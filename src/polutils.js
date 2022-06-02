@@ -37,7 +37,7 @@ module.exports.buildZhInv = function buildZhInv(F, Nbits, extendBits) {
     let sn= F.shift;
     for (i=0; i<Nbits; i++) sn = F.square(sn);
     for (let i=0; i<(1 << extendBits); i++) {
-        ZHInv[i] = F.inv(F.sub(F.mul(sn, w), F.one));
+        ZHInv[i] =F.inv(F.sub(F.mul(sn, w), F.one));
         w = F.mul(w, F.w[extendBits])
     }
     return function (i) {

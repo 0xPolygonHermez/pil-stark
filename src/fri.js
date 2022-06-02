@@ -93,9 +93,9 @@ class FRI {
             proof[si] = {};
 
             if (si < this.steps.length-1) {
-                const groupSize = 1<< ((si <  this.steps.length-1) ? this.steps[si+1].nBits : 0 );
+                const nGroups = 1<< this.steps[si+1].nBits;
 
-                let nGroups = pol2_e.length / groupSize;
+                let groupSize = (1 << this.steps[si].nBits) / nGroups;
     
                 GMT[si] = new GroupMerkle(this.M, nGroups ,groupSize, 3);
     
@@ -121,24 +121,29 @@ class FRI {
 
 
 
-        const ys = transcript.getPermutations(this.nQueries, this.inNBits);
+        const ys = transcript.getPermutations(this.nQueries, this.steps[0].nBits);
+
+        // TODO Remove
+        ys[0] =0;
 
         for (let si = 0; si<this.steps.length; si++) {
 
             proof[si].polQueries = [];
 //            proof[si].pol2Queries = [];
             for (let i=0; i<ys.length; i++) {
+                const gIdx = 
 //                proof[si].pol2Queries.push(GMT[si].getElementProof(tree[si], ys[i]));
                 proof[si].polQueries.push(queryPol(ys[i]));
             }
 
-            queryPol = (idx) => {
-                return GMT[si].getGroupProof(tree[si], idx);
-            }
 
             if (si < this.steps.length -1) {
+                queryPol = (idx) => {
+                    return GMT[si].getGroupProof(tree[si], idx);
+                }
+
                 for (let i=0; i<ys.length; i++) {
-                    ys[i] = ys[i] % GMT[si].nGroups;                   
+                    ys[i] = ys[i] % (1 << this.steps[si+1].nBits);                   
                 }
             }
         }
@@ -149,6 +154,7 @@ class FRI {
     verify(transcript, proof, checkQuery) {
 
         const F = this.F;
+        const GMT = [];
 
         assert(proof.length == this.steps.length+1, "Invalid proof size");
 
@@ -159,6 +165,11 @@ class FRI {
             special_x[si] = transcript.getField();
 
             if (si < this.steps.length-1) {
+                const nGroups = 1<< this.steps[si+1].nBits;
+
+                let groupSize = (1 << this.steps[si].nBits) / nGroups;
+    
+                GMT[si] = new GroupMerkle(this.M, nGroups ,groupSize, 3);
                 transcript.put(proof[si].root2);
             } else {
                 for (let i=0; i<proof[proof.length-1].length; i++) {
@@ -168,8 +179,11 @@ class FRI {
         }
 
 
-        const nQueries = this.steps[si].nQueries;
-        const ys = transcript.getPermutations(nQueries, this.inNBits);
+        const nQueries = this.nQueries;
+        const ys = transcript.getPermutations(this.nQueries, this.steps[0].nBits);
+
+        // TODO Remove
+        ys[0] =0;
 
         let polBits = this.inNBits;
         let shift = F.shift;
@@ -178,12 +192,6 @@ class FRI {
             const proofItem=proof[si];
 
             const reductionBits = polBits - this.steps[si].nBits;
-
-            const groupSize = 1<< ((si <  this.steps.length-1) ? this.steps[si+1].nBits : 0 );
-            let nGroups = (1 << this.steps[si].nBits) / groupSize;
-
-
-            const GMT = new GroupMerkle(this.M,(1 << this.steps[si].nBits)/groupSize  ,groupSize);
 
             for (let i=0; i<nQueries; i++) {
                 const pgroup_e = checkQuery(proofItem.polQueries[i], ys[i]);
@@ -200,16 +208,17 @@ class FRI {
 
                 const ev = evalPol(F, pgroup_c, special_x[si]);
 
-                const groupIdx  = Math.floor(ys[i] / nGroups);                   
-                if (si < this.steps.length-1) {
+                if (si < this.steps.length - 1) {
+                    const nextNGroups = 1 << this.steps[si+1].nBits
+                    const groupIdx  =Math.floor(ys[i] / nextNGroups); 
                     if (!F.eq(proof[si+1].polQueries[i][0][groupIdx], ev)) return false;
                 } else {
-                    if (!F.eq(proof[si+1][groupIdx], ev)) return false;
+                    if (!F.eq(proof[si+1][ys[i]], ev)) return false;
                 }
             }
 
             checkQuery = (query, idx) => {
-                const res = GMT.verifyGroupProof(proofItem.root2, query[1], idx, query[0]);
+                const res = GMT[si].verifyGroupProof(proofItem.root2, query[1], idx, query[0]);
                 if (!res) return false;
                 return query[0];
             }
@@ -217,8 +226,10 @@ class FRI {
             polBits = this.steps[si].nBits;
             for (let j=0; j<reductionBits; j++) shift = F.mul(shift, shift);
 
-            for (let i=0; i<ys.length; i++) {
-                ys[i] = ys[i] % nGroups;                   
+            if (si < this.steps.length -1) {
+                for (let i=0; i<ys.length; i++) {
+                    ys[i] = ys[i] % (1 << this.steps[si+1].nBits);                   
+                }
             }
 
         }

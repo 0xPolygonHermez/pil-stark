@@ -39,7 +39,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
     for (let i=0; i<pil.expressions.length; i++) {
         if (typeof pil.expressions[i].idQ != "undefined") {
             pilCodeGen(ctx, i);
-            pilCodeGen(ctx2ns, i);
+            pilCodeGen(ctx2ns, i, false, "evalQ");
         }
     }
 
@@ -117,7 +117,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
     for (let i=0; i<pil.expressions.length; i++) {
         if (typeof pil.expressions[i].idQ != "undefined") {
             pilCodeGen(ctx, i);
-            pilCodeGen(ctx2ns, i);
+            pilCodeGen(ctx2ns, i, false, "evalQ");
         }
     }
 
@@ -219,7 +219,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
     for (let i=0; i<pil.expressions.length; i++) {
         if (typeof pil.expressions[i].idQ != "undefined") {
             pilCodeGen(ctx, i);
-            pilCodeGen(ctx2ns, i);
+            pilCodeGen(ctx2ns, i, false, "evalQ");
         }
     }
 
@@ -258,7 +258,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
     for (let i=0; i<pil.expressions.length; i++) {
         if (typeof pil.expressions[i].idQ != "undefined") {
             pilCodeGen(ctx, i);
-            pilCodeGen(ctx2ns, i);
+            pilCodeGen(ctx2ns, i, false, "evalQ");
         }
     }
 
@@ -269,7 +269,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
     res.nQ4 = pil.nQ - res.nQ3 -res.nQ2 - res.nQ1;
 
 
-    pilCodeGen(ctxC, res.cExp);
+    pilCodeGen(ctxC, res.cExp, false, "correctQ");
 
     res.verifierCode = buildCode(ctxC).first;
 
@@ -282,6 +282,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
 
     res.evMap = [];
 
+    
     for (let i=0; i<res.verifierCode.length; i++) {
         for (let j=0; j<res.verifierCode[i].src.length; j++) {
             fixRef(res.verifierCode[i].src[j]);
@@ -305,8 +306,8 @@ module.exports = function starkInfoGen(pil, starkStruct) {
                     res.evMap.push(rf);
                 }
                 delete r.prime;
+                r.id= res.evIdx[r.type][p][r.id];
                 r.type= "eval";
-                r.id= res.evMap.length-1;
                 break;
             case "exp":
                 if (typeof expMap[p][r.id] === "undefined") {
@@ -314,12 +315,13 @@ module.exports = function starkInfoGen(pil, starkStruct) {
                 }
                 delete r.prime;
                 r.type= "tmp";
-                r.id= ctxC.tmpUsed++;
+                r.id= expMap[p][r.id];
                 break;
             case "number":
             case "challange":
             case "public":
             case "tmp":
+            case "Z":
                 break;
             default:
                 throw new Error("Invalid reference type");
@@ -400,10 +402,10 @@ module.exports = function starkInfoGen(pil, starkStruct) {
     };
 
     pilCodeGen(ctxFri, res.friExpId);
-    res.verifierQueryCode = buildCode(ctxFri);
+    res.verifierQueryCode = buildCode(ctxFri).first;
     res.nExps = pil.expressions.length;
 
-
+    const expMap2 = [{}, {}];
     for (let i=0; i<res.verifierQueryCode.length; i++) {
         for (let j=0; j<res.verifierQueryCode[i].src.length; j++) {
             fixRef2(res.verifierQueryCode[i].src[j]);
@@ -419,6 +421,16 @@ module.exports = function starkInfoGen(pil, starkStruct) {
                 r.type = k;
                 r.id = id;
                 delete r.prime;
+                break;
+            case "exp":
+                const p = r.prime ? 1 : 0;
+                if (typeof expMap2[p][r.id] === "undefined") {
+                    expMap2[p][r.id] = ctxFri.tmpUsed ++;
+                }
+                delete r.prime;
+                r.type= "tmp";
+                r.id= expMap2[p][r.id];
+                break;    
             case "number":
             case "challange":
             case "public":
@@ -458,13 +470,13 @@ module.exports = function starkInfoGen(pil, starkStruct) {
 
 
 
-function pilCodeGen(ctx, expId, prime, correctQ) {
+function pilCodeGen(ctx, expId, prime, mode) {
     prime = prime || false;
     const primeIdx = prime ? "expsPrime" : "exps";
 
     if (ctx.calculated[primeIdx][expId]) return;
 
-    calculateDeps(ctx, ctx.pil.expressions[expId], prime, expId);
+    calculateDeps(ctx, ctx.pil.expressions[expId], prime, expId, mode);
 
     const codeCtx = {
         pil: ctx.pil,
@@ -474,7 +486,34 @@ function pilCodeGen(ctx, expId, prime, correctQ) {
     }
 
     const retRef = evalExp(codeCtx, ctx.pil.expressions[expId], prime);
-    if ((correctQ)&&(typeof pil.exps[expId].qId !== "undefined")) {
+
+    if ((mode=="evalQ")&&(typeof ctx.pil.expressions[expId].idQ !== "undefined")) {
+        if (prime) throw new Error("EvalQ cannot be prime");
+        const rqz = {
+            type: "tmp",
+            id: codeCtx.tmpUsed++
+        };
+        codeCtx.code.push({
+            op: "sub",
+            src: [retRef, {
+                type: "exp",
+                prime: prime,
+                id: expId
+            }],
+            dest: rqz
+        });
+        codeCtx.code.push({
+            op: "mul",
+            src: [{
+                type: "Zi",
+            }, rqz],
+            dest: {
+                type: "q",
+                id: ctx.pil.expressions[expId].idQ,
+                prime: prime
+            }
+        });
+    } else if ((mode=="correctQ")&&(typeof ctx.pil.expressions[expId].idQ !== "undefined")) {
         const rqz = {
             type: "tmp",
             id: codeCtx.tmpUsed++
@@ -485,7 +524,7 @@ function pilCodeGen(ctx, expId, prime, correctQ) {
             src: [
                 {
                     type: "q",
-                    id: pil.exps[expId].qId,
+                    id: ctx.pil.expressions[expId].idQ,
                     prime: prime
                 },
                 {
@@ -510,9 +549,9 @@ function pilCodeGen(ctx, expId, prime, correctQ) {
                 prime: prime,
                 id: expId
             }
-            ctx.tmpUsed --;
+            codeCtx.tmpUsed --;
         } else {
-            codeCtx.push({
+            codeCtx.code.push({
                 op: "copy",
                 dest: {
                     type: "exp",
@@ -533,7 +572,7 @@ function pilCodeGen(ctx, expId, prime, correctQ) {
 
     ctx.calculated[primeIdx][expId] = true;
 
-    if (codeCtx.tmpUsed > ctx.tmpUsed) codeCtx.tmpUsed = codeCtx.tmpUsed;
+    if (codeCtx.tmpUsed > ctx.tmpUsed) ctx.tmpUsed = codeCtx.tmpUsed;
 }
 
 function evalExp(codeCtx, exp, prime) {
@@ -630,7 +669,7 @@ function evalExp(codeCtx, exp, prime) {
         });
         return r;
     } else if (exp.op == "cm") {
-        if (exp.next && prime) expressionError(ctxCode.pil, "double Prime", ctxCode.expId);
+        if (exp.next && prime) expressionError(codeCtx.pil, "double Prime", codeCtx.expId);
         return {
             type: "cm",
             id: exp.id,
@@ -696,14 +735,14 @@ function evalExp(codeCtx, exp, prime) {
 }
 
 
-function calculateDeps(ctx, exp, prime, expIdErr) {
+function calculateDeps(ctx, exp, prime, expIdErr, mode) {
     if (exp.op == "exp") {
         if (prime && exp.next) expressionError(ctx.pil, `Double prime`, expIdErr, exp.id);
-        pilCodeGen(ctx, exp.id, prime || exp.next);
+        pilCodeGen(ctx, exp.id, prime || exp.next, mode);
     }
     if (exp.values) {
         for (let i=0; i<exp.values.length; i++) {
-            calculateDeps(ctx, exp.values[i], prime, expIdErr);
+            calculateDeps(ctx, exp.values[i], prime, expIdErr, mode);
         }
     }
 }

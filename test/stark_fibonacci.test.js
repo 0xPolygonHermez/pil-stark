@@ -24,6 +24,16 @@ describe("test fibonacci sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
+        const starkStruct = {
+            nBits: 10,
+            nBitsExt: 11,
+            nQueries: 128,
+            steps: [
+                {nBits: 11}, 
+                {nBits: 3}
+            ]
+        };
+
         const Fr = new F1Field("0xFFFFFFFF00000001");
         const pil = await compile(Fr, path.join(__dirname, "sm_fibonacci", "fibonacci.pil"));
         const [constPols, constPolsArray, constPolsDef] =  createConstantPols(pil);
@@ -49,7 +59,10 @@ describe("test fibonacci sm", async function () {
         const poseidon = await buildPoseidon();
         const LH = new LinearHash(poseidon);
         const M = new Merkle(poseidon);
-        const MM = new MerkleGroupMultipolLHash(LH, M, constPolsDef.Fibonacci.L1.polDeg*2, 1, constPolsArray.length);
+
+        const groupSize = 1 << (starkStruct.nBitsExt - starkStruct.steps[0].nBits);
+        const nGroups = 1 << starkStruct.steps[0].nBits;
+        const MM = new MerkleGroupMultipolLHash(LH, M,nGroups, groupSize, constPolsArray.length);
 
         const constPolsArrayE = [];
         for (let i=0; i<constPolsArray.length; i++) {
@@ -57,19 +70,12 @@ describe("test fibonacci sm", async function () {
         }
         const constTree = MM.merkelize(constPolsArrayE);
 
-        const starkStruct = {
-            nBits: 10,
-            nBitsExt: 11,
-            nQueries: 128,
-            steps: [
-                {nBits: 11}, 
-                {nBits: 5}
-            ]
-        };
 
         const resP = await starkGen(cmPolsArray, constPolsArray, constTree, pil, starkStruct);
 
-        const resV = await starkVerify(resP.proof, resP.publics, pil, MM.root(constTree), starkStruct);
+        const pil2 = await compile(Fr, path.join(__dirname, "sm_fibonacci", "fibonacci.pil"));
+
+        const resV = await starkVerify(resP.proof, resP.publics, pil2, MM.root(constTree), starkStruct);
 
         assert(resV==true);
     });

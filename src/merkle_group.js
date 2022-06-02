@@ -84,7 +84,7 @@ class GroupMerkle {
 
     verifyGroupProof(root, mp, idx, groupElements) {
         const cRoot = this.calculateRootFromGroupProof(mp, idx, groupElements);
-        return this.M.F.eq(cRoot, root);
+        return this.M.eqRoot(cRoot, root);
     }
 
     root(tree) {

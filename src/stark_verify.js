@@ -1,4 +1,4 @@
-const buildPoseidon = require("circomlibjs").buildPoseidon;
+const buildPoseidon = require("./poseidon");
 const Transcript = require("./transcript");
 const FRI = require("../src/fri.js");
 const LinearHash = require("./linearhash.js");
@@ -21,13 +21,13 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
     const F = poseidon.F;
 
 
-
-    const M = new Merkle(16, poseidon, poseidon.F);
-    const MGPC = new MerkleGroupMultipol(M, nGroups, groupSize, starkInfo.nConst);
-    const MGP1 = new MerkleGroupMultipol(M, nGroups, groupSize, starkInfo.nCm1 + starkInfo.nQ1);
-    const MGP2 = new MerkleGroupMultipol(M, nGroups, groupSize, starkInfo.nCm1 + starkInfo.nQ2);
-    const MGP3 = new MerkleGroupMultipol(M, nGroups, groupSize, starkInfo.nCm1 + starkInfo.nQ3);
-    const MGP4 = new MerkleGroupMultipol(M, nGroups, groupSize, starkInfo.nCm1 + starkInfo.nQ4);
+    const LH = new LinearHash(poseidon);
+    const M = new Merkle(poseidon);
+    const MGPC = new MerkleGroupMultipol(LH, M, nGroups, groupSize, starkInfo.nConst);
+    const MGP1 = new MerkleGroupMultipol(LH, M, nGroups, groupSize, starkInfo.nCm1 + starkInfo.nQ1);
+    const MGP2 = new MerkleGroupMultipol(LH, M, nGroups, groupSize, starkInfo.nCm1 + starkInfo.nQ2);
+    const MGP3 = new MerkleGroupMultipol(LH, M, nGroups, groupSize, starkInfo.nCm1 + starkInfo.nQ3);
+    const MGP4 = new MerkleGroupMultipol(LH, M, nGroups, groupSize, starkInfo.nCm1 + starkInfo.nQ4);
 
 
     const transcript = new Transcript(poseidon, poseidon.F);
@@ -45,12 +45,23 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
     ctx.challanges[3] = transcript.getField(); // beta
     transcript.put(proof.root3);
     ctx.challanges[4] = transcript.getField(); // vc
+    // TODO REMOVE
+    //ctx.challanges[4] = 1n; // vc
+
     transcript.put(proof.root4);
     ctx.challanges[5] = transcript.getField(); // v1
     ctx.challanges[6] = transcript.getField(); // v2
     ctx.challanges[7] = transcript.getField(); // xi
 
-    const res=executeCode(ctx, starkInfo.verifierQueryCode);
+    // TODO REMOVE
+    //ctx.challanges[7] = 0n; // xi
+
+    ctx.Z = F.sub(F.exp(ctx.challanges[7], N), 1n);
+    ctx.Zp = F.sub(F.exp(F.mul(ctx.challanges[7], F.w[nBits]), N), 1n);
+
+    const res=executeCode(F, ctx, starkInfo.verifierCode);
+
+    if (!F.eq(res, 0n)) return false;
 
     const fri = new FRI( poseidon, starkStruct );
 
@@ -63,9 +74,9 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
         if (!res) return false;
         res = MGP3.verifyGroupProof(proof.root3, query[2][1], idx, query[2][0]);
         if (!res) return false;
-        res = MGP3.verifyGroupProof(proof.root4, query[3][1], idx, query[2][0]);
+        res = MGP4.verifyGroupProof(proof.root4, query[3][1], idx, query[3][0]);
         if (!res) return false;
-        res = MGPC.verifyGroupProof(constRoot, query[4][1], idx, query[3][0]);
+        res = MGPC.verifyGroupProof(constRoot, query[4][1], idx, query[4][0]);
         if (!res) return false;
 
 
@@ -83,11 +94,11 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
             ctxQry.publics = ctx.publics;
             ctxQry.challanges = ctx.challanges;
 
-            const x = F.exp(F.w[nBits + extendBits], i*nGroups + idx);
+            const x = F.mul(F.shift, F.exp(F.w[nBits + extendBits], i*nGroups + idx));
             ctxQry.xDivXSubXi = F.div(x, F.sub(x, ctxQry.challanges[7]));
             ctxQry.xDivXSubWXi = F.div(x, F.sub(x, F.mul(F.w[nBits], ctxQry.challanges[7])));
 
-            vals[i] = executeCode(ctxQry, starkInfo.verifierQueryCode);
+            vals[i] = executeCode(F, ctxQry, starkInfo.verifierQueryCode);
         }
 
         return vals;
@@ -98,12 +109,12 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
 }
 
 
-function executeCode(ctx, code) {
+function executeCode(F, ctx, code) {
     const tmp = [];
     for (let i=0; i<code.length; i++) {
         const src = [];
         for (k=0; k<code[i].src.length; k++) {
-            src.push(getRef(i, code[i].src[k]));
+            src.push(getRef(code[i].src[k]));
         }
         let res;
         switch (code[i].op) {
@@ -119,20 +130,21 @@ function executeCode(ctx, code) {
 
 
 
-    function getRef(i, r) {
+    function getRef(r) {
         switch (r.type) {
             case "tmp": return tmp[r.id];
             case "tree1": return ctx.tree1[r.id];
             case "tree2": return ctx.tree2[r.id];
             case "tree3": return ctx.tree3[r.id];
             case "tree4": return ctx.tree4[r.id];
-            case "const": return ctx.const[r.id];
+            case "const": return ctx.consts[r.id];
             case "eval": return ctx.evals[r.id];
             case "number": return BigInt(r.value);
             case "public": return ctx.publics[r.id];
             case "challange": return ctx.challanges[r.id];
             case "xDivXSubXi": return ctx.xDivXSubXi;
             case "xDivXSubWXi": return ctx.xDivXSubWXi;
+            case "Z": return r.prime ? ctx.Zp : ctx.Z;
             default: throw new Error("Invalid reference type get: " + r.type);
         }
     }

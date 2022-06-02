@@ -25,11 +25,10 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     const LH = new LinearHash(poseidon);
     const M = new Merkle(poseidon);
 
-    const groupSize = 1 << (Nbits+extendBits - starkStruct.steps[0].nBits);
+    const groupSize = 1 << (starkStruct.nBitsExt - starkStruct.steps[0].nBits);
     const nGroups = 1 << starkStruct.steps[0].nBits;
-    const MGPC = new MerkleGroupMultipolHash(LH, M, constPols[0].length*2, 1, constPols.length);
+    const MGPC = new MerkleGroupMultipolHash(LH, M,nGroups, groupSize, constPols.length);
 
-    // TODO Remove arity
     const fri = new FRI( poseidon, starkStruct );
 
     const transcript = new Transcript(poseidon);
@@ -45,7 +44,9 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
         const: [],
         publics: [],
         challanges: [],
-        evals: []
+        evals: [],
+        N: N,
+        next: 1
     };
 
     const pols2ns = {
@@ -55,12 +56,15 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
         const: [],
         publics: pols.publics,
         challanges: pols.challanges,
-        evals: pols.evals
+        evals: pols.evals,
+        N: N << extendBits,
+        next: 1 << extendBits
     };
 
 
     // Build ZHInv
     const zhInv = buildZhInv(F, Nbits, extendBits);
+    pols2ns.Zi = zhInv;
 
     const starkInfo = starkInfoGen(pil, starkStruct);
 
@@ -93,7 +97,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 
 // This will calculate all the Q polynomials and extend commits
 
-    calculateExps(F, pols, starkInfo.step1prev, N);
+    calculateExps(F, pols, starkInfo.step1prev);
 
     for (let i=0; i<pil.publics.length; i++) {
         if (pil.publics[i].polType == "cmP") {
@@ -105,10 +109,9 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
         }
     }
 
-    calculateExps(F, pols, starkInfo.step1, N);
-    await extendCms();
-    calculateExps(F, pols2ns, starkInfo.step12ns, N<<extendBits);
-    await prepareQs(starkInfo.qs1);
+    calculateExps(F, pols, starkInfo.step1);
+    await extendCms(starkInfo.qs1);
+    calculateExps(F, pols2ns, starkInfo.step12ns);
 
     console.log("Merkelizing 1....");
 
@@ -125,7 +128,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     pols.challanges[0] = transcript.getField(); // u
     pols.challanges[1] = transcript.getField(); // defVal
 
-    calculateExps(F, pols, starkInfo.step2prev, N);
+    calculateExps(F, pols, starkInfo.step2prev);
 
     for (let i=0; i<starkInfo.puCtx.length; i++) {
         const [h1, h2] = calculateH1H2(F, pols.exps[puCtx[i].fExpId], pols.exps[uCtx[i].tExpId]);
@@ -133,10 +136,9 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
         pols.cm.push(h2);
     }
 
-    calculateExps(F, pols, starkInfo.step2, N);
-    await extendCms();
-    calculateExps(F, pols2ns, starkInfo.step22ns, N<<extendBits);
-    await prepareQs(starkInfo.qs2);
+    calculateExps(F, pols, starkInfo.step2);
+    await extendCms(starkInfo.qs2);
+    calculateExps(F, pols2ns, starkInfo.step22ns);
 
     console.log("Merkelizing 2....");
     const MGP2 = new MerkleGroupMultipolHash(LH, M, nGroups, groupSize, starkInfo.nCm2 + starkInfo.nQ2);
@@ -151,17 +153,16 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     pols.challanges[2] = transcript.getField(); // gamma
     pols.challanges[3] = transcript.getField(); // betta
 
-    calculateExps(F, pols, starkInfo.step3prev, N);
+    calculateExps(F, pols, starkInfo.step3prev);
     for (let i=0; i<starkInfo.puCtx.length; i++) {
         const z = calculateZ(F, pols.exps[puCtx[i].numId], pols.exps[uCtx[i].denId]);
         pols.cm.push(z);
     }
 
-    calculateExps(F, pols, starkInfo.step3, N);
-    await extendCms();
-    calculateExps(F, pols2ns, starkInfo.step32ns, N<<extendBits);
-    await prepareQs(starkInfo.qs3);
-
+    calculateExps(F, pols, starkInfo.step3);
+    await extendCms(starkInfo.qs3);
+    calculateExps(F, pols2ns, starkInfo.step32ns);
+ 
     console.log("Merkelizing 3....");
 
     const MGP3 = new MerkleGroupMultipolHash(LH, M, nGroups, groupSize, starkInfo.nCm3 + starkInfo.nQ3);
@@ -177,10 +178,13 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 // 4. Compute C Polynomial (FRI)
     pols.challanges[4] = transcript.getField(); // vc
 
-    calculateExps(F, pols, starkInfo.step4, N);
-    await extendCms();
-    calculateExps(F, pols2ns, starkInfo.step42ns, N<<extendBits);
-    await prepareQs(starkInfo.qs4);
+    // TODO REMOVE
+    //pols.challanges[4] = 1n; // vc
+
+
+    calculateExps(F, pols, starkInfo.step4);
+    await extendCms(starkInfo.qs4);
+    calculateExps(F, pols2ns, starkInfo.step42ns);
 
     console.log("Merkelizing 4....");
 
@@ -199,26 +203,31 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     pols.challanges[6] = transcript.getField(); // v2
     pols.challanges[7] = transcript.getField(); // xi
 
+    // TODO REMOVE
+    // pols.challanges[7] = 0n; // xi
+
 // Calculate Evals
 
     let LEv = new Array(N);
     let LpEv = new Array(N);
     LEv[0] = 1n;
     LpEv[0] = 1n;
-    const xi = pols.challanges[7];
-    const wxi = F.mul(xi, F.w[Nbits]);
+    const xis = F.div(pols.challanges[7], F.shift);
+    const wxis = F.div(F.mul(pols.challanges[7], F.w[Nbits]), F.shift);
     for (let k=1; k<N; k++) {
-        LEv[k] = F.mul(LEv[k-1], xi);
-        LpEv[k] = F.mul(LpEv[k-1], wxi);
+        LEv[k] = F.mul(LEv[k-1], xis);
+        LpEv[k] = F.mul(LpEv[k-1], wxis);
     }
     LEv = F.ifft(LEv);
     LpEv = F.ifft(LpEv);
+/*
     let r = 1n;
     for (let k=0; k<N; k++) {
         LEv[k] = F.mul(LEv[k], r);
         LpEv[k] = F.mul(LpEv[k], r);
         r = F.mul(r, F.shiftInv);
     }
+*/
 
     for (let i=0; i<starkInfo.evMap.length; i++) {
         const ev = starkInfo.evMap[i];
@@ -233,9 +242,12 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 
 // Calculate xDivXSubXi, xDivXSubWXi
 
+    const xi = pols.challanges[7];
+    const wxi = F.mul(pols.challanges[7], F.w[Nbits]);
+
     let xDivXSubXi = new Array(N << extendBits);
     let xDivXSubWXi = new Array(N << extendBits);
-    let x = 1n;
+    let x = F.shift;
     for (let k=0; k< N<<extendBits; k++) {
         xDivXSubXi[k] = F.sub(x, xi);
         xDivXSubWXi[k] = F.sub(x, wxi);
@@ -243,7 +255,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     }
     xDivXSubXi = F.batchInverse(xDivXSubXi);
     xDivXSubWXi = F.batchInverse(xDivXSubWXi);
-    x = 1n;
+    x = F.shift;
     for (let k=0; k< N<<extendBits; k++) {
         xDivXSubXi[k] = F.mul(xDivXSubXi[k], x);
         xDivXSubWXi[k] = F.mul(xDivXSubWXi[k], x);
@@ -253,7 +265,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     pols2ns.xDivXSubWXi = xDivXSubWXi;
 
 
-    calculateExps(F, pols2ns, starkInfo.step52ns, N<<extendBits);
+    calculateExps(F, pols2ns, starkInfo.step52ns);
 
     const friPol = pols2ns.exps[starkInfo.friExpId];
 
@@ -274,28 +286,24 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
             root1: MGP1.root(tree1),
             root2: MGP2.root(tree2),
             root3: MGP3.root(tree3),
-            root4: MGP3.root(tree4),
+            root4: MGP4.root(tree4),
             evals: pols.evals,
             fri: friProof
         },
-        publics: pols.publics[i]
+        publics: pols.publics
     }
     
 
-    async function extendCms() {
+    async function extendCms(qs) {
         for (let i=0; i<pols.cm.length; i++) {
             if (!pols2ns.cm[i]) {
                 pols2ns.cm[i] = extendPol(F, pols.cm[i], extendBits);
             }
         }
-    }
-
-    async function prepareQs(qs) {
         for (let i=0; i<qs.length; i++) {
-            const r2ns = extendPol(F, pols.exps[qs[i].idExp], extendBits);
-            pols2ns.q[qs[i].idQ] = new Array(N<<extendBits);
-            for (let k=0; k< N<<extendBits; k++) {
-                pols2ns.q[qs[i].idQ][k] = F.mul(F.sub(pols2ns.exps[qs[i].idExp][k], r2ns[k]), zhInv(k));
+            if (pols2ns.exps[qs[i].idExp].length == 0) {
+                pols2ns.exps[qs[i].idExp] = extendPol(F, pols.exps[qs[i].idExp], extendBits);
+                pols2ns.q[qs[i].idQ] = [];
             }
         }
     }
@@ -304,14 +312,14 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 }
 
 
-function calculateExps(F, pols, code, N) {
+function calculateExps(F, pols, code) {
     const tmp = [];
 
-    for (let i=0; i<N; i++) {
+    for (let i=0; i<pols.N; i++) {
         let c;
-        if (i==0) {
+        if (i<pols.next) {
             c = code.first;
-        } else if (i<N-1) {
+        } else if (i<pols.N-pols.next) {
             c = code.i;
         } else {
             c = code.last;
@@ -336,16 +344,17 @@ function calculateExps(F, pols, code, N) {
     function getRef(i, r) {
         switch (r.type) {
             case "tmp": return tmp[r.id];
-            case "const": return pols.const[r.id][r.prime ? (i+1)%N : i];
-            case "cm": return pols.cm[r.id][r.prime ? (i+1)%N : i];
-            case "q": return pols.q[r.id][r.prime ? (i+1)%N : i];
-            case "exp": return pols.exps[r.id][r.prime ? (i+1)%N : i];
+            case "const": return pols.const[r.id][r.prime ? (i+pols.next)%pols.N : i];
+            case "cm": return pols.cm[r.id][r.prime ? (i+pols.next)%pols.N : i];
+            case "q": return pols.q[r.id][r.prime ? (i+pols.next)%pols.N : i];
+            case "exp": return pols.exps[r.id][r.prime ? (i+pols.next)%pols.N : i];
             case "number": return BigInt(r.value);
             case "public": return pols.publics[r.id];
             case "challange": return pols.challanges[r.id];
             case "eval": return pols.evals[r.id];
             case "xDivXSubXi": return pols.xDivXSubXi[i];
             case "xDivXSubWXi": return pols.xDivXSubWXi[i];
+            case "Zi": return pols.Zi(i);
             default: throw new Error("Invalid reference type get: " + r.type);
         }
     }
@@ -353,7 +362,8 @@ function calculateExps(F, pols, code, N) {
     function setRef(i, r, val) {
         switch (r.type) {
             case "tmp": tmp[r.id] = val; return;
-            case "exp": pols.exps[r.id][r.prime ? (i+1)%N : i]= val; return;
+            case "exp": pols.exps[r.id][r.prime ? (i+pols.next)%pols.N : i]= val; return;
+            case "q": pols.q[r.id][r.prime ? (i+pols.next)%pols.N : i]=val; return;
             default: throw new Error("Invalid reference type set: " + r.type);
         }
     }
