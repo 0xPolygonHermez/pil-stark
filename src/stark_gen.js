@@ -4,7 +4,7 @@ const Merkle = require("./merkle.js");
 const MerkleGroupMultipolHash = require("./merkle_group_multipol_lhash.js");
 const LinearHash = require("./linearhash.js");
 const Transcript = require("./transcript");
-const { extendPol, buildZhInv, calculateH1H2 } = require("./polutils");
+const { extendPol, buildZhInv, calculateH1H2, calculateZ } = require("./polutils.js");
 const { log2 } = require("./utils");
 const buildPoseidon = require("./poseidon");
 // const defaultStarkStruct = require("./starkstruct");
@@ -126,12 +126,13 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 
 // 2.- Caluculate plookups h1 and h2
     pols.challanges[0] = transcript.getField(); // u
-    pols.challanges[1] = transcript.getField(); // defVal
+    pols.challanges[1] = transcript.getField(); // defVal    
 
     calculateExps(F, pols, starkInfo.step2prev);
 
     for (let i=0; i<starkInfo.puCtx.length; i++) {
-        const [h1, h2] = calculateH1H2(F, pols.exps[puCtx[i].fExpId], pols.exps[uCtx[i].tExpId]);
+        const puCtx = starkInfo.puCtx[i];
+        const [h1, h2] = calculateH1H2(F, pols.exps[puCtx.fExpId], pols.exps[puCtx.tExpId]);
         pols.cm.push(h1);
         pols.cm.push(h2);
     }
@@ -155,7 +156,13 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 
     calculateExps(F, pols, starkInfo.step3prev);
     for (let i=0; i<starkInfo.puCtx.length; i++) {
-        const z = calculateZ(F, pols.exps[puCtx[i].numId], pols.exps[uCtx[i].denId]);
+        const pu = starkInfo.puCtx[i];
+        const z = calculateZ(F, pols.exps[pu.numId], pols.exps[pu.denId]);
+        pols.cm.push(z);
+    }
+    for (let i=0; i<starkInfo.peCtx.length; i++) {
+        const pe = starkInfo.peCtx[i];
+        const z = calculateZ(F, pols.exps[pe.numId], pols.exps[pe.denId]);
         pols.cm.push(z);
     }
 

@@ -1,3 +1,4 @@
+const { assert } = require("chai");
 
 
 
@@ -71,4 +72,22 @@ module.exports.calculateH1H2 = function calculateH1H2(F, f, t) {
     }
 
     return [h1, h2];
+}
+
+module.exports.calculateZ = function(F, num, den) {
+
+    const N = num.length;
+    if (N != den.length) throw new Error("Num and Den different sizes");
+
+    const denI = F.batchInverse(den);
+
+    const z = new Array(N);
+    z[0] = F.one;
+    for (let i=1; i<N; i++) {
+        z[i] = F.mul(z[i-1], F.mul(num[i-1], denI[i-1]));
+    }
+    const checkVal = F.mul(z[N-1], F.mul(num[N-1], denI[N-1]));
+    if (!F.eq(checkVal, F.one)) throw new Error("z does not match");
+
+    return z;
 }

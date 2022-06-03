@@ -79,8 +79,8 @@ class ExpressionOps {
     }
 
     challange(name) {
-        if (!challangeMap[name]) {
-            throw new Error("Challange not defined");
+        if (typeof challangeMap[name] == "undefined") {
+            throw new Error("Challange not defined "+name);
         }
         return { 
             op: "challange", 
@@ -91,7 +91,7 @@ class ExpressionOps {
     number(n) {
         return {
             op: "number",
-            value: n
+            value: BigInt(n)
         }
     }
 
