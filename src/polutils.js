@@ -87,7 +87,9 @@ module.exports.calculateZ = function(F, num, den) {
         z[i] = F.mul(z[i-1], F.mul(num[i-1], denI[i-1]));
     }
     const checkVal = F.mul(z[N-1], F.mul(num[N-1], denI[N-1]));
-    if (!F.eq(checkVal, F.one)) throw new Error("z does not match");
+    if (!F.eq(checkVal, F.one)) {
+        throw new Error("z does not match");
+    }
 
     return z;
 }

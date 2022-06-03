@@ -125,6 +125,63 @@ module.exports = function starkInfoGen(pil, starkStruct) {
     res.nCm2 = pil.nCommitments - res.nCm1;
     res.nQ2 = pil.nQ - res.nQ1;
 
+    // Build Linear combinations for the permutation checks
+    for (let i=0; i<pil.permutationIdentities.length; i++) {
+        const peCtx = {};
+        const pi = pil.permutationIdentities[i];
+
+        let tExp = null;
+        const u = E.challange("u");
+        const defVal = E.challange("defVal");
+        for (let j=0; j<pi.t.length; j++) {
+            const e = E.exp(pi.t[j]);
+            if (tExp) {
+                tExp = E.add(E.mul(u, tExp), e);
+            } else {
+                tExp = e;
+            }
+        }
+        if (pi.selT !== null) {
+            tExp = E.sub(tExp, defVal);
+            tExp = E.mul(tExp, E.exp(pi.selT));
+            tExp = E.add(tExp, defVal);
+
+            tExp.idQ = pil.nQ;
+            pil.nQ++;
+        }
+
+        peCtx.tExpId = pil.expressions.length;
+        pil.expressions.push(tExp);
+
+
+        fExp = null;
+        for (let j=0; j<pi.f.length; j++) {
+            const e = E.exp(pi.f[j]);
+            if (fExp) {
+                fExp = E.add(E.mul(fExp, u). e);
+            } else {
+                fExp = e;
+            }
+        }
+        if (pi.selF !== null) {
+            fExp = E.sub(fExp, defVal);
+            fExp = E.mul(fExp, E.exp(pi.selF));
+            fExp = E.add(fExp, defVal);
+
+            fExp.idQ = pil.nQ;
+            pil.nQ++;
+        }
+
+        peCtx.fExpId = pil.expressions.length;
+        pil.expressions.push(fExp);
+
+        pilCodeGen(ctx, peCtx.fExpId, false);
+        pilCodeGen(ctx, peCtx.tExpId, false);
+
+        res.peCtx.push(peCtx);
+    }
+
+
 // 3. Z generation plookup
     for (let i=0; i<pil.plookupIdentities.length; i++) {
         const puCtx = res.puCtx[i];
@@ -213,64 +270,16 @@ module.exports = function starkInfoGen(pil, starkStruct) {
     }
 
     // 4. Permutation Identities
+
     for (let i=0; i<pil.permutationIdentities.length; i++) {
-        const peCtx = {};
-        const pi = pil.permutationIdentities[i];
-
-        let tExp = null;
-        const u = E.challange("u", 0);
-        const defVal = E.challange("defVal");
-        for (let j=0; j<pi.t.length; j++) {
-            const e = E.exp(pi.t[j]);
-            if (tExp) {
-                tExp = E.add(E.mul(u, tExp), e);
-            } else {
-                tExp = e;
-            }
-        }
-        if (pi.selT !== null) {
-            tExp = E.sub(tExp, defVal);
-            tExp = E.mul(tExp, E.exp(pi.selT));
-            tExp = E.add(tExp, defVal);
-
-            tExp.idQ = pil.nQ;
-            pil.nQ++;
-        }
-
-        peCtx.tExpId = pil.expressions.length;
-        pil.expressions.push(tExp);
-
-
-        fExp = null;
-        for (let j=0; j<pi.f.length; j++) {
-            const e = E.exp(pi.f[j]);
-            if (fExp) {
-                fExp = E.add(E.mul(fExp, u). e);
-            } else {
-                fExp = e;
-            }
-        }
-        if (pi.selF !== null) {
-            fExp = E.sub(fExp, E.exp(puCtx.tExpId));
-            fExp = E.mul(fExp, E.exp(pi.selF));
-            fExp = E.add(fExp, E.exp(puCtx.tExpId));
-
-            fExp.idQ = pil.nQ;
-            pil.nQ++;
-        }
-
-        peCtx.fExpId = pil.expressions.length;
-        pil.expressions.push(fExp);
-
-        pilCodeGen(ctx, peCtx.fExpId, false);
-        pilCodeGen(ctx, peCtx.tExpId, false);
+        peCtx = res.peCtx[i];
 
         peCtx.zId = pil.nCommitments++;
 
-        const f = E.exp(puCtx.fExpId);
-        const t = E.exp(puCtx.tExpId);
-        const z = E.cm(puCtx.zId);
-        const zp = E.cm(puCtx.zId, true);
+        const f = E.exp(peCtx.fExpId);
+        const t = E.exp(peCtx.tExpId);
+        const z = E.cm(peCtx.zId);
+        const zp = E.cm(peCtx.zId, true);
 
         if ( typeof pil.references["Global.L1"] === "undefined") throw new Error("Global.L1 must be defined");
 
@@ -282,26 +291,24 @@ module.exports = function starkInfoGen(pil, starkStruct) {
         pil.expressions.push(c1);
         pil.polIdentities.push({e: peCtx.c1Id});
 
+        const beta = E.challange("beta");
 
-        const numExp = E.sum( f, beta);
+        const numExp = E.add( f, beta);
         peCtx.numId = pil.expressions.length;
         pil.expressions.push(numExp);
 
-        const denExp = E.sum( t, beta);
+        const denExp = E.add( t, beta);
         peCtx.denId = pil.expressions.length;
         pil.expressions.push(denExp);
 
-        const beta = E.challange("beta");
-
-        const c2 = E.sub(  E.mul(zp,  denExp), E.mul(z, numExp));
+        const c2 = E.sub(  E.mul(zp,  E.exp( peCtx.denId )), E.mul(z, E.exp( peCtx.numId )));
         c2.deg=2;
         peCtx.c2Id = pil.expressions.length;
         pil.expressions.push(c2);
         pil.polIdentities.push({e: peCtx.c2Id});
 
-        res.peCtx.push(peCtx);
-
-        res.peCtx.push(peCtx);
+        pilCodeGen(ctx, peCtx.numId, false);
+        pilCodeGen(ctx, peCtx.denId, false);
     }
 
     res.step3prev = buildCode(ctx);
