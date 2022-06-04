@@ -1,5 +1,6 @@
 const F1Field = require("../../src/f3g.js");
 const {log2} = require("../../src/utils.js");
+const getKs = require("zkpil").getKs;
 
 module.exports.buildConstants = async function (pols, polsDef) {
     const F = new F1Field("0xFFFFFFFF00000001");
@@ -9,12 +10,11 @@ module.exports.buildConstants = async function (pols, polsDef) {
     const pow = log2(N);
 
     let w = F.one;
-    const k1 = F.k;
-    const k2= F.mul(F.k, F.k);
+    const ks = getKs(F, 2);
     for (let i=0; i<N; i++) {
         pols.S1[i] = w;
-        pols.S2[i] = F.mul(w, k1);
-        pols.S3[i] = F.mul(w, k2);
+        pols.S2[i] = F.mul(w, ks[0]);
+        pols.S3[i] = F.mul(w, ks[1]);
         w = F.mul(w, F.w[pow]);
     }
 

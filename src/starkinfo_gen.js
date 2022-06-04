@@ -1,6 +1,8 @@
 
 const F1Field = require("./f3g.js");
 const ExpressionOps = require("./expressionops.js");
+const getKs = require("zkpil").getKs;
+
 
 module.exports = function starkInfoGen(pil, starkStruct) {
     const F = new F1Field();
@@ -258,7 +260,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
             if ( typeof pil.references["Global.L1"] === "undefined") throw new Error("Global.L1 must be defined");
 
             const l1 = E.const(pil.references["Global.L1"].id);
-            
+
             const c1 = E.mul(l1,  E.sub(z, E.number(1)));
             c1.deg=2;
             puCtx.c1Id = pil.expressions.length;
@@ -267,7 +269,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
 
             const gamma = E.challange("gamma");
             const beta = E.challange("beta");
-        
+
             const numExp = E.mul(
                 E.mul(
                     E.add(f, gamma),
@@ -287,7 +289,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
             numExp.idQ = pil.nQ++;
             puCtx.numId = pil.expressions.length;
             pil.expressions.push(numExp);
-        
+
             const denExp = E.mul(
                 E.add(
                     E.add(
@@ -313,10 +315,10 @@ module.exports = function starkInfoGen(pil, starkStruct) {
             denExp.idQ = pil.nQ++;
             puCtx.denId = pil.expressions.length;
             pil.expressions.push(denExp);
-        
+
             const num = E.exp(puCtx.numId);
             const den = E.exp(puCtx.denId);
-        
+
             const c2 = E.sub(  E.mul(zp, den), E.mul(z, num)  );
             c2.deg=2;
             puCtx.c2Id = pil.expressions.length;
@@ -383,45 +385,45 @@ module.exports = function starkInfoGen(pil, starkStruct) {
 
             let numExp = E.add(
                 E.add(
-                    E.exp(ci.pols[0]), 
+                    E.exp(ci.pols[0]),
                     E.mul(beta, E.x())
                 ), gamma);
 
             let denExp = E.add(
                 E.add(
-                    E.exp(ci.pols[0]), 
+                    E.exp(ci.pols[0]),
                     E.mul(beta, E.exp(ci.connections[0]))
                 ), gamma);
 
             ciCtx.numId = pil.expressions.length;
             pil.expressions.push(numExp);
-    
+
             ciCtx.denId = pil.expressions.length;
             pil.expressions.push(denExp);
-    
-            let k = F.k;
+
+            let ks = getKs(F, ci.pols.length-1);
             for (let i=1; i<ci.pols.length; i++) {
-                const numExp = 
+                const numExp =
                     E.mul(
                         E.exp(ciCtx.numId),
                         E.add(
                             E.add(
-                                E.exp(ci.pols[i]), 
-                                E.mul(E.mul(beta, E.number(k)), E.x())
-                            ), 
+                                E.exp(ci.pols[i]),
+                                E.mul(E.mul(beta, E.number(ks[i-1])), E.x())
+                            ),
                             gamma
                         )
                     );
                 numExp.idQ = pil.nQ++;
 
-                const denExp = 
+                const denExp =
                     E.mul(
                         E.exp(ciCtx.denId),
                         E.add(
                             E.add(
-                                E.exp(ci.pols[i]), 
+                                E.exp(ci.pols[i]),
                                 E.mul(beta, E.exp(ci.connections[i]))
-                            ), 
+                            ),
                             gamma
                         )
                     );
@@ -429,11 +431,9 @@ module.exports = function starkInfoGen(pil, starkStruct) {
 
                 ciCtx.numId = pil.expressions.length;
                 pil.expressions.push(numExp);
-        
+
                 ciCtx.denId = pil.expressions.length;
                 pil.expressions.push(denExp);
-        
-                k = F.mul(k, F.k);
             }
 
             const z = E.cm(ciCtx.zId);
@@ -501,13 +501,13 @@ module.exports = function starkInfoGen(pil, starkStruct) {
         res.evIdx = {
             cm: [{}, {}],
             q: [{}, {}],
-            const: [{}, {}] 
+            const: [{}, {}]
         }
         const expMap = [{}, {}];
 
         res.evMap = [];
 
-        
+
         for (let i=0; i<res.verifierCode.length; i++) {
             for (let j=0; j<res.verifierCode[i].src.length; j++) {
                 fixRef(res.verifierCode[i].src[j]);
@@ -519,7 +519,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
             switch (r.type) {
                 case "cm":
                 case "q":
-                case "const": 
+                case "const":
                     if (typeof res.evIdx[r.type][p][r.id] === "undefined") {
                         res.evIdx[r.type][p][r.id] = res.evMap.length;
                         const rf = {
@@ -577,7 +577,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
         }
 
         let fri1exp = null;
-        let fri2exp = null; 
+        let fri2exp = null;
         const xi = E.challange("xi");
         for (let i=0; i<res.evMap.length; i++) {
             const ev = res.evMap[i];
@@ -641,7 +641,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
             switch (r.type) {
                 case "cm":
                 case "q":
-                case "const": 
+                case "const":
                     const [k, id] = getTreePos(res, r.type, r.id);
                     r.type = k;
                     r.id = id;
@@ -655,7 +655,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
                     delete r.prime;
                     r.type= "tmp";
                     r.id= expMap2[p][r.id];
-                    break;    
+                    break;
                 case "number":
                 case "challange":
                 case "public":
