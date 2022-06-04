@@ -1,12 +1,15 @@
 
+const F1Field = require("./f3g.js");
 const ExpressionOps = require("./expressionops.js");
 
 module.exports = function starkInfoGen(pil, starkStruct) {
+    const F = new F1Field();
 
     const E = new ExpressionOps();
     const res = {
         puCtx: [],
-        peCtx: []
+        peCtx: [],
+        ciCtx: []
     };
 
     const ctx = {
@@ -51,64 +54,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
     res.nQ1 = pil.nQ;
     res.nConst = pil.nConstants;
 
-// 2. h1, h2 generation
-    for (let i=0; i<pil.plookupIdentities.length; i++) {
-        const puCtx = {};
-        const pi = pil.plookupIdentities[i];
-
-        let tExp = null;
-        const u = E.challange("u");
-        const defVal = E.challange("defVal");
-        for (let j=0; j<pi.t.length; j++) {
-            const e = E.exp(pi.t[j]);
-            if (tExp) {
-                tExp = E.add(E.mul(u, tExp), e);
-            } else {
-                tExp = e;
-            }
-        }
-        if (pi.selT !== null) {
-            tExp = E.sub(tExp, defVal);
-            tExp = E.mul(tExp, E.exp(pi.selT));
-            tExp = E.add(tExp, defVal);
-
-            tExp.idQ = pil.nQ;
-            pil.nQ++;
-        }
-
-        puCtx.tExpId = pil.expressions.length;
-        pil.expressions.push(tExp);
-
-
-        fExp = null;
-        for (let j=0; j<pi.f.length; j++) {
-            const e = E.exp(pi.f[j]);
-            if (fExp) {
-                fExp = E.add(E.mul(fExp, u), e);
-            } else {
-                fExp = e;
-            }
-        }
-        if (pi.selF !== null) {
-            fExp = E.sub(fExp, E.exp(puCtx.tExpId));
-            fExp = E.mul(fExp, E.exp(pi.selF));
-            fExp = E.add(fExp, E.exp(puCtx.tExpId));
-
-            fExp.idQ = pil.nQ;
-            pil.nQ++;
-        }
-
-        puCtx.fExpId = pil.expressions.length;
-        pil.expressions.push(fExp);
-
-        pilCodeGen(ctx, puCtx.fExpId, false);
-        pilCodeGen(ctx, puCtx.tExpId, false);
-
-        puCtx.h1Id = pil.nCommitments++;
-        puCtx.h2Id = pil.nCommitments++;
-
-        res.puCtx.push(puCtx);
-    }
+    generateH1H2();
 
     res.step2prev = buildCode(ctx);
 
@@ -125,191 +71,10 @@ module.exports = function starkInfoGen(pil, starkStruct) {
     res.nCm2 = pil.nCommitments - res.nCm1;
     res.nQ2 = pil.nQ - res.nQ1;
 
-    // Build Linear combinations for the permutation checks
-    for (let i=0; i<pil.permutationIdentities.length; i++) {
-        const peCtx = {};
-        const pi = pil.permutationIdentities[i];
-
-        let tExp = null;
-        const u = E.challange("u");
-        const defVal = E.challange("defVal");
-        for (let j=0; j<pi.t.length; j++) {
-            const e = E.exp(pi.t[j]);
-            if (tExp) {
-                tExp = E.add(E.mul(u, tExp), e);
-            } else {
-                tExp = e;
-            }
-        }
-        if (pi.selT !== null) {
-            tExp = E.sub(tExp, defVal);
-            tExp = E.mul(tExp, E.exp(pi.selT));
-            tExp = E.add(tExp, defVal);
-
-            tExp.idQ = pil.nQ;
-            pil.nQ++;
-        }
-
-        peCtx.tExpId = pil.expressions.length;
-        pil.expressions.push(tExp);
-
-
-        fExp = null;
-        for (let j=0; j<pi.f.length; j++) {
-            const e = E.exp(pi.f[j]);
-            if (fExp) {
-                fExp = E.add(E.mul(fExp, u). e);
-            } else {
-                fExp = e;
-            }
-        }
-        if (pi.selF !== null) {
-            fExp = E.sub(fExp, defVal);
-            fExp = E.mul(fExp, E.exp(pi.selF));
-            fExp = E.add(fExp, defVal);
-
-            fExp.idQ = pil.nQ;
-            pil.nQ++;
-        }
-
-        peCtx.fExpId = pil.expressions.length;
-        pil.expressions.push(fExp);
-
-        pilCodeGen(ctx, peCtx.fExpId, false);
-        pilCodeGen(ctx, peCtx.tExpId, false);
-
-        res.peCtx.push(peCtx);
-    }
-
-
-// 3. Z generation plookup
-    for (let i=0; i<pil.plookupIdentities.length; i++) {
-        const puCtx = res.puCtx[i];
-        puCtx.zId = pil.nCommitments++;
-
-
-        const h1 = E.cm(puCtx.h1Id);
-        const h2 =  E.cm(puCtx.h2Id);
-        const h1p = E.cm(puCtx.h1Id, true);
-        const f = E.exp(puCtx.fExpId);
-        const t = E.exp(puCtx.tExpId);
-        const tp = E.exp(puCtx.tExpId, true);
-        const z = E.cm(puCtx.zId);
-        const zp = E.cm(puCtx.zId, true);
-
-        if ( typeof pil.references["Global.L1"] === "undefined") throw new Error("Global.L1 must be defined");
-
-        const l1 = E.const(pil.references["Global.L1"].id);
-        
-        const c1 = E.mul(l1,  E.sub(z, E.number(1)));
-        c1.deg=2;
-        puCtx.c1Id = pil.expressions.length;
-        pil.expressions.push(c1);
-        pil.polIdentities.push({e: puCtx.c1Id});
-
-        const gamma = E.challange("gamma");
-        const beta = E.challange("beta");
-    
-        const numExp = E.mul(
-            E.mul(
-                E.add(f, gamma),
-                E.add(
-                    E.add(
-                        t,
-                        E.mul(
-                            tp,
-                            beta
-                        )
-                    ),
-                    E.mul(gamma,E.add(E.number(1), beta))
-                )
-            ),
-            E.add(E.number(1), beta)
-        );
-        numExp.idQ = pil.nQ++;
-        puCtx.numId = pil.expressions.length;
-        pil.expressions.push(numExp);
-    
-        const denExp = E.mul(
-            E.add(
-                E.add(
-                    h1,
-                    E.mul(
-                        h2,
-                        beta
-                    )
-                ),
-                E.mul(gamma,E.add(E.number(1), beta))
-            ),
-            E.add(
-                E.add(
-                    h2,
-                    E.mul(
-                        h1p,
-                        beta
-                    )
-                ),
-                E.mul(gamma,E.add(E.number(1), beta))
-            )
-        );
-        denExp.idQ = pil.nQ++;
-        puCtx.denId = pil.expressions.length;
-        pil.expressions.push(denExp);
-    
-        const num = E.exp(puCtx.numId);
-        const den = E.exp(puCtx.denId);
-    
-        const c2 = E.sub(  E.mul(zp, den), E.mul(z, num)  );
-        c2.deg=2;
-        puCtx.c2Id = pil.expressions.length;
-        pil.expressions.push(c2);
-        pil.polIdentities.push({e: puCtx.c2Id});
-
-        pilCodeGen(ctx, puCtx.numId, false);
-        pilCodeGen(ctx, puCtx.denId, false);
-    }
-
-    // 4. Permutation Identities
-
-    for (let i=0; i<pil.permutationIdentities.length; i++) {
-        peCtx = res.peCtx[i];
-
-        peCtx.zId = pil.nCommitments++;
-
-        const f = E.exp(peCtx.fExpId);
-        const t = E.exp(peCtx.tExpId);
-        const z = E.cm(peCtx.zId);
-        const zp = E.cm(peCtx.zId, true);
-
-        if ( typeof pil.references["Global.L1"] === "undefined") throw new Error("Global.L1 must be defined");
-
-        const l1 = E.const(pil.references["Global.L1"].id);
-
-        const c1 = E.mul(l1,  E.sub(z, E.number(1)));
-        c1.deg=2;
-        peCtx.c1Id = pil.expressions.length;
-        pil.expressions.push(c1);
-        pil.polIdentities.push({e: peCtx.c1Id});
-
-        const beta = E.challange("beta");
-
-        const numExp = E.add( f, beta);
-        peCtx.numId = pil.expressions.length;
-        pil.expressions.push(numExp);
-
-        const denExp = E.add( t, beta);
-        peCtx.denId = pil.expressions.length;
-        pil.expressions.push(denExp);
-
-        const c2 = E.sub(  E.mul(zp,  E.exp( peCtx.denId )), E.mul(z, E.exp( peCtx.numId )));
-        c2.deg=2;
-        peCtx.c2Id = pil.expressions.length;
-        pil.expressions.push(c2);
-        pil.polIdentities.push({e: peCtx.c2Id});
-
-        pilCodeGen(ctx, peCtx.numId, false);
-        pilCodeGen(ctx, peCtx.denId, false);
-    }
+    generatePermutationLC();
+    generatePlookupZ();
+    generatePermutationZ();
+    generateConnectionsZ();
 
     res.step3prev = buildCode(ctx);
 
@@ -326,30 +91,8 @@ module.exports = function starkInfoGen(pil, starkStruct) {
     res.nCm3 = pil.nCommitments - res.nCm2 - res.nCm1;
     res.nQ3 = pil.nQ - res.nQ2 - res.nQ1;
 
-    // Build the condition polynomial
-    const vc = E.challange("vc");
-    let cExp = null;
-    for (let i=0; i<pil.polIdentities.length; i++) {
-        const e = E.exp(pil.polIdentities[i].e);
-        if (cExp) {
-            cExp = E.add(E.mul(vc, cExp), e);
-        } else {
-            cExp = e;
-        }
-    }
-    cExp.idQ = pil.nQ++;
-    res.cExp = pil.expressions.length;
-    pil.expressions.push(cExp);
+    generateConstraintPolynomial();
 
-    const ctxC = {
-        pil: pil,
-        calculated: {
-            exps: {},
-            expsPrime: {}
-        },
-        tmpUsed: 0,
-        code: []
-    };
 
 
     for (let i=0; i<pil.expressions.length; i++) {
@@ -365,204 +108,590 @@ module.exports = function starkInfoGen(pil, starkStruct) {
     res.nCm4 = pil.nCommitments - res.nCm3 -res.nCm2-res.nCm1;
     res.nQ4 = pil.nQ - res.nQ3 -res.nQ2 - res.nQ1;
 
-
-    pilCodeGen(ctxC, res.cExp, false, "correctQ");
-
-    res.verifierCode = buildCode(ctxC).first;
-
-    res.evIdx = {
-        cm: [{}, {}],
-        q: [{}, {}],
-        const: [{}, {}] 
-    }
-    const expMap = [{}, {}];
-
-    res.evMap = [];
-
-    
-    for (let i=0; i<res.verifierCode.length; i++) {
-        for (let j=0; j<res.verifierCode[i].src.length; j++) {
-            fixRef(res.verifierCode[i].src[j]);
-        }
-        fixRef(res.verifierCode[i].dest);
-    }
-    function fixRef(r) {
-        const p = r.prime ? 1 : 0;
-        switch (r.type) {
-            case "cm":
-            case "q":
-            case "const": 
-                if (typeof res.evIdx[r.type][p][r.id] === "undefined") {
-                    res.evIdx[r.type][p][r.id] = res.evMap.length;
-                    const rf = {
-                        type: r.type,
-                        id: r.id,
-                        prime: r.prime ? true : false,
-                    };
-                    [rf.tree, rf.treePos] = getTreePos(res, r.type, r.id);
-                    res.evMap.push(rf);
-                }
-                delete r.prime;
-                r.id= res.evIdx[r.type][p][r.id];
-                r.type= "eval";
-                break;
-            case "exp":
-                if (typeof expMap[p][r.id] === "undefined") {
-                    expMap[p][r.id] = ctxC.tmpUsed ++;
-                }
-                delete r.prime;
-                r.type= "tmp";
-                r.id= expMap[p][r.id];
-                break;
-            case "number":
-            case "challange":
-            case "public":
-            case "tmp":
-            case "Z":
-                break;
-            default:
-                throw new Error("Invalid reference type");
-        }
-    }
-
-
-// Build the stark polynomial
-
-    const vf1 = E.challange("vf1");
-    const vf2 = E.challange("vf2");
-
-    let friExp = null;
-    for (let i=0; i<pil.nCommitments; i++) {
-        if (friExp) {
-            friExp = E.add(E.mul(vf1, friExp), E.cm(i));
-        } else {
-            friExp = E.cm(i);
-        }
-    }
-    for (let i=0; i<pil.nQ; i++) {
-        if (friExp) {
-            friExp = E.add(E.mul(vf1, friExp), E.q(i));
-        } else {
-            friExp = E.q(i);
-        }
-    }
-
-    let fri1exp = null;
-    let fri2exp = null; 
-    const xi = E.challange("xi");
-    for (let i=0; i<res.evMap.length; i++) {
-        const ev = res.evMap[i];
-        let friExp = ev.prime ? fri2exp : fri1exp;
-        const e = E[ev.type](ev.id);
-        if (friExp) {
-            friExp = E.add(E.mul(friExp, vf2), E.sub(e,  E.eval(i)));
-        } else {
-            friExp = E.sub(e,  E.eval(i));
-        }
-        if (ev.prime) {
-            fri2exp = friExp;
-        } else {
-            fri1exp = friExp;
-        }
-    }
-
-
-    fri1exp = E.mul(fri1exp, E.xDivXSubXi() );
-    if (friExp) {
-        friExp = E.add(E.mul(vf1, friExp),  fri1exp );
-    } else {
-        friExp = fri1exp;
-    }
-
-    fri2exp =  E.mul(fri2exp, E.xDivXSubWXi() );
-    if (friExp) {
-        friExp = E.add(E.mul(vf1, friExp),  fri2exp );
-    } else {
-        friExp = fri2exp;
-    }
-
-    res.friExpId = pil.expressions.length;
-    pil.expressions.push(friExp);
-
+    generateConstraintPolynomialVerifier();
+    generateFRIPolynomial();
 
     pilCodeGen(ctx2ns, res.friExpId);
     res.step52ns = buildCode(ctx2ns);
 
-    const ctxFri = {
-        pil: pil,
-        calculated: {
-            exps: {},
-            expsPrime: {}
-        },
-        tmpUsed: 0,
-        code: []
-    };
+    generateVerifierQuery();
 
-    pilCodeGen(ctxFri, res.friExpId);
-    res.verifierQueryCode = buildCode(ctxFri).first;
-    res.nExps = pil.expressions.length;
+    return res;
 
-    const expMap2 = [{}, {}];
-    for (let i=0; i<res.verifierQueryCode.length; i++) {
-        for (let j=0; j<res.verifierQueryCode[i].src.length; j++) {
-            fixRef2(res.verifierQueryCode[i].src[j]);
-        }
-        fixRef2(res.verifierQueryCode[i].dest);
-    }
-    function fixRef2(r) {
-        switch (r.type) {
-            case "cm":
-            case "q":
-            case "const": 
-                const [k, id] = getTreePos(res, r.type, r.id);
-                r.type = k;
-                r.id = id;
-                delete r.prime;
-                break;
-            case "exp":
-                const p = r.prime ? 1 : 0;
-                if (typeof expMap2[p][r.id] === "undefined") {
-                    expMap2[p][r.id] = ctxFri.tmpUsed ++;
+
+    function generateH1H2() {
+
+        for (let i=0; i<pil.plookupIdentities.length; i++) {
+            const puCtx = {};
+            const pi = pil.plookupIdentities[i];
+
+            let tExp = null;
+            const u = E.challange("u");
+            const defVal = E.challange("defVal");
+            for (let j=0; j<pi.t.length; j++) {
+                const e = E.exp(pi.t[j]);
+                if (tExp) {
+                    tExp = E.add(E.mul(u, tExp), e);
+                } else {
+                    tExp = e;
                 }
-                delete r.prime;
-                r.type= "tmp";
-                r.id= expMap2[p][r.id];
-                break;    
-            case "number":
-            case "challange":
-            case "public":
-            case "tmp":
-            case "xDivXSubXi":
-            case "xDivXSubWXi":
-            case "eval":
-                break;
-            default:
-                throw new Error("Invalid reference type: "+r.type);
+            }
+            if (pi.selT !== null) {
+                tExp = E.sub(tExp, defVal);
+                tExp = E.mul(tExp, E.exp(pi.selT));
+                tExp = E.add(tExp, defVal);
+
+                tExp.idQ = pil.nQ;
+                pil.nQ++;
+            }
+
+            puCtx.tExpId = pil.expressions.length;
+            pil.expressions.push(tExp);
+
+
+            fExp = null;
+            for (let j=0; j<pi.f.length; j++) {
+                const e = E.exp(pi.f[j]);
+                if (fExp) {
+                    fExp = E.add(E.mul(fExp, u), e);
+                } else {
+                    fExp = e;
+                }
+            }
+            if (pi.selF !== null) {
+                fExp = E.sub(fExp, E.exp(puCtx.tExpId));
+                fExp = E.mul(fExp, E.exp(pi.selF));
+                fExp = E.add(fExp, E.exp(puCtx.tExpId));
+
+                fExp.idQ = pil.nQ;
+                pil.nQ++;
+            }
+
+            puCtx.fExpId = pil.expressions.length;
+            pil.expressions.push(fExp);
+
+            pilCodeGen(ctx, puCtx.fExpId, false);
+            pilCodeGen(ctx, puCtx.tExpId, false);
+
+            puCtx.h1Id = pil.nCommitments++;
+            puCtx.h2Id = pil.nCommitments++;
+
+            res.puCtx.push(puCtx);
         }
     }
 
-    res.qs1 = [];
-    res.qs2 = [];
-    res.qs3 = [];
-    res.qs4 = [];
-    for (let i=0; i<pil.expressions.length; i++) {
-        const exp = pil.expressions[i];
-        if (typeof exp.idQ !== "undefined") {
-            if (exp.idQ<res.nQ1) {
-                res.qs1.push({idExp: i, idQ: exp.idQ});
-            } else if (exp.idQ<res.nQ1+res.nQ2) {
-                res.qs2.push({idExp: i, idQ: exp.idQ});
-            } else if (exp.idQ<res.nQ1+res.nQ2+res.nQ3) {
-                res.qs3.push({idExp: i, idQ: exp.idQ});
-            } else if (exp.idQ<res.nQ1+res.nQ2+res.nQ3+res.nQ4) {
-                res.qs4.push({idExp: i, idQ: exp.idQ});
+
+
+    function generatePermutationLC() {
+        for (let i=0; i<pil.permutationIdentities.length; i++) {
+            const peCtx = {};
+            const pi = pil.permutationIdentities[i];
+
+            let tExp = null;
+            const u = E.challange("u");
+            const defVal = E.challange("defVal");
+            for (let j=0; j<pi.t.length; j++) {
+                const e = E.exp(pi.t[j]);
+                if (tExp) {
+                    tExp = E.add(E.mul(u, tExp), e);
+                } else {
+                    tExp = e;
+                }
+            }
+            if (pi.selT !== null) {
+                tExp = E.sub(tExp, defVal);
+                tExp = E.mul(tExp, E.exp(pi.selT));
+                tExp = E.add(tExp, defVal);
+
+                tExp.idQ = pil.nQ;
+                pil.nQ++;
+            }
+
+            peCtx.tExpId = pil.expressions.length;
+            pil.expressions.push(tExp);
+
+
+            fExp = null;
+            for (let j=0; j<pi.f.length; j++) {
+                const e = E.exp(pi.f[j]);
+                if (fExp) {
+                    fExp = E.add(E.mul(fExp, u). e);
+                } else {
+                    fExp = e;
+                }
+            }
+            if (pi.selF !== null) {
+                fExp = E.sub(fExp, defVal);
+                fExp = E.mul(fExp, E.exp(pi.selF));
+                fExp = E.add(fExp, defVal);
+
+                fExp.idQ = pil.nQ;
+                pil.nQ++;
+            }
+
+            peCtx.fExpId = pil.expressions.length;
+            pil.expressions.push(fExp);
+
+            pilCodeGen(ctx, peCtx.fExpId, false);
+            pilCodeGen(ctx, peCtx.tExpId, false);
+
+            res.peCtx.push(peCtx);
+        }
+    }
+
+
+    function generatePlookupZ() {
+        for (let i=0; i<pil.plookupIdentities.length; i++) {
+            const puCtx = res.puCtx[i];
+            puCtx.zId = pil.nCommitments++;
+
+
+            const h1 = E.cm(puCtx.h1Id);
+            const h2 =  E.cm(puCtx.h2Id);
+            const h1p = E.cm(puCtx.h1Id, true);
+            const f = E.exp(puCtx.fExpId);
+            const t = E.exp(puCtx.tExpId);
+            const tp = E.exp(puCtx.tExpId, true);
+            const z = E.cm(puCtx.zId);
+            const zp = E.cm(puCtx.zId, true);
+
+            if ( typeof pil.references["Global.L1"] === "undefined") throw new Error("Global.L1 must be defined");
+
+            const l1 = E.const(pil.references["Global.L1"].id);
+            
+            const c1 = E.mul(l1,  E.sub(z, E.number(1)));
+            c1.deg=2;
+            puCtx.c1Id = pil.expressions.length;
+            pil.expressions.push(c1);
+            pil.polIdentities.push({e: puCtx.c1Id});
+
+            const gamma = E.challange("gamma");
+            const beta = E.challange("beta");
+        
+            const numExp = E.mul(
+                E.mul(
+                    E.add(f, gamma),
+                    E.add(
+                        E.add(
+                            t,
+                            E.mul(
+                                tp,
+                                beta
+                            )
+                        ),
+                        E.mul(gamma,E.add(E.number(1), beta))
+                    )
+                ),
+                E.add(E.number(1), beta)
+            );
+            numExp.idQ = pil.nQ++;
+            puCtx.numId = pil.expressions.length;
+            pil.expressions.push(numExp);
+        
+            const denExp = E.mul(
+                E.add(
+                    E.add(
+                        h1,
+                        E.mul(
+                            h2,
+                            beta
+                        )
+                    ),
+                    E.mul(gamma,E.add(E.number(1), beta))
+                ),
+                E.add(
+                    E.add(
+                        h2,
+                        E.mul(
+                            h1p,
+                            beta
+                        )
+                    ),
+                    E.mul(gamma,E.add(E.number(1), beta))
+                )
+            );
+            denExp.idQ = pil.nQ++;
+            puCtx.denId = pil.expressions.length;
+            pil.expressions.push(denExp);
+        
+            const num = E.exp(puCtx.numId);
+            const den = E.exp(puCtx.denId);
+        
+            const c2 = E.sub(  E.mul(zp, den), E.mul(z, num)  );
+            c2.deg=2;
+            puCtx.c2Id = pil.expressions.length;
+            pil.expressions.push(c2);
+            pil.polIdentities.push({e: puCtx.c2Id});
+
+            pilCodeGen(ctx, puCtx.numId, false);
+            pilCodeGen(ctx, puCtx.denId, false);
+        }
+    }
+
+
+    function generatePermutationZ() {
+        for (let i=0; i<pil.permutationIdentities.length; i++) {
+            peCtx = res.peCtx[i];
+
+            peCtx.zId = pil.nCommitments++;
+
+            const f = E.exp(peCtx.fExpId);
+            const t = E.exp(peCtx.tExpId);
+            const z = E.cm(peCtx.zId);
+            const zp = E.cm(peCtx.zId, true);
+
+            if ( typeof pil.references["Global.L1"] === "undefined") throw new Error("Global.L1 must be defined");
+
+            const l1 = E.const(pil.references["Global.L1"].id);
+
+            const c1 = E.mul(l1,  E.sub(z, E.number(1)));
+            c1.deg=2;
+            peCtx.c1Id = pil.expressions.length;
+            pil.expressions.push(c1);
+            pil.polIdentities.push({e: peCtx.c1Id});
+
+            const beta = E.challange("beta");
+
+            const numExp = E.add( f, beta);
+            peCtx.numId = pil.expressions.length;
+            pil.expressions.push(numExp);
+
+            const denExp = E.add( t, beta);
+            peCtx.denId = pil.expressions.length;
+            pil.expressions.push(denExp);
+
+            const c2 = E.sub(  E.mul(zp,  E.exp( peCtx.denId )), E.mul(z, E.exp( peCtx.numId )));
+            c2.deg=2;
+            peCtx.c2Id = pil.expressions.length;
+            pil.expressions.push(c2);
+            pil.polIdentities.push({e: peCtx.c2Id});
+
+            pilCodeGen(ctx, peCtx.numId, false);
+            pilCodeGen(ctx, peCtx.denId, false);
+        }
+    }
+
+    function generateConnectionsZ() {
+        for (let i=0; i<pil.connectionIdentities.length; i++) {
+            const ci = pil.connectionIdentities[i];
+            const ciCtx = {};
+
+            ciCtx.zId = pil.nCommitments++;
+
+            const beta = E.challange("beta");
+            const gamma = E.challange("gamma");
+
+            let numExp = E.add(
+                E.add(
+                    E.exp(ci.pols[0]), 
+                    E.mul(beta, E.x())
+                ), gamma);
+
+            let denExp = E.add(
+                E.add(
+                    E.exp(ci.pols[0]), 
+                    E.mul(beta, E.exp(ci.connections[0]))
+                ), gamma);
+
+            ciCtx.numId = pil.expressions.length;
+            pil.expressions.push(numExp);
+    
+            ciCtx.denId = pil.expressions.length;
+            pil.expressions.push(denExp);
+    
+            let k = F.k;
+            for (let i=1; i<ci.pols.length; i++) {
+                const numExp = 
+                    E.mul(
+                        E.exp(ciCtx.numId),
+                        E.add(
+                            E.add(
+                                E.exp(ci.pols[i]), 
+                                E.mul(E.mul(beta, E.number(k)), E.x())
+                            ), 
+                            gamma
+                        )
+                    );
+                numExp.idQ = pil.nQ++;
+
+                const denExp = 
+                    E.mul(
+                        E.exp(ciCtx.denId),
+                        E.add(
+                            E.add(
+                                E.exp(ci.pols[i]), 
+                                E.mul(beta, E.exp(ci.connections[i]))
+                            ), 
+                            gamma
+                        )
+                    );
+                denExp.idQ = pil.nQ++;
+
+                ciCtx.numId = pil.expressions.length;
+                pil.expressions.push(numExp);
+        
+                ciCtx.denId = pil.expressions.length;
+                pil.expressions.push(denExp);
+        
+                k = F.mul(k, F.k);
+            }
+
+            const z = E.cm(ciCtx.zId);
+            const zp = E.cm(ciCtx.zId, true);
+
+            if ( typeof pil.references["Global.L1"] === "undefined") throw new Error("Global.L1 must be defined");
+
+            const l1 = E.const(pil.references["Global.L1"].id);
+
+            const c1 = E.mul(l1,  E.sub(z, E.number(1)));
+            c1.deg=2;
+            ciCtx.c1Id = pil.expressions.length;
+            pil.expressions.push(c1);
+            pil.polIdentities.push({e: ciCtx.c1Id});
+
+
+            const c2 = E.sub(  E.mul(zp,  E.exp( ciCtx.denId )), E.mul(z, E.exp( ciCtx.numId )));
+            c2.deg=2;
+            ciCtx.c2Id = pil.expressions.length;
+            pil.expressions.push(c2);
+            pil.polIdentities.push({e: ciCtx.c2Id});
+
+            pilCodeGen(ctx, ciCtx.numId, false);
+            pilCodeGen(ctx, ciCtx.denId, false);
+
+            res.ciCtx.push(ciCtx);
+        }
+    }
+
+
+    // Build the condition polynomial
+
+    function generateConstraintPolynomial() {
+        const vc = E.challange("vc");
+        let cExp = null;
+        for (let i=0; i<pil.polIdentities.length; i++) {
+            const e = E.exp(pil.polIdentities[i].e);
+            if (cExp) {
+                cExp = E.add(E.mul(vc, cExp), e);
             } else {
-                throw new Error("q too big");
+                cExp = e;
+            }
+        }
+        cExp.idQ = pil.nQ++;
+        res.cExp = pil.expressions.length;
+        pil.expressions.push(cExp);
+    }
+
+    function generateConstraintPolynomialVerifier() {
+        const ctxC = {
+            pil: pil,
+            calculated: {
+                exps: {},
+                expsPrime: {}
+            },
+            tmpUsed: 0,
+            code: []
+        };
+
+        pilCodeGen(ctxC, res.cExp, false, "correctQ");
+
+        res.verifierCode = buildCode(ctxC).first;
+
+
+        res.evIdx = {
+            cm: [{}, {}],
+            q: [{}, {}],
+            const: [{}, {}] 
+        }
+        const expMap = [{}, {}];
+
+        res.evMap = [];
+
+        
+        for (let i=0; i<res.verifierCode.length; i++) {
+            for (let j=0; j<res.verifierCode[i].src.length; j++) {
+                fixRef(res.verifierCode[i].src[j]);
+            }
+            fixRef(res.verifierCode[i].dest);
+        }
+        function fixRef(r) {
+            const p = r.prime ? 1 : 0;
+            switch (r.type) {
+                case "cm":
+                case "q":
+                case "const": 
+                    if (typeof res.evIdx[r.type][p][r.id] === "undefined") {
+                        res.evIdx[r.type][p][r.id] = res.evMap.length;
+                        const rf = {
+                            type: r.type,
+                            id: r.id,
+                            prime: r.prime ? true : false,
+                        };
+                        [rf.tree, rf.treePos] = getTreePos(res, r.type, r.id);
+                        res.evMap.push(rf);
+                    }
+                    delete r.prime;
+                    r.id= res.evIdx[r.type][p][r.id];
+                    r.type= "eval";
+                    break;
+                case "exp":
+                    if (typeof expMap[p][r.id] === "undefined") {
+                        expMap[p][r.id] = ctxC.tmpUsed ++;
+                    }
+                    delete r.prime;
+                    r.type= "tmp";
+                    r.id= expMap[p][r.id];
+                    break;
+                case "number":
+                case "challange":
+                case "public":
+                case "tmp":
+                case "Z":
+                case "x":
+                    break;
+                default:
+                    throw new Error("Invalid reference type");
             }
         }
     }
 
-    return res;
+
+    function generateFRIPolynomial() {
+        const vf1 = E.challange("vf1");
+        const vf2 = E.challange("vf2");
+
+        let friExp = null;
+        for (let i=0; i<pil.nCommitments; i++) {
+            if (friExp) {
+                friExp = E.add(E.mul(vf1, friExp), E.cm(i));
+            } else {
+                friExp = E.cm(i);
+            }
+        }
+        for (let i=0; i<pil.nQ; i++) {
+            if (friExp) {
+                friExp = E.add(E.mul(vf1, friExp), E.q(i));
+            } else {
+                friExp = E.q(i);
+            }
+        }
+
+        let fri1exp = null;
+        let fri2exp = null; 
+        const xi = E.challange("xi");
+        for (let i=0; i<res.evMap.length; i++) {
+            const ev = res.evMap[i];
+            let friExp = ev.prime ? fri2exp : fri1exp;
+            const e = E[ev.type](ev.id);
+            if (friExp) {
+                friExp = E.add(E.mul(friExp, vf2), E.sub(e,  E.eval(i)));
+            } else {
+                friExp = E.sub(e,  E.eval(i));
+            }
+            if (ev.prime) {
+                fri2exp = friExp;
+            } else {
+                fri1exp = friExp;
+            }
+        }
+
+
+        fri1exp = E.mul(fri1exp, E.xDivXSubXi() );
+        if (friExp) {
+            friExp = E.add(E.mul(vf1, friExp),  fri1exp );
+        } else {
+            friExp = fri1exp;
+        }
+
+        fri2exp =  E.mul(fri2exp, E.xDivXSubWXi() );
+        if (friExp) {
+            friExp = E.add(E.mul(vf1, friExp),  fri2exp );
+        } else {
+            friExp = fri2exp;
+        }
+
+        res.friExpId = pil.expressions.length;
+        pil.expressions.push(friExp);
+    }
+
+    function generateVerifierQuery() {
+
+        const ctxFri = {
+            pil: pil,
+            calculated: {
+                exps: {},
+                expsPrime: {}
+            },
+            tmpUsed: 0,
+            code: []
+        };
+
+        pilCodeGen(ctxFri, res.friExpId);
+        res.verifierQueryCode = buildCode(ctxFri).first;
+        res.nExps = pil.expressions.length;
+
+        const expMap2 = [{}, {}];
+        for (let i=0; i<res.verifierQueryCode.length; i++) {
+            for (let j=0; j<res.verifierQueryCode[i].src.length; j++) {
+                fixRef2(res.verifierQueryCode[i].src[j]);
+            }
+            fixRef2(res.verifierQueryCode[i].dest);
+        }
+        function fixRef2(r) {
+            switch (r.type) {
+                case "cm":
+                case "q":
+                case "const": 
+                    const [k, id] = getTreePos(res, r.type, r.id);
+                    r.type = k;
+                    r.id = id;
+                    delete r.prime;
+                    break;
+                case "exp":
+                    const p = r.prime ? 1 : 0;
+                    if (typeof expMap2[p][r.id] === "undefined") {
+                        expMap2[p][r.id] = ctxFri.tmpUsed ++;
+                    }
+                    delete r.prime;
+                    r.type= "tmp";
+                    r.id= expMap2[p][r.id];
+                    break;    
+                case "number":
+                case "challange":
+                case "public":
+                case "tmp":
+                case "xDivXSubXi":
+                case "xDivXSubWXi":
+                case "x":
+                case "eval":
+                    break;
+                default:
+                    throw new Error("Invalid reference type: "+r.type);
+            }
+        }
+
+        res.qs1 = [];
+        res.qs2 = [];
+        res.qs3 = [];
+        res.qs4 = [];
+        for (let i=0; i<pil.expressions.length; i++) {
+            const exp = pil.expressions[i];
+            if (typeof exp.idQ !== "undefined") {
+                if (exp.idQ<res.nQ1) {
+                    res.qs1.push({idExp: i, idQ: exp.idQ});
+                } else if (exp.idQ<res.nQ1+res.nQ2) {
+                    res.qs2.push({idExp: i, idQ: exp.idQ});
+                } else if (exp.idQ<res.nQ1+res.nQ2+res.nQ3) {
+                    res.qs3.push({idExp: i, idQ: exp.idQ});
+                } else if (exp.idQ<res.nQ1+res.nQ2+res.nQ3+res.nQ4) {
+                    res.qs4.push({idExp: i, idQ: exp.idQ});
+                } else {
+                    throw new Error("q too big");
+                }
+            }
+        }
+    }
+
 }
 
 
@@ -824,13 +953,15 @@ function evalExp(codeCtx, exp, prime) {
         }
     } else if (exp.op == "xDivXSubXi") {
         return {
-            type: "xDivXSubXi",
-            id: exp.id,
+            type: "xDivXSubXi"
         }
     } else if (exp.op == "xDivXSubWXi") {
         return {
-            type: "xDivXSubWXi",
-            id: exp.id,
+            type: "xDivXSubWXi"
+        }
+    } else if (exp.op == "x") {
+        return {
+            type: "x"
         }
     } else {
         throw new Error(`Invalid op: ${exp.op}`);

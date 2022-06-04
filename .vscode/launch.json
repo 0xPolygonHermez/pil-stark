@@ -120,6 +120,19 @@
                 "${workspaceFolder}/test/stark_permutation.test.js" 
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "test connection",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/stark_connection.test.js" 
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
         }
     ]
 }

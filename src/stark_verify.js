@@ -144,6 +144,7 @@ function executeCode(F, ctx, code) {
             case "challange": return ctx.challanges[r.id];
             case "xDivXSubXi": return ctx.xDivXSubXi;
             case "xDivXSubWXi": return ctx.xDivXSubWXi;
+            case "x": return ctx.challanges[7];
             case "Z": return r.prime ? ctx.Zp : ctx.Z;
             default: throw new Error("Invalid reference type get: " + r.type);
         }

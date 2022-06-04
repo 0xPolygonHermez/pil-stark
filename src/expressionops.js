@@ -121,6 +121,12 @@ class ExpressionOps {
         }
     }
 
+    x() {
+        return {
+            op: "x"
+        }
+    }
+
 }
 
 module.exports = ExpressionOps;

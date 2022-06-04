@@ -46,7 +46,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
         challanges: [],
         evals: [],
         N: N,
-        next: 1
+        next: 1,
+        x: []
     };
 
     const pols2ns = {
@@ -58,8 +59,20 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
         challanges: pols.challanges,
         evals: pols.evals,
         N: N << extendBits,
-        next: 1 << extendBits
+        next: 1 << extendBits,
+        x: []
     };
+
+    let xx = F.one;
+    for (let i=0; i<N; i++) {
+        pols.x[i] = xx;
+        xx = F.mul(xx, F.w[Nbits])
+    }
+    xx = F.shift;
+    for (let i=0; i<N << extendBits; i++) {
+        pols2ns.x[i] = xx;
+        xx = F.mul(xx, F.w[Nbits + extendBits]);
+    }
 
 
     // Build ZHInv
@@ -154,6 +167,11 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     pols.challanges[2] = transcript.getField(); // gamma
     pols.challanges[3] = transcript.getField(); // betta
 
+    // TODO REMOVE
+    // pols.challanges[2] = 0n; 
+    // pols.challanges[3] = 1n; 
+
+
     calculateExps(F, pols, starkInfo.step3prev);
     for (let i=0; i<starkInfo.puCtx.length; i++) {
         const pu = starkInfo.puCtx[i];
@@ -163,6 +181,11 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     for (let i=0; i<starkInfo.peCtx.length; i++) {
         const pe = starkInfo.peCtx[i];
         const z = calculateZ(F, pols.exps[pe.numId], pols.exps[pe.denId]);
+        pols.cm.push(z);
+    }
+    for (let i=0; i<starkInfo.ciCtx.length; i++) {
+        const ci = starkInfo.ciCtx[i];
+        const z = calculateZ(F, pols.exps[ci.numId], pols.exps[ci.denId]);
         pols.cm.push(z);
     }
 
@@ -361,6 +384,7 @@ function calculateExps(F, pols, code) {
             case "eval": return pols.evals[r.id];
             case "xDivXSubXi": return pols.xDivXSubXi[i];
             case "xDivXSubWXi": return pols.xDivXSubWXi[i];
+            case "x": return pols.x[i];
             case "Zi": return pols.Zi(i);
             default: throw new Error("Invalid reference type get: " + r.type);
         }
