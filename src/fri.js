@@ -1,6 +1,5 @@
 const { assert } = require("chai");
-const Merkle = require("./merkle");
-const GroupMerkle = require("./merkle_group");
+const MerkleHash = require("./merkle_hash.js");
 const {polMulAxi, evalPol} = require("./polutils");
 const {log2} = require("./utils");
 
@@ -8,7 +7,6 @@ class FRI {
 
     constructor(poseidon, starkStruct) {
         this.F = poseidon.F;
-        this.M = new Merkle(poseidon);
         this.inNBits = starkStruct.nBitsExt;
         this.maxDegNBits = starkStruct.nBits;
         this.nQueries = starkStruct.nQueries;
@@ -30,7 +28,6 @@ class FRI {
         let shiftInv = F.shiftInv;
         let shift = F.shift;
         let tree = [];
-        let GMT = [];
 
         for (let si = 0; si<this.steps.length; si++) {
             const reductionBits = polBits - this.steps[si].nBits;
@@ -42,34 +39,6 @@ class FRI {
 
             let special_x = transcript.getField();
 
-            // TODO, this can be calculated the same way than the verifier
-/*
-            const pol2_e_test = new Array(pol2N);
-            const pol_c = await F.ifft(pol);
-            polMulAxi(F, pol_c, F.one, shiftInv);    // Multiplies coefs by 1, shiftInv, shiftInv^2, shiftInv^3, ......
-
-            let yS = [F.exp(shift, Scalar.e(     (1<<reductionBits)  ) )];
-            for (let k=1; k<pol2N; k++) yS[k] = F.mul(yS[k-1], F.w[ this.steps[si].nBits ]);
-
-            let fx = pol_c[pol.length -1];
-            for (let j=nX-2; j>= 0; j--) {
-                fx = F.add(F.mul(fx, special_x), pol_c[pol.length - nX + j]);
-            }
-            for (let k=0; k<pol2N; k++) pol2_e_test[k] = fx;
-
-            for (let g = pol.length/nX - 2; g>=0; g--) {
-                let fx = pol_c[g*nX +nX -1];
-                for (let j=nX-2; j>= 0; j--) {
-                    fx = F.add(F.mul(fx, special_x), pol_c[g*nX + j]);
-                }
-                for (let k=0; k<pol2N; k++) {
-                    pol2_e_test[k] = F.add(F.mul(pol2_e_test[k], yS[k]), fx);
-                }
-            }
-*/
-
-            ////// End Test Code
-
             let sinv = shiftInv;
             const wi = F.inv(F.w[polBits]);
             for (let g = 0; g<pol.length/nX; g++) {
@@ -78,9 +47,6 @@ class FRI {
                     ppar[i] = pol[(i*pol2N)+g];
                 }
                 const ppar_c = F.ifft(ppar);
-/*
-                const sinv = F.inv(F.mul( shift, F.exp(  F.w[polBits], g)));
-*/
                 polMulAxi(F, ppar_c, F.one, sinv);    // Multiplies coefs by 1, shiftInv, shiftInv^2, shiftInv^3, ......
 
                 pol2_e[g] = evalPol(F, ppar_c, special_x);
@@ -88,7 +54,6 @@ class FRI {
             }
 
 
-            ////// End of production code
 
             proof[si] = {};
 
@@ -96,13 +61,11 @@ class FRI {
                 const nGroups = 1<< this.steps[si+1].nBits;
 
                 let groupSize = (1 << this.steps[si].nBits) / nGroups;
-    
-                GMT[si] = new GroupMerkle(this.M, nGroups ,groupSize, 3);
-    
-                tree[si] = GMT[si].merkelize(pol2_e);
-    
-                proof[si].root2= GMT[si].root(tree[si]);
-                transcript.put(GMT[si].root(tree[si]));    
+
+                tree[si] = MerkleHash.merkelize(pol2_e, 3, groupSize, nGroups);
+
+                proof[si].root2= MerkleHash.root(tree[si]);
+                transcript.put(MerkleHash.root(tree[si]));
             } else {
                 for (let i=0; i<pol2_e.length; i++) {
                     transcript.put(pol2_e[i]);
@@ -123,27 +86,22 @@ class FRI {
 
         const ys = transcript.getPermutations(this.nQueries, this.steps[0].nBits);
 
-        // TODO Remove
-        ys[0] =0;
-
         for (let si = 0; si<this.steps.length; si++) {
 
             proof[si].polQueries = [];
-//            proof[si].pol2Queries = [];
             for (let i=0; i<ys.length; i++) {
-                const gIdx = 
-//                proof[si].pol2Queries.push(GMT[si].getElementProof(tree[si], ys[i]));
+                const gIdx =
                 proof[si].polQueries.push(queryPol(ys[i]));
             }
 
 
             if (si < this.steps.length -1) {
                 queryPol = (idx) => {
-                    return GMT[si].getGroupProof(tree[si], idx);
+                    return MerkleHash.getGroupProof(tree[si], idx);
                 }
 
                 for (let i=0; i<ys.length; i++) {
-                    ys[i] = ys[i] % (1 << this.steps[si+1].nBits);                   
+                    ys[i] = ys[i] % (1 << this.steps[si+1].nBits);
                 }
             }
         }
@@ -168,8 +126,6 @@ class FRI {
                 const nGroups = 1<< this.steps[si+1].nBits;
 
                 let groupSize = (1 << this.steps[si].nBits) / nGroups;
-    
-                GMT[si] = new GroupMerkle(this.M, nGroups ,groupSize, 3);
                 transcript.put(proof[si].root2);
             } else {
                 for (let i=0; i<proof[proof.length-1].length; i++) {
@@ -181,9 +137,6 @@ class FRI {
 
         const nQueries = this.nQueries;
         const ys = transcript.getPermutations(this.nQueries, this.steps[0].nBits);
-
-        // TODO Remove
-        ys[0] =0;
 
         let polBits = this.inNBits;
         let shift = F.shift;
@@ -197,10 +150,6 @@ class FRI {
                 const pgroup_e = checkQuery(proofItem.polQueries[i], ys[i]);
                 if (!pgroup_e) return false;
 
-                // const res = GMT.verifyElementProof(proofItem.root2, proofItem.pol2Queries[i][1], ys[i], proofItem.pol2Queries[i][0]);
-
-                // if (res !== true) return false;
-
                 const pgroup_c = F.ifft(pgroup_e);
                 const sinv = F.inv(F.mul( shift, F.exp(  F.w[polBits], ys[i])));
                 polMulAxi(F, pgroup_c, F.one, sinv);    // Multiplies coefs by 1, shiftInv, shiftInv^2, shiftInv^3, ......
@@ -210,7 +159,7 @@ class FRI {
 
                 if (si < this.steps.length - 1) {
                     const nextNGroups = 1 << this.steps[si+1].nBits
-                    const groupIdx  =Math.floor(ys[i] / nextNGroups); 
+                    const groupIdx  =Math.floor(ys[i] / nextNGroups);
                     if (!F.eq(proof[si+1].polQueries[i][0][groupIdx], ev)) return false;
                 } else {
                     if (!F.eq(proof[si+1][ys[i]], ev)) return false;
@@ -218,7 +167,7 @@ class FRI {
             }
 
             checkQuery = (query, idx) => {
-                const res = GMT[si].verifyGroupProof(proofItem.root2, query[1], idx, query[0]);
+                const res = MerkleHash.verifyGroupProof(proofItem.root2, query[1], idx, query[0]);
                 if (!res) return false;
                 return query[0];
             }
@@ -228,7 +177,7 @@ class FRI {
 
             if (si < this.steps.length -1) {
                 for (let i=0; i<ys.length; i++) {
-                    ys[i] = ys[i] % (1 << this.steps[si+1].nBits);                   
+                    ys[i] = ys[i] % (1 << this.steps[si+1].nBits);
                 }
             }
 

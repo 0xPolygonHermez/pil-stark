@@ -1,0 +1,11 @@
+node_modules
+.vscode
+dist
+proof.json
+logs.json
+logs-trace
+logs-full-trace
+cache-main-pil.json
+testvectors/commit.bin
+testvectors/constants.bin
+tmp

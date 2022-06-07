@@ -1,13 +1,10 @@
 
 const assert = require("assert");
-const Merkle = require("./merkle.js");
-const MerkleGroupMultipolHash = require("./merkle_group_multipol_lhash.js");
-const LinearHash = require("./linearhash.js");
+const MerkleHash = require("./merkle_hash.js");
 const Transcript = require("./transcript");
 const { extendPol, buildZhInv, calculateH1H2, calculateZ } = require("./polutils.js");
 const { log2 } = require("./utils");
 const buildPoseidon = require("./poseidon");
-// const defaultStarkStruct = require("./starkstruct");
 const FRI = require(".//fri.js");
 const starkInfoGen = require("./starkinfo_gen.js");
 
@@ -17,17 +14,10 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     const N = cmPols[0].length;
     const extendBits = starkStruct.nBitsExt - starkStruct.nBits;
     const Nbits = log2(N);
-    assert(1 << Nbits == N, "N must be a power of 2"); 
+    assert(1 << Nbits == N, "N must be a power of 2");
 
     const poseidon = await buildPoseidon();
     const F = poseidon.F;
-
-    const LH = new LinearHash(poseidon);
-    const M = new Merkle(poseidon);
-
-    const groupSize = 1 << (starkStruct.nBitsExt - starkStruct.steps[0].nBits);
-    const nGroups = 1 << starkStruct.steps[0].nBits;
-    const MGPC = new MerkleGroupMultipolHash(LH, M,nGroups, groupSize, constPols.length);
 
     const fri = new FRI( poseidon, starkStruct );
 
@@ -86,14 +76,13 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
         pols2ns.exps[i] = [];
     }
 
-// 1.- Prepare commited polynomials. 
+// 1.- Prepare commited polynomials.
     for (let i=0; i<cmPols.length; i++) {
         console.log(`Preparing polynomial ${i}`);
         if (cmPols[i].length!= N) {
             throw new Error(`Polynomial ${i} does not have the right size: ${cmPols[i].length} and should be ${N}`);
         }
-        pols.cm[i] = new Array(N);
-        for (let j=0; j<N; j++) pols.cm[i][j] = F.e(cmPols[i][j]);
+        pols.cm[i+k] = cmPols[i+k];
     }
 
     for (let i=0; i<constPols.length; i++) {
@@ -101,10 +90,9 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
         if (constPols[i].length!= N) {
             throw new Error(`Constant Polynomial ${i} does not have the right size: ${constPols[i].length} and should be ${N}`);
         }
-        pols.const[i] = new Array(N);
+        pols.const[i] = constPols[i];
         pols2ns.const[i] = new Array(N << extendBits);
-        for (let j=0; j<(N<<extendBits); j++) pols2ns.const[i][j] = MGPC.getElement(constTree, i, j);
-        for (let j=0; j<N; j++) pols.const[i][j] = F.e(constPols[i][j]);
+        for (let j=0; j<(N<<extendBits); j++) pols2ns.const[i][j] = MerkleHash.getElement(constTree, j, i);
     }
 
 
@@ -127,19 +115,14 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     calculateExps(F, pols2ns, starkInfo.step12ns);
 
     console.log("Merkelizing 1....");
+    const tree1 = MerkleHash.merkelize([ ...pols2ns.cm, ...pols2ns.q], 1, pols2ns.cm.length + pols2ns.q.length, N<<extendBits);
+    transcript.put(MerkleHash.root(tree1));
 
-    const MGP1 = new MerkleGroupMultipolHash(LH, M, nGroups, groupSize, pols2ns.cm.length + pols2ns.q.length);
-    const tree1 = MGP1.merkelize([ 
-        ...pols2ns.cm, 
-        ...pols2ns.q, 
-    ]);
-
-    transcript.put(MGP1.root(tree1));
-
-
+///////////
 // 2.- Caluculate plookups h1 and h2
+///////////
     pols.challanges[0] = transcript.getField(); // u
-    pols.challanges[1] = transcript.getField(); // defVal    
+    pols.challanges[1] = transcript.getField(); // defVal
 
     calculateExps(F, pols, starkInfo.step2prev);
 
@@ -155,21 +138,17 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     calculateExps(F, pols2ns, starkInfo.step22ns);
 
     console.log("Merkelizing 2....");
-    const MGP2 = new MerkleGroupMultipolHash(LH, M, nGroups, groupSize, starkInfo.nCm2 + starkInfo.nQ2);
-    const tree2 = MGP2.merkelize([
-        ...pols2ns.cm.slice(starkInfo.nCm1 ), 
-        ...pols2ns.q.slice(starkInfo.nQ1 ), 
-    ]);
-    transcript.put(MGP2.root(tree2));
+    const tree2 = MerkleHash.merkelize([
+        ...pols2ns.cm.slice(starkInfo.nCm1 ),
+        ...pols2ns.q.slice(starkInfo.nQ1 ),
+    ], 3, starkInfo.nCm2 + starkInfo.nQ2, N << extendBits);
+    transcript.put(MerkleHash.root(tree2));
 
-
+///////////
 // 3.- Compute Z polynomials
+///////////
     pols.challanges[2] = transcript.getField(); // gamma
     pols.challanges[3] = transcript.getField(); // betta
-
-    // TODO REMOVE
-    // pols.challanges[2] = 0n; 
-    // pols.challanges[3] = 1n; 
 
 
     calculateExps(F, pols, starkInfo.step3prev);
@@ -192,25 +171,20 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     calculateExps(F, pols, starkInfo.step3);
     await extendCms(starkInfo.qs3);
     calculateExps(F, pols2ns, starkInfo.step32ns);
- 
+
     console.log("Merkelizing 3....");
 
-    const MGP3 = new MerkleGroupMultipolHash(LH, M, nGroups, groupSize, starkInfo.nCm3 + starkInfo.nQ3);
-    const tree3 = MGP3.merkelize([
-        ...pols2ns.cm.slice(starkInfo.nCm1 + starkInfo.nCm2 ), 
-        ...pols2ns.q.slice(starkInfo.nQ1 + starkInfo.nQ2 ), 
-    ]);
-
-    transcript.put(MGP3.root(tree3));
+    const tree3 = MerkleHash.merkelize([
+        ...pols2ns.cm.slice(starkInfo.nCm1 + starkInfo.nCm2 ),
+        ...pols2ns.q.slice(starkInfo.nQ1 + starkInfo.nQ2 ),
+    ], 3, starkInfo.nCm3 + starkInfo.nQ3, N << extendBits);
+    transcript.put(MerkleHash.root(tree3));
 
 
-
+///////////
 // 4. Compute C Polynomial (FRI)
+///////////
     pols.challanges[4] = transcript.getField(); // vc
-
-    // TODO REMOVE
-    //pols.challanges[4] = 1n; // vc
-
 
     calculateExps(F, pols, starkInfo.step4);
     await extendCms(starkInfo.qs4);
@@ -218,23 +192,19 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 
     console.log("Merkelizing 4....");
 
-    const MGP4 = new MerkleGroupMultipolHash(LH, M, nGroups, groupSize, starkInfo.nCm4 + starkInfo.nQ4);
-    const tree4 = MGP4.merkelize([
-        ...pols2ns.cm.slice(starkInfo.nCm1 + starkInfo.nCm2 + starkInfo.nCm3), 
-        ...pols2ns.q.slice(starkInfo.nQ1 + starkInfo.nQ2 + starkInfo.nQ3), 
-    ]);
-
-    transcript.put(MGP4.root(tree4));
+    const tree4 = MerkleHash.merkelize([
+        ...pols2ns.cm.slice(starkInfo.nCm1 + starkInfo.nCm2 + starkInfo.nCm3),
+        ...pols2ns.q.slice(starkInfo.nQ1 + starkInfo.nQ2 + starkInfo.nQ3),
+    ], 3, starkInfo.nCm4 + starkInfo.nQ4, N << extendBits);
+    transcript.put(MerkleHash.root(tree4));
 
 
+///////////
 // 5. Compute FRI Polynomial
-
+///////////
     pols.challanges[5] = transcript.getField(); // v1
     pols.challanges[6] = transcript.getField(); // v2
     pols.challanges[7] = transcript.getField(); // xi
-
-    // TODO REMOVE
-    // pols.challanges[7] = 0n; // xi
 
 // Calculate Evals
 
@@ -250,14 +220,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     }
     LEv = F.ifft(LEv);
     LpEv = F.ifft(LpEv);
-/*
-    let r = 1n;
-    for (let k=0; k<N; k++) {
-        LEv[k] = F.mul(LEv[k], r);
-        LpEv[k] = F.mul(LpEv[k], r);
-        r = F.mul(r, F.shiftInv);
-    }
-*/
 
     for (let i=0; i<starkInfo.evMap.length; i++) {
         const ev = starkInfo.evMap[i];
@@ -301,11 +263,11 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 
     const queryPol = (idx) => {
         return [
-            MGP1.getGroupProof(tree1, idx),
-            MGP2.getGroupProof(tree2, idx),
-            MGP3.getGroupProof(tree3, idx),
-            MGP4.getGroupProof(tree4, idx),
-            MGPC.getGroupProof(constTree, idx),
+            MerkleHash.getGroupProof(tree1, idx),
+            MerkleHash.getGroupProof(tree2, idx),
+            MerkleHash.getGroupProof(tree3, idx),
+            MerkleHash.getGroupProof(tree4, idx),
+            MerkleHash.getGroupProof(constTree, idx),
         ];
     }
 
@@ -313,16 +275,16 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 
     return {
         proof: {
-            root1: MGP1.root(tree1),
-            root2: MGP2.root(tree2),
-            root3: MGP3.root(tree3),
-            root4: MGP4.root(tree4),
+            root1: MerkleHash.root(tree1),
+            root2: MerkleHash.root(tree2),
+            root3: MerkleHash.root(tree3),
+            root4: MerkleHash.root(tree4),
             evals: pols.evals,
             fri: friProof
         },
         publics: pols.publics
     }
-    
+
 
     async function extendCms(qs) {
         for (let i=0; i<pols.cm.length; i++) {

@@ -45,7 +45,7 @@ function unsringifyConstants(Fr, o) {
  * Build poseidon hash function with golden prime
  * @returns {Object} poseidon function
  */
-async function buildPoseidon() {
+function buildPoseidon() {
     const goldenPrime = (1n << 64n) - (1n << 32n) + 1n;
 
     const F = new F3g();
@@ -115,9 +115,9 @@ async function buildPoseidon() {
  * singleton to build poseidon once
  * @returns {Object} - poseidon hash function
  */
-async function getPoseidon() {
+function getPoseidon() {
     if (isBuilt === false) {
-        poseidon = await buildPoseidon();
+        poseidon = buildPoseidon();
         isBuilt = true;
     }
 

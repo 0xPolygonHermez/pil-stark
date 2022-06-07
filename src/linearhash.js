@@ -8,8 +8,8 @@ module.exports = class LinearHash {
     }
 
     hash(vals) {
-        if (vals.length == 0) return [];
         let st = [0n, 0n, 0n, 0n];
+        if (vals.length == 0) return st;
         let inHash = [];
         for (let i=0; i<vals.length;i++) {
             if (Array.isArray(vals[i])) {

@@ -2,8 +2,6 @@ const chai = require("chai");
 const assert = chai.assert;
 const F1Field = require("../src/f3g");
 const path = require("path");
-// const starkGen = require("../src/stark_gen.js");
-const MerkleGroupMultipolLHash = require("../src/merkle_group_multipol_lhash.js");
 const buildPoseidon = require("../src/poseidon.js");
 const starkGen = require("../src/stark_gen.js");
 const starkVerify = require("../src/stark_verify.js");
@@ -15,9 +13,7 @@ const { createCommitedPols, createConstantPols, compile, verifyPil } = require("
 const smGlobal = require("../src/sm/sm_global.js");
 const smConnection = require("./sm_connection/sm_connection.js");
 
-
-const Merkle = require("../src/merkle.js");
-const LinearHash = require("../src/linearhash.js");
+const MerkleHash = require("../src/merkle_hash.js");
 const { extendPol } = require("../src/polutils");
 
 
@@ -31,7 +27,7 @@ describe("test connection sm", async function () {
             nBitsExt: 11,
             nQueries: 128,
             steps: [
-                {nBits: 11}, 
+                {nBits: 11},
                 {nBits: 3}
             ]
         };
@@ -41,7 +37,7 @@ describe("test connection sm", async function () {
         const [constPols, constPolsArray, constPolsDef] =  createConstantPols(pil);
         const [cmPols, cmPolsArray, cmPolsDef] =  createCommitedPols(pil);
 
-        
+
         await smGlobal.buildConstants(constPols.Global, constPolsDef.Global);
         await smConnection.buildConstants(constPols.Connection, constPolsDef.Connection);
 
@@ -60,25 +56,20 @@ describe("test connection sm", async function () {
         }
 
         const poseidon = await buildPoseidon();
-        const LH = new LinearHash(poseidon);
-        const M = new Merkle(poseidon);
-
-        const groupSize = 1 << (starkStruct.nBitsExt - starkStruct.steps[0].nBits);
-        const nGroups = 1 << starkStruct.steps[0].nBits;
-        const MM = new MerkleGroupMultipolLHash(LH, M,nGroups, groupSize, constPolsArray.length);
 
         const constPolsArrayE = [];
         for (let i=0; i<constPolsArray.length; i++) {
             constPolsArrayE[i] = await extendPol(poseidon.F, constPolsArray[i], 1);
         }
-        const constTree = MM.merkelize(constPolsArrayE);
+
+        const constTree = MerkleHash.merkelize(constPolsArrayE, 1, constPolsArrayE.length, constPolsArrayE[0].length);
 
 
         const resP = await starkGen(cmPolsArray, constPolsArray, constTree, pil, starkStruct);
 
         const pil2 = await compile(Fr, path.join(__dirname, "sm_connection", "connection.pil"));
 
-        const resV = await starkVerify(resP.proof, resP.publics, pil2, MM.root(constTree), starkStruct);
+        const resV = await starkVerify(resP.proof, resP.publics, pil2, MerkleHash.root(constTree), starkStruct);
 
         assert(resV==true);
 
