@@ -4,8 +4,8 @@ module.exports.buildConstants = async function (pols, polsDef) {
     const N = Number(polsDef.LLAST.polDeg);
 
     for ( let i=0; i<N; i++) {
-        pols.L1.push(i == 0);
-        pols.LLAST.push(i == N-1);
+        pols.L1.push((i == 0) ? 1n : 0n);
+        pols.LLAST.push((i == N-1) ? 1n : 0n);
     }
 }
 

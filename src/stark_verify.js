@@ -115,7 +115,7 @@ function executeCode(F, ctx, code) {
             case "const": return ctx.consts[r.id];
             case "eval": return ctx.evals[r.id];
             case "number": return BigInt(r.value);
-            case "public": return ctx.publics[r.id];
+            case "public": return BigInt(ctx.publics[r.id]);
             case "challange": return ctx.challanges[r.id];
             case "xDivXSubXi": return ctx.xDivXSubXi;
             case "xDivXSubWXi": return ctx.xDivXSubWXi;

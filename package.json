@@ -4,7 +4,10 @@
   "description": "Build a stark from a PIL",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "fibonacci_buidconst": "node test/sm_fibonacci/main_genconst_fibonacci.js -o tmp/fibonacci.const.bin",
+    "fibonacci_exec": "node test/sm_fibonacci/main_exec_fibonacci.js -i tmp/fibonacci.input.json -o tmp/fibonacci.commit.bin",
+    "fibonacci_buildconsttree": "node src/main_buildconsttree.js -c tmp/fibonacci.const.bin -p test/sm_fibonacci/fibonacci.pil -s tmp/fibonacci.starkstruct.json -t tmp/fibonacci.consttree.bin -v tmp/fibonacci.verkey.json"
   },
   "keywords": [
     "stark",
@@ -15,6 +18,7 @@
     "hermez"
   ],
   "dependencies": {
+    "ejs": "^3.1.8",
     "zkpil": "https://github.com/hermeznetwork/zkpil"
   },
   "author": "Jordi Baylina",
@@ -22,6 +26,7 @@
   "devDependencies": {
     "chai": "^4.3.6",
     "circom_tester": "^0.0.11",
+    "json-bigint": "^1.0.0",
     "mocha": "^10.0.0"
   }
 }

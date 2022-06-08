@@ -82,7 +82,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
         if (cmPols[i].length!= N) {
             throw new Error(`Polynomial ${i} does not have the right size: ${cmPols[i].length} and should be ${N}`);
         }
-        pols.cm[i+k] = cmPols[i+k];
+        pols.cm[i] = cmPols[i];
     }
 
     for (let i=0; i<constPols.length; i++) {

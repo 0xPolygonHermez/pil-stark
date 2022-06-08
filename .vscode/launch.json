@@ -159,7 +159,59 @@
                 "${workspaceFolder}/test/poseidon.circuit.test.js"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "fibonacci build consttree",
+            "program": "src/main_buildconsttree.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-c ${workspaceFolder}/tmp/fibonacci.const.bin",
+                "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci.pil",
+                "-s ${workspaceFolder}/tmp/fibonacci.starkstruct.json",
+                "-t ${workspaceFolder}/tmp/fibonacci.consttree.bin",
+                "-v ${workspaceFolder}/tmp/fibonacci.verkey.json",
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "fibonacci build proof",
+            "program": "src/main_prover.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-m ${workspaceFolder}/tmp/fibonacci.commit.bin",
+                "-c ${workspaceFolder}/tmp/fibonacci.const.bin",
+                "-t ${workspaceFolder}/tmp/fibonacci.consttree.bin",
+                "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci.pil",
+                "-s ${workspaceFolder}/tmp/fibonacci.starkstruct.json",
+                "-o ${workspaceFolder}/tmp/fibonacci.proof.json",
+                "-b ${workspaceFolder}/tmp/fibonacci.public.json",
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "fibonacci verify proof",
+            "program": "src/main_verifier.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci.pil",
+                "-s ${workspaceFolder}/tmp/fibonacci.starkstruct.json",
+                "-o ${workspaceFolder}/tmp/fibonacci.proof.json",
+                "-b ${workspaceFolder}/tmp/fibonacci.public.json",
+                "-v ${workspaceFolder}/tmp/fibonacci.verkey.json"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
         }
-
     ]
 }

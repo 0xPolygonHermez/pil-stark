@@ -1,0 +1,103 @@
+
+
+template VerifyEvaluations {
+    signal input challanges[8];
+    signal input
+
+<%
+    function ref(r) {
+        if (r.type == "eval") {
+            return "eval[" + r.id + "]";
+        } else if (r.type == "challange") {
+            return "challange[" + r.id + "]";
+        } else if (r.type == "public") {
+            return "public[" + r.id + "]";
+        } else if (r.type == "x") {
+            return "challange[7]";
+        } else if (r.type == "Z") {
+            return "Z";
+        } else if (r.type == "tmp") {
+            return "tmp_"+r.id;
+        } else {
+            return r.value;
+        }
+    }
+-%>
+<% var tmpNameId = 0;                                                                   -%>
+<% for(let i=0; i<starkInfo.verifierCode.length; i++) {                                 -%>
+<%      let inst = starkInfo.verifierCode[i];                                           -%>
+<%      if (inst.dest.type == "tmp") {                                                  -%>
+<%          if (inst.dest.dim == 1) {                                                   -%>
+    signal tmp_<%- inst.dest.id %>;
+<%          } else if (inst.dest.dim == 3)  {                                           -%>
+    signal tmp_<%- inst.dest.id %>[3];
+<%          } else throw new Error("Invalid dimension");                                -%>
+<%      }                                                                               -%>
+
+<%      if (inst.op == "add") {                                                         -%>
+<%          if ((inst.src[0].dim==1) && (inst.src[0].dim==1)) {                         -%>
+    <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>;
+<%          } else if ((inst.src[0].dim==1) && (inst.src[0].dim==3)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>[0];
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[1]) %>[1];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[1]) %>[2];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[0].dim==1)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>[0];
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[0].dim==1)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>[0];
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[1]) %> + <%- ref(inst.src[1]) %>[1];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[2]) %> + <%- ref(inst.src[1]) %>[2];
+<%          } else throw new Error("Invalid src dimmensions");                          -%>
+<%      } else if (inst.op == "sub") {                                                  -%>
+<%          if ((inst.src[0].dim==1) && (inst.src[0].dim==1)) {                         -%>
+    <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>;
+<%          } else if ((inst.src[0].dim==1) && (inst.src[0].dim==3)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>[0];
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[1]) %>[1];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[1]) %>[2];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[0].dim==1)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>[0];
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[0].dim==1)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>[0];
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[1]) %> - <%- ref(inst.src[1]) %>[1];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[2]) %> - <%- ref(inst.src[1]) %>[2];
+<%          } else throw new Error("Invalid src dimmensions");                          -%>
+<%      } else if (inst.op == "mul") {                                                  -%>
+<%          if ((inst.src[0].dim==1) && (inst.src[0].dim==1)) {                         -%>
+    <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %>;
+<%          } else if ((inst.src[0].dim==1) && (inst.src[0].dim==3)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %>[0];
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %>[1];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %>[2];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[0].dim==1)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %>[0];
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[1]) %> * <%- ref(inst.src[1]) %>[0];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[2]) %> * <%- ref(inst.src[1]) %>[0];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[0].dim==1)) {                  -%>
+<%              const cmpName = "cmul_" + tmpNameId++;                                  -%>
+    component <%- cmpName%> = CMul();
+    <%- cmpName %>.ina[0] <== <%- ref(inst.src[0]) %>[0];
+    <%- cmpName %>.ina[1] <== <%- ref(inst.src[0]) %>[1];
+    <%- cmpName %>.ina[2] <== <%- ref(inst.src[0]) %>[2];
+    <%- cmpName %>.inb[0] <== <%- ref(inst.src[1]) %>[0];
+    <%- cmpName %>.inb[1] <== <%- ref(inst.src[1]) %>[1];
+    <%- cmpName %>.inb[2] <== <%- ref(inst.src[1]) %>[2];
+    <%- ref(inst.dest) %>[0] <== <%- cmpName %>.out[0];
+    <%- ref(inst.dest) %>[1] <== <%- cmpName %>.out[1];
+    <%- ref(inst.dest) %>[2] <== <%- cmpName %>.out[2];
+<%          } else throw new Error("Invalid src dimmensions");                          -%>
+<%      } else if (inst.op == "copy") {                                                 -%>
+<%          if (inst.src[0].dim==1) {                                                   -%>
+    <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %>;
+<%          } else if (inst.src[0].dim==3) {                                            -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %>[0];
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2];
+<%          } else throw new Error("Invalid src dimmensions");                          -%>
+<%      } else throw new Error("Invalid op");                                           -%>
+
+<% } -%>

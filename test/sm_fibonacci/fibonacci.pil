@@ -4,7 +4,7 @@ constant %N = 2**10;
 namespace Fibonacci(%N);
 
 
-    pol bool constant L1, LLAST;
+    pol constant L1, LLAST;
     pol commit l1,l2;
 
     public in1 = l2(0);
@@ -14,7 +14,7 @@ namespace Fibonacci(%N);
     (l2' - l1)*(1-LLAST) = 0;
 
     pol next = l1*l1 + l2*l2;
-    
+
     (l1' - next)*(1-LLAST) = 0;
 
     L1 * (l2 - :in1) = 0;
