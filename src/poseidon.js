@@ -54,7 +54,8 @@ function buildPoseidon() {
 
     const pow7 = (a) => F.mul(a, F.square(F.mul(a, F.square(a, a))));
 
-    poseidon = function (inputs, capacity) {
+    poseidon = function (inputs, capacity, nOuts) {
+        nOuts = nOuts || 4;
         if (inputs.length !== 8) throw new Error('Invalid Input size (must be 8)');
 
         let state;
@@ -103,7 +104,7 @@ function buildPoseidon() {
         state = state.map((a) => pow7(a));
         state = state.map((_, i) => state.reduce((acc, a, j) => F.add(acc, F.mul(M[j][i], a)), F.zero));
 
-        return [state[0], state[1], state[2], state[3]];
+        return state.slice(0, nOuts);
     };
 
     poseidon.F = F;

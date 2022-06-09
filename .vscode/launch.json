@@ -161,6 +161,33 @@
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
         {
+            "name": "fibonacci build constant",
+            "program": "test/sm_fibonacci/main_genconst_fibonacci.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-o tmp/fibonacci.const.bin"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "fibonacci exec",
+            "program": "test/sm_fibonacci/main_exec_fibonacci.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-i test/sm_fibonacci/fibonacci.input.json",
+                "-o tmp/fibonacci.commit.bin"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
             "name": "fibonacci build consttree",
             "program": "src/main_buildconsttree.js",
             "request": "launch",
@@ -171,7 +198,7 @@
             "args": [
                 "-c ${workspaceFolder}/tmp/fibonacci.const.bin",
                 "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci.pil",
-                "-s ${workspaceFolder}/tmp/fibonacci.starkstruct.json",
+                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.starkstruct.json",
                 "-t ${workspaceFolder}/tmp/fibonacci.consttree.bin",
                 "-v ${workspaceFolder}/tmp/fibonacci.verkey.json",
             ],
@@ -190,7 +217,7 @@
                 "-c ${workspaceFolder}/tmp/fibonacci.const.bin",
                 "-t ${workspaceFolder}/tmp/fibonacci.consttree.bin",
                 "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci.pil",
-                "-s ${workspaceFolder}/tmp/fibonacci.starkstruct.json",
+                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.starkstruct.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.proof.json",
                 "-b ${workspaceFolder}/tmp/fibonacci.public.json",
             ],
@@ -206,10 +233,26 @@
             "type": "pwa-node",
             "args": [
                 "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci.pil",
-                "-s ${workspaceFolder}/tmp/fibonacci.starkstruct.json",
+                "-s ${workspaceFolder}/test/sm_fibonacci//fibonacci.starkstruct.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.proof.json",
                 "-b ${workspaceFolder}/tmp/fibonacci.public.json",
                 "-v ${workspaceFolder}/tmp/fibonacci.verkey.json"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "fibonacci generate circom",
+            "program": "src/main_pil2circom.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci.pil",
+                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.starkstruct.json",
+                "-v ${workspaceFolder}/tmp/fibonacci.verkey.json",
+                "-o ${workspaceFolder}/tmp/fibonacci.verifier.circom",
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         }

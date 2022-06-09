@@ -1,17 +1,150 @@
 
+<%
+class Transcript {
+    constructor() {
+        this.state = ["0", "0", "0", "0"];
+        this.pending = [];
+        this.out = [];
+        this.stCnt =0;
+        this.hCnt =0;
+        this.n2bCnt =0;
+
+        this.code = [];
+    }
+
+
+    getField(v) {
+        this.code.push(`${v}[0] <== ${this.getFields1()};`);
+        this.code.push(`${v}[1] <== ${this.getFields1()};`);
+        this.code.push(`${v}[2] <== ${this.getFields1()};`);
+    }
+
+    getFields1() {
+        if (this.out.length == 0) {
+            while (this.pending.length<8) {
+                this.pending.push("0");
+            }
+            this.code.push(`component tcHahs_${this.hCnt++} = Poseidon();`);
+            for (let i=0; i<8; i++) {
+                this.code.push(`tcHahs_${this.hCnt-1}.in[${i}] <== ${this.pending[i]};`);
+            }
+            for (let i=0; i<12; i++) {
+                this.out[i] = `tcHahs_${this.hCnt-1}.out[${i}]`;
+            }
+            for (let i=0; i<4; i++) {
+                this.code.push(`tcHahs_${this.hCnt-1}.capacity[${i}] <== ${this.state[i]};`);
+                this.state[i] = `tcHahs_${this.hCnt-1}.out[${i}]`;
+            }
+            this.pending = [];
+        }
+        const res = this.out.shift();
+        return res;
+    }
+
+    put(a, l) {
+        if (typeof l !== "undefined") {
+            for (let i=0; i<l; i++) {
+                this._add1(`${a}[${i}]`);
+            }
+        } else {
+            this._add1(a);
+        }
+    }
+
+    _add1(a) {
+        this.out = [];
+        this.pending.push(a);
+        if (this.pending.length == 8) {
+            this.code.push(`component tcHahs_${this.hCnt++} = Poseidon();`);
+            for (let i=0; i<8; i++) {
+                this.code.push(`tcHahs_${this.hCnt-1}.in[${i}] <== ${this.pending[i]}`);
+            }
+            for (let i=0; i<12; i++) {
+                this.out[i] = `tcHahs_${this.hCnt-1}.out[${i}]`;
+            }
+            for (let i=0; i<4; i++) {
+                this.code.push(`tcHahs_${this.hCnt-1}.capacity[${i}] <== ${this.state[i]}`);
+                this.state[i] = `tcHahs_${this.hCnt-1}.out[${i}]`;
+            }
+            this.pending = [];
+        }
+    }
+
+    getPermutations(v, n, nBits) {
+        const totalBits = n*nBits;
+        const NFields = Math.floor((totalBits - 1)/63)+1;
+        const n2b = [];
+        for (let i=0; i<NFields; i++) {
+            const f = this.getFields1();
+            n2b[i] = `tcN2b_${this.n2bCnt++}`;
+            this.code.push(`component ${n2b[i]} = Num2Bit_strict();`);
+            this.code.push(`${n2b[i]}.in <== ${f}`);
+        }
+        let curField =0;
+        let curBit =0n;
+        for (let i=0; i<n; i++) {
+            let a = 0;
+            for (let j=0; j<nBits; j++) {
+                this.code.push(`${v}[i][j] <== ${n2b[curField]}.out[$curBit];`);
+                curBit ++;
+                if (curBit == 63) {
+                    curBit = 0n;
+                    curField ++;
+                }
+            }
+            res.push(a);
+        }
+    }
+
+    getCode() {
+        for (let i=0; i<this.code.length; i++) this.code[i] = "    "+this.code[i];
+        return this.code.join("\n");
+    }
+
+}
+
+-%>
+
 
 template VerifyEvaluations {
     signal input challanges[8];
-    signal input
+    signal input evals[<%- starkInfo.evMap.length %>][3];
+    signal input publics[<%- pil.nPublis %>];
+
+    component zMul[<%- starkStruct.nBits %>];
+    for (var i=0; i< <%- starkStruct.nBits %> ; i++) {
+        zMul[i] = CMul();
+        if (i==0) {
+            zMul[i].ina[0] <== challanges[7][0];
+            zMul[i].ina[1] <== challanges[7][1];
+            zMul[i].ina[2] <== challanges[7][2];
+            zMul[i].inb[0] <== challanges[7][0];
+            zMul[i].inb[1] <== challanges[7][1];
+            zMul[i].inb[2] <== challanges[7][2];
+        } else {
+            zMul[i].ina[0] <== zMul[i-1].out[0];
+            zMul[i].ina[1] <== zMul[i-1].out[1];
+            zMul[i].ina[2] <== zMul[i-1].out[2];
+            zMul[i].inb[0] <== zMul[i-1].out[0];
+            zMul[i].inb[1] <== zMul[i-1].out[1];
+            zMul[i].inb[2] <== zMul[i-1].out[2];
+        }
+    }
+
+    signal Z[3];
+
+    Z[0] <== zMul[<%- starkStruct.nBits -1%>][0] -1;
+    Z[1] <== zMul[<%- starkStruct.nBits -1%>][1];
+    Z[2] <== zMul[<%- starkStruct.nBits -1%>][2];
 
 <%
     function ref(r) {
-        if (r.type == "eval") {
+        if (r.type == "evals") {
             return "eval[" + r.id + "]";
         } else if (r.type == "challange") {
-            return "challange[" + r.id + "]";
+            return "challanges[" + r.id + "]";
         } else if (r.type == "public") {
-            return "public[" + r.id + "]";
+            return "publics[" + r.id + "]";
         } else if (r.type == "x") {
             return "challange[7]";
         } else if (r.type == "Z") {
@@ -35,49 +168,49 @@ template VerifyEvaluations {
 <%      }                                                                               -%>
 
 <%      if (inst.op == "add") {                                                         -%>
-<%          if ((inst.src[0].dim==1) && (inst.src[0].dim==1)) {                         -%>
+<%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
     <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>;
-<%          } else if ((inst.src[0].dim==1) && (inst.src[0].dim==3)) {                  -%>
+<%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
     <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>[0];
     <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[1]) %>[1];
     <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[1]) %>[2];
-<%          } else if ((inst.src[0].dim==3) && (inst.src[0].dim==1)) {                  -%>
-    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>[0];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %>[0] + <%- ref(inst.src[1]) %>;
     <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1];
     <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2];
-<%          } else if ((inst.src[0].dim==3) && (inst.src[0].dim==1)) {                  -%>
-    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>[0];
-    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[1]) %> + <%- ref(inst.src[1]) %>[1];
-    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[2]) %> + <%- ref(inst.src[1]) %>[2];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %>[0] + <%- ref(inst.src[1]) %>[0];
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1] + <%- ref(inst.src[1]) %>[1];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2] + <%- ref(inst.src[1]) %>[2];
 <%          } else throw new Error("Invalid src dimmensions");                          -%>
 <%      } else if (inst.op == "sub") {                                                  -%>
-<%          if ((inst.src[0].dim==1) && (inst.src[0].dim==1)) {                         -%>
+<%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
     <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>;
-<%          } else if ((inst.src[0].dim==1) && (inst.src[0].dim==3)) {                  -%>
+<%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
     <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>[0];
     <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[1]) %>[1];
     <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[1]) %>[2];
-<%          } else if ((inst.src[0].dim==3) && (inst.src[0].dim==1)) {                  -%>
-    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>[0];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %>[0] - <%- ref(inst.src[1]) %>;
     <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1];
     <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2];
-<%          } else if ((inst.src[0].dim==3) && (inst.src[0].dim==1)) {                  -%>
-    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>[0];
-    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[1]) %> - <%- ref(inst.src[1]) %>[1];
-    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[2]) %> - <%- ref(inst.src[1]) %>[2];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %>[0] - <%- ref(inst.src[1]) %>[0];
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1] - <%- ref(inst.src[1]) %>[1];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2] - <%- ref(inst.src[1]) %>[2];
 <%          } else throw new Error("Invalid src dimmensions");                          -%>
 <%      } else if (inst.op == "mul") {                                                  -%>
-<%          if ((inst.src[0].dim==1) && (inst.src[0].dim==1)) {                         -%>
+<%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
     <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %>;
-<%          } else if ((inst.src[0].dim==1) && (inst.src[0].dim==3)) {                  -%>
+<%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
     <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %>[0];
     <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %>[1];
     <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %>[2];
-<%          } else if ((inst.src[0].dim==3) && (inst.src[0].dim==1)) {                  -%>
-    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %>[0];
-    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[1]) %> * <%- ref(inst.src[1]) %>[0];
-    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[2]) %> * <%- ref(inst.src[1]) %>[0];
-<%          } else if ((inst.src[0].dim==3) && (inst.src[0].dim==1)) {                  -%>
+<%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %>[0] * <%- ref(inst.src[1]) %>;
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1] * <%- ref(inst.src[1]) %>;
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2] * <%- ref(inst.src[1]) %>;
+<%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
 <%              const cmpName = "cmul_" + tmpNameId++;                                  -%>
     component <%- cmpName%> = CMul();
     <%- cmpName %>.ina[0] <== <%- ref(inst.src[0]) %>[0];
@@ -101,3 +234,47 @@ template VerifyEvaluations {
 <%      } else throw new Error("Invalid op");                                           -%>
 
 <% } -%>
+
+// Final Verification
+<% const lastInst = starkInfo.verifierCode[starkInfo.verifierCode.length-1]             -%>
+<% if (lastInst.dest.dim == 3)  {                                                       -%>
+    <%- ref(lastInst.dest) %>[0] === 0;
+    <%- ref(lastInst.dest) %>[1] === 0;
+    <%- ref(lastInst.dest) %>[2] === 0;
+<% } else if (lastInst.dest.dim == 3)  {                                                -%>
+    <%- ref(lastInst.dest) %> === 0;
+<% } else throw new Error("Invalid src dimmensions");                                   -%>
+
+}
+
+
+template StarkVerifier() {
+    signal input publics[<%- pil.nPublis %>];
+    signal input root1[4];
+    signal input root2[4];
+    signal input root3[4];
+    signal input root4[4];
+    signal input evals[<%- starkInfo.evMap.length %>][3];
+
+
+<%
+const transcript = new Transcript();
+transcript.put("root1", 4);
+transcript.getField("challanges[0]", 3);
+transcript.getField("challanges[1]", 3);
+transcript.put("root2", 4);
+transcript.getField("challanges[2]", 3);
+transcript.getField("challanges[3]", 3);
+transcript.put("root3", 4);
+transcript.getField("challanges[4]", 3);
+transcript.put("root4", 4);
+transcript.getField("challanges[5]", 3);
+transcript.getField("challanges[6]", 3);
+transcript.getField("challanges[7]", 3);
+-%>
+<%- transcript.getCode() %>
+
+}
+
+
+

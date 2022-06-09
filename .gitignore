@@ -8,4 +8,4 @@ logs-full-trace
 cache-main-pil.json
 testvectors/commit.bin
 testvectors/constants.bin
-tmp
+tmp/*

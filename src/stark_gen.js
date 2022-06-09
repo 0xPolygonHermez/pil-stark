@@ -9,11 +9,9 @@ const FRI = require(".//fri.js");
 const starkInfoGen = require("./starkinfo_gen.js");
 
 module.exports = async function starkGen(cmPols, constPols, constTree, pil, starkStruct) {
-    let eStarkId;
-    let debugId;
-    const N = cmPols[0].length;
+    const N = 1 << starkStruct.nBits;
     const extendBits = starkStruct.nBitsExt - starkStruct.nBits;
-    const Nbits = log2(N);
+    const Nbits = starkStruct.nBits;
     assert(1 << Nbits == N, "N must be a power of 2");
 
     const poseidon = await buildPoseidon();

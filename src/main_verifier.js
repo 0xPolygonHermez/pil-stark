@@ -2,9 +2,9 @@ const fs = require("fs");
 const version = require("../package").version;
 
 const F1Field = require("./f3g");
-const { createCommitedPols, createConstantPols, compile, importPolynomials } = require("zkpil");
+const { compile } = require("zkpil");
 const starkVerify = require("../src/stark_verify.js");
-var JSONbig = require('json-bigint')({ useNativeBigInt: true });;
+var JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });;
 
 const argv = require("yargs")
     .version(version)

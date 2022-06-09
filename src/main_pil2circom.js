@@ -2,16 +2,17 @@ const fs = require("fs");
 const version = require("../package").version;
 
 const pil2circom = require("./pil2circom.js");
-const F1Field = require("./src/f3g");
+const F1Field = require("./f3g.js");
+const { compile } = require("zkpil");
 
 
 const argv = require("yargs")
     .version(version)
     .usage("node main_pil2circom.js -o <verifier.circom> -p <pil.json> -v <verification_key.json>")
     .alias("p", "pil")
+    .alias("s", "starkStruct")
     .alias("v", "verkey")
     .alias("o", "output")
-    .alias("s", "starkStruct")
     .argv;
 
 async function run() {
@@ -22,7 +23,7 @@ async function run() {
     const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "verifier.circom";
     const starkStructFile = typeof(argv.starkStruct) === "string" ?  argv.starkStruct.trim() : "stark_struct.json";
 
-    const pil = await compile(F, path.join(__dirname, "fibonacci.pil"));
+    const pil = await compile(F, pilFile);
     const verKey = JSON.parse(await fs.promises.readFile(verKeyFile, "utf8"));
     const constRoot = [];
     for (let i=0; i<4; i++) {

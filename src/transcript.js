@@ -17,16 +17,15 @@ class Transcript {
             while (this.pending.length<8) {
                 this.pending.push(0n);
             }
-            this.state = this.poseidon(this.pending, this.state);
+            this.out = this.poseidon(this.pending, this.state, 12);
             this.pending = [];
-            this.out = this.state.slice();
+            this.state = this.out.slice(0, 4);
         }
         const res = this.out.shift();
         return res;
     }
 
     put(a) {
-        this.out = [];
         if (Array.isArray(a)) {
             for (let i=0; i<a.length; i++) {
                 this._add1(a[i]);
@@ -37,10 +36,12 @@ class Transcript {
     }
 
     _add1(a) {
+        this.out = [];
         this.pending.push(a);
         if (this.pending.length == 8) {
-            this.state = this.poseidon(this.pending, this.state);
+            this.out = this.poseidon(this.pending, this.state, 12);
             this.pending = [];
+            this.state = this.out.slice(0, 4);
         }
     }
 

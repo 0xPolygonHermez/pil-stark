@@ -6,7 +6,7 @@
   "scripts": {
     "test": "mocha",
     "fibonacci_buidconst": "node test/sm_fibonacci/main_genconst_fibonacci.js -o tmp/fibonacci.const.bin",
-    "fibonacci_exec": "node test/sm_fibonacci/main_exec_fibonacci.js -i tmp/fibonacci.input.json -o tmp/fibonacci.commit.bin",
+    "fibonacci_exec": "node test/sm_fibonacci/main_exec_fibonacci.js -i test/sm_fibonacci/fibonacci.input.json -o tmp/fibonacci.commit.bin",
     "fibonacci_buildconsttree": "node src/main_buildconsttree.js -c tmp/fibonacci.const.bin -p test/sm_fibonacci/fibonacci.pil -s tmp/fibonacci.starkstruct.json -t tmp/fibonacci.consttree.bin -v tmp/fibonacci.verkey.json"
   },
   "keywords": [

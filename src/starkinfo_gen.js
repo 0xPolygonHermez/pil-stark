@@ -713,7 +713,7 @@ function pilCodeGen(ctx, expId, prime, mode) {
     const codeCtx = {
         pil: ctx.pil,
         expId: expId,
-        tmpUsed: 0,
+        tmpUsed: ctx.tmpUsed,
         code: []
     }
 
