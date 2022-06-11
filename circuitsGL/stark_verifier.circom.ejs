@@ -1,3 +1,7 @@
+pragma circom 2.0.4;
+include "../circuitsGL/cmul.circom";
+include "../circuitsGL/poseidon.circom";
+include "../circuitsGL/bitify.circom";
 
 <%
 class Transcript {
@@ -24,7 +28,7 @@ class Transcript {
             while (this.pending.length<8) {
                 this.pending.push("0");
             }
-            this.code.push(`component tcHahs_${this.hCnt++} = Poseidon();`);
+            this.code.push(`component tcHahs_${this.hCnt++} = Poseidon(12);`);
             for (let i=0; i<8; i++) {
                 this.code.push(`tcHahs_${this.hCnt-1}.in[${i}] <== ${this.pending[i]};`);
             }
@@ -55,15 +59,15 @@ class Transcript {
         this.out = [];
         this.pending.push(a);
         if (this.pending.length == 8) {
-            this.code.push(`component tcHahs_${this.hCnt++} = Poseidon();`);
+            this.code.push(`component tcHahs_${this.hCnt++} = Poseidon(12);`);
             for (let i=0; i<8; i++) {
-                this.code.push(`tcHahs_${this.hCnt-1}.in[${i}] <== ${this.pending[i]}`);
+                this.code.push(`tcHahs_${this.hCnt-1}.in[${i}] <== ${this.pending[i]};`);
             }
             for (let i=0; i<12; i++) {
                 this.out[i] = `tcHahs_${this.hCnt-1}.out[${i}]`;
             }
             for (let i=0; i<4; i++) {
-                this.code.push(`tcHahs_${this.hCnt-1}.capacity[${i}] <== ${this.state[i]}`);
+                this.code.push(`tcHahs_${this.hCnt-1}.capacity[${i}] <== ${this.state[i]};`);
                 this.state[i] = `tcHahs_${this.hCnt-1}.out[${i}]`;
             }
             this.pending = [];
@@ -77,22 +81,21 @@ class Transcript {
         for (let i=0; i<NFields; i++) {
             const f = this.getFields1();
             n2b[i] = `tcN2b_${this.n2bCnt++}`;
-            this.code.push(`component ${n2b[i]} = Num2Bit_strict();`);
-            this.code.push(`${n2b[i]}.in <== ${f}`);
+            this.code.push(`component ${n2b[i]} = Num2Bits_strict();`);
+            this.code.push(`${n2b[i]}.in <== ${f};`);
         }
         let curField =0;
         let curBit =0n;
         for (let i=0; i<n; i++) {
             let a = 0;
             for (let j=0; j<nBits; j++) {
-                this.code.push(`${v}[i][j] <== ${n2b[curField]}.out[$curBit];`);
+                this.code.push(`${v}[${i}][${j}] <== ${n2b[curField]}.out[${curBit}];`);
                 curBit ++;
                 if (curBit == 63) {
                     curBit = 0n;
                     curField ++;
                 }
             }
-            res.push(a);
         }
     }
 
@@ -106,10 +109,10 @@ class Transcript {
 -%>
 
 
-template VerifyEvaluations {
-    signal input challanges[8];
+template VerifyEvaluations() {
+    signal input challanges[8][3];
     signal input evals[<%- starkInfo.evMap.length %>][3];
-    signal input publics[<%- pil.nPublis %>];
+    signal input publics[<%- pil.publics.length %>];
 
     component zMul[<%- starkStruct.nBits %>];
     for (var i=0; i< <%- starkStruct.nBits %> ; i++) {
@@ -133,14 +136,14 @@ template VerifyEvaluations {
 
     signal Z[3];
 
-    Z[0] <== zMul[<%- starkStruct.nBits -1%>][0] -1;
-    Z[1] <== zMul[<%- starkStruct.nBits -1%>][1];
-    Z[2] <== zMul[<%- starkStruct.nBits -1%>][2];
+    Z[0] <== zMul[<%- starkStruct.nBits -1%>].out[0] -1;
+    Z[1] <== zMul[<%- starkStruct.nBits -1%>].out[1];
+    Z[2] <== zMul[<%- starkStruct.nBits -1%>].out[2];
 
 <%
     function ref(r) {
-        if (r.type == "evals") {
-            return "eval[" + r.id + "]";
+        if (r.type == "eval") {
+            return "evals[" + r.id + "]";
         } else if (r.type == "challange") {
             return "challanges[" + r.id + "]";
         } else if (r.type == "public") {
@@ -188,8 +191,8 @@ template VerifyEvaluations {
     <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>;
 <%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
     <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>[0];
-    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[1]) %>[1];
-    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[1]) %>[2];
+    <%- ref(inst.dest) %>[1] <== -<%- ref(inst.src[1]) %>[1];
+    <%- ref(inst.dest) %>[2] <== -<%- ref(inst.src[1]) %>[2];
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
     <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %>[0] - <%- ref(inst.src[1]) %>;
     <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1];
@@ -233,6 +236,13 @@ template VerifyEvaluations {
 <%          } else throw new Error("Invalid src dimmensions");                          -%>
 <%      } else throw new Error("Invalid op");                                           -%>
 
+<%      if (inst.dest.type == "tmp") {                                                  -%>
+<%          if (inst.dest.dim == 1) {                                                   -%>
+<%          } else if (inst.dest.dim == 3)  {                                           -%>
+<%          } else throw new Error("Invalid dimension");                                -%>
+<%      }                                                                               -%>
+
+
 <% } -%>
 
 // Final Verification
@@ -249,13 +259,22 @@ template VerifyEvaluations {
 
 
 template StarkVerifier() {
-    signal input publics[<%- pil.nPublis %>];
+    signal input publics[<%- pil.publics.length %>];
     signal input root1[4];
     signal input root2[4];
     signal input root3[4];
     signal input root4[4];
     signal input evals[<%- starkInfo.evMap.length %>][3];
+    signal input friRoots[<%- starkStruct.steps.length-1 %>][4];
+    signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
 
+    signal challanges[8][3];
+    signal special_x[<%- starkStruct.steps.length %>][3];
+    signal ys[<%- starkStruct.nQueries %>][<%- starkStruct.steps[0].nBits %>];
+
+///////////
+// Challange calculation
+///////////
 
 <%
 const transcript = new Transcript();
@@ -271,10 +290,43 @@ transcript.put("root4", 4);
 transcript.getField("challanges[5]", 3);
 transcript.getField("challanges[6]", 3);
 transcript.getField("challanges[7]", 3);
+for (let si=0; si<starkStruct.steps.length; si++) {
+    transcript.getField(`special_x[${si}]`, 3);
+    if (si < starkStruct.steps.length-1) {
+        transcript.put(`friRoots[${si}]`, 4);
+    } else {
+        for (let j=0; j< 1<<starkStruct.steps[starkStruct.steps.length-1].nBits; j++ ) {
+            transcript.put(`finalPol[${j}]`, 3);
+        }
+    }
+}
+transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBits);
+
 -%>
+
 <%- transcript.getCode() %>
 
+///////////
+// COnstrain polynomial check in vauations
+///////////
+    component verifyEvaluations = VerifyEvaluations();
+    for (var i=0; i<8; i++) {
+        for (var k=0; k<3; k++) {
+            verifyEvaluations.challanges[i][k] <== challanges[i][k];
+        }
+    }
+    for (var i=0; i<<%- pil.publics.length %>; i++) {
+        verifyEvaluations.publics[i] <== publics[i];
+    }
+    for (var i=0; i<<%- starkInfo.evMap.length %>; i++) {
+        for (var k=0; k<3; k++) {
+            verifyEvaluations.evals[i][k] <== evals[i][k];
+        }
+    }
+
 }
+
+component main = StarkVerifier();
 
 
 

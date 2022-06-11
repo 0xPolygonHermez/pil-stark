@@ -18,10 +18,10 @@ template MDS() {
     out[11] <-- 15*in[0] + 41*in[1] + 16*in[2] +  2*in[3] + 28*in[4] + 13*in[5] + 13*in[6] + 39*in[7] + 18*in[8] + 34*in[9] + 20*in[10] + 17*in[11];
 }
 
-template Poseidon() {
+template Poseidon(nOuts) {
     signal input in[8];
     signal input capacity[4];
-    signal output out[4];
+    signal output out[nOuts];
 
     signal state[31][12];
     signal f1_x2[4][12];
@@ -184,7 +184,7 @@ template Poseidon() {
         }
     }
 
-    for (var j=0; j<4; j++) {
+    for (var j=0; j<nOuts; j++) {
         out[j] <== state[30][j];
     }
 

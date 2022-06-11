@@ -25,7 +25,7 @@
   "license": "GPL-3.0",
   "devDependencies": {
     "chai": "^4.3.6",
-    "circom_tester": "^0.0.11",
+    "circom_tester": "^0.0.12",
     "json-bigint": "^1.0.0",
     "mocha": "^10.0.0"
   }

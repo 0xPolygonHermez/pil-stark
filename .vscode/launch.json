@@ -255,6 +255,97 @@
                 "-o ${workspaceFolder}/tmp/fibonacci.verifier.circom",
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "StarkVerifier circuit test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/stark_verification.circuit.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "FFT circuit test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/fft.circuit.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "LinearHash circuit test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/linearhash.circuit.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "MerkleHash circuit test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/merklehash.circuit.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "TreeSelector circuit test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/treeselector.circuit.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "eval pol circuit test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/evalpol.circuit.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "Aliascheck circuit test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/aliascheck.circuit.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
         }
     ]
 }

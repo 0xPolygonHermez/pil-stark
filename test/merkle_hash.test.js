@@ -1,5 +1,4 @@
 const MerkleHash = require("../src/merkle_hash.js");
-const buildPoseidon = require("../src/poseidon");
 const chai = require("chai");
 const assert = chai.assert;
 
@@ -68,9 +67,9 @@ describe("merkle hash", async function () {
         assert(MerkleHash.verifyGroupProof(root, mp, idx, groupElements));
     });
     it("It should merkelize and return the right number of elements", async () => {
-        const N = 2**24;
+        const N = 2**14;
         const idx = 2334;
-        const nPols = 700;
+        const nPols = 40;
 
         const pols = [];
         for (let i=0; i<nPols; i++) pols[i] = [];

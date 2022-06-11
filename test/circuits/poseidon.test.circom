@@ -1,5 +1,5 @@
 pragma circom 2.0.4;
 
-include "../../circuits/poseidon.circom";
+include "../../circuitsGL/poseidon.circom";
 
-component main = Poseidon();
+component main = Poseidon(4);

@@ -4,7 +4,7 @@ const version = require("../package").version;
 const F1Field = require("./f3g");
 const { createCommitedPols, createConstantPols, compile, importPolynomials } = require("zkpil");
 const starkGen = require("../src/stark_gen.js");
-var JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
+const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 
 const argv = require("yargs")
     .version(version)
