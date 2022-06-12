@@ -150,10 +150,9 @@ class FRI {
 
                 const pgroup_c = F.ifft(pgroup_e);
                 const sinv = F.inv(F.mul( shift, F.exp(  F.w[polBits], ys[i])));
-                polMulAxi(F, pgroup_c, F.one, sinv);    // Multiplies coefs by 1, shiftInv, shiftInv^2, shiftInv^3, ......
-
-
-                const ev = evalPol(F, pgroup_c, special_x[si]);
+//                polMulAxi(F, pgroup_c, F.one, sinv);    // Multiplies coefs by 1, shiftInv, shiftInv^2, shiftInv^3, ......
+//                const ev = evalPol(F, pgroup_c, special_x[si]);
+                const ev = evalPol(F, pgroup_c, F.mul(special_x[si], sinv));
 
                 if (si < this.steps.length - 1) {
                     const nextNGroups = 1 << this.steps[si+1].nBits

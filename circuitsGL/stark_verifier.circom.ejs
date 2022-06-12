@@ -5,6 +5,8 @@ include "../circuitsGL/poseidon.circom";
 include "../circuitsGL/bitify.circom";
 include "../circuitsGL/fft.circom";
 include "../circuitsGL/merklehash.circom";
+include "../circuitsGL/evalpol.circom";
+include "../circuitsGL/treeselector.circom";
 
 <%
 class Transcript {
@@ -355,7 +357,10 @@ template StarkVerifier() {
     signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
 
     signal challanges[8][3];
-    signal special_x[<%- starkStruct.steps.length %>][3];
+<% for (let s=0; s<starkStruct.steps.length; s++) {   -%>
+    signal s<%- s %>_specialX[3];
+<% }                                                    -%>
+
     signal ys[<%- starkStruct.nQueries %>][<%- starkStruct.steps[0].nBits %>];
 
 ///////////
@@ -377,7 +382,7 @@ transcript.getField("challanges[5]", 3);
 transcript.getField("challanges[6]", 3);
 transcript.getField("challanges[7]", 3);
 for (let si=0; si<starkStruct.steps.length; si++) {
-    transcript.getField(`special_x[${si}]`, 3);
+    transcript.getField(`s${si}_specialX`, 3);
     if (si < starkStruct.steps.length-1) {
         transcript.put(`s${si+1}_root`, 4);
     } else {
@@ -424,6 +429,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 <% }                                         %>
     component s0_merkle4[<%- starkStruct.nQueries %>];
     component s0_merkleC[<%- starkStruct.nQueries %>];
+    component s0_lowValues[<%- starkStruct.nQueries %>];
 
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         verifyQueries[q] = VerifyQuery();
@@ -436,6 +442,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 <% }                                         %>
         s0_merkle4[q] = MerkleHash(3, <%- starkInfo.nCm4 + starkInfo.nQ4 %>, <%- 1 << starkStruct.steps[0].nBits %>);
         s0_merkleC[q] = MerkleHash(1, <%- starkInfo.nConst %>, <%- 1 << starkStruct.steps[0].nBits %>);
+        s0_lowValues[q] = TreeSelector(<%- starkStruct.steps[0].nBits - ((0< starkStruct.steps.length-1) ? starkStruct.steps[1].nBits : 0)  %>, 3) ;
 
         for (var i=0; i<<%- starkStruct.steps[0].nBits %>; i++ ) {
             verifyQueries[q].ys[i] <== ys[q][i];
@@ -517,17 +524,47 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
         s0_merkleC[q].root[2] === <%- constRoot[2] %>;
         s0_merkleC[q].root[3] === <%- constRoot[3] %>;
 
-        // TODO CHECK DOWN
+<% if (0 < starkStruct.steps.length-1) {            -%>
+        for (var i=0; i<<%- 1 << (starkStruct.steps[0].nBits - starkStruct.steps[1].nBits) %>; i++) {
+            for (var e=0; e<3; e++) {
+                s0_lowValues[q].values[i][e] <== s1_vals[q][i][e];
+            }
+        }
+        for (var i=0; i<<%- (starkStruct.steps[0].nBits - starkStruct.steps[1].nBits) %>; i++) {
+            s0_lowValues[q].key[i] <== ys[q][i + <%- starkStruct.steps[1].nBits %>];
+        }
+<% } else { -%>
+        for (var i=0; i<<%- 1 << (starkStruct.steps[0].nBits) %>; i++) {
+            for (var e=0; e<3; e++) {
+                s0_lowValues[q].values[i][e] <== finalPol[i][e];
+            }
+        }
+        for (var i=0; i<<%- (starkStruct.steps[0].nBits) %>; i++) {
+            s0_lowValues[q].key[i] <== ys[q][i];
+        }
+<% }      -%>
+        for (var e=0; e<3; e++) {
+            s0_lowValues[q].out[e] === verifyQueries[q].out[e];
+        }
+
     }
 
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
     component s<%- s %>_merkle[<%- starkStruct.nQueries %>];
+    component s<%- s %>_fft[<%- starkStruct.nQueries %>];
+    component s<%- s %>_evalPol[<%- starkStruct.nQueries %>];
+    component s<%- s %>_lowValues[<%- starkStruct.nQueries %>];
+    signal s<%- s %>_sx[<%- starkStruct.nQueries %>][<%- starkStruct.steps[s].nBits %>];
 
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         s<%- s %>_merkle[q] = MerkleHash(3, <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>, <%- 1 << starkStruct.steps[s].nBits %>);
+        s<%- s %>_fft[q] = FFT(<%- starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits %>, 3, 1, 1);
+        s<%- s %>_evalPol[q] = EvalPol(<%- 1 << starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits %>);
+        s<%- s %>_lowValues[q] = TreeSelector(<%- starkStruct.steps[s].nBits - ((s< starkStruct.steps.length-1) ? starkStruct.steps[s+1].nBits : 0)  %>, 3) ;
         for (var i=0; i< <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>; i++) {
             for (var e=0; e<3; e++) {
                 s<%- s %>_merkle[q].values[i][e] <== s<%- s %>_vals[q][i][e];
+                s<%- s %>_fft[q].in[i][e] <== s<%- s %>_vals[q][i][e];
             }
         }
         for (var i=0; i<<%- starkStruct.steps[s].nBits %>; i++) {
@@ -536,12 +573,67 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
             }
             s<%- s %>_merkle[q].key[i] <== ys[q][i];
         }
+        s<%- s %>_sx[q][0] <==  <%- F.inv(F.exp(F.shift, 1 << (starkStruct.nBitsExt -starkStruct.steps[s-1].nBits) ) ) %> *  ( ys[q][0] * <%- F.sub(F.inv(F.w[starkStruct.steps[s-1].nBits]), 1n) %> +1);
+        for (var i=1; i<<%- starkStruct.steps[s].nBits %>; i++) {
+            s<%- s %>_sx[q][i] <== s<%- s %>_sx[q][i-1] *  ( ys[q][i] * ((1/roots(<%- starkStruct.steps[s-1].nBits %> -i)) -1) +1);
+        }
+        for (var i=0; i< <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>; i++) {
+            for (var e=0; e<3; e++) {
+                s<%- s %>_evalPol[q].pol[i][e] <== s<%- s %>_fft[q].out[i][e];
+            }
+        }
+        for (var e=0; e<3; e++) {
+            s<%- s %>_evalPol[q].x[e] <== s<%- s %>_specialX[e] *  s<%- s %>_sx[q][<%- starkStruct.steps[s].nBits-1 %>];
+        }
+<% if (s < starkStruct.steps.length-1) {            -%>
+        for (var i=0; i<<%- 1 << (starkStruct.steps[s].nBits - starkStruct.steps[s+1].nBits) %>; i++) {
+            for (var e=0; e<3; e++) {
+                s<%- s %>_lowValues[q].values[i][e] <== s<%- s+1 %>_vals[q][i][e];
+            }
+        }
+        for (var i=0; i<<%- (starkStruct.steps[s].nBits - starkStruct.steps[s+1].nBits) %>; i++) {
+            s<%- s %>_lowValues[q].key[i] <== ys[q][i + <%- starkStruct.steps[s+1].nBits %>];
+        }
+<% } else { -%>
+        for (var i=0; i<<%- 1 << (starkStruct.steps[s].nBits) %>; i++) {
+            for (var e=0; e<3; e++) {
+                s<%- s %>_lowValues[q].values[i][e] <== finalPol[i][e];
+            }
+        }
+        for (var i=0; i<<%- (starkStruct.steps[s].nBits) %>; i++) {
+            s<%- s %>_lowValues[q].key[i] <== ys[q][i];
+        }
+<% }      -%>
+        for (var e=0; e<3; e++) {
+            s<%- s %>_lowValues[q].out[e] === s<%- s %>_evalPol[q].out[e];
+        }
+
         s<%- s %>_merkle[q].root[0] === s<%- s %>_root[0];
         s<%- s %>_merkle[q].root[1] === s<%- s %>_root[1];
         s<%- s %>_merkle[q].root[2] === s<%- s %>_root[2];
         s<%- s %>_merkle[q].root[3] === s<%- s %>_root[3];
     }
 <% }                                                  -%>
+
+///////
+// Check Degree last pol
+///////
+// Last FFT
+<% const nLastBits = starkStruct.steps[ starkStruct.steps.length-1].nBits;  -%>
+<% const maxDegBits =  nLastBits -  (starkStruct.nBitsExt - starkStruct.nBits); -%>
+    component lastIFFT = FFT(<%- nLastBits %>, 3, 1, 1 );
+
+    for (var k=0; k< <%- 1 << nLastBits %>; k++ ){
+        for (var e=0; e<3; e++) {
+            lastIFFT.in[k][e] <== finalPol[k][e];
+        }
+    }
+
+    for (var k= <%- 1 << maxDegBits %>; k< <%- 1 << nLastBits %>; k++ ) {
+        for (var e=0; e<3; e++) {
+            lastIFFT.out[k][e] === 0;
+        }
+    }
 
 }
 

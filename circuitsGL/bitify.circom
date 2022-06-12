@@ -52,7 +52,7 @@ template CompConstant(ct) {
     var sl;
     var sm;
 
-    var sum= (1<<32)-1;
+    signal sum[32];
 
     var e = 1;
     var i;
@@ -73,16 +73,18 @@ template CompConstant(ct) {
             parts[i] <== e*sm*sl -e;
         }
 
-        sum = sum + parts[i];
+        if (i==0) {
+            sum[i] <== (1<<32)-1 + parts[i];
+        } else {
+            sum[i] <== sum[i-1] + parts[i];
+        }
 
         e = e*2;
     }
 
-    sout <== sum;
-
     component num2bits = Num2Bits(33);
 
-    num2bits.in <== sout;
+    num2bits.in <== sum[31];
 
     out <== num2bits.out[32];
 }
