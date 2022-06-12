@@ -48,13 +48,17 @@ describe("Stark Verification Circuit Test", function () {
 
         await fs.promises.writeFile(circomFile, circuitSrc, "utf8");
 
+        console.log("Start comliling...");
         circuit = await wasm_tester(circomFile, {O:1, prime: "goldilocks"});
+        console.log("End comliling...");
 
         const proof= JSONbig.parse( await fs.promises.readFile(proofFile, "utf8") );
         const input = proof2zkin(proof);
         input.publics = publics;
 
+        console.log("Start wc...");
         await fs.promises.writeFile(zkInputFile, JSONbig.stringify(input, null, 1), "utf8");
+        console.log("End wc...");
 
         const w = await circuit.calculateWitness(input, true);
 

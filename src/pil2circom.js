@@ -10,6 +10,7 @@ module.exports = async function pil2circom(template, pil, constRoot, starkStruct
     const F = new F1Field();
 
     setDimensions(starkInfo.verifierCode);
+    setDimensions(starkInfo.verifierQueryCode);
 
     const obj = {
         F: F,

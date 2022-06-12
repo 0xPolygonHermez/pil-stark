@@ -9,60 +9,69 @@ module.exports.proof2zkin = function proof2zkin(p) {
 
     const friProof = p.fri;
 
-    zkin.friRoots = [];
-    for (let i=0; i<friProof.length-2; i++) {
-        zkin.friRoots[i] = friProof[i].root2;
+    for (let i=1; i<friProof.length-1; i++) {
+        zkin[`s${i}_root`] = friProof[i].root;
+        zkin[`s${i}_vals`] = [];
+        zkin[`s${i}_siblings`] = [];
+        for (let q=0; q<friProof[0].polQueries.length; q++) {
+            zkin[`s${i}_vals`][q] =friProof[i].polQueries[q][0];
+            zkin[`s${i}_siblings`][q] =friProof[i].polQueries[q][1];
+        }
     }
 
+    zkin.s0_vals1 = [];
+    if (friProof[0].polQueries[0][1][0].length) {
+        zkin.s0_vals2 = [];
+    }
+    if (friProof[0].polQueries[0][2][0].length) {
+        zkin.s0_vals3 = [];
+    }
+    zkin.s0_vals4 = [];
+    zkin.s0_valsC = [];
+    zkin.s0_siblings1 = [];
+    if (friProof[0].polQueries[0][1][0].length) {
+        zkin.s0_siblings2 = [];
+    }
+    if (friProof[0].polQueries[0][2][0].length) {
+        zkin.s0_siblings3 = [];
+    }
+    zkin.s0_siblings4 = [];
+    zkin.s0_siblingsC = [];
 /*
-    zkin.s0_valsUp1 = [];
-    zkin.s0_valsUp2 = [];
-    zkin.s0_valsUp3 = [];
-    zkin.s0_valsUpC = [];
-    zkin.s0_valsUp1p = [];
-    zkin.s0_valsUp2p = [];
-    zkin.s0_valsUp3p = [];
-    zkin.s0_valsUpCp = [];
-    zkin.s0_siblingsUp1 = [];
-    zkin.s0_siblingsUp2 = [];
-    zkin.s0_siblingsUp3 = [];
-    zkin.s0_siblingsUpC = [];
-    zkin.s0_siblingsUp1p = [];
-    zkin.s0_siblingsUp2p = [];
-    zkin.s0_siblingsUp3p = [];
-    zkin.s0_siblingsUpCp = [];
     zkin.s0_valsDown = [];
     zkin.s0_siblingsDownL = [];
     zkin.s0_siblingsDownH = [];
 
     let stepProof = friProof[0];
     zkin.s0_rootDown = stepProof.root2;
-    for (let i=0; i<stepProof.polQueries.length; i++) {
+*/
 
-        zkin.s0_valsUp1[i] = stepProof.polQueries[i][0][0];
-        zkin.s0_valsUp2[i] = stepProof.polQueries[i][1][0];
-        zkin.s0_valsUp3[i] = stepProof.polQueries[i][2][0];
-        zkin.s0_valsUpC[i] = stepProof.polQueries[i][3][0];
-        zkin.s0_valsUp1p[i] = stepProof.polQueries[i][4][0];
-        zkin.s0_valsUp2p[i] = stepProof.polQueries[i][5][0];
-        zkin.s0_valsUp3p[i] = stepProof.polQueries[i][6][0];
-        zkin.s0_valsUpCp[i] = stepProof.polQueries[i][7][0];
+    for (let i=0; i<friProof[0].polQueries.length; i++) {
 
+        zkin.s0_vals1[i] = friProof[0].polQueries[i][0][0];
+        zkin.s0_siblings1[i] = friProof[0].polQueries[i][0][1];
 
-        zkin.s0_siblingsUp1[i] = stepProof.polQueries[i][0][1];
-        zkin.s0_siblingsUp2[i] = stepProof.polQueries[i][1][1];
-        zkin.s0_siblingsUp3[i] = stepProof.polQueries[i][2][1];
-        zkin.s0_siblingsUpC[i] = stepProof.polQueries[i][3][1];
-        zkin.s0_siblingsUp1p[i] = stepProof.polQueries[i][4][1];
-        zkin.s0_siblingsUp2p[i] = stepProof.polQueries[i][5][1];
-        zkin.s0_siblingsUp3p[i] = stepProof.polQueries[i][6][1];
-        zkin.s0_siblingsUpCp[i] = stepProof.polQueries[i][7][1];
+        if (friProof[0].polQueries[0][1][0].length) {
+            zkin.s0_vals2[i] = friProof[0].polQueries[i][1][0];
+            zkin.s0_siblings2[i] = friProof[0].polQueries[i][1][1];
+        }
+        if (friProof[0].polQueries[0][2][0].length) {
+            zkin.s0_vals2[i] = friProof[0].polQueries[i][2][0];
+            zkin.s0_siblings3[i] = friProof[0].polQueries[i][2][1];
+        }
 
+        zkin.s0_vals4[i] = friProof[0].polQueries[i][3][0];
+        zkin.s0_siblings4[i] = friProof[0].polQueries[i][3][1];
+
+        zkin.s0_valsC[i] = friProof[0].polQueries[i][4][0];
+        zkin.s0_siblingsC[i] = friProof[0].polQueries[i][4][1];
+/*
         zkin.s0_valsDown[i] = stepProof.pol2Queries[i][0];
         zkin.s0_siblingsDownL[i] = stepProof.pol2Queries[i][1][0];
         zkin.s0_siblingsDownH[i] = stepProof.pol2Queries[i][1][1];
+*/
     }
-
+/*
     const nSteps = p.length - 4;
 
     for (s=1; s<p[3].length-1; s++) {

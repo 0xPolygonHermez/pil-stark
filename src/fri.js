@@ -29,6 +29,7 @@ class FRI {
         let shift = F.shift;
         let tree = [];
 
+        for (let si = 0; si<this.steps.length; si++) proof[si] = {};
         for (let si = 0; si<this.steps.length; si++) {
             const reductionBits = polBits - this.steps[si].nBits;
 
@@ -54,9 +55,6 @@ class FRI {
             }
 
 
-
-            proof[si] = {};
-
             if (si < this.steps.length-1) {
                 const nGroups = 1<< this.steps[si+1].nBits;
 
@@ -64,7 +62,7 @@ class FRI {
 
                 tree[si] = MerkleHash.merkelize(pol2_e, 3, groupSize, nGroups);
 
-                proof[si].root2= MerkleHash.root(tree[si]);
+                proof[si+1].root= MerkleHash.root(tree[si]);
                 transcript.put(MerkleHash.root(tree[si]));
             } else {
                 for (let i=0; i<pol2_e.length; i++) {
@@ -126,7 +124,7 @@ class FRI {
                 const nGroups = 1<< this.steps[si+1].nBits;
 
                 let groupSize = (1 << this.steps[si].nBits) / nGroups;
-                transcript.put(proof[si].root2);
+                transcript.put(proof[si+1].root);
             } else {
                 for (let i=0; i<proof[proof.length-1].length; i++) {
                     transcript.put(proof[proof.length-1][i]);
@@ -167,7 +165,7 @@ class FRI {
             }
 
             checkQuery = (query, idx) => {
-                const res = MerkleHash.verifyGroupProof(proofItem.root2, query[1], idx, query[0]);
+                const res = MerkleHash.verifyGroupProof(proof[si+1].root, query[1], idx, query[0]);
                 if (!res) return false;
                 return query[0];
             }
