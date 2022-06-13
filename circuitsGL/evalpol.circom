@@ -9,7 +9,7 @@ template EvalPol(n) {
 
     signal acc[n][3];
 
-    component cmul[n-1];
+    custom_component cmul[n-1];
 
     for (var e=0; e<3; e++) {
         acc[0][e] <== pol[n-1][e];

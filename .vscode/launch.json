@@ -346,6 +346,22 @@
                 "${workspaceFolder}/test/aliascheck.circuit.test.js"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
-        }
+        },
+        {
+            "name": "plonk setup",
+            "program": "src/main_plonk_setup.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-r ${workspaceFolder}/tmp/fibonacci_verifier.r1cs",
+                "-p ${workspaceFolder}/tmp/fibonacci_verifier.plonk.pil",
+                "-c ${workspaceFolder}/tmp/fibonacci_verifier.plonk.const",
+                "-e ${workspaceFolder}/tmp/fibonacci_verifier.plonk.exec",
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
     ]
 }

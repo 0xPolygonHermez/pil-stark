@@ -40,12 +40,12 @@ module.exports = class F3G {
             if (typeof(b) == "bigint") {
                 return (a+b) % this.p
             } else {
-                return [(a+b[0]) % this.p, b[1], b[2]]; 
+                return [(a+b[0]) % this.p, b[1], b[2]];
             }
         } else if (typeof(b) == "bigint") {
-            return [(a[0]+b) % this.p, a[1], a[2]]; 
+            return [(a[0]+b) % this.p, a[1], a[2]];
         } else {
-            return [(a[0]+b[0]) % this.p, (a[1]+b[1]) % this.p, (a[2]+b[2]) % this.p]; 
+            return [(a[0]+b[0]) % this.p, (a[1]+b[1]) % this.p, (a[2]+b[2]) % this.p];
         }
     }
 
@@ -54,12 +54,12 @@ module.exports = class F3G {
             if (typeof(b) == "bigint") {
                 return (a >= b) ? a-b : this.p-b+a;
             } else {
-                return [(a >= b[0]) ? a-b[0] : this.p-b[0]+a, b[1] > 0n ? this.p-b[1] : b[1], b[2] > 0n ? this.p-b[2] : b[2]]; 
+                return [(a >= b[0]) ? a-b[0] : this.p-b[0]+a, b[1] > 0n ? this.p-b[1] : b[1], b[2] > 0n ? this.p-b[2] : b[2]];
             }
         } else if (typeof(b) == "bigint") {
-            return [(a[0] >= b) ? a[0]-b : this.p-b+a[0], a[1], a[2]]; 
+            return [(a[0] >= b) ? a[0]-b : this.p-b+a[0], a[1], a[2]];
         } else {
-            return [(a[0] >= b[0]) ? a[0]-b[0] : this.p-b[0]+a[0], (a[1] >= b[1]) ? a[1]-b[1] : this.p-b[1]+a[1], (a[2] >= b[2]) ? a[2]-b[2] : this.p-b[2]+a[2]]; 
+            return [(a[0] >= b[0]) ? a[0]-b[0] : this.p-b[0]+a[0], (a[1] >= b[1]) ? a[1]-b[1] : this.p-b[1]+a[1], (a[2] >= b[2]) ? a[2]-b[2] : this.p-b[2]+a[2]];
         }
     }
 
@@ -67,7 +67,7 @@ module.exports = class F3G {
         if (typeof(a) == "bigint") {
             return a > 0n ? this.p-a : a;
         } else {
-            return [a[0] > 0n ? this.p-a[0] : a[0], a[1] > 0n ? this.p-a[1] : a[1], a[2] > 0n ? this.p-a[2] : a[2]]; 
+            return [a[0] > 0n ? this.p-a[0] : a[0], a[1] > 0n ? this.p-a[1] : a[1], a[2] > 0n ? this.p-a[2] : a[2]];
         }
     }
 
@@ -188,12 +188,12 @@ module.exports = class F3G {
             if (typeof(b) == "bigint") {
                 return a == b;
             } else {
-                return (a == b[0]) && (b[1]== 0)  && (b[2]==0); 
+                return (a == b[0]) && (b[1]== 0)  && (b[2]==0);
             }
         } else if (typeof(b) == "bigint") {
-            return (a[0] == b) && (a[1]== 0)  && (a[2]==0); 
+            return (a[0] == b) && (a[1]== 0)  && (a[2]==0);
         } else {
-            return (a[0] == b[0]) && (a[1]== b[1])  && (a[2]==b[2]); 
+            return (a[0] == b[0]) && (a[1]== b[1])  && (a[2]==b[2]);
         }
     }
 
@@ -205,15 +205,15 @@ module.exports = class F3G {
             if (typeof(b) == "bigint") {
                 return a > b;
             } else {
-                return a > b[0]; 
+                return a > b[0];
             }
         } else if (typeof(b) == "bigint") {
             return (a[0] > b) ||
-                   ((a[0] == b) && (a[1] > 0n)) || 
+                   ((a[0] == b) && (a[1] > 0n)) ||
                    ((a[0] == b) && (a[1] == 0n) && a[2] >0n)
         } else {
             return  (a[0] > b[0]) ||
-                    ((a[0] == b[0]) && (a[1] > b[1])) || 
+                    ((a[0] == b[0]) && (a[1] > b[1])) ||
                     ((a[0] == b[0]) && (a[1] == b[1]) && a[2] >b[2])
         }
 
@@ -253,7 +253,7 @@ module.exports = class F3G {
         if (typeof(a) == "bigint") {
             return a == 0n;
         } else {
-            return (a[0] == 0n) && (a[1]== 0n)  && (a[2]==0n); 
+            return (a[0] == 0n) && (a[1]== 0n)  && (a[2]==0n);
         }
     }
 
@@ -279,22 +279,22 @@ module.exports = class F3G {
     exp(base, e) {
         e = BigInt(e);
         if (e === 0n) return this.one;
-    
+
         const n = this._bits(e);
-    
+
         if (n.length==0) return this.one;
-    
+
         let res = base;
-    
+
         for (let i=n.length-2; i>=0; i--) {
-    
+
             res = this.square(res);
-    
+
             if (n[i]) {
                 res = this.mul(res, base);
             }
         }
-    
+
         return res;
     }
 
@@ -370,6 +370,32 @@ module.exports = class F3G {
         }
         res[0] = z;
         return res;
+    }
+
+    fromRprLE(buff, o) {
+        if (o & 7 == 0) {
+            const v = new BigUint64Array(buff.buffer, o || 0, 1);
+            return v[0];
+        } else if ((o & 3)==0) {
+            const v = new Uint32Array(buff.buffer, o || 0, 2);
+            return BigInt(v[0]) |  (BigInt(v[1]) << 32n);
+        } else if ((o & 1)==0) {
+            const v = new Uint16Array(buff.buffer, o || 0, 8);
+            return   BigInt(v[0])         |
+                    (BigInt(v[1]) << 16n) |
+                    (BigInt(v[2]) << 32n) |
+                    (BigInt(v[3]) << 48n);
+        } else {
+            const v = new Uint8Array(buff.buffer, o || 0, 8);
+            return   BigInt(v[0])         |
+                    (BigInt(v[1]) <<  8n) |
+                    (BigInt(v[2]) << 16n) |
+                    (BigInt(v[3]) << 24n) |
+                    (BigInt(v[4]) << 32n) |
+                    (BigInt(v[5]) << 40n) |
+                    (BigInt(v[6]) << 48n) |
+                    (BigInt(v[7]) << 56n);
+        }
     }
 
 }

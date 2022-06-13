@@ -24,9 +24,11 @@
   "author": "Jordi Baylina",
   "license": "GPL-3.0",
   "devDependencies": {
+    "@iden3/bigarray": "^0.0.2",
     "chai": "^4.3.6",
     "circom_tester": "^0.0.12",
     "json-bigint": "^1.0.0",
-    "mocha": "^10.0.0"
+    "mocha": "^10.0.0",
+    "r1csfile": "^0.0.35"
   }
 }
