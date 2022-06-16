@@ -1,6 +1,6 @@
 pragma circom 2.0.4;
 
-template MDS() {
+custom_gate MDS() {
     signal input in[12];
     signal output out[12];
 
@@ -17,7 +17,22 @@ template MDS() {
     out[10] <-- 41*in[0] + 16*in[1] +  2*in[2] + 28*in[3] + 13*in[4] + 13*in[5] + 39*in[6] + 18*in[7] + 34*in[8] + 20*in[9] + 17*in[10] + 15*in[11];
     out[11] <-- 15*in[0] + 41*in[1] + 16*in[2] +  2*in[3] + 28*in[4] + 13*in[5] + 13*in[6] + 39*in[7] + 18*in[8] + 34*in[9] + 20*in[10] + 17*in[11];
 }
+/*
+template MDS() {
+    signal input in[12];
+    signal output out[12];
 
+    custom_component mds = MDSCG();
+
+    for (var i=0; i<12; i++) {
+        mds.in[i] <== in[i];
+    }
+
+    for (var i=0; i<12; i++) {
+        out[i] <== mds.out[i];
+    }
+}
+*/
 template Poseidon(nOuts) {
     signal input in[8];
     signal input capacity[4];

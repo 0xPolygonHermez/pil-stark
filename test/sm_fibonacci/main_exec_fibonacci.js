@@ -16,7 +16,7 @@ const argv = require("yargs")
 
 async function run() {
 
-    const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "fibonacci.commit.bin";
+    const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "fibonacci.commit";
     const inputFile = typeof(argv.input) === "string" ?  argv.input.trim() : "input.json";
 
     const F = new F1Field();

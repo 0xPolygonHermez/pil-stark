@@ -30,8 +30,8 @@ class FFT {
         this.G = G;
         this.opMulGF = opMulGF;
 
-        let rem = F.sqrt_t || F.t;
-        let s = F.sqrt_s || F.s;
+        let rem = F.t;
+        let s = F.s;
 
         let nqr = F.one;
         while (F.eq(F.pow(nqr, F.half), F.one)) nqr = F.add(nqr, F.one);
@@ -151,5 +151,5 @@ module.exports = function buildFFT(F) {
     F.fft = fft.fft.bind(fft);
     F.ifft = fft.ifft.bind(fft);
     F.w = fft.w;
-    F.wi = fft.wi; 
+    F.wi = fft.wi;
 }

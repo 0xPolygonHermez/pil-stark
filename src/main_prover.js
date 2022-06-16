@@ -5,6 +5,7 @@ const F1Field = require("./f3g");
 const { createCommitedPols, createConstantPols, compile, importPolynomials } = require("zkpil");
 const starkGen = require("../src/stark_gen.js");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
+const { proof2zkin } = require("./proof2zkin")
 
 const argv = require("yargs")
     .version(version)
@@ -15,19 +16,21 @@ const argv = require("yargs")
     .alias("p", "pil")
     .alias("s", "starkstruct")
     .alias("o", "proof")
+    .alias("z", "zkin")
     .alias("b", "public")
     .argv;
 
 async function run() {
     const F = new F1Field();
 
-    const commitFile = typeof(argv.commit) === "string" ?  argv.commit.trim() : "commit.bin";
-    const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "consttree.bin";
-    const constTreeFile = typeof(argv.consttree) === "string" ?  argv.consttree.trim() : "consttree.bin";
-    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "main.pil.json";
-    const starkStructFile = typeof(argv.starkstruct) === "string" ?  argv.starkstruct.trim() : "stark_struct.json";
-    const proofFile = typeof(argv.proof) === "string" ?  argv.proof.trim() : "verkey.json";
-    const publicFile = typeof(argv.public) === "string" ?  argv.public.trim() : "verkey.json";
+    const commitFile = typeof(argv.commit) === "string" ?  argv.commit.trim() : "mycircuit.commit";
+    const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "mycircuit.const";
+    const constTreeFile = typeof(argv.consttree) === "string" ?  argv.consttree.trim() : "mycircuit.consttree";
+    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
+    const starkStructFile = typeof(argv.starkstruct) === "string" ?  argv.starkstruct.trim() : "mycircuit.stark_struct.json";
+    const proofFile = typeof(argv.proof) === "string" ?  argv.proof.trim() : "mycircuit.proof.json";
+    const zkinFile = typeof(argv.zkin) === "string" ?  argv.zkin.trim() : "mycircuit.proof.zkin.json";
+    const publicFile = typeof(argv.public) === "string" ?  argv.public.trim() : "mycircuit.public.json";
 
     const pil = await compile(F, pilFile);
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
@@ -49,6 +52,10 @@ async function run() {
 
     await fs.promises.writeFile(proofFile, JSONbig.stringify(resP.proof, null, 1), "utf8");
     await fs.promises.writeFile(publicFile, JSONbig.stringify(resP.publics, null, 1), "utf8");
+
+    const zkIn = proof2zkin(resP.proof);
+    zkIn.publics = resP.publics;
+    await fs.promises.writeFile(zkinFile, JSONbig.stringify(zkIn, null, 1), "utf8");
 
     console.log("files Generated Correctly");
 }

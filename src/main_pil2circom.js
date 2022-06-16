@@ -18,10 +18,10 @@ const argv = require("yargs")
 async function run() {
     const F = new F1Field();
 
-    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "main.pil.json";
-    const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "verification_key.json";
-    const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "verifier.circom";
+    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
     const starkStructFile = typeof(argv.starkStruct) === "string" ?  argv.starkStruct.trim() : "stark_struct.json";
+    const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "mycircuit.verkey.json";
+    const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "mycircuit.verifier.circom";
 
     const pil = await compile(F, pilFile);
     const verKey = JSON.parse(await fs.promises.readFile(verKeyFile, "utf8"));

@@ -875,7 +875,7 @@ function evalExp(codeCtx, exp, prime) {
         const a = evalExp(codeCtx, exp.values[0], prime);
         const b = {
             type: "number",
-            value: exp.const
+            value: exp.const.toString()
         }
         const r = {
             type: "tmp",
@@ -934,7 +934,7 @@ function evalExp(codeCtx, exp, prime) {
     } else if (exp.op == "number") {
         return {
             type: "number",
-            value: exp.value
+            value: exp.value.toString()
         }
     } else if (exp.op == "public") {
         return {

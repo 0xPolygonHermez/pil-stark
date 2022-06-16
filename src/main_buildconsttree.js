@@ -20,11 +20,11 @@ const argv = require("yargs")
 async function run() {
     const F = new F1Field();
 
-    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "main.pil.json";
-    const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "const.bin";
-    const starkStructFile = typeof(argv.starkstruct) === "string" ?  argv.starkstruct.trim() : "stark_struct.json";
-    const constTreeFile = typeof(argv.consttree) === "string" ?  argv.consttree.trim() : "consttree.bin";
-    const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "verkey.json";
+    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
+    const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "mycircuit.const";
+    const starkStructFile = typeof(argv.starkstruct) === "string" ?  argv.starkstruct.trim() : "mycircuit.stark_struct.json";
+    const constTreeFile = typeof(argv.consttree) === "string" ?  argv.consttree.trim() : "mycircuit.consttree";
+    const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "mycircuit.verkey.json";
 
     const pil = await compile(F, pilFile);
     const [ , , , constPolsArrayDef] =  createConstantPols(pil);

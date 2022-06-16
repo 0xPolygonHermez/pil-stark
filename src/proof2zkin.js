@@ -56,7 +56,7 @@ module.exports.proof2zkin = function proof2zkin(p) {
             zkin.s0_siblings2[i] = friProof[0].polQueries[i][1][1];
         }
         if (friProof[0].polQueries[0][2][0].length) {
-            zkin.s0_vals2[i] = friProof[0].polQueries[i][2][0];
+            zkin.s0_vals3[i] = friProof[0].polQueries[i][2][0];
             zkin.s0_siblings3[i] = friProof[0].polQueries[i][2][1];
         }
 

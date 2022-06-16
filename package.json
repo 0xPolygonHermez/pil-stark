@@ -7,7 +7,8 @@
     "test": "mocha",
     "fibonacci_buidconst": "node test/sm_fibonacci/main_genconst_fibonacci.js -o tmp/fibonacci.const.bin",
     "fibonacci_exec": "node test/sm_fibonacci/main_exec_fibonacci.js -i test/sm_fibonacci/fibonacci.input.json -o tmp/fibonacci.commit.bin",
-    "fibonacci_buildconsttree": "node src/main_buildconsttree.js -c tmp/fibonacci.const.bin -p test/sm_fibonacci/fibonacci.pil -s tmp/fibonacci.starkstruct.json -t tmp/fibonacci.consttree.bin -v tmp/fibonacci.verkey.json"
+    "fibonacci_buildconsttree": "node src/main_buildconsttree.js -c tmp/fibonacci.const.bin -p test/sm_fibonacci/fibonacci.pil -s tmp/fibonacci.starkstruct.json -t tmp/fibonacci.consttree.bin -v tmp/fibonacci.verkey.json",
+    "fibonacci_compileverifier": "circom --O1 --prime goldilocks --r1cs --sym --wasm --verbose tmp/fibonacci.verifier.circom -o tmp"
   },
   "keywords": [
     "stark",
@@ -18,8 +19,10 @@
     "hermez"
   ],
   "dependencies": {
+    "circom_runtime": "^0.1.18",
     "ejs": "^3.1.8",
-    "zkpil": "https://github.com/hermeznetwork/zkpil"
+    "tmp-promise": "^3.0.3",
+    "zkpil": "git+ssh://git@github.com/hermeznetwork/zkpil.git"
   },
   "author": "Jordi Baylina",
   "license": "GPL-3.0",
@@ -29,6 +32,6 @@
     "circom_tester": "^0.0.12",
     "json-bigint": "^1.0.0",
     "mocha": "^10.0.0",
-    "r1csfile": "^0.0.35"
+    "r1csfile": "^0.0.38"
   }
 }

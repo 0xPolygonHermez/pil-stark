@@ -1,6 +1,23 @@
 pragma circom 2.0.4;
-
+/*
 template CMul() {
+    signal input ina[3];
+    signal input inb[3];
+    signal output out[3];
+
+    custom_component cmul = CMulCG();
+
+    for (var i=0; i<3; i++) {
+        cmul.ina[i] <== ina[i];
+        cmul.inb[i] <== inb[i];
+    }
+
+    for (var i=0; i<3; i++) {
+        out[i] <== cmul.out[i];
+    }
+}
+*/
+custom_gate CMul() {
     signal input ina[3];
     signal input inb[3];
     signal output out[3];
