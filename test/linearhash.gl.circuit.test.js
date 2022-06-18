@@ -16,7 +16,7 @@ describe("Linear Hash Circuit Test", function () {
     this.timeout(10000000);
 
     before( async() => {
-        circuit = await wasm_tester(path.join(__dirname, "circuits", "linearhash.test.circom"), {O:1, prime: "goldilocks"});
+        circuit = await wasm_tester(path.join(__dirname, "circuits", "linearhash.gl.test.circom"), {O:1, prime: "goldilocks"});
     });
 
     it("Should calculate linear hash of 9 complex elements", async () => {

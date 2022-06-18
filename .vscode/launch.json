@@ -57,7 +57,7 @@
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
         {
-            "name": "test merkle",
+            "name": "test merklehash",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -65,12 +65,12 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/merkle.test.js"
+                "${workspaceFolder}/test/merklehash.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": ["--max-old-space-size=64000"]
         },
         {
-            "name": "test merkle group multipol lhash",
+            "name": "test bn128 merklehash",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -78,12 +78,12 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/merkle_group_multipol_lhash.test.js"
+                "${workspaceFolder}/test/merklehash.bn128.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": ["--max-old-space-size=64000"]
         },
         {
-            "name": "test merkle hash",
+            "name": "test bn128 circuit gl",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -91,7 +91,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/merkle_hash.test.js"
+                "${workspaceFolder}/test/gl.bn128.circuit.test.js"
             ],
             "runtimeArgs": ["--max-old-space-size=64000"]
         },
@@ -187,7 +187,7 @@
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
         {
-            "name": "LinearHash circuit test",
+            "name": "FFT bn128 circuit test",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -195,12 +195,38 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/linearhash.circuit.test.js"
+                "${workspaceFolder}/test/fft.bn128.circuit.test.js"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
         {
-            "name": "MerkleHash circuit test",
+            "name": "LinearHash GL circuit test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/linearhash.gl.circuit.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "LinearHash BN128 circuit test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/linearhash.bn128.circuit.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "test MerkleHash circuit",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -209,6 +235,19 @@
             "type": "pwa-node",
             "args": [
                 "${workspaceFolder}/test/merklehash.circuit.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "test MerkleHash bn128 circuit test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/merklehash.bn128.circuit.test.js"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
@@ -226,7 +265,7 @@
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
         {
-            "name": "eval pol circuit test",
+            "name": "evalPol circuit test",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -235,6 +274,19 @@
             "type": "pwa-node",
             "args": [
                 "${workspaceFolder}/test/evalpol.circuit.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "evalPol bn128 circuit test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/evalpol.bn128.circuit.test.js"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },

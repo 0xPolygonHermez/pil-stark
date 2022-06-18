@@ -1,9 +1,7 @@
 const chai = require("chai");
 const path = require("path");
-const buildPoseidon = require("../src/poseidon");
-const MerkleHash = require("../src/merklehash.js");
-
-
+const { buildPoseidon } = require("circomlibjs");
+const MerkleHash = require("../src/merklehash.bn128.js");
 
 const assert = chai.assert;
 
@@ -18,9 +16,10 @@ function getBits(idx, nBits) {
 }
 
 describe("Linear Hash Circuit Test", function () {
-    let poseidon;
-    let MH;
     let circuit;
+    let MH;
+    let poseidon;
+
 
     this.timeout(10000000);
 
@@ -28,7 +27,7 @@ describe("Linear Hash Circuit Test", function () {
         poseidon = await buildPoseidon();
         MH = new MerkleHash(poseidon);
 
-        circuit = await wasm_tester(path.join(__dirname, "circuits", "merklehash.test.circom"), {O:1, prime: "goldilocks"});
+        circuit = await wasm_tester(path.join(__dirname, "circuits", "merklehash.bn128.test.circom"), {O:1});
     });
 
     it("Should calculate linear hash of 9 complex elements", async () => {
@@ -37,7 +36,6 @@ describe("Linear Hash Circuit Test", function () {
         const idx = 9;
 
         const poseidon = await buildPoseidon();
-        const F = poseidon.F;
         const N = 1<<nBits;
 
         const pols = [];
@@ -57,9 +55,7 @@ describe("Linear Hash Circuit Test", function () {
 
         const calcRoot = MH.calculateRootFromGroupProof(proof[1], idx, proof[0]);
         const root = MH.root(tree);
-        for (let i=0; i<4; i++) {
-            assert(root[i] == calcRoot[i]);
-        }
+        assert(root == calcRoot);
 
         const input={
             values: proof[0],
@@ -68,6 +64,6 @@ describe("Linear Hash Circuit Test", function () {
         };
         const w1 = await circuit.calculateWitness(input, true);
 
-        await circuit.assertOut(w1, {root: MH.root(tree)});
+        await circuit.assertOut(w1, {root: root});
     });
 });

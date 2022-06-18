@@ -1,12 +1,17 @@
-const MerkleHash = require("../src/merkle_hash.js");
+const MerkleHash = require("../src/merklehash.js");
+const buildPoseidon = require("../src/poseidon");
 const chai = require("chai");
 const assert = chai.assert;
 
 describe("merkle hash", async function () {
     let poseidon;
-    let F;
+    let MH;
     this.timeout(10000000);
 
+    before( async() => {
+        poseidon = await buildPoseidon();
+        MH = new MerkleHash(poseidon);
+    });
     it("It should merkelize and return the right number of elements", async () => {
         const N = 256;
         const idx = 3;
@@ -20,12 +25,12 @@ describe("merkle hash", async function () {
             }
         }
 
-        const tree = await MerkleHash.merkelize(pols, 1, nPols, N);
+        const tree = await MH.merkelize(pols, 1, nPols, N);
 
-        const [groupElements, mp] = MerkleHash.getGroupProof(tree, idx);
-        const root = MerkleHash.root(tree);
+        const [groupElements, mp] = MH.getGroupProof(tree, idx);
+        const root = MH.root(tree);
 
-        assert(MerkleHash.verifyGroupProof(root, mp, idx, groupElements));
+        assert(MH.verifyGroupProof(root, mp, idx, groupElements));
     });
     it("It should merkelize polynomials in ext 3", async () => {
         const N = 256;
@@ -40,12 +45,12 @@ describe("merkle hash", async function () {
             }
         }
 
-        const tree = MerkleHash.merkelize(pols, 3, nPols, N);
+        const tree = await MH.merkelize(pols, 3, nPols, N);
 
-        const [groupElements, mp] = MerkleHash.getGroupProof(tree, idx);
-        const root = MerkleHash.root(tree);
+        const [groupElements, mp] = MH.getGroupProof(tree, idx);
+        const root = MH.root(tree);
 
-        assert(MerkleHash.verifyGroupProof(root, mp, idx, groupElements));
+        assert(MH.verifyGroupProof(root, mp, idx, groupElements));
     });
     it("It should merkelize polynomials in ext 3", async () => {
         const N = 256;
@@ -59,12 +64,12 @@ describe("merkle hash", async function () {
             pol.push([ BigInt(i), BigInt(i+10), BigInt(i+20)]);
         }
 
-        const tree = MerkleHash.merkelize(pol, 3, groupSize, nGroups);
+        const tree = await MH.merkelize(pol, 3, groupSize, nGroups);
 
-        const [groupElements, mp] = MerkleHash.getGroupProof(tree, idx);
-        const root = MerkleHash.root(tree);
+        const [groupElements, mp] = MH.getGroupProof(tree, idx);
+        const root = MH.root(tree);
 
-        assert(MerkleHash.verifyGroupProof(root, mp, idx, groupElements));
+        assert(MH.verifyGroupProof(root, mp, idx, groupElements));
     });
     it("It should merkelize and return the right number of elements", async () => {
         const N = 2**14;
@@ -80,11 +85,11 @@ describe("merkle hash", async function () {
             }
         }
 
-        const tree = await MerkleHash.merkelize(pols, 1, nPols, N);
+        const tree = await MH.merkelize(pols, 1, nPols, N);
 
-        const [groupElements, mp] = MerkleHash.getGroupProof(tree, idx);
-        const root = MerkleHash.root(tree);
+        const [groupElements, mp] = MH.getGroupProof(tree, idx);
+        const root = MH.root(tree);
 
-        assert(MerkleHash.verifyGroupProof(root, mp, idx, groupElements));
+        assert(MH.verifyGroupProof(root, mp, idx, groupElements));
     });
 });

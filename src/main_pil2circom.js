@@ -29,7 +29,7 @@ async function run() {
     for (let i=0; i<4; i++) {
         constRoot[i] = BigInt(verKey.constRoot[i]);
     }
-    const template = await fs.promises.readFile("./circuitsGL/stark_verifier.circom.ejs", "utf8");
+    const template = await fs.promises.readFile("./circuits.gl/stark_verifier.circom.ejs", "utf8");
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
 
     const verifier = await pil2circom(template, pil, constRoot, starkStruct);

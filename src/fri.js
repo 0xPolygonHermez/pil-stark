@@ -1,15 +1,15 @@
 const { assert } = require("chai");
-const MerkleHash = require("./merkle_hash.js");
 const {polMulAxi, evalPol} = require("./polutils");
 const {log2} = require("./utils");
 
 class FRI {
 
-    constructor(poseidon, starkStruct) {
+    constructor(poseidon, starkStruct, MH) {
         this.F = poseidon.F;
         this.inNBits = starkStruct.nBitsExt;
         this.maxDegNBits = starkStruct.nBits;
         this.nQueries = starkStruct.nQueries;
+        this.MH = MH;
         if (starkStruct) {
             this.steps = starkStruct.steps;
         } else {
@@ -17,7 +17,8 @@ class FRI {
         }
     }
 
-    prove(transcript, pol, queryPol) {
+    async prove(transcript, pol, queryPol) {
+        const self = this;
         const proof = [];
         const F = this.F;
 
@@ -60,10 +61,10 @@ class FRI {
 
                 let groupSize = (1 << this.steps[si].nBits) / nGroups;
 
-                tree[si] = MerkleHash.merkelize(pol2_e, 3, groupSize, nGroups);
+                tree[si] = await this.MH.merkelize(pol2_e, 3, groupSize, nGroups);
 
-                proof[si+1].root= MerkleHash.root(tree[si]);
-                transcript.put(MerkleHash.root(tree[si]));
+                proof[si+1].root= this.MH.root(tree[si]);
+                transcript.put(this.MH.root(tree[si]));
             } else {
                 for (let i=0; i<pol2_e.length; i++) {
                     transcript.put(pol2_e[i]);
@@ -95,7 +96,7 @@ class FRI {
 
             if (si < this.steps.length -1) {
                 queryPol = (idx) => {
-                    return MerkleHash.getGroupProof(tree[si], idx);
+                    return self.MH.getGroupProof(tree[si], idx);
                 }
 
                 for (let i=0; i<ys.length; i++) {
@@ -108,7 +109,7 @@ class FRI {
     }
 
     verify(transcript, proof, checkQuery) {
-
+        const self = this;
         const F = this.F;
         const GMT = [];
 
@@ -164,7 +165,7 @@ class FRI {
             }
 
             checkQuery = (query, idx) => {
-                const res = MerkleHash.verifyGroupProof(proof[si+1].root, query[1], idx, query[0]);
+                const res = self.MH.verifyGroupProof(proof[si+1].root, query[1], idx, query[0]);
                 if (!res) return false;
                 return query[0];
             }

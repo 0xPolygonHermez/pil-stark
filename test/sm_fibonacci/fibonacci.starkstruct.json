@@ -2,6 +2,7 @@
             "nBits": 10,
             "nBitsExt": 11,
             "nQueries": 8,
+            "hashType": "GL",
             "steps": [
                 {"nBits": 11},
                 {"nBits": 7},

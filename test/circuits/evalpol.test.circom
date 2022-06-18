@@ -1,5 +1,5 @@
 pragma circom 2.0.4;
 
-include "../../circuitsGL/evalpol.circom";
+include "../../circuits.gl/evalpol.circom";
 
 component main = EvalPol(32);

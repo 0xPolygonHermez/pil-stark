@@ -1,10 +1,12 @@
 
 const assert = require("assert");
-const MerkleHash = require("./merkle_hash.js");
+const MerkleHashGL = require("./merklehash.js");
+const MerkleHashBN128 = require("./merklehash.bn128.js");
 const Transcript = require("./transcript");
 const { extendPol, buildZhInv, calculateH1H2, calculateZ } = require("./polutils.js");
 const { log2 } = require("./utils");
-const buildPoseidon = require("./poseidon");
+const buildPoseidonGL = require("./poseidon");
+const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 const FRI = require(".//fri.js");
 const starkInfoGen = require("./starkinfo_gen.js");
 
@@ -14,10 +16,22 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     const Nbits = starkStruct.nBits;
     assert(1 << Nbits == N, "N must be a power of 2");
 
-    const poseidon = await buildPoseidon();
+    const poseidon = await buildPoseidonGL();
     const F = poseidon.F;
 
-    const fri = new FRI( poseidon, starkStruct );
+    let MH;
+    if (starkStruct.hashType == "GL") {
+        MH = new MerkleHashGL(poseidon);
+    } else if (starkStruct.hashType == "GL") {
+        const poseidonBN128 = await buildPoseidonBN128();
+        MH = new MerkleHashBN128(poseidonBN128);
+    } else {
+        throw new Error("Invalid Hash Type: "+ starkStruct.hashType);
+    }
+
+
+
+    const fri = new FRI( poseidon, starkStruct, MH );
 
     const transcript = new Transcript(poseidon);
 
@@ -90,7 +104,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
         }
         pols.const[i] = constPols[i];
         pols2ns.const[i] = new Array(N << extendBits);
-        for (let j=0; j<(N<<extendBits); j++) pols2ns.const[i][j] = MerkleHash.getElement(constTree, j, i);
+        for (let j=0; j<(N<<extendBits); j++) pols2ns.const[i][j] = MH.getElement(constTree, j, i);
     }
 
 
@@ -113,8 +127,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     calculateExps(F, pols2ns, starkInfo.step12ns);
 
     console.log("Merkelizing 1....");
-    const tree1 = MerkleHash.merkelize([ ...pols2ns.cm, ...pols2ns.q], 1, pols2ns.cm.length + pols2ns.q.length, N<<extendBits);
-    transcript.put(MerkleHash.root(tree1));
+    const tree1 = await MH.merkelize([ ...pols2ns.cm, ...pols2ns.q], 1, pols2ns.cm.length + pols2ns.q.length, N<<extendBits);
+    transcript.put(MH.root(tree1));
 
 ///////////
 // 2.- Caluculate plookups h1 and h2
@@ -136,11 +150,11 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     calculateExps(F, pols2ns, starkInfo.step22ns);
 
     console.log("Merkelizing 2....");
-    const tree2 = MerkleHash.merkelize([
+    const tree2 = await MH.merkelize([
         ...pols2ns.cm.slice(starkInfo.nCm1 ),
         ...pols2ns.q.slice(starkInfo.nQ1 ),
     ], 3, starkInfo.nCm2 + starkInfo.nQ2, N << extendBits);
-    transcript.put(MerkleHash.root(tree2));
+    transcript.put(MH.root(tree2));
 
 ///////////
 // 3.- Compute Z polynomials
@@ -172,11 +186,11 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 
     console.log("Merkelizing 3....");
 
-    const tree3 = MerkleHash.merkelize([
+    const tree3 = await MH.merkelize([
         ...pols2ns.cm.slice(starkInfo.nCm1 + starkInfo.nCm2 ),
         ...pols2ns.q.slice(starkInfo.nQ1 + starkInfo.nQ2 ),
     ], 3, starkInfo.nCm3 + starkInfo.nQ3, N << extendBits);
-    transcript.put(MerkleHash.root(tree3));
+    transcript.put(MH.root(tree3));
 
 
 ///////////
@@ -190,11 +204,11 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 
     console.log("Merkelizing 4....");
 
-    const tree4 = MerkleHash.merkelize([
+    const tree4 = await MH.merkelize([
         ...pols2ns.cm.slice(starkInfo.nCm1 + starkInfo.nCm2 + starkInfo.nCm3),
         ...pols2ns.q.slice(starkInfo.nQ1 + starkInfo.nQ2 + starkInfo.nQ3),
     ], 3, starkInfo.nCm4 + starkInfo.nQ4, N << extendBits);
-    transcript.put(MerkleHash.root(tree4));
+    transcript.put(MH.root(tree4));
 
 
 ///////////
@@ -261,22 +275,22 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 
     const queryPol = (idx) => {
         return [
-            MerkleHash.getGroupProof(tree1, idx),
-            MerkleHash.getGroupProof(tree2, idx),
-            MerkleHash.getGroupProof(tree3, idx),
-            MerkleHash.getGroupProof(tree4, idx),
-            MerkleHash.getGroupProof(constTree, idx),
+            MH.getGroupProof(tree1, idx),
+            MH.getGroupProof(tree2, idx),
+            MH.getGroupProof(tree3, idx),
+            MH.getGroupProof(tree4, idx),
+            MH.getGroupProof(constTree, idx),
         ];
     }
 
-    const friProof = fri.prove(transcript, friPol, queryPol);
+    const friProof = await fri.prove(transcript, friPol, queryPol);
 
     return {
         proof: {
-            root1: MerkleHash.root(tree1),
-            root2: MerkleHash.root(tree2),
-            root3: MerkleHash.root(tree3),
-            root4: MerkleHash.root(tree4),
+            root1: MH.root(tree1),
+            root2: MH.root(tree2),
+            root3: MH.root(tree3),
+            root4: MH.root(tree4),
             evals: pols.evals,
             fri: friProof
         },

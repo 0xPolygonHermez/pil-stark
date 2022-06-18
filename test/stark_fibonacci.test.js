@@ -62,7 +62,7 @@ describe("test fibonacci sm", async function () {
             constPolsArrayE[i] = await extendPol(poseidon.F, constPolsArray[i], 1);
         }
 
-        const constTree = MerkleHash.merkelize(constPolsArrayE, 1, constPolsArrayE.length, constPolsArrayE[0].length);
+        const constTree = await MerkleHash.merkelize(constPolsArrayE, 1, constPolsArrayE.length, constPolsArrayE[0].length);
 
         const resP = await starkGen(cmPolsArray, constPolsArray, constTree, pil, starkStruct);
 

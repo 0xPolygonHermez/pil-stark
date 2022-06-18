@@ -166,7 +166,6 @@ module.exports = class F3G {
 
     _inv1(a) {
         if (!a) throw new Error("Division by zero");
-        const sign = 0;
 
         let t = this.zero;
         let r = this.p;

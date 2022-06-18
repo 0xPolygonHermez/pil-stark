@@ -1,5 +1,5 @@
 pragma circom 2.0.4;
 
-include "../../circuitsGL/linearhash.circom";
+include "../../circuits.bn128/linearhash.circom";
 
 component main = LinearHash(9, 3);

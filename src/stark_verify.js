@@ -1,13 +1,27 @@
-const buildPoseidon = require("./poseidon");
 const Transcript = require("./transcript");
 const FRI = require("../src/fri.js");
-const MerkleHash = require("./merkle_hash.js");
+const MerkleHashGL = require("./merklehash.js");
+const MerkleHashBN128 = require("./merklehash.bn128.js");
 const starkInfoGen = require("./starkinfo_gen.js");
 const { assert } = require("chai");
+const buildPoseidonGL = require("./poseidon");
+const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 
 module.exports = async function starkVerify(proof, publics, pil, constRoot, starkStruct) {
 
     const starkInfo = starkInfoGen(pil, starkStruct);
+
+    const poseidon = await buildPoseidonGL();
+
+    let MH;
+    if (starkStruct.hashType == "GL") {
+        MH = new MerkleHashGL(poseidon);
+    } else if (starkStruct.hashType == "GL") {
+        const poseidonBN128 = await buildPoseidonBN128();
+        MH = new MerkleHashBN128(poseidonBN128);
+    } else {
+        throw new Error("Invalid Hash Type: "+ starkStruct.hashType);
+    }
 
     const nBits = starkStruct.nBits;
     const N = 1 << nBits;
@@ -15,7 +29,6 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
 
     assert(nBits+extendBits == starkStruct.steps[0].nBits, "First step must be just one");
 
-    const poseidon = await buildPoseidon();
     const F = poseidon.F;
     const transcript = new Transcript(poseidon, poseidon.F);
 
@@ -45,20 +58,20 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
 
     if (!F.eq(res, 0n)) return false;
 
-    const fri = new FRI( poseidon, starkStruct );
+    const fri = new FRI( poseidon, starkStruct, MH );
 
     const checkQuery = (query, idx) => {
         console.log("Query:"+  idx)
         let res;
-        res = MerkleHash.verifyGroupProof(proof.root1, query[0][1], idx, query[0][0]);
+        res = MH.verifyGroupProof(proof.root1, query[0][1], idx, query[0][0]);
         if (!res) return false;
-        res = MerkleHash.verifyGroupProof(proof.root2, query[1][1], idx, query[1][0]);
+        res = MH.verifyGroupProof(proof.root2, query[1][1], idx, query[1][0]);
         if (!res) return false;
-        res = MerkleHash.verifyGroupProof(proof.root3, query[2][1], idx, query[2][0]);
+        res = MH.verifyGroupProof(proof.root3, query[2][1], idx, query[2][0]);
         if (!res) return false;
-        res = MerkleHash.verifyGroupProof(proof.root4, query[3][1], idx, query[3][0]);
+        res = MH.verifyGroupProof(proof.root4, query[3][1], idx, query[3][0]);
         if (!res) return false;
-        res = MerkleHash.verifyGroupProof(constRoot, query[4][1], idx, query[4][0]);
+        res = MH.verifyGroupProof(constRoot, query[4][1], idx, query[4][0]);
         if (!res) return false;
 
         const ctxQry = {};

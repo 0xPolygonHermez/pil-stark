@@ -4,7 +4,10 @@ const version = require("../package").version;
 const F1Field = require("./f3g");
 const { createConstantPols, compile, importPolynomials } = require("zkpil");
 const { extendPol } = require("./polutils");
-const MerkleHash = require("./merkle_hash.js");
+const MerkleHashGL = require("./merklehash.js");
+const MerkleHashBN128 = require("./merklehash.bn128.js");
+const buildPoseidonGL = require("./poseidon");
+const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 
 
 const argv = require("yargs")
@@ -38,9 +41,20 @@ async function run() {
         constPolsArrayE[i] = await extendPol(F, constPolsArray[i], starkStruct.nBitsExt - starkStruct.nBits);
     }
 
-    const constTree = MerkleHash.merkelize(constPolsArrayE, 1, constPolsArrayE.length, constPolsArrayE[0].length);
+    let MH;
+    if (starkStruct.hashType == "GL") {
+        const poseidonGL = await buildPoseidonGL();
+        MH = new MerkleHashGL(poseidonGL);
+    } else if (starkStruct.hashType == "GL") {
+        const poseidonBN128 = await buildPoseidonBN128();
+        MH = new MerkleHashBN128(poseidonBN128);
+    } else {
+        throw new Error("Invalid Hash Type: "+ starkStruct.hashType);
+    }
 
-    const constRoot = MerkleHash.root(constTree);
+    const constTree = await MH.merkelize(constPolsArrayE, 1, constPolsArrayE.length, constPolsArrayE[0].length);
+
+    const constRoot = MH.root(constTree);
     const verKey = {
         constRoot: [
             constRoot[0].toString(),
