@@ -3,6 +3,8 @@ const assert = require("assert");
 const MerkleHashGL = require("./merklehash.js");
 const MerkleHashBN128 = require("./merklehash.bn128.js");
 const Transcript = require("./transcript");
+const TranscriptBN128 = require("./transcript.bn128");
+
 const { extendPol, buildZhInv, calculateH1H2, calculateZ } = require("./polutils.js");
 const { log2 } = require("./utils");
 const buildPoseidonGL = require("./poseidon");
@@ -20,20 +22,19 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     const F = poseidon.F;
 
     let MH;
+    let transcript;
     if (starkStruct.hashType == "GL") {
         MH = new MerkleHashGL(poseidon);
-    } else if (starkStruct.hashType == "GL") {
+        transcript = new Transcript(poseidon);
+    } else if (starkStruct.hashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
         MH = new MerkleHashBN128(poseidonBN128);
+        transcript = new TranscriptBN128(poseidonBN128);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.hashType);
     }
 
-
-
     const fri = new FRI( poseidon, starkStruct, MH );
-
-    const transcript = new Transcript(poseidon);
 
     if (cmPols.length != pil.nCommitments) {
         throw new Error(`Number of Commited Polynomials: ${cmPols.length} do not match with the pil definition: ${pil.nCommitments} `)

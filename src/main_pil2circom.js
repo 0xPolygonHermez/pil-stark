@@ -4,6 +4,8 @@ const version = require("../package").version;
 const pil2circom = require("./pil2circom.js");
 const F1Field = require("./f3g.js");
 const { compile } = require("zkpil");
+const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
+
 
 
 const argv = require("yargs")
@@ -24,15 +26,12 @@ async function run() {
     const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "mycircuit.verifier.circom";
 
     const pil = await compile(F, pilFile);
-    const verKey = JSON.parse(await fs.promises.readFile(verKeyFile, "utf8"));
-    const constRoot = [];
-    for (let i=0; i<4; i++) {
-        constRoot[i] = BigInt(verKey.constRoot[i]);
-    }
-    const template = await fs.promises.readFile("./circuits.gl/stark_verifier.circom.ejs", "utf8");
+    const verKey = JSONbig.parse(await fs.promises.readFile(verKeyFile, "utf8"));
+    const constRoot = verKey.constRoot;
+
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
 
-    const verifier = await pil2circom(template, pil, constRoot, starkStruct);
+    const verifier = await pil2circom(pil, constRoot, starkStruct);
 
     await fs.promises.writeFile(outputFile, verifier, "utf8");
 

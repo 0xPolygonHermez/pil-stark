@@ -27,15 +27,11 @@ async function run() {
 
     const pil = await compile(F, pilFile);
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
-    const verkey = JSON.parse(await fs.promises.readFile(verKeyFile, "utf8"));
+    const verkey = JSONbig.parse(await fs.promises.readFile(verKeyFile, "utf8"));
     const proof = JSONbig.parse(await fs.promises.readFile(proofFile, "utf8"));
     const public = JSONbig.parse(await fs.promises.readFile(publicFile, "utf8"));
 
-    const constRoot = [];
-    constRoot[0] = BigInt(verkey.constRoot[0]);
-    constRoot[1] = BigInt(verkey.constRoot[1]);
-    constRoot[2] = BigInt(verkey.constRoot[2]);
-    constRoot[3] = BigInt(verkey.constRoot[3]);
+    const constRoot = verkey.constRoot;
 
     const resV = await starkVerify(proof, public, pil, constRoot, starkStruct);
 

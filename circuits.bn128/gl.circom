@@ -1,6 +1,43 @@
 pragma circom 2.0.4;
 include "../node_modules/circomlib/circuits/bitify.circom";
 
+template GLNorm() {
+    signal input in;
+    signal output out;
+
+    var p=0xFFFFFFFF00000001;
+    signal k <-- in\p;
+    out <-- in - k*p;
+
+    component n2bK = Num2Bits(10);
+    component n2bO = Num2Bits(64);
+
+    n2bK.in <== k;
+    n2bO.in <== out;
+
+    in === k*p + out;
+}
+
+template GLCNorm() {
+    signal input in[3];
+    signal output out[3];
+
+    signal k[3];
+    component n2bK[3];
+    component n2bO[3];
+
+    var p=0xFFFFFFFF00000001;
+
+    for (var i=0; i<3; i++) {
+        k[i] <-- in[i]\p;
+        out[i] <-- in[i] - k[i]*p;
+        n2bK[i] = Num2Bits(10);
+        n2bO[i] = Num2Bits(64);
+        n2bK[i].in <== k[i];
+        n2bO[i].in <== out[i];
+        in[i] === k[i]*p + out[i];
+    }
+}
 
 template GLMul() {
     signal input ina;
@@ -81,7 +118,6 @@ template GLCMul() {
     out[1] <-- m[1] -k[1]*p;
     out[2] <-- m[2] -k[2]*p;
 
-
     component n2bK0 = Num2Bits(70);
     component n2bK1 = Num2Bits(70);
     component n2bK2 = Num2Bits(70);
@@ -136,7 +172,6 @@ template GLCMulAdd() {
     out[0] <-- m[0] -k[0]*p;
     out[1] <-- m[1] -k[1]*p;
     out[2] <-- m[2] -k[2]*p;
-
 
     component n2bK0 = Num2Bits(70);
     component n2bK1 = Num2Bits(70);
@@ -232,12 +267,17 @@ template GLCInv() {
     t = t % p;
     var tinv = _inv1(t);
 
-    var i1 = ((-aa -ac-ac +bc + bb - cc)*tinv) % p;
-    if (i1 <0) i1 = i1 + p;
-    var i2 = ((ba -cc)*tinv) % p;
-    if (i2 <0) i2 = i2 + p;
-    var i3 =  ((-bb +ac + cc)*tinv) % p;
-    if (i3 <0) i3 = i3 + p;
+    var i1 = (-aa -ac-ac +bc + bb - cc);
+    while (i1 <0) i1 = i1 + p;
+    i1 = i1*tinv % p;
+
+    var i2 = (ba -cc);
+    while (i2<0) i2 = i2 + p;
+    i2 = i2*tinv % p;
+
+    var i3 =  (-bb +ac + cc);
+    while (i3 <0) i3 = i3 + p;
+    i3 = i3*tinv % p;
 
     out[0] <--  i1;
     out[1] <--  i2;

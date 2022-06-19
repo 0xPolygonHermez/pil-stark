@@ -1,5 +1,7 @@
 const fs = require("fs");
 const version = require("../package").version;
+const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
+
 
 const F1Field = require("./f3g");
 const { createConstantPols, compile, importPolynomials } = require("zkpil");
@@ -46,7 +48,7 @@ async function run() {
     if (starkStruct.hashType == "GL") {
         const poseidonGL = await buildPoseidonGL();
         MH = new MerkleHashGL(poseidonGL);
-    } else if (starkStruct.hashType == "GL") {
+    } else if (starkStruct.hashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
         MH = new MerkleHashBN128(poseidonBN128);
     } else {
@@ -56,16 +58,12 @@ async function run() {
     const constTree = await MH.merkelize(constPolsArrayE, 1, constPolsArrayE.length, constPolsArrayE[0].length);
 
     const constRoot = MH.root(constTree);
+
     const verKey = {
-        constRoot: [
-            constRoot[0].toString(),
-            constRoot[1].toString(),
-            constRoot[2].toString(),
-            constRoot[3].toString(),
-        ]
+        constRoot: constRoot
     };
 
-    await fs.promises.writeFile(verKeyFile, JSON.stringify(verKey, null, 1), "utf8");
+    await fs.promises.writeFile(verKeyFile, JSONbig.stringify(verKey, null, 1), "utf8");
 
     const fd =await fs.promises.open(constTreeFile, "w+");
     await fd.write(constTree);
