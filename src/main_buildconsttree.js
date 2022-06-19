@@ -38,6 +38,7 @@ async function run() {
 
     const constPolsArrayE = [];
     for (let i=0; i<constPolsArray.length; i++) {
+        console.log(`Extending polynomial ${i+1}/${constPolsArray.length}`);
         constPolsArrayE[i] = await extendPol(F, constPolsArray[i], starkStruct.nBitsExt - starkStruct.nBits);
     }
 

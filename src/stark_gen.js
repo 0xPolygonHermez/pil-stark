@@ -301,11 +301,13 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     async function extendCms(qs) {
         for (let i=0; i<pols.cm.length; i++) {
             if (!pols2ns.cm[i]) {
+                console.log(`Extending cm pol ${i+1}/${pols.cm.length}`);
                 pols2ns.cm[i] = extendPol(F, pols.cm[i], extendBits);
             }
         }
         for (let i=0; i<qs.length; i++) {
             if (pols2ns.exps[qs[i].idExp].length == 0) {
+                console.log(`Calc and Extending q pol ${i+1}/${qs.length}`);
                 pols2ns.exps[qs[i].idExp] = extendPol(F, pols.exps[qs[i].idExp], extendBits);
                 pols2ns.q[qs[i].idQ] = [];
             }
