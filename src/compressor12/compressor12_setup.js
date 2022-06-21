@@ -330,7 +330,7 @@ function processConstraints(F, r1cs, logger ) {
             }
         }
         normalize(res);
-        return;
+        return res;
     }
 
     function normalize(lc) {
@@ -439,11 +439,11 @@ function processConstraints(F, r1cs, logger ) {
             normalize(lcC);
             addConstraintSum(lcC);
         } else if (lctA == "k") {
-            const lcCC = join(lcB, A[0], lcC);
+            const lcCC = join(lcB, lcA[0], lcC);
             addConstraintSum(lcCC);
         } else if (lctB == "k") {
             const lcCC = join(lcA, lcB[0], lcC);
-            addConstraintSum(CC);
+            addConstraintSum(lcCC);
         } else {
             addConstraintMul(lcA, lcB, lcC);
         }
