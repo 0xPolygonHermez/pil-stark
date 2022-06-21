@@ -66,6 +66,16 @@ async function run() {
     await fs.promises.writeFile(verKeyFile, JSONbig.stringify(verKey, null, 1), "utf8");
 
     const fd =await fs.promises.open(constTreeFile, "w+");
+
+    const MAX_WRITE_SIZE=2**24;
+    let pending = constTree.byteLength;
+    let offset = 0;
+    while (pending) {
+        const n= Math.min(MAX_WRITE_SIZE, pending);
+        await fd.write(constTree, offset, n);
+        offset += n;
+        pending -= n;
+    }
     await fd.write(constTree);
     await fd.close();
 
