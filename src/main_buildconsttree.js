@@ -45,14 +45,14 @@ async function run() {
     }
 
     let MH;
-    if (starkStruct.hashType == "GL") {
+    if (starkStruct.verificationHashType == "GL") {
         const poseidonGL = await buildPoseidonGL();
         MH = new MerkleHashGL(poseidonGL);
-    } else if (starkStruct.hashType == "BN128") {
+    } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
         MH = new MerkleHashBN128(poseidonBN128);
     } else {
-        throw new Error("Invalid Hash Type: "+ starkStruct.hashType);
+        throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
 
     const constTree = await MH.merkelize(constPolsArrayE, 1, constPolsArrayE.length, constPolsArrayE[0].length);
@@ -76,7 +76,6 @@ async function run() {
         offset += n;
         pending -= n;
     }
-    await fd.write(constTree);
     await fd.close();
 
     console.log("files Generated Correctly");

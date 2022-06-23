@@ -559,5 +559,22 @@
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
+        {
+            "name": "fibonacci generate BN128 final circom",
+            "program": "src/main_pil2circom.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
+                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.c12.starkstruct.json",
+                "-v ${workspaceFolder}/tmp/fibonacci.c12.verkey.json",
+                "-o ${workspaceFolder}/tmp/fibonacci.c12.verifier.circom",
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+
     ]
 }

@@ -16,15 +16,15 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
 
     let MH;
     let transcript;
-    if (starkStruct.hashType == "GL") {
+    if (starkStruct.verificationHashType == "GL") {
         MH = new MerkleHashGL(poseidon);
         transcript = new Transcript(poseidon);
-    } else if (starkStruct.hashType == "BN128") {
+    } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
         MH = new MerkleHashBN128(poseidonBN128);
         transcript = new TranscriptBN128(poseidonBN128);
     } else {
-        throw new Error("Invalid Hash Type: "+ starkStruct.hashType);
+        throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
 
     const nBits = starkStruct.nBits;

@@ -14,12 +14,12 @@ module.exports = async function pil2circom(pil, constRoot, starkStruct) {
     setDimensions(starkInfo.verifierQueryCode);
 
     let template;
-    if (starkStruct.hashType == "GL") {
+    if (starkStruct.verificationHashType == "GL") {
         template = await fs.promises.readFile("./circuits.gl/stark_verifier.circom.ejs", "utf8");
-    } else if (starkStruct.hashType == "BN128") {
+    } else if (starkStruct.verificationHashType == "BN128") {
         template = await fs.promises.readFile("./circuits.bn128/stark_verifier.circom.ejs", "utf8");
     } else {
-        throw new Error("Invalid Hash Type: "+ starkStruct.hashType);
+        throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
 
 
