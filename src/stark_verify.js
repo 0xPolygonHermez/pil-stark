@@ -54,10 +54,10 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
     ctx.challanges[6] = transcript.getField(); // v2
     ctx.challanges[7] = transcript.getField(); // xi
 
-    console.log(ctx.challanges[7]);
-
     ctx.Z = F.sub(F.exp(ctx.challanges[7], N), 1n);
     ctx.Zp = F.sub(F.exp(F.mul(ctx.challanges[7], F.w[nBits]), N), 1n);
+
+
 
     const res=executeCode(F, ctx, starkInfo.verifierCode.first);
 
@@ -80,10 +80,10 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
         if (!res) return false;
 
         const ctxQry = {};
-        ctxQry.tree1 = extractVals(starkInfo, query[0][0], starkInfo.mapSections.cm1_2ns);
-        ctxQry.tree2 = extractVals(starkInfo, query[1][0], starkInfo.mapSections.cm2_2ns);
-        ctxQry.tree3 = extractVals(starkInfo, query[2][0], starkInfo.mapSections.cm3_2ns);
-        ctxQry.tree4 = extractVals(starkInfo, query[3][0], starkInfo.mapSections.q_2ns);
+        ctxQry.tree1 = query[0][0];
+        ctxQry.tree2 = query[1][0];
+        ctxQry.tree3 = query[2][0];
+        ctxQry.tree4 = query[3][0];
         ctxQry.consts = query[4][0];
         ctxQry.evals = ctx.evals;
         ctxQry.publics = ctx.publics;
@@ -93,27 +93,9 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
         ctxQry.xDivXSubXi = F.div(x, F.sub(x, ctxQry.challanges[7]));
         ctxQry.xDivXSubWXi = F.div(x, F.sub(x, F.mul(F.w[nBits], ctxQry.challanges[7])));
 
-        const vals = [executeCode(F, ctxQry, starkInfo.verifierQueryCode)];
+        const vals = [executeCode(F, ctxQry, starkInfo.verifierQueryCode.first)];
 
         return vals;
-
-        function extractVals(starkInfo, rawVals, pols) {
-            const res = [];
-            for (let i=0; i<pols.length; i++) {
-                const p = starkInfo.varPolMap[pols[i]];
-                if (p.dim == 1) {
-                    res.push(rawVals[p.sectionPos]);
-                } else if (p.dim == 3) {
-                    res.push([
-                        rawVals[p.sectionPos],
-                        rawVals[p.sectionPos+1],
-                        rawVals[p.sectionPos+2]
-                    ]);
-                } else {
-                    throw new Error("Invalid dim");
-                }
-            }
-        }
     }
 
     return fri.verify(transcript, proof.fri, checkQuery);
@@ -144,10 +126,10 @@ function executeCode(F, ctx, code) {
     function getRef(r) {
         switch (r.type) {
             case "tmp": return tmp[r.id];
-            case "tree1": return extractVal(ctx.tree1, r.treePos, r.treeSize);
-            case "tree2": return extractVal(ctx.tree2, r.treePos, r.treeSize);
-            case "tree3": return extractVal(ctx.tree3, r.treePos, r.treeSize);
-            case "tree4": return extractVal(ctx.tree4, r.treePos, r.treeSize);
+            case "tree1": return extractVal(ctx.tree1, r.treePos, r.dim);
+            case "tree2": return extractVal(ctx.tree2, r.treePos, r.dim);
+            case "tree3": return extractVal(ctx.tree3, r.treePos, r.dim);
+            case "tree4": return extractVal(ctx.tree4, r.treePos, r.dim);
             case "const": return ctx.consts[r.id];
             case "eval": return ctx.evals[r.id];
             case "number": return BigInt(r.value);

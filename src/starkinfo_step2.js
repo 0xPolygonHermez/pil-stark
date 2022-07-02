@@ -3,19 +3,9 @@ const {pilCodeGen, buildCode, fixCode} = require("./starkinfo_codegen.js");
 const ExpressionOps = require("./expressionops.js");
 
 
-module.exports = function generateStep2(res, pil) {
+module.exports = function generateStep2(res, pil, ctx) {
 
     const E = new ExpressionOps();
-
-    const ctx = {
-        pil: pil,
-        calculated: {
-            exps: {},
-            expsPrime: {}
-        },
-        tmpUsed: 0,
-        code: []
-    };
 
     for (let i=0; i<pil.plookupIdentities.length; i++) {
         const puCtx = {};

@@ -2,9 +2,10 @@ const chai = require("chai");
 const assert = chai.assert;
 const F1Field = require("../src/f3g");
 const path = require("path");
-const buildPoseidon = require("../src/poseidon.js");
 const starkGen = require("../src/stark_gen.js");
 const starkVerify = require("../src/stark_verify.js");
+const buildPoseidonGL = require("../src/poseidon");
+const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 
 
 const { createCommitedPols, createConstantPols, compile, verifyPil } = require("zkpil");
@@ -13,8 +14,9 @@ const { createCommitedPols, createConstantPols, compile, verifyPil } = require("
 const smGlobal = require("../src/sm/sm_global.js");
 const smPermutation = require("./sm_permutation/sm_permutation.js");
 
+const MerkleHashGL = require("../src/merklehash.js");
+const MerkleHashBN128 = require("../src/merklehash.bn128.js");
 
-const MerkleHash = require("../src/merkle_hash.js");
 const { extendPol } = require("../src/polutils");
 
 
@@ -26,7 +28,8 @@ describe("test plookup sm", async function () {
         const starkStruct = {
             nBits: 10,
             nBitsExt: 11,
-            nQueries: 128,
+            nQueries: 8,
+            verificationHashType : "GL",
             steps: [
                 {nBits: 11},
                 {nBits: 3}
@@ -54,20 +57,30 @@ describe("test plookup sm", async function () {
             assert(0);
         }
 
-        const poseidon = await buildPoseidon();
-
         const constPolsArrayE = [];
         for (let i=0; i<constPolsArray.length; i++) {
-            constPolsArrayE[i] = await extendPol(poseidon.F, constPolsArray[i], 1);
+            constPolsArrayE[i] = await extendPol(Fr, constPolsArray[i], 1);
         }
 
-        const constTree = await MerkleHash.merkelize(constPolsArrayE, 1, constPolsArrayE.length, constPolsArrayE[0].length);
+        let MH;
+        if (starkStruct.verificationHashType == "GL") {
+            const poseidonGL = await buildPoseidonGL();
+            MH = new MerkleHashGL(poseidonGL);
+        } else if (starkStruct.verificationHashType == "BN128") {
+            const poseidonBN128 = await buildPoseidonBN128();
+            MH = new MerkleHashBN128(poseidonBN128);
+        } else {
+            throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
+        }
+
+
+        const constTree = await MH.merkelize(constPolsArrayE, 1, constPolsArrayE.length, constPolsArrayE[0].length);
 
         const resP = await starkGen(cmPolsArray, constPolsArray, constTree, pil, starkStruct);
 
         const pil2 = await compile(Fr, path.join(__dirname, "sm_permutation", "permutation.pil"));
 
-        const resV = await starkVerify(resP.proof, resP.publics, pil2, MerkleHash.root(constTree), starkStruct);
+        const resV = await starkVerify(resP.proof, resP.publics, pil2, MH.root(constTree), starkStruct);
 
         assert(resV==true);
 

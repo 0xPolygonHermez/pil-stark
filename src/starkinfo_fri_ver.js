@@ -28,10 +28,6 @@ module.exports = function generateVerifierQuery(res, pil) {
             case "cm":
             case "q":
             case "const":
-                const [k, id] = getTreePos(res, r.type, r.id);
-                r.type = k;
-                r.id = id;
-                delete r.prime;
                 break;
             case "exp":
                 const p = r.prime ? 1 : 0;

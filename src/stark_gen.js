@@ -128,8 +128,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 
     for (let i=0; i<starkInfo.puCtx.length; i++) {
         const puCtx = starkInfo.puCtx[i];
-        const fPol = getPol(ctx.pols, starkInfo, starkInfo.exps_n[pu.fExpId]);
-        const tPol = getPol(ctx.pols, starkInfo, starkInfo.exps_n[pu.tExpId]);
+        const fPol = getPol(ctx.pols, starkInfo, starkInfo.exps_n[puCtx.fExpId]);
+        const tPol = getPol(ctx.pols, starkInfo, starkInfo.exps_n[puCtx.tExpId]);
         const [h1, h2] = calculateH1H2(F, fPol, tPol);
         setPol(ctx.pols, starkInfo, starkInfo.cm_n[nCm++], h1);
         setPol(ctx.pols, starkInfo, starkInfo.cm_n[nCm++], h2);
@@ -147,7 +147,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     ctx.challanges[3] = transcript.getField(); // betta
 
 
-    calculateExps(ctx, starkInfo.step3prev);
+    calculateExps(ctx, starkInfo.step3prev, "n");
     for (let i=0; i<starkInfo.puCtx.length; i++) {
         const pu = starkInfo.puCtx[i];
         const pNum = getPol(ctx.pols, starkInfo, starkInfo.exps_n[pu.numId]);
@@ -222,6 +222,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
             p = getPol(ctx.pols, starkInfo, starkInfo.cm_2ns[ev.id]);
         } else if (ev.type == "q") {
             p = getPol(ctx.pols, starkInfo, starkInfo.qs[ev.id]);
+        } else {
+            throw new Error("Invalid ev type: "+ ev.type);
         }
         l = ev.prime ? LpEv : LEv;
         let acc = 0n;
@@ -254,8 +256,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     }
 
     calculateExps(ctx, starkInfo.step52ns, "2ns");
-
-    console.log(ctx.challanges[7]);
 
     const friPol = getPol(ctx.pols, starkInfo, starkInfo.exps_2ns[starkInfo.friExpId]);
 
@@ -290,6 +290,7 @@ function compileCode(ctx, code, dom, ret) {
     const body = [];
 
     const next = (dom=="n" ? 1 : (1<<ctx.nBitsExt - ctx.nBits)).toString();
+    const N = (dom=="n" ? (1 << ctx.nBits) : (1<<ctx.nBitsExt)).toString();
 
     for (let j=0;j<code.length; j++) {
         const src = [];
@@ -319,13 +320,13 @@ function compileCode(ctx, code, dom, ret) {
             case "const": {
                 if (dom=="n") {
                     if (r.prime) {
-                        return `ctx.const_n[${r.id}][i+1]`;
+                        return `ctx.const_n[${r.id}][(i+1)%${N}]`;
                     } else {
                         return `ctx.const_n[${r.id}][i]`;
                     }
                 } else if (dom=="2ns") {
                     if (r.prime) {
-                        return `ctx.const_2ns[${r.id}][i+${next}]`;
+                        return `ctx.const_2ns[${r.id}][(i+${next})%${N}]`;
                     } else {
                         return `ctx.const_2ns[${r.id}][i]`;
                     }
@@ -366,7 +367,15 @@ function compileCode(ctx, code, dom, ret) {
             case "eval": return `ctx.evals[${r.id}]`;
             case "xDivXSubXi": return `ctx.xDivXSubXi[i]`;
             case "xDivXSubWXi": return `ctx.xDivXSubWXi[i]`;
-            case "x": return `ctx.x[i]`;
+            case "x": {
+                if (dom=="n") {
+                    return `ctx.x_n[i]`;
+                } else if (dom=="2ns") {
+                    return `ctx.x_2ns[i]`;
+                } else {
+                    throw new Error("Invalid dom");
+                }
+            }
             case "Zi": return `ctx.Zi(i)`;
             default: throw new Error("Invalid reference type get: " + r.type);
         }
@@ -408,16 +417,16 @@ function compileCode(ctx, code, dom, ret) {
         let size = ctx.starkInfo.mapSectionsN[p.section];
         if (p.dim == 1) {
             if (prime) {
-                return `ctx.pols[${offset} + (i + ${next})*${size}]`;
+                return `ctx.pols[${offset} + ((i + ${next})%${N})*${size}]`;
             } else {
                 return `ctx.pols[${offset} + i*${size}]`;
             }
         } else if (p.dim == 3) {
             if (prime) {
                 return `[` +
-                    ` ctx.pols[${offset} + (i + ${next})*${size}] ,`+
-                    ` ctx.pols[${offset} + (i + ${next})*${size} + 1],`+
-                    ` ctx.pols[${offset} + (i + ${next})*${size} + 2] `+
+                    ` ctx.pols[${offset} + ((i + ${next})%${N})*${size}] ,`+
+                    ` ctx.pols[${offset} + ((i + ${next})%${N})*${size} + 1],`+
+                    ` ctx.pols[${offset} + ((i + ${next})%${N})*${size} + 2] `+
                     `]`;
             } else {
                 return `[` +
@@ -440,7 +449,7 @@ function calculateExps(ctx, code, dom) {
     cLast = compileCode(ctx, code.last, dom);
 
     const next = dom=="n" ? 1 : 1<< (ctx.nBitsExt - ctx.nBits);
-    const N = dom=="n" ? ctx.N : ctx.NExt;
+    const N = dom=="n" ? ctx.N : ctx.Next;
     for (let i=0; i<next; i++) {
         cFirst(ctx, i);
     }
@@ -472,12 +481,12 @@ function setPol(pols, starkInfo, idPol, pol) {
         }
     } else if (p.dim == 3) {
         for (let i=0; i<N; i++) {
-            if (Array.isArray(p[i])) {
+            if (Array.isArray(pol[i])) {
                 for (let e =0; e<3; e++) {
-                    pols[offset + i*size + e] = p[i][e];
+                    pols[offset + i*size + e] = pol[i][e];
                 }
             } else {
-                pols[offset + i*size] = p[i];
+                pols[offset + i*size] = pol[i];
                 pols[offset + i*size+1] = 0n;
                 pols[offset + i*size+2] = 0n;
             }
@@ -550,5 +559,5 @@ async function  extend(F, buff, src, nPols1, nPols3,  dst, nBits, nBitsExt ) {
 async function  merkelize(MH, buff, src, width, nBitsExt ) {
     const Next = 1 << nBitsExt;
     const nTotal = Next * width
-    return await MH.merkelize(buff.slice(src, src + nTotal), 1, width, Next);
+    return await MH.merkelize(buff.slice(src, src + nTotal), 1, width, Next, true);
 }

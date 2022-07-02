@@ -73,7 +73,7 @@ module.exports = function map(res, pil) {
         });
         res.cm_n.push(pph2_n);
         res.cm_2ns.push(pph2_2ns);
-        res.mapSections.cm2_n.push(pph12n);
+        res.mapSections.cm2_n.push(pph2_n);
         res.mapSections.cm2_2ns.push(pph2_2ns);
         pil.cmDims[res.nCm1 + i*2+1] = dim;
     }
@@ -216,6 +216,25 @@ module.exports = function map(res, pil) {
     fixProverCode(res.step42ns, "2ns");
     fixProverCode(res.step52ns, "2ns");
 
+    iterateCode(res.verifierQueryCode, function fixRef(r, ctx) {
+        if (r.type == "cm") {
+            const p1 = res.varPolMap[res.cm_n[r.id]];
+            switch(p1.section) {
+                case "cm1_n": r.type = "tree1"; break;
+                case "cm2_n": r.type = "tree2"; break;
+                case "cm3_n": r.type = "tree3"; break;
+                default: throw new Error("Invalid cm section");
+            }
+            r.treePos = p1.sectionPos;
+            r.dim = p1.dim;
+        } else if (r.type == "q") {
+            const p2 = res.varPolMap[res.qs[r.id]];
+            r.type = "tree4";
+            r.treePos = p2.sectionPos;
+            r.dim = p2.dim;
+        }
+    });
+
     function fixProverCode(code, dom) {
         const ctx = {};
         ctx.expMap = [{}, {}];
@@ -253,14 +272,8 @@ module.exports = function map(res, pil) {
                         } else {
                             throw ("Invalid domain", ctx.dom);
                         }
-                    } else if (pil.expressions[r.id].keep) {
-                        if (ctx.dom == "n") {
-                            r.p = res.exps_n[r.id];
-                        } else if (ctx.dom == "2ns") {
-                            throw new Error("Accession keep expresion in 2ns domain");
-                        } else {
-                            throw ("Invalid domain", ctx.dom);
-                        }
+                    } else if ((pil.expressions[r.id].keep)&&(ctx.dom=="n")) {
+                        r.p = res.exps_n[r.id];
                     } else if (pil.expressions[r.id].keep2ns) {
                         if (ctx.dom == "n") {
                             throw new Error("Accession keep2ns expresion in n domain");

@@ -1,25 +1,15 @@
 
 const {pilCodeGen, buildCode, fixCode} = require("./starkinfo_codegen.js");
 const ExpressionOps = require("./expressionops.js");
+const getKs = require("zkpil").getKs;
+const F1Field = require("./f3g.js");
 
-module.exports = function generateStep3(res, pil) {
+module.exports = function generateStep3(res, pil, ctx) {
 
-    const E = new ExpressionOps();
-
-    const ctx = {
-        pil: pil,
-        calculated: {
-            exps: {},
-            expsPrime: {}
-        },
-        tmpUsed: 0,
-        code: []
-    };
-
-    generatePermutationLC(res, pil);
-    generatePlookupZ(res, pil);
-    generatePermutationZ(res, pil);
-    generateConnectionsZ(res, pil);
+    generatePermutationLC(res, pil, ctx);
+    generatePlookupZ(res, pil, ctx);
+    generatePermutationZ(res, pil, ctx);
+    generateConnectionsZ(res, pil, ctx);
 
 
     res.step3prev = buildCode(ctx);
@@ -27,7 +17,10 @@ module.exports = function generateStep3(res, pil) {
 
 
 
-function generatePermutationLC(res, pil) {
+function generatePermutationLC(res, pil, ctx) {
+
+    const E = new ExpressionOps();
+
     for (let i=0; i<pil.permutationIdentities.length; i++) {
         const peCtx = {};
         const pi = pil.permutationIdentities[i];
@@ -85,7 +78,9 @@ function generatePermutationLC(res, pil) {
 }
 
 
-function generatePlookupZ(res, pil) {
+function generatePlookupZ(res, pil, ctx) {
+    const E = new ExpressionOps();
+
     for (let i=0; i<pil.plookupIdentities.length; i++) {
         const puCtx = res.puCtx[i];
         puCtx.zId = pil.nCommitments++;
@@ -176,7 +171,9 @@ function generatePlookupZ(res, pil) {
 }
 
 
-function generatePermutationZ(res, pil) {
+function generatePermutationZ(res, pil, ctx) {
+    const E = new ExpressionOps();
+
     for (let i=0; i<pil.permutationIdentities.length; i++) {
         peCtx = res.peCtx[i];
 
@@ -220,7 +217,10 @@ function generatePermutationZ(res, pil) {
     }
 }
 
-function generateConnectionsZ(res, pil) {
+function generateConnectionsZ(res, pil, ctx) {
+    const E = new ExpressionOps();
+    const F = new F1Field();
+
     for (let i=0; i<pil.connectionIdentities.length; i++) {
         const ci = pil.connectionIdentities[i];
         const ciCtx = {};
