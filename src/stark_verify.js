@@ -3,7 +3,7 @@ const TranscriptBN128 = require("./transcript.bn128");
 const FRI = require("../src/fri.js");
 const MerkleHashGL = require("./merklehash.js");
 const MerkleHashBN128 = require("./merklehash.bn128.js");
-const starkInfoGen = require("./starkinfo_gen.js");
+const starkInfoGen = require("./starkinfo.js");
 const { assert } = require("chai");
 const buildPoseidonGL = require("./poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
@@ -54,10 +54,12 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
     ctx.challanges[6] = transcript.getField(); // v2
     ctx.challanges[7] = transcript.getField(); // xi
 
+    console.log(ctx.challanges[7]);
+
     ctx.Z = F.sub(F.exp(ctx.challanges[7], N), 1n);
     ctx.Zp = F.sub(F.exp(F.mul(ctx.challanges[7], F.w[nBits]), N), 1n);
 
-    const res=executeCode(F, ctx, starkInfo.verifierCode);
+    const res=executeCode(F, ctx, starkInfo.verifierCode.first);
 
     if (!F.eq(res, 0n)) return false;
 
@@ -78,10 +80,10 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
         if (!res) return false;
 
         const ctxQry = {};
-        ctxQry.tree1 = query[0][0];
-        ctxQry.tree2 = query[1][0];
-        ctxQry.tree3 = query[2][0];
-        ctxQry.tree4 = query[3][0];
+        ctxQry.tree1 = extractVals(starkInfo, query[0][0], starkInfo.mapSections.cm1_2ns);
+        ctxQry.tree2 = extractVals(starkInfo, query[1][0], starkInfo.mapSections.cm2_2ns);
+        ctxQry.tree3 = extractVals(starkInfo, query[2][0], starkInfo.mapSections.cm3_2ns);
+        ctxQry.tree4 = extractVals(starkInfo, query[3][0], starkInfo.mapSections.q_2ns);
         ctxQry.consts = query[4][0];
         ctxQry.evals = ctx.evals;
         ctxQry.publics = ctx.publics;
@@ -94,6 +96,24 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
         const vals = [executeCode(F, ctxQry, starkInfo.verifierQueryCode)];
 
         return vals;
+
+        function extractVals(starkInfo, rawVals, pols) {
+            const res = [];
+            for (let i=0; i<pols.length; i++) {
+                const p = starkInfo.varPolMap[pols[i]];
+                if (p.dim == 1) {
+                    res.push(rawVals[p.sectionPos]);
+                } else if (p.dim == 3) {
+                    res.push([
+                        rawVals[p.sectionPos],
+                        rawVals[p.sectionPos+1],
+                        rawVals[p.sectionPos+2]
+                    ]);
+                } else {
+                    throw new Error("Invalid dim");
+                }
+            }
+        }
     }
 
     return fri.verify(transcript, proof.fri, checkQuery);
@@ -124,10 +144,10 @@ function executeCode(F, ctx, code) {
     function getRef(r) {
         switch (r.type) {
             case "tmp": return tmp[r.id];
-            case "tree1": return ctx.tree1[r.id];
-            case "tree2": return ctx.tree2[r.id];
-            case "tree3": return ctx.tree3[r.id];
-            case "tree4": return ctx.tree4[r.id];
+            case "tree1": return extractVal(ctx.tree1, r.treePos, r.treeSize);
+            case "tree2": return extractVal(ctx.tree2, r.treePos, r.treeSize);
+            case "tree3": return extractVal(ctx.tree3, r.treePos, r.treeSize);
+            case "tree4": return extractVal(ctx.tree4, r.treePos, r.treeSize);
             case "const": return ctx.consts[r.id];
             case "eval": return ctx.evals[r.id];
             case "number": return BigInt(r.value);
@@ -141,6 +161,16 @@ function executeCode(F, ctx, code) {
         }
     }
 
+    function extractVal(arr, pos, dim) {
+        if (dim==1) {
+            return arr[pos];
+        } else if (dim==3) {
+            return arr.slice(pos, pos+3);
+        } else {
+            throw new Error("Invalid dimension");
+        }
+    }
+
     function setRef(r, val) {
         switch (r.type) {
             case "tmp": tmp[r.id] = val; return;
@@ -149,3 +179,4 @@ function executeCode(F, ctx, code) {
     }
 
 }
+

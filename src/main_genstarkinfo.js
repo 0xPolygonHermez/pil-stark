@@ -2,7 +2,7 @@ const fs = require("fs");
 const version = require("../package").version;
 
 const F1Field = require("./f3g");
-const starkInfoGen = require("./starkinfo_gen.js");
+const starkInfoGen = require("./starkinfo.js");
 const { compile } = require("zkpil");
 
 const argv = require("yargs")
