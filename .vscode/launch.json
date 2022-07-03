@@ -96,19 +96,6 @@
             "runtimeArgs": ["--max-old-space-size=64000"]
         },
         {
-            "name": "test bn128 circuit gl",
-            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
-            "request": "launch",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node",
-            "args": [
-                "${workspaceFolder}/test/gl.bn128.circuit.test.js"
-            ],
-            "runtimeArgs": ["--max-old-space-size=64000"]
-        },
-        {
             "name": "test fibonacci",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
@@ -170,19 +157,6 @@
             "type": "pwa-node",
             "args": [
                 "${workspaceFolder}/test/poseidon.circuit.test.js"
-            ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
-        },
-        {
-            "name": "StarkVerifier circuit test",
-            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
-            "request": "launch",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node",
-            "args": [
-                "${workspaceFolder}/test/stark_verification.circuit.test.js"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
@@ -443,7 +417,20 @@
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
         {
-            "name": "Fibonacci C12 setup",
+            "name": "fibonacci StarkVerifier GL circuit test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/stark_verification.circuit.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "fibonacci C12 setup",
             "program": "src/compressor12/main_compressor12_setup.js",
             "request": "launch",
             "skipFiles": [
@@ -575,6 +562,18 @@
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
-
+        {
+            "name": "fibonacci bn128 circuit test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/gl.bn128.circuit.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=64000"]
+        },
     ]
 }

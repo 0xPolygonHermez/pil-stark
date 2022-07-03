@@ -1,9 +1,5 @@
 const chai = require("chai");
 const path = require("path");
-const buildPoseidon = require("../src/poseidon");
-const MerkleHash = require("../src/merkle_hash.js");
-
-
 
 const assert = chai.assert;
 

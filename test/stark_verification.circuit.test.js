@@ -23,7 +23,7 @@ describe("Stark Verification Circuit Test", function () {
 
     it("Should test circom circuit", async () => {
 
-        const circomFile = path.join(__dirname, "..", "tmp", "fibonacci_verifier.circom");
+        const circomFile = path.join(__dirname, "..", "tmp", "fibonacci.verifier.circom");
         const verKeyFile = path.join(__dirname, "..","tmp", "fibonacci.verkey.json");
         const starkStructFile = path.join(__dirname, "sm_fibonacci", "fibonacci.starkstruct.json");
         const pilFile = path.join(__dirname, "sm_fibonacci", "fibonacci.pil");
@@ -32,10 +32,9 @@ describe("Stark Verification Circuit Test", function () {
         const zkInputFile = path.join(__dirname, "..", "tmp", "fibonacci.zkinput.json")
 
 
-        const template = await fs.promises.readFile(path.join(__dirname, ".." , "circuitsGL", "stark_verifier.circom.ejs"), "utf8");
         const Fr = new F1Field("0xFFFFFFFF00000001");
         const pil = await compile(Fr, pilFile);
-        const verKey = JSON.parse(await fs.promises.readFile(verKeyFile, "utf8"));
+        const verKey = JSONbig.parse(await fs.promises.readFile(verKeyFile, "utf8"));
         const constRoot = [];
         for (let i=0; i<4; i++) {
             constRoot[i] = BigInt(verKey.constRoot[i]);
@@ -44,7 +43,7 @@ describe("Stark Verification Circuit Test", function () {
         const publics = JSONbig.parse(await fs.promises.readFile(publicsFile, "utf8"));
 
 
-        const circuitSrc = await pil2circom(template, pil, constRoot, starkStruct)
+        const circuitSrc = await pil2circom(pil, constRoot, starkStruct)
 
         await fs.promises.writeFile(circomFile, circuitSrc, "utf8");
 
