@@ -1,4 +1,4 @@
-const starkInfoGen = require("./starkinfo_gen.js");
+const starkInfoGen = require("./starkinfo.js");
 const ejs = require("ejs");
 const F1Field = require("./f3g");
 const fs = require("fs");
@@ -10,8 +10,8 @@ module.exports = async function pil2circom(pil, constRoot, starkStruct) {
 
     const F = new F1Field();
 
-    setDimensions(starkInfo.verifierCode);
-    setDimensions(starkInfo.verifierQueryCode);
+    setDimensions(starkInfo.verifierCode.first);
+    setDimensions(starkInfo.verifierQueryCode.first);
 
     let template;
     if (starkStruct.verificationHashType == "GL") {
@@ -56,10 +56,10 @@ function setDimensions(code) {
         let d;
         switch (r.type) {
             case "tmp": d=tmpDim[r.id]; break;
-            case "tree1": d=1; break;
-            case "tree2": d=3; break;
-            case "tree3": d=3; break;
-            case "tree4": d=3; break;
+            case "tree1": d=r.dim; break;
+            case "tree2": d=r.dim; break;
+            case "tree3": d=r.dim; break;
+            case "tree4": d=r.dim; break;
             case "const": d=1; break;
             case "eval": d=3; break;
             case "number": d=1; break;

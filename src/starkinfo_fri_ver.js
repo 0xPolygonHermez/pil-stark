@@ -57,27 +57,3 @@ module.exports = function generateVerifierQuery(res, pil) {
     }
 }
 
-
-function getTreePos(res, type, id) {
-    if (type == "cm") {
-        if (id < res.nCm1) {
-            return ["tree1", id];
-        } else if (id < res.nCm1 + res.nCm2) {
-            return ["tree2", id - res.nCm1];
-        } else if (id < res.nCm1 + res.nCm2 + res.nCm3) {
-            return ["tree3", id - res.nCm1 - res.nCm2];
-        } else {
-            throw new Error("Invalid tree pos: "+type+ " " + id);
-        }
-    } else if (type == "q") {
-        return ["tree4", id];
-    } else if (type = "const") {
-        if (id < res.nConstants) {
-            return ["const", id];
-        } else {
-            throw new Error("Invalid tree pos: "+type+ " " + id);
-        }
-    } else {
-        throw new Error("Invalid tree pos");
-    }
-}

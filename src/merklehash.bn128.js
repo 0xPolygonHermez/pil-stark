@@ -9,7 +9,7 @@ module.exports = class MerkleHash {
         this.lh = new LinearHash(poseidon);
     }
 
-    async merkelize(vals, elementSize, elementsInLinear, nLinears) {
+    async merkelize(vals, elementSize, elementsInLinear, nLinears, interleaved) {
         const F = this.F;
         const lh = this.lh;
 
@@ -46,7 +46,7 @@ module.exports = class MerkleHash {
         } else if (vals.length == nLinears*elementsInLinear) {
             for (let i=0; i<nLinears; i++) {
                 for (let j=0; j<elementsInLinear; j++) {
-                    const s = j*nLinears + i;
+                    const s = interleaved ? i*elementsInLinear + j : j*nLinears + i;
                     if (Array.isArray(vals[s])) {
                         if (vals[s].length != elementSize) throw new Error("Invalid Element size");
                         for (let k=0; k<elementSize; k++) {

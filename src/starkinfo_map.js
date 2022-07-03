@@ -218,11 +218,11 @@ module.exports = function map(res, pil) {
 
     iterateCode(res.verifierQueryCode, function fixRef(r, ctx) {
         if (r.type == "cm") {
-            const p1 = res.varPolMap[res.cm_n[r.id]];
+            const p1 = res.varPolMap[res.cm_2ns[r.id]];
             switch(p1.section) {
-                case "cm1_n": r.type = "tree1"; break;
-                case "cm2_n": r.type = "tree2"; break;
-                case "cm3_n": r.type = "tree3"; break;
+                case "cm1_2ns": r.type = "tree1"; break;
+                case "cm2_2ns": r.type = "tree2"; break;
+                case "cm3_2ns": r.type = "tree3"; break;
                 default: throw new Error("Invalid cm section");
             }
             r.treePos = p1.sectionPos;
