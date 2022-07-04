@@ -18,6 +18,19 @@
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
         {
+            "name": "test gl Wasm",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/glwasm.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
             "name": "test fft",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
@@ -332,7 +345,7 @@
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
         {
-            "name": "fibonacci genStarkInfo",
+            "name": "fibonacci gen StarkInfo",
             "program": "${workspaceFolder}/src/main_genstarkinfo.js",
             "request": "launch",
             "skipFiles": [
@@ -343,6 +356,21 @@
                 "-p test/sm_fibonacci/fibonacci.pil",
                 "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.starkstruct.json",
                 "-i tmp/fibonacci.starkinfo.json"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "fibonacci build CHelpers",
+            "program": "${workspaceFolder}/src/main_buildchelpers.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p test/sm_fibonacci/fibonacci.pil",
+                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.starkstruct.json",
+                "-c tmp/fibonacci.chelpers.cpp"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
@@ -461,7 +489,7 @@
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
         {
-            "name": "Fibonacci C12 exec",
+            "name": "fibonacci C12 exec",
             "program": "src/compressor12/main_compressor12_exec.js",
             "request": "launch",
             "skipFiles": [

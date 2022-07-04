@@ -107,6 +107,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
         if (pil.publics[i].polType == "cmP") {
             ctx.publics[i] = ctx.pols[ pil.publics[i].idx * starkInfo.mapSectionsN.cm1_n + pil.publics[i].polId   ];
         } else if (pil.publics[i].polType == "imP") {
+            // EDU: Do not implement this in the firs version.
+            //      we will not use it.
             ctx.publics[i] = calculateExpAtPoint(ctx, starkInfo.publicsCode[i], pil.publics[i].idx);
 //            ctx.publics[i] = ctx.exps[pil.publics[i].polId][pil.publics[i].idx];
         } else {

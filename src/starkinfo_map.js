@@ -235,6 +235,20 @@ module.exports = function map(res, pil) {
         }
     });
 
+    for (let i=0; i<res.nPublics; i++) {
+        if (res.publicsCode[i]) {
+            setCodeDimensions(res.publicsCode[i], res, 1);
+        }
+    }
+
+    setCodeDimensions(res.step2prev, res, 1);
+    setCodeDimensions(res.step3prev,res, 1);
+    setCodeDimensions(res.step4, res, 1);
+    setCodeDimensions(res.step42ns, res, 1);
+    setCodeDimensions(res.step52ns, res, 1);
+    setCodeDimensions(res.verifierCode, res, 3);
+    setCodeDimensions(res.verifierQueryCode, res, 1);
+
     function fixProverCode(code, dom) {
         const ctx = {};
         ctx.expMap = [{}, {}];
@@ -364,3 +378,69 @@ function getExpDim(pil, expId) {
         }
     }
 }
+
+function setCodeDimensions(code, starkInfo, dimX) {
+    _setCodeDimensions(code.first);
+    _setCodeDimensions(code.i);
+    _setCodeDimensions(code.last);
+
+    function _setCodeDimensions(code) {
+        const tmpDim = [];
+
+        for (let i=0; i<code.length; i++) {
+            let newDim;
+            switch (code[i].op) {
+                case 'add': newDim = Math.max(getDim(code[i].src[0]), getDim(code[i].src[1])); break;
+                case 'sub': newDim = Math.max(getDim(code[i].src[0]), getDim(code[i].src[1])); break;
+                case 'mul': newDim = Math.max(getDim(code[i].src[0]), getDim(code[i].src[1])); break;
+                case 'copy': newDim = getDim(code[i].src[0]); break;
+                default: throw new Error("Invalid op:"+ code[i].op);
+            }
+            setDim(code[i].dest, newDim);
+        }
+
+
+        function getDim(r) {
+            let d;
+            switch (r.type) {
+                case "tmp": d=tmpDim[r.id]; break;
+                case "tree1": d=r.dim; break;
+                case "tree2": d=r.dim; break;
+                case "tree3": d=r.dim; break;
+                case "tree4": d=r.dim; break;
+                case "exp": d= starkInfo.varPolMap[starkInfo.exps_2ns[r.id]].dim; break;
+                case "cm": d=starkInfo.varPolMap[starkInfo.cm_2ns[r.id]].dim; break;
+                case "q": d=starkInfo.varPolMap[starkInfo.qs[r.id]].dim; break;
+                case "const": d=1; break;
+                case "eval": d=3; break;
+                case "number": d=1; break;
+                case "public": d=1; break;
+                case "challange": d=3; break;
+                case "xDivXSubXi": d=dimX; break;
+                case "xDivXSubWXi": d=dimX; break;
+                case "x": d=dimX; break;
+                case "Z": d=3; break;
+                case "Zi": d=1; break;
+                default: throw new Error("Invalid reference type get: " + r.type);
+            }
+            if (!d) {
+                throw new Error("Invalid dim");
+            }
+            r.dim = d;
+            return d;
+        }
+
+        function setDim(r, dim) {
+            switch (r.type) {
+                case "tmp": tmpDim[r.id] = dim; r.dim=dim; return;
+                case "exp":
+                case "cm":
+                case "q": r.dim=dim; return;
+                default: throw new Error("Invalid reference type set: " + r.type);
+            }
+        }
+    }
+
+}
+
+
