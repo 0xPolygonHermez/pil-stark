@@ -260,6 +260,7 @@ class Transcript {
     <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2];
 <%          } else throw new Error("Invalid src dimmensions");                          -%>
 <%      } else throw new Error("Invalid op");                                           -%>
+    log(<%- i %>);
 <% }                                                                                    -%>
 <% return ref(code[code.length-1].dest);                                                -%>
 <% }                                                                                    -%>

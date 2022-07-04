@@ -17,7 +17,7 @@ describe("bn128 Verifier circuit Tester", function () {
 
     before( async() => {
         input = JSONbig.parse(await fs.promises.readFile(path.join(__dirname, "..", "tmp", "fibonacci.c12.proof.zkin.json"),  "utf8"));
-        circuit = await wasm_tester(path.join(__dirname, "..", "tmp", "fibonacci.c12.verifier.circom"), {O:1});
+        circuit = await wasm_tester(path.join(__dirname, "..", "tmp", "fibonacci.c12.verifier.circom"), {O:1, verbose:true});
     });
 
     it("Should calculate poseidon of all 0", async () => {

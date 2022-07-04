@@ -6,8 +6,8 @@ template GLNorm() {
     signal output out;
 
     var p=0xFFFFFFFF00000001;
-    signal k <-- in\p;
-    out <-- in - k*p;
+    signal k <-- (in + 16*p)\p;
+    out <-- (in+16*p) - k*p;
 
     component n2bK = Num2Bits(10);
     component n2bO = Num2Bits(64);
@@ -15,7 +15,7 @@ template GLNorm() {
     n2bK.in <== k;
     n2bO.in <== out;
 
-    in === k*p + out;
+    (in+16*p) === k*p + out;
 }
 
 template GLCNorm() {
@@ -29,13 +29,13 @@ template GLCNorm() {
     var p=0xFFFFFFFF00000001;
 
     for (var i=0; i<3; i++) {
-        k[i] <-- in[i]\p;
-        out[i] <-- in[i] - k[i]*p;
+        k[i] <-- (in[i]+16*p)\p;
+        out[i] <-- (in[i]+16*p) - k[i]*p;
         n2bK[i] = Num2Bits(10);
         n2bO[i] = Num2Bits(64);
         n2bK[i].in <== k[i];
         n2bO[i].in <== out[i];
-        in[i] === k[i]*p + out[i];
+        in[i]+16*p === k[i]*p + out[i];
     }
 }
 
@@ -48,18 +48,18 @@ template GLMul() {
     signal k;
     signal m;
 
-    m <== ina*inb;
+    m <== (ina+16*p)*(inb+16*p);
 
     k <-- m\p;
     out <-- m-k*p;
 
-    component n2bK = Num2Bits(70);
+    component n2bK = Num2Bits(80);
     component n2bO = Num2Bits(64);
 
     n2bK.in <== k;
     n2bO.in <== out;
 
-    ina*inb === k*p + out;
+    m === k*p + out;
 }
 
 template GLMulAdd() {
@@ -72,12 +72,12 @@ template GLMulAdd() {
     signal k;
     signal m;
 
-    m <== ina*inb + inc;
+    m <== (ina + 16*p)*(inb + 16*p) + inc;
 
     k <-- m\p;
     out <-- m-k*p;
 
-    component n2bK = Num2Bits(70);
+    component n2bK = Num2Bits(80);
     component n2bO = Num2Bits(64);
 
     n2bK.in <== k;
@@ -97,12 +97,12 @@ template GLCMul() {
     signal A,B,C,D,E,F,G;
     signal m[3];
 
-    A <== (ina[0] + ina[1])  * (inb[0] + inb[1]);
-    B <== (ina[0] + ina[2])  * (inb[0] + inb[2]);
-    C <== (ina[1] + ina[2])  * (inb[1] + inb[2]);
-    D <== ina[0]*inb[0];
-    E <== ina[1]*inb[1];
-    F <== ina[2]*inb[2];
+    A <== ((ina[0]+16*p) + (ina[1]+16*p))  * ((inb[0]+16*p) + (inb[1]+16*p));
+    B <== ((ina[0]+16*p) + (ina[2]+16*p))  * ((inb[0]+16*p) + (inb[2]+16*p));
+    C <== ((ina[1]+16*p) + (ina[2]+16*p))  * ((inb[1]+16*p) + (inb[2]+16*p));
+    D <== (ina[0]+16*p) * (inb[0]+16*p);
+    E <== (ina[1]+16*p) * (inb[1]+16*p);
+    F <== (ina[2]+16*p) * (inb[2]+16*p);
     G <== D-E;
     m[0] <== C+G-F;
     m[1] <== A+C-E-E-D;
@@ -118,9 +118,9 @@ template GLCMul() {
     out[1] <-- m[1] -k[1]*p;
     out[2] <-- m[2] -k[2]*p;
 
-    component n2bK0 = Num2Bits(70);
-    component n2bK1 = Num2Bits(70);
-    component n2bK2 = Num2Bits(70);
+    component n2bK0 = Num2Bits(80);
+    component n2bK1 = Num2Bits(80);
+    component n2bK2 = Num2Bits(80);
 
     component n2bO0 = Num2Bits(64);
     component n2bO1 = Num2Bits(64);
@@ -152,16 +152,16 @@ template GLCMulAdd() {
     signal A,B,C,D,E,F,G;
     signal m[3];
 
-    A <== (ina[0] + ina[1])  * (inb[0] + inb[1]);
-    B <== (ina[0] + ina[2])  * (inb[0] + inb[2]);
-    C <== (ina[1] + ina[2])  * (inb[1] + inb[2]);
-    D <== ina[0]*inb[0];
-    E <== ina[1]*inb[1];
-    F <== ina[2]*inb[2];
+    A <== ((ina[0]+16*p) + (ina[1]+16*p))  * ((inb[0]+16*p) + (inb[1]+16*p));
+    B <== ((ina[0]+16*p) + (ina[2]+16*p))  * ((inb[0]+16*p) + (inb[2]+16*p));
+    C <== ((ina[1]+16*p) + (ina[2]+16*p))  * ((inb[1]+16*p) + (inb[2]+16*p));
+    D <== (ina[0]+16*p) * (inb[0]+16*p);
+    E <== (ina[1]+16*p) * (inb[1]+16*p);
+    F <== (ina[2]+16*p) * (inb[2]+16*p);
     G <== D-E;
-    m[0] <== C+G-F + inc[0];
-    m[1] <== A+C-E-E-D + inc[1];
-    m[2] <== B-G + inc[2];
+    m[0] <== C+G-F + inc[0]+16*p;
+    m[1] <== A+C-E-E-D + inc[1]+16*p;
+    m[2] <== B-G + inc[2]+16*p;
 
     signal k[3];
 
@@ -173,9 +173,9 @@ template GLCMulAdd() {
     out[1] <-- m[1] -k[1]*p;
     out[2] <-- m[2] -k[2]*p;
 
-    component n2bK0 = Num2Bits(70);
-    component n2bK1 = Num2Bits(70);
-    component n2bK2 = Num2Bits(70);
+    component n2bK0 = Num2Bits(80);
+    component n2bK1 = Num2Bits(80);
+    component n2bK2 = Num2Bits(80);
 
     component n2bO0 = Num2Bits(64);
     component n2bO1 = Num2Bits(64);
