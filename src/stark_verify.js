@@ -36,26 +36,26 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
     const F = poseidon.F;
 
     ctx = {
-        challanges: [],
+        challenges: [],
         evals: proof.evals,
         publics: publics
     };
     transcript.put(proof.root1);
-    ctx.challanges[0] = transcript.getField(); // u
-    ctx.challanges[1] = transcript.getField(); // defVal
+    ctx.challenges[0] = transcript.getField(); // u
+    ctx.challenges[1] = transcript.getField(); // defVal
     transcript.put(proof.root2);
-    ctx.challanges[2] = transcript.getField(); // gamma
-    ctx.challanges[3] = transcript.getField(); // beta
+    ctx.challenges[2] = transcript.getField(); // gamma
+    ctx.challenges[3] = transcript.getField(); // beta
     transcript.put(proof.root3);
-    ctx.challanges[4] = transcript.getField(); // vc
+    ctx.challenges[4] = transcript.getField(); // vc
 
     transcript.put(proof.root4);
-    ctx.challanges[5] = transcript.getField(); // v1
-    ctx.challanges[6] = transcript.getField(); // v2
-    ctx.challanges[7] = transcript.getField(); // xi
+    ctx.challenges[5] = transcript.getField(); // v1
+    ctx.challenges[6] = transcript.getField(); // v2
+    ctx.challenges[7] = transcript.getField(); // xi
 
-    ctx.Z = F.sub(F.exp(ctx.challanges[7], N), 1n);
-    ctx.Zp = F.sub(F.exp(F.mul(ctx.challanges[7], F.w[nBits]), N), 1n);
+    ctx.Z = F.sub(F.exp(ctx.challenges[7], N), 1n);
+    ctx.Zp = F.sub(F.exp(F.mul(ctx.challenges[7], F.w[nBits]), N), 1n);
 
 
 
@@ -87,11 +87,11 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
         ctxQry.consts = query[4][0];
         ctxQry.evals = ctx.evals;
         ctxQry.publics = ctx.publics;
-        ctxQry.challanges = ctx.challanges;
+        ctxQry.challenges = ctx.challenges;
 
         const x = F.mul(F.shift, F.exp(F.w[nBits + extendBits], idx));
-        ctxQry.xDivXSubXi = F.div(x, F.sub(x, ctxQry.challanges[7]));
-        ctxQry.xDivXSubWXi = F.div(x, F.sub(x, F.mul(F.w[nBits], ctxQry.challanges[7])));
+        ctxQry.xDivXSubXi = F.div(x, F.sub(x, ctxQry.challenges[7]));
+        ctxQry.xDivXSubWXi = F.div(x, F.sub(x, F.mul(F.w[nBits], ctxQry.challenges[7])));
 
         const vals = [executeCode(F, ctxQry, starkInfo.verifierQueryCode.first)];
 
@@ -134,10 +134,10 @@ function executeCode(F, ctx, code) {
             case "eval": return ctx.evals[r.id];
             case "number": return BigInt(r.value);
             case "public": return BigInt(ctx.publics[r.id]);
-            case "challange": return ctx.challanges[r.id];
+            case "challenge": return ctx.challenges[r.id];
             case "xDivXSubXi": return ctx.xDivXSubXi;
             case "xDivXSubWXi": return ctx.xDivXSubWXi;
-            case "x": return ctx.challanges[7];
+            case "x": return ctx.challenges[7];
             case "Z": return r.prime ? ctx.Zp : ctx.Z;
             default: throw new Error("Invalid reference type get: " + r.type);
         }

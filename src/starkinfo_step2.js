@@ -12,8 +12,8 @@ module.exports = function generateStep2(res, pil, ctx) {
         const pi = pil.plookupIdentities[i];
 
         let tExp = null;
-        const u = E.challange("u");
-        const defVal = E.challange("defVal");
+        const u = E.challenge("u");
+        const defVal = E.challenge("defVal");
         for (let j=0; j<pi.t.length; j++) {
             const e = E.exp(pi.t[j]);
             if (tExp) {

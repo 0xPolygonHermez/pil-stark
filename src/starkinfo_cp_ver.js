@@ -58,7 +58,7 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil) {
                 r.id= ctx.expMap[p][r.id];
                 break;
             case "number":
-            case "challange":
+            case "challenge":
             case "public":
             case "tmp":
             case "Z":

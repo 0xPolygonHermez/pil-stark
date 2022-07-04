@@ -12,6 +12,9 @@ const { createCommitedPols, createConstantPols, compile, verifyPil } = require("
 
 
 const smGlobal = require("../src/sm/sm_global.js");
+const smPlookup = require("./sm_plookup/sm_plookup.js");
+const smFibonacci = require("./sm_fibonacci/sm_fibonacci.js");
+const smPermutation = require("./sm_permiutation/sm_permutation.js");
 const smConnection = require("./sm_connection/sm_connection.js");
 
 const MerkleHashGL = require("../src/merklehash.js");
@@ -21,7 +24,7 @@ const { extendPol } = require("../src/polutils");
 
 
 
-describe("test connection sm", async function () {
+describe("test plookup sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
@@ -37,17 +40,22 @@ describe("test connection sm", async function () {
         };
 
         const Fr = new F1Field("0xFFFFFFFF00000001");
-        const pil = await compile(Fr, path.join(__dirname, "sm_connection", "connection_main.pil"));
+        const pil = await compile(Fr, path.join(__dirname, "sm_all", "all_main.pil"));
         const [constPols, constPolsArray, constPolsDef] =  createConstantPols(pil);
         const [cmPols, cmPolsArray, cmPolsDef] =  createCommitedPols(pil);
 
 
         await smGlobal.buildConstants(constPols.Global, constPolsDef.Global);
+        await smPlookup.buildConstants(constPols.Plookup, constPolsDef.Plookup);
+        await smFibonacci.buildConstants(constPols.Fibonacci, constPolsDef.Fibonacci);
+        await smPermutation.buildConstants(constPols.Permutation, constPolsDef.Permutation);
         await smConnection.buildConstants(constPols.Connection, constPolsDef.Connection);
 
-        const result = await smConnection.execute(cmPols.Connection, cmPolsDef.Connection);
-        console.log("Result: " + result);
 
+        await smPlookup.execute(cmPols.Plookup, cmPolsDef.Plookup);
+        await smFibonacci.execute(cmPols.Fibonacci, cmPolsDef.Fibonacci, [1,2]);
+        await smPermutation.execute(cmPols.Permutation, cmPolsDef.Permutation);
+        await smConnection.execute(cmPols.Connection, cmPolsDef.Connection);
 
         const res = await verifyPil(Fr, pil, cmPolsArray , constPolsArray);
 
@@ -77,15 +85,13 @@ describe("test connection sm", async function () {
 
         const constTree = await MH.merkelize(constPolsArrayE, 1, constPolsArrayE.length, constPolsArrayE[0].length);
 
-
         const resP = await starkGen(cmPolsArray, constPolsArray, constTree, pil, starkStruct);
 
-        const pil2 = await compile(Fr, path.join(__dirname, "sm_connection", "connection_main.pil"));
+        const pil2 = await compile(Fr, path.join(__dirname, "sm_all", "all_main.pil"));
 
         const resV = await starkVerify(resP.proof, resP.publics, pil2, MH.root(constTree), starkStruct);
 
         assert(resV==true);
-
     });
 
 });

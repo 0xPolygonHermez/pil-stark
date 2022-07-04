@@ -23,13 +23,13 @@ describe("Stark Verification Circuit Test", function () {
 
     it("Should test circom circuit", async () => {
 
-        const circomFile = path.join(__dirname, "..", "tmp", "fibonacci.verifier.circom");
-        const verKeyFile = path.join(__dirname, "..","tmp", "fibonacci.verkey.json");
-        const starkStructFile = path.join(__dirname, "sm_fibonacci", "fibonacci.starkstruct.json");
-        const pilFile = path.join(__dirname, "sm_fibonacci", "fibonacci.pil");
-        const proofFile = path.join(__dirname, "..", "tmp", "fibonacci.proof.json");
-        const publicsFile = path.join(__dirname, "..", "tmp", "fibonacci.public.json")
-        const zkInputFile = path.join(__dirname, "..", "tmp", "fibonacci.zkinput.json")
+        const circomFile = path.join(__dirname, "..", "tmp", "all.verifier.circom");
+        const verKeyFile = path.join(__dirname, "..","tmp", "all.verkey.json");
+        const starkStructFile = path.join(__dirname, "sm_all", "all.starkstruct.json");
+        const pilFile = path.join(__dirname, "sm_all", "all_main.pil");
+        const proofFile = path.join(__dirname, "..", "tmp", "all.proof.json");
+        const publicsFile = path.join(__dirname, "..", "tmp", "all.public.json")
+        const zkInputFile = path.join(__dirname, "..", "tmp", "all.zkinput.json")
 
 
         const Fr = new F1Field("0xFFFFFFFF00000001");

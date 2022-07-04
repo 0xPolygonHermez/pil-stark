@@ -53,7 +53,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     ctx.Next = 1 << starkInfo.starkStruct.nBitsExt;
     ctx.starkInfo = starkInfo;
     ctx.tmp = [];
-    ctx.challanges = [];
+    ctx.challenges = [];
 
 
     ctx.x_n = [];
@@ -123,8 +123,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 ///////////
 // 2.- Caluculate plookups h1 and h2
 ///////////
-    ctx.challanges[0] = transcript.getField(); // u
-    ctx.challanges[1] = transcript.getField(); // defVal
+    ctx.challenges[0] = transcript.getField(); // u
+    ctx.challenges[1] = transcript.getField(); // defVal
 
     calculateExps(ctx, starkInfo.step2prev, "n");
 
@@ -145,8 +145,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 ///////////
 // 3.- Compute Z polynomials
 ///////////
-    ctx.challanges[2] = transcript.getField(); // gamma
-    ctx.challanges[3] = transcript.getField(); // betta
+    ctx.challenges[2] = transcript.getField(); // gamma
+    ctx.challenges[3] = transcript.getField(); // betta
 
 
     calculateExps(ctx, starkInfo.step3prev, "n");
@@ -180,7 +180,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 ///////////
 // 4. Compute C Polynomial
 ///////////
-    ctx.challanges[4] = transcript.getField(); // vc
+    ctx.challenges[4] = transcript.getField(); // vc
 
     calculateExps(ctx, starkInfo.step4, "n");
     await extend(F, ctx.pols, starkInfo.mapOffsets.exps_withq_n, starkInfo.mapSectionsN1.exps_withq_n, starkInfo.mapSectionsN3.exps_withq_n, starkInfo.mapOffsets.exps_withq_2ns , ctx.nBits, ctx.nBitsExt);
@@ -195,9 +195,9 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 ///////////
 // 5. Compute FRI Polynomial
 ///////////
-    ctx.challanges[5] = transcript.getField(); // v1
-    ctx.challanges[6] = transcript.getField(); // v2
-    ctx.challanges[7] = transcript.getField(); // xi
+    ctx.challenges[5] = transcript.getField(); // v1
+    ctx.challenges[6] = transcript.getField(); // v2
+    ctx.challenges[7] = transcript.getField(); // xi
 
 // Calculate Evals
 
@@ -205,8 +205,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     let LpEv = new Array(N);
     LEv[0] = 1n;
     LpEv[0] = 1n;
-    const xis = F.div(ctx.challanges[7], F.shift);
-    const wxis = F.div(F.mul(ctx.challanges[7], F.w[nBits]), F.shift);
+    const xis = F.div(ctx.challenges[7], F.shift);
+    const wxis = F.div(F.mul(ctx.challenges[7], F.w[nBits]), F.shift);
     for (let k=1; k<N; k++) {
         LEv[k] = F.mul(LEv[k-1], xis);
         LpEv[k] = F.mul(LpEv[k-1], wxis);
@@ -237,8 +237,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 
 // Calculate xDivXSubXi, xDivXSubWXi
 
-    const xi = ctx.challanges[7];
-    const wxi = F.mul(ctx.challanges[7], F.w[nBits]);
+    const xi = ctx.challenges[7];
+    const wxi = F.mul(ctx.challenges[7], F.w[nBits]);
 
     ctx.xDivXSubXi = new Array(N << extendBits);
     ctx.xDivXSubWXi = new Array(N << extendBits);
@@ -365,7 +365,7 @@ function compileCode(ctx, code, dom, ret) {
             }
             case "number": return `${r.value.toString()}n`;
             case "public": return `ctx.publics[${r.id}]`;
-            case "challange": return `ctx.challanges[${r.id}]`;
+            case "challenge": return `ctx.challenges[${r.id}]`;
             case "eval": return `ctx.evals[${r.id}]`;
             case "xDivXSubXi": return `ctx.xDivXSubXi[i]`;
             case "xDivXSubWXi": return `ctx.xDivXSubWXi[i]`;
@@ -456,6 +456,7 @@ function calculateExps(ctx, code, dom) {
         cFirst(ctx, i);
     }
     for (let i=next; i<N-next; i++) {
+        if ((i%1000) == 0) console.log(`Calculating expression.. ${i}/${N}`);
         cI(ctx, i);
     }
     for (let i=N-next; i<N; i++) {
@@ -533,6 +534,7 @@ async function  extend(F, buff, src, nPols1, nPols3,  dst, nBits, nBitsExt ) {
     let rowSize = nPols1 + nPols3*3;
     const p = [];
     for (let i=0; i<nPols1; i++) {
+        console.log(`Extending pols1... ${i+1}/${nPols1}`)
         for (let j=0; j<N; j++) {
             p[j] = buff[src + j*rowSize + i];
         }
@@ -542,6 +544,7 @@ async function  extend(F, buff, src, nPols1, nPols3,  dst, nBits, nBitsExt ) {
         }
     }
     for (let i=nPols1; i<rowSize; i+=3) {
+        console.log(`Extending pols3... ${i+1}/${rowSize}`)
         for (let j=0; j<N; j++) {
             p[j] = [
                 buff[src + j*rowSize + i],

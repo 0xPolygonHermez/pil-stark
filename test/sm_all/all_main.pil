@@ -1,0 +1,9 @@
+constant %N = 2**10;
+
+namespace Global(%N);
+    pol constant L1;
+
+include "../sm_fibonacci/fibonacci.pil";
+include "../sm_connection/connection.pil";
+include "../sm_permutation/permutation.pil";
+include "../sm_plookup/plookup.pil";

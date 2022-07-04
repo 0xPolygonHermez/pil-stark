@@ -1,8 +1,8 @@
 
-const challangeMap = {
+const challengeMap = {
     "u": 0,
     "defVal": 1,
-    "gamma": 2, 
+    "gamma": 2,
     "beta": 3,
     "vc": 4,
     "vf1": 5,
@@ -50,7 +50,7 @@ class ExpressionOps {
         return {
             op: "exp",
             id: id,
-            next: !!next 
+            next: !!next
         }
     }
 
@@ -58,7 +58,7 @@ class ExpressionOps {
         return {
             op: "cm",
             id: id,
-            next: !!next 
+            next: !!next
         }
     }
 
@@ -66,7 +66,7 @@ class ExpressionOps {
         return {
             op: "const",
             id: id,
-            next: !!next 
+            next: !!next
         }
     }
 
@@ -74,17 +74,17 @@ class ExpressionOps {
         return {
             op: "q",
             id: id,
-            next: !!next 
+            next: !!next
         }
     }
 
-    challange(name) {
-        if (typeof challangeMap[name] == "undefined") {
-            throw new Error("Challange not defined "+name);
+    challenge(name) {
+        if (typeof challengeMap[name] == "undefined") {
+            throw new Error("challenge not defined "+name);
         }
-        return { 
-            op: "challange", 
-            id: challangeMap[name]
+        return {
+            op: "challenge",
+            id: challengeMap[name]
         };
     }
 

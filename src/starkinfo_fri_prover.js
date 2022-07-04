@@ -6,8 +6,8 @@ const ExpressionOps = require("./expressionops.js");
 module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
     const E = new ExpressionOps();
 
-    const vf1 = E.challange("vf1");
-    const vf2 = E.challange("vf2");
+    const vf1 = E.challenge("vf1");
+    const vf2 = E.challenge("vf2");
 
     let friExp = null;
     for (let i=0; i<pil.nCommitments; i++) {
@@ -27,7 +27,7 @@ module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
 
     let fri1exp = null;
     let fri2exp = null;
-    const xi = E.challange("xi");
+    const xi = E.challenge("xi");
     for (let i=0; i<res.evMap.length; i++) {
         const ev = res.evMap[i];
         let friExp = ev.prime ? fri2exp : fri1exp;

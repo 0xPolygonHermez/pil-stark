@@ -245,9 +245,9 @@ function evalExp(codeCtx, exp, prime) {
             type: "public",
             id: exp.id
         }
-    } else if (exp.op == "challange") {
+    } else if (exp.op == "challenge") {
         return {
-            type: "challange",
+            type: "challenge",
             id: exp.id,
         }
     } else if (exp.op == "eval") {
