@@ -1,6 +1,3 @@
-
-constant %N = 2**10;
-
 namespace Fibonacci(%N);
 
 

@@ -226,7 +226,7 @@ module.exports = async function buildCHelpers(starkInfo) {
                 }
                 case "number": return `${r.value.toString()}n`;
                 case "public": return `ctx.publics[${r.id}]`;
-                case "challange": return `ctx.challanges[${r.id}]`;
+                case "challenge": return `ctx.challenges[${r.id}]`;
                 case "eval": return `ctx.evals[${r.id}]`;
                 case "xDivXSubXi": return `ctx.xDivXSubXi[i]`;
                 case "xDivXSubWXi": return `ctx.xDivXSubWXi[i]`;

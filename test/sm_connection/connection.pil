@@ -1,7 +1,4 @@
-constant %N = 2**10;
 
-namespace Global(%N);
-    pol constant L1;
 
 namespace Connection(%N);
     pol constant S1, S2, S3;

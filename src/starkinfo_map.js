@@ -307,7 +307,7 @@ module.exports = function map(res, pil) {
                     break;
                 case "const":
                 case "number":
-                case "challange":
+                case "challenge":
                 case "public":
                 case "tmp":
                 case "Zi":
@@ -369,7 +369,7 @@ function getExpDim(pil, expId) {
             case "q": return _getExpDim(pil.expressions[pil.q2exp[exp.id]]);
             case "number": return 1;
             case "public": return 1;
-            case "challange": return 3;
+            case "challenge": return 3;
             case "eval": return 3;
             case "xDivXSubXi":  return 3;
             case "xDivXSubWXi": return 3;
@@ -380,12 +380,14 @@ function getExpDim(pil, expId) {
 }
 
 function setCodeDimensions(code, starkInfo, dimX) {
+    const tmpDim = [];
+
     _setCodeDimensions(code.first);
     _setCodeDimensions(code.i);
     _setCodeDimensions(code.last);
 
+
     function _setCodeDimensions(code) {
-        const tmpDim = [];
 
         for (let i=0; i<code.length; i++) {
             let newDim;
@@ -408,14 +410,16 @@ function setCodeDimensions(code, starkInfo, dimX) {
                 case "tree2": d=r.dim; break;
                 case "tree3": d=r.dim; break;
                 case "tree4": d=r.dim; break;
-                case "exp": d= starkInfo.varPolMap[starkInfo.exps_2ns[r.id]].dim; break;
+                case "exp": d= starkInfo.varPolMap[starkInfo.exps_2ns[r.id]] ?
+                               starkInfo.varPolMap[starkInfo.exps_2ns[r.id]].dim:
+                               starkInfo.varPolMap[starkInfo.exps_n[r.id]].dim; break;
                 case "cm": d=starkInfo.varPolMap[starkInfo.cm_2ns[r.id]].dim; break;
                 case "q": d=starkInfo.varPolMap[starkInfo.qs[r.id]].dim; break;
                 case "const": d=1; break;
                 case "eval": d=3; break;
                 case "number": d=1; break;
                 case "public": d=1; break;
-                case "challange": d=3; break;
+                case "challenge": d=3; break;
                 case "xDivXSubXi": d=dimX; break;
                 case "xDivXSubWXi": d=dimX; break;
                 case "x": d=dimX; break;

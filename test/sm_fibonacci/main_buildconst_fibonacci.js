@@ -9,16 +9,16 @@ const F1Field = require("../../src/f3g");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_genconst_fibonacci.js -o <fibonacci.constant.bin>")
+    .usage("node main_genconst_fibonacci.js -o <fibonacci.const>")
     .alias("o", "output")
     .argv;
 
 async function run() {
 
-    const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "fibonacci.constant.bin";
+    const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "fibonacci.const";
 
     const F = new F1Field();
-    const pil = await compile(F, path.join(__dirname, "fibonacci.pil"));
+    const pil = await compile(F, path.join(__dirname, "fibonacci_main.pil"));
     const [constPols, constPolsArray, constPolsDef, constPolsArrayDef] =  createConstantPols(pil);
 
     await smFibonacci.buildConstants(constPols.Fibonacci, constPolsDef.Fibonacci);

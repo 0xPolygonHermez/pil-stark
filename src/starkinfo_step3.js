@@ -26,8 +26,8 @@ function generatePermutationLC(res, pil, ctx) {
         const pi = pil.permutationIdentities[i];
 
         let tExp = null;
-        const u = E.challange("u");
-        const defVal = E.challange("defVal");
+        const u = E.challenge("u");
+        const defVal = E.challenge("defVal");
         for (let j=0; j<pi.t.length; j++) {
             const e = E.exp(pi.t[j]);
             if (tExp) {
@@ -105,8 +105,8 @@ function generatePlookupZ(res, pil, ctx) {
         pil.expressions.push(c1);
         pil.polIdentities.push({e: puCtx.c1Id});
 
-        const gamma = E.challange("gamma");
-        const beta = E.challange("beta");
+        const gamma = E.challenge("gamma");
+        const beta = E.challenge("beta");
 
         const numExp = E.mul(
             E.mul(
@@ -194,7 +194,7 @@ function generatePermutationZ(res, pil, ctx) {
         pil.expressions.push(c1);
         pil.polIdentities.push({e: peCtx.c1Id});
 
-        const beta = E.challange("beta");
+        const beta = E.challenge("beta");
 
         const numExp = E.add( f, beta);
         peCtx.numId = pil.expressions.length;
@@ -227,8 +227,8 @@ function generateConnectionsZ(res, pil, ctx) {
 
         ciCtx.zId = pil.nCommitments++;
 
-        const beta = E.challange("beta");
-        const gamma = E.challange("gamma");
+        const beta = E.challenge("beta");
+        const gamma = E.challenge("gamma");
 
         let numExp = E.add(
             E.add(

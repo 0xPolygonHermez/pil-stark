@@ -128,8 +128,8 @@ module.exports = function starkInfoGen(pil, starkStruct) {
             const pi = pil.plookupIdentities[i];
 
             let tExp = null;
-            const u = E.challange("u");
-            const defVal = E.challange("defVal");
+            const u = E.challenge("u");
+            const defVal = E.challenge("defVal");
             for (let j=0; j<pi.t.length; j++) {
                 const e = E.exp(pi.t[j]);
                 if (tExp) {
@@ -190,8 +190,8 @@ module.exports = function starkInfoGen(pil, starkStruct) {
             const pi = pil.permutationIdentities[i];
 
             let tExp = null;
-            const u = E.challange("u");
-            const defVal = E.challange("defVal");
+            const u = E.challenge("u");
+            const defVal = E.challenge("defVal");
             for (let j=0; j<pi.t.length; j++) {
                 const e = E.exp(pi.t[j]);
                 if (tExp) {
@@ -267,8 +267,8 @@ module.exports = function starkInfoGen(pil, starkStruct) {
             pil.expressions.push(c1);
             pil.polIdentities.push({e: puCtx.c1Id});
 
-            const gamma = E.challange("gamma");
-            const beta = E.challange("beta");
+            const gamma = E.challenge("gamma");
+            const beta = E.challenge("beta");
 
             const numExp = E.mul(
                 E.mul(
@@ -352,7 +352,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
             pil.expressions.push(c1);
             pil.polIdentities.push({e: peCtx.c1Id});
 
-            const beta = E.challange("beta");
+            const beta = E.challenge("beta");
 
             const numExp = E.add( f, beta);
             peCtx.numId = pil.expressions.length;
@@ -380,8 +380,8 @@ module.exports = function starkInfoGen(pil, starkStruct) {
 
             ciCtx.zId = pil.nCommitments++;
 
-            const beta = E.challange("beta");
-            const gamma = E.challange("gamma");
+            const beta = E.challenge("beta");
+            const gamma = E.challenge("gamma");
 
             let numExp = E.add(
                 E.add(
@@ -467,7 +467,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
     // Build the condition polynomial
 
     function generateConstraintPolynomial() {
-        const vc = E.challange("vc");
+        const vc = E.challenge("vc");
         let cExp = null;
         for (let i=0; i<pil.polIdentities.length; i++) {
             const e = E.exp(pil.polIdentities[i].e);
@@ -543,7 +543,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
                     r.id= expMap[p][r.id];
                     break;
                 case "number":
-                case "challange":
+                case "challenge":
                 case "public":
                 case "tmp":
                 case "Z":
@@ -557,8 +557,8 @@ module.exports = function starkInfoGen(pil, starkStruct) {
 
 
     function generateFRIPolynomial() {
-        const vf1 = E.challange("vf1");
-        const vf2 = E.challange("vf2");
+        const vf1 = E.challenge("vf1");
+        const vf2 = E.challenge("vf2");
 
         let friExp = null;
         for (let i=0; i<pil.nCommitments; i++) {
@@ -578,7 +578,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
 
         let fri1exp = null;
         let fri2exp = null;
-        const xi = E.challange("xi");
+        const xi = E.challenge("xi");
         for (let i=0; i<res.evMap.length; i++) {
             const ev = res.evMap[i];
             let friExp = ev.prime ? fri2exp : fri1exp;
@@ -657,7 +657,7 @@ module.exports = function starkInfoGen(pil, starkStruct) {
                     r.id= expMap2[p][r.id];
                     break;
                 case "number":
-                case "challange":
+                case "challenge":
                 case "public":
                 case "tmp":
                 case "xDivXSubXi":
@@ -941,9 +941,9 @@ function evalExp(codeCtx, exp, prime) {
             type: "public",
             id: exp.id
         }
-    } else if (exp.op == "challange") {
+    } else if (exp.op == "challenge") {
         return {
-            type: "challange",
+            type: "challenge",
             id: exp.id,
         }
     } else if (exp.op == "eval") {

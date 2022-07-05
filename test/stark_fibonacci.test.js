@@ -36,7 +36,7 @@ describe("test fibonacci sm", async function () {
         };
 
         const Fr = new F1Field("0xFFFFFFFF00000001");
-        const pil = await compile(Fr, path.join(__dirname, "sm_fibonacci", "fibonacci.pil"));
+        const pil = await compile(Fr, path.join(__dirname, "sm_fibonacci", "fibonacci_main.pil"));
         const [constPols, constPolsArray, constPolsDef] =  createConstantPols(pil);
         const [cmPols, cmPolsArray, cmPolsDef] =  createCommitedPols(pil);
 
@@ -80,7 +80,7 @@ describe("test fibonacci sm", async function () {
 
         const resP = await starkGen(cmPolsArray, constPolsArray, constTree, pil, starkStruct);
 
-        const pil2 = await compile(Fr, path.join(__dirname, "sm_fibonacci", "fibonacci.pil"));
+        const pil2 = await compile(Fr, path.join(__dirname, "sm_fibonacci", "fibonacci_main.pil"));
 
         const resV = await starkVerify(resP.proof, resP.publics, pil2, MH.root(constTree), starkStruct);
 
