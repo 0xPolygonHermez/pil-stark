@@ -1,6 +1,6 @@
 const chai = require("chai");
 const assert = chai.assert;
-const buildGLWasm = require("../src/glwasm.js");
+const buildGLWasm = require("../src/glwasm.js").buildProtoboard;
 const F3g = require("../src/f3g.js");
 const { P } = require("../src/poseidon_constants_opt.js");
 
@@ -106,7 +106,7 @@ describe("Goldilocks Wasm test", function () {
         let res;
 
         glwasm.set(pIn, [0,1,2,3,4,5,6,7,8,9,10,11]);
-        glwasm.poseidon(pIn, 12, pOut, 4);
+        glwasm.poseidon(pIn, 8, pIn+8*8, 4, pOut, 4);
 
         res = glwasm.get(pOut, 4, 8);
 
@@ -123,7 +123,7 @@ describe("Goldilocks Wasm test", function () {
         const n1 = 0xffffffff00000000n
 
         glwasm.set(pIn, [n1,n1,n1,n1, n1,n1,n1,n1,  n1,n1,n1,n1]);
-        glwasm.poseidon(pIn, 12, pOut, 4);
+        glwasm.poseidon(pIn, 8, pIn+8*8, 4, pOut, 4);
 
         res = glwasm.get(pOut, 4, 8);
 
@@ -136,7 +136,7 @@ describe("Goldilocks Wasm test", function () {
         const F = new F3g();
         let res;
 
-        glwasm.poseidon(pIn, 0, pOut, 4);
+        glwasm.poseidon(pIn, 0, pIn+8*8, 0, pOut, 4);
 
         res = glwasm.get(pOut, 4, 8);
 
@@ -151,7 +151,7 @@ describe("Goldilocks Wasm test", function () {
 
         for (let i=0; i<1000000; i++) {
             glwasm.set(pIn, i);
-            glwasm.poseidon(pIn, 0, pOut, 4);
+            glwasm.poseidon(pIn, 0, pIn+8*8, 0, pOut, 4);
         }
     });
 

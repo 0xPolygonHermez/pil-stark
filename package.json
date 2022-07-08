@@ -27,6 +27,7 @@
     "ejs": "^3.1.8",
     "tmp-promise": "^3.0.3",
     "wasmbuilder": "^0.0.12",
+    "workerpool": "^6.2.1",
     "zkpil": "git+ssh://git@github.com/hermeznetwork/zkpil.git"
   },
   "author": "Jordi Baylina",

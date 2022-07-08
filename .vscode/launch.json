@@ -5,6 +5,26 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "test workers",
+            "program": "${workspaceFolder}/src/workersgl.test.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
+            "name": "test fft parallel",
+            "program": "${workspaceFolder}/src/fft_p.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
             "name": "test f3g",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
@@ -79,6 +99,19 @@
             "type": "pwa-node",
             "args": [
                 "${workspaceFolder}/test/merklehash.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=64000"]
+        },
+        {
+            "name": "test merklehash parallel",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/merklehash_p.test.js"
             ],
             "runtimeArgs": ["--max-old-space-size=64000"]
         },

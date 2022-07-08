@@ -223,15 +223,17 @@ function build(module) {
         const f = module.addFunction("poseidon");
         f.addParam("pIn", "i32");       // 0
         f.addParam("nIn", "i32");       // 1
-        f.addParam("pOut", "i32");      // 2
-        f.addParam("nOut", "i32");      // 3
-        f.addLocal("i", "i32");         // 4
-        f.addLocal("t", "i64");         // 5
-        f.addLocal("aux", "i32");
-        f.addLocal("pOutAux", "i32");   // 7
-        f.addLocal("pInAux", "i32");    // 8
-        f.addLocal("poIn", "i32");      // 9
-        f.addLocal("poOut", "i32");     // 10
+        f.addParam("pOffset", "i32");   // 2
+        f.addParam("nOffset", "i32");   // 3
+        f.addParam("pOut", "i32");      // 4
+        f.addParam("nOut", "i32");      // 5
+        f.addLocal("i", "i32");         // 6
+        f.addLocal("t", "i64");         // 7
+        f.addLocal("aux", "i32");       // 8
+        f.addLocal("pOutAux", "i32");   // 9
+        f.addLocal("pInAux", "i32");    // 10
+        f.addLocal("poIn", "i32");      // 11
+        f.addLocal("poOut", "i32");     // 12
 
         const c = f.getCodeBuilder();
         f.addCode(
@@ -278,7 +280,7 @@ function build(module) {
                     1,
                     c.i32_eq(
                         c.getLocal("i"),
-                        c.i32_const(12)
+                        c.i32_const(8)
                     )
                 ),
 
@@ -290,6 +292,65 @@ function build(module) {
                 c.i64_store(
                     c.i32_mul(c.getLocal("i"), c.i32_const(16)),
                     st+8, 3,
+                    c.i64_const(0)
+                ),
+                c.setLocal("i", c.i32_add(c.getLocal("i"), c.i32_const(1))),
+                c.br(0)
+            )),
+
+            // Set capacity
+            c.setLocal("i", c.i32_const(0)),
+            c.block(c.loop(
+                c.br_if(
+                    1,
+                    c.i32_eq(
+                        c.getLocal("i"),
+                        c.getLocal("nOffset")
+                    )
+                ),
+                c.setLocal(
+                    "t",
+                    c.i64_load(
+                        c.i32_add(
+                            c.getLocal("pOffset"),
+                            c.i32_mul(
+                                c.getLocal("i"),
+                                c.i32_const(8)
+                            )
+                        ),
+                        0, 3
+                    )
+                ),
+                c.i64_store(
+                    c.i32_mul(c.getLocal("i"), c.i32_const(16)),
+                    st + 8*16, 3,
+                    low(c, c.getLocal("t"))
+                ),
+                c.i64_store(
+                    c.i32_mul(c.getLocal("i"), c.i32_const(16)),
+                    st+ 8*16 +8, 3,
+                    high(c, c.getLocal("t"))
+                ),
+                c.setLocal("i", c.i32_add(c.getLocal("i"), c.i32_const(1))),
+                c.br(0)
+            )),
+            c.block(c.loop(
+                c.br_if(
+                    1,
+                    c.i32_eq(
+                        c.getLocal("i"),
+                        c.i32_const(4)
+                    )
+                ),
+
+                c.i64_store(
+                    c.i32_mul(c.getLocal("i"), c.i32_const(16)),
+                    st + 8*16, 3,
+                    c.i64_const(0)
+                ),
+                c.i64_store(
+                    c.i32_mul(c.getLocal("i"), c.i32_const(16)),
+                    st+8*16 + 8, 3,
                     c.i64_const(0)
                 ),
                 c.setLocal("i", c.i32_add(c.getLocal("i"), c.i32_const(1))),
@@ -696,21 +757,159 @@ function build(module) {
         );
     }
 
+    function buildMultiLinearHash() {
+        const f = module.addFunction("multiLinearHash");
+        f.addParam("pIn", "i32");       // 0
+        f.addParam("width", "i32");     // 1
+        f.addParam("heigth", "i32");    // 2
+        f.addParam("pOut", "i32");      // 3
+        f.addLocal("i", "i32");         // 4
+        f.addLocal("j", "i32");         // 5
+        f.addLocal("curN", "i32");      // 6
+
+        const c = f.getCodeBuilder();
+        f.addCode(
+            c.setLocal("i", c.i32_const(0)),
+            c.block(c.loop(
+                c.br_if(
+                    1,
+                    c.i32_ge_s(
+                        c.getLocal("i"),
+                        c.getLocal("heigth"),
+                    )
+                ),
+                c.i64_store(
+                    c.getLocal("pOut"),
+                    0,
+                    0,
+                    c.i64_const(0)
+                ),
+                c.i64_store(
+                    c.getLocal("pOut"),
+                    8,
+                    0,
+                    c.i64_const(0)
+                ),
+                c.i64_store(
+                    c.getLocal("pOut"),
+                    16,
+                    0,
+                    c.i64_const(0)
+                ),
+                c.i64_store(
+                    c.getLocal("pOut"),
+                    24,
+                    0,
+                    c.i64_const(0)
+                ),
+                c.setLocal("j", c.i32_const(0)),
+                c.block(c.loop(
+                    c.br_if(
+                        1,
+                        c.i32_ge_s(
+                            c.getLocal("j"),
+                            c.getLocal("width"),
+                        )
+                    ),
+                    c.setLocal("curN",
+                        c.i32_sub(
+                            c.getLocal("width"),
+                            c.getLocal("j")
+                        ),
+                    ),
+                    c.if(
+                        c.i32_gt_s(
+                            c.getLocal("curN"),
+                            c.i32_const(8)
+                        ),
+                        c.setLocal("curN", c.i32_const(8))
+                    ),
+                    c.call(
+                        "poseidon",
+                        c.getLocal("pIn"),
+                        c.getLocal("curN"),
+                        c.getLocal("pOut"),
+                        c.i32_const(4),
+                        c.getLocal("pOut"),
+                        c.i32_const(4)
+                    ),
+                    c.setLocal("j", c.i32_add(c.getLocal("j"), c.i32_const(8))),
+                    c.setLocal(
+                        "pIn",
+                        c.i32_add(
+                            c.getLocal("pIn"),
+                            c.i32_mul(
+                                c.getLocal("curN"),
+                                c.i32_const(8)
+                            )
+                        )
+                    ),
+                    c.br(0)
+                )),
+                c.setLocal("i", c.i32_add(c.getLocal("i"), c.i32_const(1))),
+                c.setLocal("pOut", c.i32_add(c.getLocal("pOut"), c.i32_const(32))),
+                c.br(0)
+            ))
+        );
+    }
+
+    function buildMerkelizeLevel() {
+        const f = module.addFunction("merkelizeLevel");
+        f.addParam("pIn", "i32");       // 0
+        f.addParam("nOps", "i32");      // 0
+        f.addParam("pOut", "i32");      // 0
+        f.addLocal("i", "i32");         // 2
+
+        const c = f.getCodeBuilder();
+        f.addCode(
+            c.setLocal("i", c.i32_const(0)),
+            c.block(c.loop(
+                c.br_if(
+                    1,
+                    c.i32_eq(
+                        c.getLocal("i"),
+                        c.getLocal("nOps"),
+                    )
+                ),
+                c.call(
+                    "poseidon",
+                    c.getLocal("pIn"),
+                    c.i32_const(8),
+                    c.getLocal("pIn"),
+                    c.i32_const(0),
+                    c.getLocal("pOut"),
+                    c.i32_const(4)
+                ),
+
+                c.setLocal("i", c.i32_add(c.getLocal("i"), c.i32_const(1))),
+                c.setLocal("pIn", c.i32_add(c.getLocal("pIn"), c.i32_const(8*8))),
+                c.setLocal("pOut", c.i32_add(c.getLocal("pOut"), c.i32_const(8*4))),
+                c.br(0)
+            )),
+        );
+    }
+
+
 
     buildAdd();
     buildReduce2to1();
     buildMul();
     buildSquare();
     buildPoseidon();
+    buildMultiLinearHash();
+    buildMerkelizeLevel();
 
     module.exportFunction("add");
     module.exportFunction("mul");
     module.exportFunction("square");
     module.exportFunction("poseidon");
+    module.exportFunction("multiLinearHash");
+    module.exportFunction("merkelizeLevel");
 }
 
-
-module.exports = async function buildGL() {
+module.exports.buildProtoboard = async function buildGL() {
     const pb = await buildProtoboard(build, 8);
     return pb;
 }
+
+module.exports.build = build;
