@@ -1,7 +1,7 @@
 const fs = require("fs");
 const version = require("../../package").version;
 
-const { exportPolynomials, compile, createCommitedPols } = require("zkpil");
+const { exportPolynomials, compile, createCommitedPols } = require("pilcom");
 const F1Field = require("../f3g.js");
 const { WitnessCalculatorBuilder } = require("circom_runtime");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });

@@ -4,7 +4,7 @@ const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig
 
 
 const F1Field = require("./f3g");
-const { createConstantPols, compile, importPolynomials } = require("zkpil");
+const { createConstantPols, compile, importPolynomials } = require("pilcom");
 const { extendPol } = require("./polutils");
 const MerkleHashGL = require("./merklehash.js");
 const MerkleHashBN128 = require("./merklehash.bn128.js");

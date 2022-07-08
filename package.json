@@ -1,5 +1,5 @@
 {
-  "name": "starkpil",
+  "name": "pil-stark",
   "version": "0.0.1",
   "description": "Build a stark from a PIL",
   "main": "index.js",
@@ -28,10 +28,10 @@
     "tmp-promise": "^3.0.3",
     "wasmbuilder": "^0.0.12",
     "workerpool": "^6.2.1",
-    "zkpil": "git+ssh://git@github.com/hermeznetwork/zkpil.git"
+    "pilcom": "git+ssh://git@github.com/0xpolygonhermez/pilcom.git"
   },
-  "author": "Jordi Baylina",
-  "license": "GPL-3.0",
+  "author": "Polygon Hermez",
+  "license": "UNLICENSED",
   "devDependencies": {
     "@iden3/bigarray": "^0.0.2",
     "chai": "^4.3.6",

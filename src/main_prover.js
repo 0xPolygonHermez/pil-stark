@@ -2,7 +2,7 @@ const fs = require("fs");
 const version = require("../package").version;
 
 const F1Field = require("./f3g");
-const { createCommitedPols, createConstantPols, compile, importPolynomials } = require("zkpil");
+const { createCommitedPols, createConstantPols, compile, importPolynomials } = require("pilcom");
 const starkGen = require("../src/stark_gen.js");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 const { proof2zkin } = require("./proof2zkin")

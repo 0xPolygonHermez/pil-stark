@@ -3,7 +3,7 @@ const version = require("../package").version;
 
 const F1Field = require("./f3g");
 const starkInfoGen = require("./starkinfo.js");
-const { compile } = require("zkpil");
+const { compile } = require("pilcom");
 
 const argv = require("yargs")
     .version(version)

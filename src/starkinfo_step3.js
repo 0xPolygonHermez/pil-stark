@@ -1,7 +1,7 @@
 
 const {pilCodeGen, buildCode, fixCode} = require("./starkinfo_codegen.js");
 const ExpressionOps = require("./expressionops.js");
-const getKs = require("zkpil").getKs;
+const getKs = require("pilcom").getKs;
 const F1Field = require("./f3g.js");
 
 module.exports = function generateStep3(res, pil, ctx) {

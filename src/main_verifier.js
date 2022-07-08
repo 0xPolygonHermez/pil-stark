@@ -2,7 +2,7 @@ const fs = require("fs");
 const version = require("../package").version;
 
 const F1Field = require("./f3g");
-const { compile } = require("zkpil");
+const { compile } = require("pilcom");
 const starkVerify = require("../src/stark_verify.js");
 var JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });;
 

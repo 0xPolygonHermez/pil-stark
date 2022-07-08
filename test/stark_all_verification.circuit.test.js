@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const pil2circom = require("../src/pil2circom");
 const F1Field = require("../src/f3g");
-const { compile } = require("zkpil");
+const { compile } = require("pilcom");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 const proof2zkin = require("../src/proof2zkin").proof2zkin;
 

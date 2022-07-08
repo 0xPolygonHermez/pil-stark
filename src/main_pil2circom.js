@@ -3,7 +3,7 @@ const version = require("../package").version;
 
 const pil2circom = require("./pil2circom.js");
 const F1Field = require("./f3g.js");
-const { compile } = require("zkpil");
+const { compile } = require("pilcom");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 
 

@@ -8,7 +8,7 @@ const buildPoseidonGL = require("../src/poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 
 
-const { createCommitedPols, createConstantPols, compile, verifyPil } = require("zkpil");
+const { createCommitedPols, createConstantPols, compile, verifyPil } = require("pilcom");
 
 
 const smFibonacci = require("./sm_fibonacci/sm_fibonacci.js");

@@ -1,6 +1,6 @@
 
 const F1Field = require("./f3g.js");
-const getKs = require("zkpil").getKs;
+const getKs = require("pilcom").getKs;
 
 const generatePublicCalculators = require("./starkinfo_publics");
 const generateStep2 = require("./starkinfo_step2");

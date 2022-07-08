@@ -1,7 +1,7 @@
 
 const F1Field = require("./f3g.js");
 const ExpressionOps = require("./expressionops.js");
-const getKs = require("zkpil").getKs;
+const getKs = require("pilcom").getKs;
 
 
 module.exports = function starkInfoGen(pil, starkStruct) {

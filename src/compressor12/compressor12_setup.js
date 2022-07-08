@@ -5,7 +5,7 @@ const path = require("path");
 const F3G = require("../f3g.js");
 const {log2} = require("../utils");
 const {tmpName} = require("tmp-promise");
-const { createConstantPols, compile, getKs } = require("zkpil");
+const { createConstantPols, compile, getKs } = require("pilcom");
 const ejs = require("ejs");
 const { connect } = require("http2");
 

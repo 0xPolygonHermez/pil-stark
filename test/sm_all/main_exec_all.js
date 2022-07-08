@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const version = require("../../package").version;
-const { createCommitedPols, compile, exportPolynomials } = require("zkpil");
+const { createCommitedPols, compile, exportPolynomials } = require("pilcom");
 
 const smPlookup = require("../sm_plookup/sm_plookup.js");
 const smFibonacci = require("../sm_fibonacci/sm_fibonacci.js");

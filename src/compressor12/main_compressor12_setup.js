@@ -1,7 +1,7 @@
 const fs = require("fs");
 const version = require("../../package").version;
 
-const { exportPolynomials } = require("zkpil");
+const { exportPolynomials } = require("pilcom");
 const F1Field = require("../f3g.js");
 const {readR1cs} = require("r1csfile");
 const plonkSetup = require("./compressor12_setup.js");

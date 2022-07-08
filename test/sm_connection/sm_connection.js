@@ -1,6 +1,6 @@
 const F1Field = require("../../src/f3g.js");
 const {log2} = require("../../src/utils.js");
-const getKs = require("zkpil").getKs;
+const getKs = require("pilcom").getKs;
 
 module.exports.buildConstants = async function (pols, polsDef) {
     const F = new F1Field("0xFFFFFFFF00000001");
