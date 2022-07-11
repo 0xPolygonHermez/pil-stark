@@ -1,7 +1,7 @@
 const F1Field = require("../../src/f3g");
 
-module.exports.buildConstants = async function (pols, polsDef) {
-    const N = Number(polsDef.A.polDeg);
+module.exports.buildConstants = async function (pols) {
+    const N = pols.A.length;
 
     let p=0;
     for ( let i=0; i<16;- i++) {
@@ -23,9 +23,9 @@ module.exports.buildConstants = async function (pols, polsDef) {
 }
 
 
-module.exports.execute = async function (pols, polsDef) {
+module.exports.execute = async function (pols) {
 
-    const N = Number(polsDef.a.polDeg);
+    const N = pols.cc.length;
 
     let p=0;
     for ( let i=0; i<16; i++) {

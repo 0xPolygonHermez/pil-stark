@@ -1,7 +1,6 @@
 const fs = require("fs");
 const version = require("../../package").version;
 
-const { exportPolynomials } = require("pilcom");
 const F1Field = require("../f3g.js");
 const {readR1cs} = require("r1csfile");
 const plonkSetup = require("./compressor12_setup.js");
@@ -30,7 +29,7 @@ async function run() {
 
     await fs.promises.writeFile(pilFile, res.pilStr, "utf8");
 
-    await exportPolynomials(F, constFile, res.constPolsArray, res.constPolsArrayDef);
+    await res.constPols.saveToFile(constFile);
 
     await writeExecFile(execFile,res.plonkAdditions,  res.sMap);
 

@@ -1,6 +1,7 @@
 const { assert } = require("chai");
 const LinearHash = require("./linearhash");
 const workerpool = require("workerpool");
+const fs = require("fs");
 
 const {linearHash, merkelizeLevel} = require("./merklehash_worker");
 
@@ -83,11 +84,11 @@ module.exports = class {
                 if (nOps < 2<<15) {
                     await merkelizeLevel(buff, pIn + i*8*8, curNOps, pOut + i*4*8);
                 } else {
-                    promisesLH.push(pool.exec("merkelizeLevel", [buff, pIn + i*8*8, curNOps, pOut + i*4*8]));
+                    promises.push(pool.exec("merkelizeLevel", [buff, pIn + i*8*8, curNOps, pOut + i*4*8]));
                 }
             }
 
-            await Promise.all(promisesLH);
+            await Promise.all(promises);
         }
     }
 
@@ -182,6 +183,56 @@ module.exports = class {
 
     root(tree) {
         return [...tree.nodes.slice(-4)];
+    }
+
+    async writeToFile(tree, fileName) {
+        const fd =await fs.promises.open(fileName, "w+");
+        const header = new BigUint64Array(2);
+        header[0]= BigInt(tree.width);
+        header[1]= BigInt(tree.height);
+        await fd.write(header);
+        await writeBigBuffer(fd, tree.elements);
+        await writeBigBuffer(fd, tree.nodes);
+        await fd.close();
+
+        async function writeBigBuffer(fd, buff8) {
+            const MaxBuffSize = 1024*1024*32;  //  256Mb
+            for (let i=0; i<buff8.byteLength; i+= MaxBuffSize) {
+                const n = Math.min(buff8.byteLength -i, MaxBuffSize);
+                const sb = new Uint8Array(buff8.buffer, buff8.byteOffset+i, n);
+                await fd.write(sb);
+            }
+        }
+    }
+
+    async readFromFile(fileName) {
+        const fd =await fs.promises.open(fileName, "r");
+        const header = new BigUint64Array(2);
+        const header8 = new Uint8Array(header.buffer);
+        await fd.read(header8, {offset:0, length: 16, position:0});
+        const tree = {
+            width: Number(header[0]),
+            height: Number(header[1])
+        }
+        const elementsBuff = new SharedArrayBuffer(tree.width*tree.height*8);
+        tree.elements = new BigUint64Array(elementsBuff);
+        const elements8 = new Uint8Array(elementsBuff);
+        const nodesBuffer = new SharedArrayBuffer(this._getNNodes(tree.height*4)*8);
+        const nodes8 = new Uint8Array(nodesBuffer);
+        tree.nodes = new BigUint64Array(nodesBuffer);
+        await readBigBuffer(fd, elements8, 16);
+        await readBigBuffer(fd, nodes8, 16+ elements8.length);
+        await fd.close();
+
+        async function  readBigBuffer(fd, buff8, pos) {
+            const MaxBuffSize = 1024*1024*32;  //  256Mb
+            for (let i=0; i<buff8.byteLength; i+= MaxBuffSize) {
+                const n = Math.min(buff8.byteLength -i, MaxBuffSize);
+                await fd.read(buff8, {offset: i, length:n, position:pos});
+            }
+        }
+
+        return tree;
     }
 }
 

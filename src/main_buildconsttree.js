@@ -4,12 +4,12 @@ const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig
 
 
 const F1Field = require("./f3g");
-const { createConstantPols, compile, importPolynomials } = require("pilcom");
-const { extendPol } = require("./polutils");
-const MerkleHashGL = require("./merklehash.js");
+const { useConstantPolsArray, compile } = require("pilcom");
+const MerkleHashGL = require("./merklehash_p.js");
 const MerkleHashBN128 = require("./merklehash.bn128.js");
 const buildPoseidonGL = require("./poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
+const {interpolate} = require("./fft_p");
 
 
 const argv = require("yargs")
@@ -31,18 +31,26 @@ async function run() {
     const constTreeFile = typeof(argv.consttree) === "string" ?  argv.consttree.trim() : "mycircuit.consttree";
     const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "mycircuit.verkey.json";
 
-    const pil = await compile(F, pilFile);
-    const [ , , , constPolsArrayDef] =  createConstantPols(pil);
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
+    const pil = await compile(F, pilFile);
 
-    const constPolsArray = await importPolynomials(F, constFile, constPolsArrayDef);
+    const nBits = starkStruct.nBits;
+    const nBitsExt = starkStruct.nBitsExt;
+    const n = 1 << nBits;
+    const nExt = 1 << nBitsExt;
 
+    const constBuffBuff = new SharedArrayBuffer(pil.nConstants*8*n);
+    const constBuff = new BigUint64Array(constBuffBuff)
 
-    const constPolsArrayE = [];
-    for (let i=0; i<constPolsArray.length; i++) {
-        console.log(`Extending polynomial ${i+1}/${constPolsArray.length}`);
-        constPolsArrayE[i] = await extendPol(F, constPolsArray[i], starkStruct.nBitsExt - starkStruct.nBits);
-    }
+    const constPols =  useConstantPolsArray(pil, constBuff, 0);
+    await constPols.loadFromFile(constFile);
+
+    const nPols = pil.nConstants;
+
+    const constPolsEBuff = new SharedArrayBuffer(nPols*nExt*8);
+    const constPolsE = new BigUint64Array(constPolsEBuff);
+
+    await interpolate(constPols.$$buffer, 0, nPols, nBits, constPolsE, 0, nBitsExt);
 
     let MH;
     if (starkStruct.verificationHashType == "GL") {
@@ -55,7 +63,7 @@ async function run() {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
 
-    const constTree = await MH.merkelize(constPolsArrayE, 1, constPolsArrayE.length, constPolsArrayE[0].length);
+    const constTree = await MH.merkelize(constPolsE, 0, nPols, nExt);
 
     const constRoot = MH.root(constTree);
 
@@ -65,18 +73,7 @@ async function run() {
 
     await fs.promises.writeFile(verKeyFile, JSONbig.stringify(verKey, null, 1), "utf8");
 
-    const fd =await fs.promises.open(constTreeFile, "w+");
-
-    const MAX_WRITE_SIZE=2**24;
-    let pending = constTree.byteLength;
-    let offset = 0;
-    while (pending) {
-        const n= Math.min(MAX_WRITE_SIZE, pending);
-        await fd.write(constTree, offset, n);
-        offset += n;
-        pending -= n;
-    }
-    await fd.close();
+    await MH.writeToFile(constTree, constTreeFile);
 
     console.log("files Generated Correctly");
 }

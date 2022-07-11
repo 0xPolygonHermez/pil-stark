@@ -2,10 +2,16 @@ const fs = require("fs");
 const version = require("../package").version;
 
 const F1Field = require("./f3g");
-const { createCommitedPols, createConstantPols, compile, importPolynomials } = require("pilcom");
-const starkGen = require("../src/stark_gen.js");
-const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
-const { proof2zkin } = require("./proof2zkin")
+const { useConstantPolsArray, compile } = require("pilcom");
+const starkInfoGen = require("../src/starkinfo.js");
+const { starkGen, starkGen_allocate } = require("../src/stark_gen.js");
+const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true, storeAsString: true });
+const { proof2zkin } = require("./proof2zkin");
+const buildPoseidonGL = require("../src/poseidon");
+const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
+const MerkleHashGL = require("../src/merklehash_p.js");
+const MerkleHashBN128 = require("../src/merklehash.bn128.js");
+
 
 const argv = require("yargs")
     .version(version)
@@ -35,27 +41,47 @@ async function run() {
     const pil = await compile(F, pilFile);
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
 
-    const fd =await fs.promises.open(constTreeFile, "r");
-    const st =await fd.stat();
-    const constTree = new BigUint64Array(st.size/8)
-    await fd.read(constTree, 0, st.size);
-    await fd.close();
+    const nBits = starkStruct.nBits;
+    const n = 1 << nBits;
 
+    const constBuffBuff = new SharedArrayBuffer(pil.nConstants*8*n);
+    const constBuff = new BigUint64Array(constBuffBuff);
 
-    const [ , , , cmPolsArrayDef] =  createCommitedPols(pil);
-    const [ , , , constPolsArrayDef] =  createConstantPols(pil);
+    const constPols =  useConstantPolsArray(pil, constBuff, 0);
+    await constPols.loadFromFile(constFile);
 
-    const constPolsArray = await importPolynomials(F, constFile, constPolsArrayDef);
-    const cmPolsArray = await importPolynomials(F, commitFile, cmPolsArrayDef);
+    let MH;
+    if (starkStruct.verificationHashType == "GL") {
+        const poseidonGL = await buildPoseidonGL();
+        MH = new MerkleHashGL(poseidonGL);
+    } else if (starkStruct.verificationHashType == "BN128") {
+        const poseidonBN128 = await buildPoseidonBN128();
+        MH = new MerkleHashBN128(poseidonBN128);
+    } else {
+        throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
+    }
 
-    const resP = await starkGen(cmPolsArray, constPolsArray, constTree, pil, starkStruct);
+    const constTree = await MH.readFromFile(constTreeFile);
+
+    const starkInfo = starkInfoGen(pil, starkStruct);
+    const cmPols = starkGen_allocate(pil, starkInfo);
+
+    await cmPols.loadFromFile(commitFile);
+
+    const resP = await starkGen(cmPols, constPols, constTree, pil, starkInfo);
 
     await fs.promises.writeFile(proofFile, JSONbig.stringify(resP.proof, null, 1), "utf8");
     await fs.promises.writeFile(publicFile, JSONbig.stringify(resP.publics, null, 1), "utf8");
 
     const zkIn = proof2zkin(resP.proof);
     zkIn.publics = resP.publics;
-    await fs.promises.writeFile(zkinFile, JSONbig.stringify(zkIn, null, 1), "utf8");
+    await fs.promises.writeFile(zkinFile, JSONbig.stringify(zkIn, (k, v) => {
+        if (typeof(v) === "bigint") {
+            return v.toString();
+        } else {
+            return v;
+        }
+    }, 1), "utf8");
 
     console.log("files Generated Correctly");
 }

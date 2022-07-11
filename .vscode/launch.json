@@ -16,12 +16,15 @@
         },
         {
             "name": "test fft parallel",
-            "program": "${workspaceFolder}/src/fft_p.js",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/fft_p.test.js"
+            ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
         {
@@ -189,7 +192,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/stark_connection.test.js"
+                "${workspaceFolder}/test/stark_all.test.js"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
@@ -378,7 +381,7 @@
         },
         {
             "name": "fibonacci PIL verify",
-            "program": "node_modules/zkpil/src/main_pilverifier.js",
+            "program": "node_modules/pilcom/src/main_pilverifier.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -554,7 +557,7 @@
         },
         {
             "name": "fibonacci C12 PIL verify",
-            "program": "node_modules/zkpil/src/main_pilverifier.js",
+            "program": "node_modules/pilcom/src/main_pilverifier.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -682,7 +685,7 @@
         },
         {
             "name": "all PIL verify",
-            "program": "node_modules/zkpil/src/main_pilverifier.js",
+            "program": "node_modules/pilcom/src/main_pilverifier.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -858,7 +861,7 @@
         },
         {
             "name": "all C12 PIL verify",
-            "program": "node_modules/zkpil/src/main_pilverifier.js",
+            "program": "node_modules/pilcom/src/main_pilverifier.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"

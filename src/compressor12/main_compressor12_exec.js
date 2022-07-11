@@ -1,7 +1,7 @@
 const fs = require("fs");
 const version = require("../../package").version;
 
-const { exportPolynomials, compile, createCommitedPols } = require("pilcom");
+const { compile, newCommitPolsArray } = require("pilcom");
 const F1Field = require("../f3g.js");
 const { WitnessCalculatorBuilder } = require("circom_runtime");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
@@ -39,7 +39,7 @@ async function run() {
 
     const pil = await compile(F, pilFile);
 
-    const [cmPols, cmPolsArray, cmPolsDef, cmPolsDefArray] = createCommitedPols(pil);
+    const cmPols = newCommitPolsArray(pil);
 
     const wc = await WitnessCalculatorBuilder(wasm);
     const w = await wc.calculateWitness(input);
@@ -67,7 +67,7 @@ async function run() {
         }
     }
 
-    await exportPolynomials(F, commitFile, cmPolsArray, cmPolsDefArray);
+    await cmPols.saveToFile(commitFile);
 
     console.log("files Generated Correctly");
 

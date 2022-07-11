@@ -1,19 +1,28 @@
 
 const assert = require("assert");
-const MerkleHashGL = require("./merklehash.js");
+const MerkleHashGL = require("./merklehash_p.js");
 const MerkleHashBN128 = require("./merklehash.bn128.js");
 const Transcript = require("./transcript");
 const TranscriptBN128 = require("./transcript.bn128");
+const { useCommitPolsArray } = require("pilcom");
 
 const { extendPol, buildZhInv, calculateH1H2, calculateZ } = require("./polutils.js");
-const { log2 } = require("./utils");
 const buildPoseidonGL = require("./poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 const FRI = require(".//fri.js");
-const starkInfoGen = require("./starkinfo.js");
 const _ = require("json-bigint");
+const { interpolate } = require("./fft_p.js");
 
-module.exports = async function starkGen(cmPols, constPols, constTree, pil, starkStruct) {
+module.exports.starkGen_allocate = function starkGen(pil, starkInfo) {
+    const buffBuff = new SharedArrayBuffer(starkInfo.mapTotalN*8);
+    const buffer = new BigUint64Array(buffBuff);
+    const cmPols = useCommitPolsArray(pil, buffer, 0);
+    cmPols.$$fullBuffer = buffer;
+    return cmPols;
+}
+
+module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, pil, starkInfo) {
+    const starkStruct = starkInfo.starkStruct;
     const N = 1 << starkStruct.nBits;
     const extendBits = starkStruct.nBitsExt - starkStruct.nBits;
     const nBitsExt = starkStruct.nBitsExt;
@@ -24,6 +33,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     const F = poseidon.F;
 
     let MH;
+    let MHS;
     let transcript;
     if (starkStruct.verificationHashType == "GL") {
         MH = new MerkleHashGL(poseidon);
@@ -38,15 +48,16 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
 
     const fri = new FRI( poseidon, starkStruct, MH );
 
-    if (cmPols.length != pil.nCommitments) {
+    if (cmPols.$$nPols != pil.nCommitments) {
         throw new Error(`Number of Commited Polynomials: ${cmPols.length} do not match with the pil definition: ${pil.nCommitments} `)
     };
-
-    const starkInfo = starkInfoGen(pil, starkStruct);
+    if (!cmPols.$$fullBuffer) {
+        throw new Error("invalid cmPolsBuffer:, use starkgen_alloc to allocate the buffer");
+    }
 
     const ctx = {}
     ctx.F = F;
-    ctx.pols = new BigUint64Array(starkInfo.mapTotalN);
+    ctx.pols = cmPols.$$fullBuffer;
     ctx.nBits = starkInfo.starkStruct.nBits;
     ctx.nBitsExt = starkInfo.starkStruct.nBitsExt;
     ctx.N = 1 << starkInfo.starkStruct.nBits;
@@ -54,6 +65,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     ctx.starkInfo = starkInfo;
     ctx.tmp = [];
     ctx.challenges = [];
+    let nCm = starkInfo.nCm1;
 
 
     ctx.x_n = [];
@@ -75,28 +87,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
     const zhInv = buildZhInv(F, nBits, extendBits);
     ctx.Zi = zhInv;
 
-// 1.- Prepare commited polynomials.
-    let nCm=0;
-    for (let i=0; i<cmPols.length; i++) {
-        console.log(`Preparing polynomial ${i}`);
-        if (cmPols[i].length!= N) {
-            throw new Error(`Polynomial ${i} does not have the right size: ${cmPols[i].length} and should be ${N}`);
-        }
-        setPol(ctx.pols, starkInfo, starkInfo.cm_n[nCm++], cmPols[i]);
-    }
-
-
-    ctx.const_n = [];
-    ctx.const_2ns = [];
-    for (let i=0; i<constPols.length; i++) {
-        console.log(`Preparing constant polynomial ${i}`);
-        if (constPols[i].length!= N) {
-            throw new Error(`Constant Polynomial ${i} does not have the right size: ${constPols[i].length} and should be ${N}`);
-        }
-        ctx.const_n[i] = constPols[i];
-        ctx.const_2ns[i] = new Array(N << extendBits);
-        for (let j=0; j<(N<<extendBits); j++)  ctx.const_2ns[i][j] = MH.getElement(constTree, j, i);
-    }
+    ctx.const_n = constPols.$$buffer;
+    ctx.const_2ns = constTree.elements;
 
 // This will calculate all the Q polynomials and extend commits
 
@@ -219,7 +211,13 @@ module.exports = async function starkGen(cmPols, constPols, constTree, pil, star
         const ev = starkInfo.evMap[i];
         let p;
         if (ev.type == "const") {
-            p = ctx.const_2ns[ev.id];
+            p = new Proxy({
+                buffer: ctx.const_2ns,
+                deg: 1<<nBitsExt,
+                offset: ev.id,
+                size: starkInfo.nConstants,
+                dim: 1
+            }, polHandle);
         } else if (ev.type == "cm") {
             p = getPol(ctx.pols, starkInfo, starkInfo.cm_2ns[ev.id]);
         } else if (ev.type == "q") {
@@ -322,15 +320,15 @@ function compileCode(ctx, code, dom, ret) {
             case "const": {
                 if (dom=="n") {
                     if (r.prime) {
-                        return `ctx.const_n[${r.id}][(i+1)%${N}]`;
+                        return `ctx.const_n[${r.id} + ((i+1)%${N})*${ctx.starkInfo.nConstants}]`;
                     } else {
-                        return `ctx.const_n[${r.id}][i]`;
+                        return `ctx.const_n[${r.id} + i*${ctx.starkInfo.nConstants}]`;
                     }
                 } else if (dom=="2ns") {
                     if (r.prime) {
-                        return `ctx.const_2ns[${r.id}][(i+${next})%${N}]`;
+                        return `ctx.const_2ns[${r.id} + ((i+${next})%${N})*${ctx.starkInfo.nConstants}]`;
                     } else {
-                        return `ctx.const_2ns[${r.id}][i]`;
+                        return `ctx.const_2ns[${r.id} + i*${ctx.starkInfo.nConstants}]`;
                     }
                 } else {
                     throw new Error("Invalid dom");
@@ -499,6 +497,7 @@ function setPol(pols, starkInfo, idPol, pol) {
     }
 }
 
+/*
 function getPol(pols, starkInfo, idPol) {
     const res = [];
     let p = starkInfo.varPolMap[idPol];
@@ -521,6 +520,63 @@ function getPol(pols, starkInfo, idPol) {
     }
     return res;
 }
+*/
+
+const polHandle = {
+    get( obj, prop) {
+        if (!isNaN(prop)) {
+            prop = Number(prop);
+            assert(prop<obj.deg, "Out of range");
+            if (obj.dim == 1) {
+                return obj.buffer[obj.offset + obj.size*prop];
+            } else {
+                return [
+                    obj.buffer[obj.offset + obj.size*prop],
+                    obj.buffer[obj.offset + obj.size*prop+1],
+                    obj.buffer[obj.offset + obj.size*prop+2]
+                ];
+            }
+        } else if (prop == "length") {
+            return obj.deg;
+        }
+    },
+    set( obj, prop, v) {
+        if (!isNaN(prop)) {
+            prop = Number(prop);
+            assert(prop<obj.deg, "Out of range");
+            if (obj.dim == 1) {
+                obj.buffer[obj.offset + obj.size*prop] = v;
+            } else {
+                if (Array.isArray(v)) {
+                    [
+                        obj.buffer[obj.offset + obj.size*prop],
+                        obj.buffer[obj.offset + obj.size*prop+1],
+                        obj.buffer[obj.offset + obj.size*prop+2]
+                    ] = v;
+                } else {
+                    [
+                        obj.buffer[obj.offset + obj.size*prop],
+                        obj.buffer[obj.offset + obj.size*prop+1],
+                        obj.buffer[obj.offset + obj.size*prop+2]
+                    ] = [ v, 0n, 0n];
+                }
+            }
+            return true;
+        }
+    }
+}
+
+function getPol(pols, starkInfo, idPol) {
+    let p = starkInfo.varPolMap[idPol];
+    let polRef = {
+        buffer: pols,
+        deg: starkInfo.mapDeg[p.section],
+        offset: starkInfo.mapOffsets[p.section] + p.sectionPos,
+        size: starkInfo.mapSectionsN[p.section],
+        dim: p.dim
+    };
+    return new Proxy(polRef, polHandle);
+}
 
 
 async function  extendAndMerkelize(MH, F, buff, src, nPols1, nPols3, dst, nBits, nBitsExt) {
@@ -529,40 +585,10 @@ async function  extendAndMerkelize(MH, F, buff, src, nPols1, nPols3, dst, nBits,
 }
 
 async function  extend(F, buff, src, nPols1, nPols3,  dst, nBits, nBitsExt ) {
-    let N = 1 << nBits;
-    let Next = 1 << nBitsExt
-    let rowSize = nPols1 + nPols3*3;
-    const p = [];
-    for (let i=0; i<nPols1; i++) {
-        console.log(`Extending pols1... ${i+1}/${nPols1}`)
-        for (let j=0; j<N; j++) {
-            p[j] = buff[src + j*rowSize + i];
-        }
-        const pE = extendPol(F, p, nBitsExt-nBits);
-        for (let j=0; j<Next; j++) {
-            buff[dst + j*rowSize + i] = pE[j];
-        }
-    }
-    for (let i=nPols1; i<rowSize; i+=3) {
-        console.log(`Extending pols3... ${i+1}/${rowSize}`)
-        for (let j=0; j<N; j++) {
-            p[j] = [
-                buff[src + j*rowSize + i],
-                buff[src + j*rowSize + i + 1],
-                buff[src + j*rowSize + i + 2]
-            ];
-        }
-        const pE = extendPol(F, p, nBitsExt-nBits);
-        for (let j=0; j<Next; j++) {
-            buff[dst + j*rowSize + i] = pE[j][0];
-            buff[dst + j*rowSize + i + 1] = pE[j][1];
-            buff[dst + j*rowSize + i + 2] = pE[j][2];
-        }
-    }
+    await interpolate(buff, src*8, nPols1 + 3*nPols3, nBits, buff, dst*8, nBitsExt);
 }
 
 async function  merkelize(MH, buff, src, width, nBitsExt ) {
-    const Next = 1 << nBitsExt;
-    const nTotal = Next * width
-    return await MH.merkelize(buff.slice(src, src + nTotal), 1, width, Next, true);
+    const nExt = 1 << nBitsExt;
+    return await MH.merkelize(buff, src*8, width, nExt);
 }

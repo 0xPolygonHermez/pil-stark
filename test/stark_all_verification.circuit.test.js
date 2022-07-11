@@ -10,6 +10,7 @@ const proof2zkin = require("../src/proof2zkin").proof2zkin;
 const assert = chai.assert;
 
 const wasm_tester = require("circom_tester").wasm;
+const c_tester = require("circom_tester").wasm;
 
 describe("Stark Verification Circuit Test", function () {
     let eddsa;
@@ -55,9 +56,11 @@ describe("Stark Verification Circuit Test", function () {
         const input = proof2zkin(proof);
         input.publics = publics;
 
+        /*
         console.log("Start wc...");
         await fs.promises.writeFile(zkInputFile, JSONbig.stringify(input, null, 1), "utf8");
         console.log("End wc...");
+        */
 
         const w = await circuit.calculateWitness(input, true);
 

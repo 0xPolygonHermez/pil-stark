@@ -1,20 +1,22 @@
 const F1Field = require("../../src/f3g");
 
-module.exports.buildConstants = async function (pols, polsDef) {
-    const N = Number(polsDef.LLAST.polDeg);
+module.exports.buildConstants = async function (pols) {
+
+    const N = pols.L1.length;
+
 
     for ( let i=0; i<N; i++) {
-        pols.L1.push((i == 0) ? 1n : 0n);
-        pols.LLAST.push((i == N-1) ? 1n : 0n);
+        pols.L1[i] = (i == 0) ? 1n : 0n;
+        pols.LLAST[i] = (i == N-1) ? 1n : 0n;
     }
 }
 
 
-module.exports.execute = async function (pols, polsDef, input) {
+module.exports.execute = async function (pols, input) {
+
+    const N = pols.l1.length;
 
     const Fr = new F1Field("0xFFFFFFFF00000001");
-
-    const N = Number(polsDef.l1.polDeg);
 
     pols.l2[0] = BigInt(input[0]);
     pols.l1[0] = BigInt(input[1]);

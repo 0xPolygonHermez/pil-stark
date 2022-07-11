@@ -1,6 +1,7 @@
 const { assert } = require("chai");
 const {polMulAxi, evalPol} = require("./polutils");
 const {log2} = require("./utils");
+const {traspose} = require("./fft_p");
 
 class FRI {
 
@@ -37,22 +38,27 @@ class FRI {
             const pol2N = 1 << (polBits - reductionBits);
             const nX = pol.length / pol2N;
 
-            const pol2_e = new Array(pol2N);
+            const pol2_e = createPol(pol2N);
+
 
             let special_x = transcript.getField();
 
             let sinv = shiftInv;
             const wi = F.inv(F.w[polBits]);
             for (let g = 0; g<pol.length/nX; g++) {
-                const ppar = new Array(nX);
-                for (let i=0; i<nX; i++) {
-                    ppar[i] = pol[(i*pol2N)+g];
-                }
-                const ppar_c = F.ifft(ppar);
-                polMulAxi(F, ppar_c, F.one, sinv);    // Multiplies coefs by 1, shiftInv, shiftInv^2, shiftInv^3, ......
+                if (si==0) {
+                    pol2_e[g] = pol[g];
+                } else {
+                    const ppar = new Array(nX);
+                    for (let i=0; i<nX; i++) {
+                        ppar[i] = pol[(i*pol2N)+g];
+                    }
+                    const ppar_c = F.ifft(ppar);
+                    polMulAxi(F, ppar_c, F.one, sinv);    // Multiplies coefs by 1, shiftInv, shiftInv^2, shiftInv^3, ......
 
-                pol2_e[g] = evalPol(F, ppar_c, special_x);
-                sinv = F.mul(sinv, wi);
+                    pol2_e[g] = evalPol(F, ppar_c, special_x);
+                    sinv = F.mul(sinv, wi);
+                }
             }
 
 
@@ -61,7 +67,11 @@ class FRI {
 
                 let groupSize = (1 << this.steps[si].nBits) / nGroups;
 
-                tree[si] = await this.MH.merkelize(pol2_e, 3, groupSize, nGroups);
+                const pol2_et = createPol(pol2_e.length);
+
+                await traspose(pol2_et.buffer, pol2_e.buffer, 3, this.steps[si].nBits, this.steps[si+1].nBits);
+
+                tree[si] = await this.MH.merkelize(pol2_et.buffer, 0, 3* groupSize, nGroups);
 
                 proof[si+1].root= this.MH.root(tree[si]);
                 transcript.put(this.MH.root(tree[si]));
@@ -79,7 +89,11 @@ class FRI {
                 shift = F.mul(shift, shift);
             }
         }
-        proof.push(pol);
+        const lastPol = [];
+        for (let i=0; i<pol.length; i++) {
+            lastPol.push(pol[i]);
+        }
+        proof.push(lastPol);
 
 
 
@@ -158,7 +172,7 @@ class FRI {
                 if (si < this.steps.length - 1) {
                     const nextNGroups = 1 << this.steps[si+1].nBits
                     const groupIdx  =Math.floor(ys[i] / nextNGroups);
-                    if (!F.eq(proof[si+1].polQueries[i][0][groupIdx], ev)) return false;
+                    if (!F.eq(get3(proof[si+1].polQueries[i][0], groupIdx), ev)) return false;
                 } else {
                     if (!F.eq(proof[si+1][ys[i]], ev)) return false;
                 }
@@ -167,7 +181,7 @@ class FRI {
             checkQuery = (query, idx) => {
                 const res = self.MH.verifyGroupProof(proof[si+1].root, query[1], idx, query[0]);
                 if (!res) return false;
-                return query[0];
+                return split3(query[0]);
             }
 
             polBits = this.steps[si].nBits;
@@ -203,5 +217,64 @@ class FRI {
 }
 
 module.exports = FRI;
+
+function createPol(n) {
+    const buffBuff = new SharedArrayBuffer(n*3*64);
+    const buff = new BigUint64Array(buffBuff)
+    return new Proxy({
+        buffer: buff,
+        deg: n
+    }, {
+        get( obj, prop) {
+            if (!isNaN(prop)) {
+                prop = Number(prop);
+                assert(prop<obj.deg, "Out of range");
+                return [
+                    obj.buffer[3*prop],
+                    obj.buffer[3*prop+1],
+                    obj.buffer[3*prop+2]
+                ];
+            } else if (prop == "length") {
+                return obj.deg;
+            } else if (prop == "buffer") {
+                return obj.buffer;
+            }
+        },
+        set( obj, prop, v) {
+            if (!isNaN(prop)) {
+                prop = Number(prop);
+                assert(prop<obj.deg, "Out of range");
+                if (Array.isArray(v)) {
+                    [
+                        obj.buffer[3*prop],
+                        obj.buffer[3*prop+1],
+                        obj.buffer[3*prop+2]
+                    ] = v;
+                } else {
+                    [
+                        obj.buffer[3*prop],
+                        obj.buffer[3*prop+1],
+                        obj.buffer[3*prop+2]
+                    ] = [ v, 0n, 0n];
+                }
+                return true;
+            }
+        }
+
+    });
+}
+
+function split3(arr) {
+    const res = [];
+    for (let i=0; i<arr.length; i+=3) {
+        res.push([arr[i], arr[i+1], arr[i+2]]);
+    }
+    return res;
+}
+
+function get3(arr, idx) {
+    return [arr[idx*3], arr[idx*3+1], arr[idx*3+2]];
+}
+
 
 

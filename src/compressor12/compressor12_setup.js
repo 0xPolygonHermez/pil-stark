@@ -5,7 +5,7 @@ const path = require("path");
 const F3G = require("../f3g.js");
 const {log2} = require("../utils");
 const {tmpName} = require("tmp-promise");
-const { createConstantPols, compile, getKs } = require("pilcom");
+const { newConstantPolsArray, compile, getKs } = require("pilcom");
 const ejs = require("ejs");
 const { connect } = require("http2");
 
@@ -43,7 +43,7 @@ module.exports = async function plonkSetup(r1cs) {
     await fs.promises.writeFile(pilFile, pilStr, "utf8");
 
     const pil = await compile(F, pilFile);
-    const [constPols, constPolsArray, constPolsDef,  constPolsArrayDef] =  createConstantPols(pil);
+    const constPols =  newConstantPolsArray(pil);
 
     fs.promises.unlink(pilFile);
 
@@ -209,8 +209,7 @@ module.exports = async function plonkSetup(r1cs) {
 
     return {
         pilStr: pilStr,
-        constPolsArray: constPolsArray,
-        constPolsArrayDef: constPolsArrayDef,
+        constPols: constPols,
         sMap: sMap,
         plonkAdditions: plonkAdditions
     };

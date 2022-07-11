@@ -12,7 +12,8 @@ const generateConstraintPolynomialVerifier = require("./starkinfo_cp_ver");
 const generateVerifierQuery = require("./starkinfo_fri_ver");
 const map = require("./starkinfo_map");
 
-module.exports = function starkInfoGen(pil, starkStruct) {
+module.exports = function starkInfoGen(_pil, starkStruct) {
+    const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
     const F = new F1Field();
 
     const res = {

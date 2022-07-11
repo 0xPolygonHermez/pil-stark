@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const version = require("../../package").version;
-const { createConstantPols, compile, exportPolynomials } = require("pilcom");
+const { newConstantPolsArray, compile } = require("pilcom");
 
 const smGlobal = require("../../src/sm/sm_global.js");
 const smPlookup = require("../sm_plookup/sm_plookup.js");
@@ -24,15 +24,16 @@ async function run() {
 
     const F = new F1Field();
     const pil = await compile(F, path.join(__dirname, "all_main.pil"));
-    const [constPols, constPolsArray, constPolsDef, constPolsArrayDef] =  createConstantPols(pil);
 
-    await smGlobal.buildConstants(constPols.Global, constPolsDef.Global);
-    await smPlookup.buildConstants(constPols.Plookup, constPolsDef.Plookup);
-    await smFibonacci.buildConstants(constPols.Fibonacci, constPolsDef.Fibonacci);
-    await smPermutation.buildConstants(constPols.Permutation, constPolsDef.Permutation);
-    await smConnection.buildConstants(constPols.Connection, constPolsDef.Connection);
+    const constPols = newConstantPolsArray(pil);
 
-    await exportPolynomials(F, outputFile, constPolsArray, constPolsArrayDef);
+    await smGlobal.buildConstants(constPols.Global);
+    await smPlookup.buildConstants(constPols.Plookup);
+    await smFibonacci.buildConstants(constPols.Fibonacci);
+    await smPermutation.buildConstants(constPols.Permutation);
+    await smConnection.buildConstants(constPols.Connection);
+
+    await constPols.saveToFile(outputFile);
 
     console.log("file Generated Correctly");
 }

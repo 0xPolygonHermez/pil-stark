@@ -2,10 +2,10 @@ const F1Field = require("../../src/f3g.js");
 const {log2} = require("../../src/utils.js");
 const getKs = require("pilcom").getKs;
 
-module.exports.buildConstants = async function (pols, polsDef) {
+module.exports.buildConstants = async function (pols) {
     const F = new F1Field("0xFFFFFFFF00000001");
 
-    const N = Number(polsDef.S1.polDeg);
+    const N = pols.S1.length;
 
     const pow = log2(N);
 
@@ -35,10 +35,9 @@ module.exports.buildConstants = async function (pols, polsDef) {
 }
 
 
-module.exports.execute = async function (pols, polsDef) {
+module.exports.execute = async function (pols) {
 
-
-    const N = Number(polsDef.a.polDeg);
+    const N = pols.a.length;
 
 
     for (let i=0; i<N; i++) {

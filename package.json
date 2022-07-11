@@ -10,7 +10,7 @@
     "fibonacci_buildconsttree": "node src/main_buildconsttree.js -c tmp/fibonacci.const.bin -p test/sm_fibonacci/fibonacci.pil -s tmp/fibonacci.starkstruct.json -t tmp/fibonacci.consttree.bin -v tmp/fibonacci.verkey.json",
     "fibonacci_compileverifier": "circom --O1 --prime goldilocks --r1cs --sym --wasm --verbose tmp/fibonacci.verifier.circom -o tmp",
     "fibonacci_compileC12verifier": "circom --O1 --r1cs --sym --wasm --verbose tmp/fibonacci.c12.verifier.circom -o tmp",
-    "all_compileverifier": "circom --O1 --prime goldilocks --r1cs --sym --wasm --verbose tmp/all.verifier.circom -o tmp",
+    "all_compileverifier": "circom --O1 --prime goldilocks --r1cs --sym --wasm --c --verbose tmp/all.verifier.circom -o tmp",
     "all_compileC12verifier": "circom --O1 --r1cs --sym --wasm --verbose tmp/all.c12.verifier.circom -o tmp"
   },
   "keywords": [
@@ -25,10 +25,9 @@
     "circom_runtime": "^0.1.18",
     "circomlibjs": "^0.1.6",
     "ejs": "^3.1.8",
-    "tmp-promise": "^3.0.3",
+    "pilcom": "git+ssh://git@github.com/0xpolygonhermez/pilcom.git",
     "wasmbuilder": "^0.0.12",
-    "workerpool": "^6.2.1",
-    "pilcom": "git+ssh://git@github.com/0xpolygonhermez/pilcom.git"
+    "workerpool": "^6.2.1"
   },
   "author": "Polygon Hermez",
   "license": "UNLICENSED",
@@ -39,6 +38,7 @@
     "circomlib": "^2.0.5",
     "json-bigint": "^1.0.0",
     "mocha": "^10.0.0",
-    "r1csfile": "^0.0.38"
+    "r1csfile": "^0.0.38",
+    "tmp-promise": "^3.0.3"
   }
 }
