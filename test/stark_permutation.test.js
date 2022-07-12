@@ -2,22 +2,21 @@ const chai = require("chai");
 const assert = chai.assert;
 const F1Field = require("../src/f3g");
 const path = require("path");
-const starkGen = require("../src/stark_gen.js");
+const starkInfoGen = require("../src/starkinfo.js");
+const { starkGen, starkGen_allocate } = require("../src/stark_gen.js");
 const starkVerify = require("../src/stark_verify.js");
 const buildPoseidonGL = require("../src/poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 
-
-const { createCommitedPols, createConstantPols, compile, verifyPil } = require("pilcom");
-
+const { newConstantPolsArray, compile, verifyPil } = require("pilcom");
 
 const smGlobal = require("../src/sm/sm_global.js");
 const smPermutation = require("./sm_permutation/sm_permutation.js");
 
-const MerkleHashGL = require("../src/merklehash.js");
+const MerkleHashGL = require("../src/merklehash_p.js");
 const MerkleHashBN128 = require("../src/merklehash.bn128.js");
 
-const { extendPol } = require("../src/polutils");
+const { interpolate } = require("../src/fft_p");
 
 
 
@@ -38,16 +37,17 @@ describe("test plookup sm", async function () {
 
         const Fr = new F1Field("0xFFFFFFFF00000001");
         const pil = await compile(Fr, path.join(__dirname, "sm_permutation", "permutation_main.pil"));
-        const [constPols, constPolsArray, constPolsDef] =  createConstantPols(pil);
-        const [cmPols, cmPolsArray, cmPolsDef] =  createCommitedPols(pil);
+        const constPols =  newConstantPolsArray(pil);
 
+        await smGlobal.buildConstants(constPols.Global);
+        await smPermutation.buildConstants(constPols.Permutation);
 
-        await smGlobal.buildConstants(constPols.Global, constPolsDef.Global);
-        await smPermutation.buildConstants(constPols.Permutation, constPolsDef.Permutation);
+        const starkInfo = starkInfoGen(pil, starkStruct);
+        const cmPols = starkGen_allocate(pil, starkInfo);
 
-        await smPermutation.execute(cmPols.Permutation, cmPolsDef.Permutation);
+        await smPermutation.execute(cmPols.Permutation);
 
-        const res = await verifyPil(Fr, pil, cmPolsArray , constPolsArray);
+        const res = await verifyPil(Fr, pil, cmPols , constPols);
 
         if (res.length != 0) {
             console.log("Pil does not pass");
@@ -57,10 +57,13 @@ describe("test plookup sm", async function () {
             assert(0);
         }
 
-        const constPolsArrayE = [];
-        for (let i=0; i<constPolsArray.length; i++) {
-            constPolsArrayE[i] = await extendPol(Fr, constPolsArray[i], 1);
-        }
+        const nBits = starkStruct.nBits;
+        const nBitsExt = starkStruct.nBitsExt;
+        const nExt= 1 << nBitsExt;
+        const constPolsArrayEbuff = new SharedArrayBuffer(nExt*pil.nConstants*8);
+        const constPolsArrayE = new BigUint64Array(constPolsArrayEbuff);
+
+        await interpolate(constPols.$$buffer, 0, pil.nConstants, nBits, constPolsArrayE, 0, nBitsExt );
 
         let MH;
         if (starkStruct.verificationHashType == "GL") {
@@ -73,17 +76,13 @@ describe("test plookup sm", async function () {
             throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
         }
 
+        const constTree = await MH.merkelize(constPolsArrayE, 0, pil.nConstants, nExt);
 
-        const constTree = await MH.merkelize(constPolsArrayE, 1, constPolsArrayE.length, constPolsArrayE[0].length);
+        const resP = await starkGen(cmPols, constPols, constTree, pil, starkInfo);
 
-        const resP = await starkGen(cmPolsArray, constPolsArray, constTree, pil, starkStruct);
-
-        const pil2 = await compile(Fr, path.join(__dirname, "sm_permutation", "permutation_main.pil"));
-
-        const resV = await starkVerify(resP.proof, resP.publics, pil2, MH.root(constTree), starkStruct);
+        const resV = await starkVerify(resP.proof, resP.publics, pil, MH.root(constTree), starkStruct);
 
         assert(resV==true);
-
     });
 
 });

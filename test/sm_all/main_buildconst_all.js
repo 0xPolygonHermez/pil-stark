@@ -1,4 +1,3 @@
-const fs = require("fs");
 const path = require("path");
 const version = require("../../package").version;
 const { newConstantPolsArray, compile } = require("pilcom");

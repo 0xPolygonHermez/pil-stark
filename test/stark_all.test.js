@@ -21,8 +21,6 @@ const smConnection = require("./sm_connection/sm_connection.js");
 const MerkleHashGL = require("../src/merklehash_p.js");
 const MerkleHashBN128 = require("../src/merklehash.bn128.js");
 
-const { extendPol } = require("../src/polutils");
-const { M } = require("../src/poseidon_constants_opt");
 const { interpolate } = require("../src/fft_p");
 
 
@@ -51,7 +49,6 @@ describe("test All sm", async function () {
         await smFibonacci.buildConstants(constPols.Fibonacci);
         await smPermutation.buildConstants(constPols.Permutation);
         await smConnection.buildConstants(constPols.Connection);
-
 
         const starkInfo = starkInfoGen(pil, starkStruct);
         const cmPols = starkGen_allocate(pil, starkInfo);

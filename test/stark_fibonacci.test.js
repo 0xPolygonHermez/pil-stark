@@ -2,21 +2,22 @@ const chai = require("chai");
 const assert = chai.assert;
 const F1Field = require("../src/f3g");
 const path = require("path");
-const starkGen = require("../src/stark_gen.js");
+const starkInfoGen = require("../src/starkinfo.js");
+const { starkGen, starkGen_allocate } = require("../src/stark_gen.js");
 const starkVerify = require("../src/stark_verify.js");
 const buildPoseidonGL = require("../src/poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 
 
-const { createCommitedPols, createConstantPols, compile, verifyPil } = require("pilcom");
+const { newConstantPolsArray, compile, verifyPil } = require("pilcom");
 
 
 const smFibonacci = require("./sm_fibonacci/sm_fibonacci.js");
 
-const MerkleHashGL = require("../src/merklehash.js");
+const MerkleHashGL = require("../src/merklehash_p.js");
 const MerkleHashBN128 = require("../src/merklehash.bn128.js");
 
-const { extendPol } = require("../src/polutils");
+const { interpolate } = require("../src/fft_p");
 
 
 
@@ -37,17 +38,17 @@ describe("test fibonacci sm", async function () {
 
         const Fr = new F1Field("0xFFFFFFFF00000001");
         const pil = await compile(Fr, path.join(__dirname, "sm_fibonacci", "fibonacci_main.pil"));
-        const [constPols, constPolsArray, constPolsDef] =  createConstantPols(pil);
-        const [cmPols, cmPolsArray, cmPolsDef] =  createCommitedPols(pil);
+        const constPols =  newConstantPolsArray(pil);
 
-        await smFibonacci.buildConstants(constPols.Fibonacci, constPolsDef.Fibonacci);
+        await smFibonacci.buildConstants(constPols.Fibonacci);
 
+        const starkInfo = starkInfoGen(pil, starkStruct);
+        const cmPols = starkGen_allocate(pil, starkInfo);
 
-        const result = await smFibonacci.execute(cmPols.Fibonacci, cmPolsDef.Fibonacci, [1,2]);
+        const result = await smFibonacci.execute(cmPols.Fibonacci, [1,2]);
         console.log("Result: " + result);
 
-
-        const res = await verifyPil(Fr, pil, cmPolsArray , constPolsArray);
+        const res = await verifyPil(Fr, pil, cmPols , constPols);
 
         if (res.length != 0) {
             console.log("Pil does not pass");
@@ -57,13 +58,13 @@ describe("test fibonacci sm", async function () {
             assert(0);
         }
 
-        const poseidon = await buildPoseidon();
+        const nBits = starkStruct.nBits;
+        const nBitsExt = starkStruct.nBitsExt;
+        const nExt= 1 << nBitsExt;
+        const constPolsArrayEbuff = new SharedArrayBuffer(nExt*pil.nConstants*8);
+        const constPolsArrayE = new BigUint64Array(constPolsArrayEbuff);
 
-        const constPolsArrayE = [];
-        for (let i=0; i<constPolsArray.length; i++) {
-            constPolsArrayE[i] = await extendPol(poseidon.F, constPolsArray[i], 1);
-        }
-
+        await interpolate(constPols.$$buffer, 0, pil.nConstants, nBits, constPolsArrayE, 0, nBitsExt );
 
         let MH;
         if (starkStruct.verificationHashType == "GL") {
@@ -76,13 +77,11 @@ describe("test fibonacci sm", async function () {
             throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
         }
 
-        const constTree = await MH.merkelize(constPolsArrayE, 1, constPolsArrayE.length, constPolsArrayE[0].length);
+        const constTree = await MH.merkelize(constPolsArrayE, 0, pil.nConstants, nExt);
 
-        const resP = await starkGen(cmPolsArray, constPolsArray, constTree, pil, starkStruct);
+        const resP = await starkGen(cmPols, constPols, constTree, pil, starkInfo);
 
-        const pil2 = await compile(Fr, path.join(__dirname, "sm_fibonacci", "fibonacci_main.pil"));
-
-        const resV = await starkVerify(resP.proof, resP.publics, pil2, MH.root(constTree), starkStruct);
+        const resV = await starkVerify(resP.proof, resP.publics, pil, MH.root(constTree), starkStruct);
 
         assert(resV==true);
     });

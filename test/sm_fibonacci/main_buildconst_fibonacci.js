@@ -1,9 +1,9 @@
-const fs = require("fs");
 const path = require("path");
 const version = require("../../package").version;
-const { createConstantPols, compile, exportPolynomials } = require("pilcom");
+const { newConstantPolsArray, compile } = require("pilcom");
 
 const smFibonacci = require("./sm_fibonacci.js");
+
 const F1Field = require("../../src/f3g");
 
 
@@ -19,11 +19,12 @@ async function run() {
 
     const F = new F1Field();
     const pil = await compile(F, path.join(__dirname, "fibonacci_main.pil"));
-    const [constPols, constPolsArray, constPolsDef, constPolsArrayDef] =  createConstantPols(pil);
 
-    await smFibonacci.buildConstants(constPols.Fibonacci, constPolsDef.Fibonacci);
+    const constPols = newConstantPolsArray(pil);
 
-    await exportPolynomials(F, outputFile, constPolsArray, constPolsArrayDef);
+    await smFibonacci.buildConstants(constPols.Fibonacci);
+
+    await constPols.saveToFile(outputFile);
 
     console.log("file Generated Correctly");
 }

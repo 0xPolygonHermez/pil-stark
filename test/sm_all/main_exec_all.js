@@ -1,4 +1,3 @@
-const fs = require("fs");
 const path = require("path");
 const version = require("../../package").version;
 
@@ -6,6 +5,7 @@ const smPlookup = require("../sm_plookup/sm_plookup.js");
 const smFibonacci = require("../sm_fibonacci/sm_fibonacci.js");
 const smPermutation = require("../sm_permutation/sm_permutation.js");
 const smConnection = require("../sm_connection/sm_connection.js");
+
 const F1Field = require("../../src/f3g");
 const { newCommitPolsArray, compile } = require("pilcom");
 

@@ -1,10 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 const version = require("../../package").version;
-const { createCommitedPols, compile, exportPolynomials } = require("pilcom");
 
 const smFibonacci = require("./sm_fibonacci.js");
+
 const F1Field = require("../../src/f3g");
+const { newCommitPolsArray, compile } = require("pilcom");
 
 
 const argv = require("yargs")
@@ -23,12 +24,12 @@ async function run() {
     const pil = await compile(F, path.join(__dirname, "fibonacci_main.pil"));
 
     const input = JSON.parse(await fs.promises.readFile(inputFile, "utf8"));
-    const [cmPols, cmPolsArray, cmPolsDef, cmPolsArrayDef] =  createCommitedPols(pil);
+    const cmPols =  newCommitPolsArray(pil);
 
-    const result = await smFibonacci.execute(cmPols.Fibonacci, cmPolsDef.Fibonacci, input);
+    const result = await smFibonacci.execute(cmPols.Fibonacci, input);
     console.log("Result: " + result);
 
-    await exportPolynomials(F, outputFile, cmPolsArray, cmPolsArrayDef);
+    await cmPols.saveToFile(outputFile);
 
     console.log("file Generated Correctly");
 }
