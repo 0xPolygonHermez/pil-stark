@@ -6,20 +6,12 @@ const Transcript = require("./transcript");
 const TranscriptBN128 = require("./transcript.bn128");
 const { useCommitPolsArray } = require("pilcom");
 
-const { extendPol, buildZhInv, calculateH1H2, calculateZ } = require("./polutils.js");
+const { buildZhInv, calculateH1H2, calculateZ } = require("./polutils.js");
 const buildPoseidonGL = require("./poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 const FRI = require(".//fri.js");
 const _ = require("json-bigint");
 const { interpolate } = require("./fft_p.js");
-
-module.exports.starkGen_allocate = function starkGen(pil, starkInfo) {
-    const buffBuff = new SharedArrayBuffer(starkInfo.mapTotalN*8);
-    const buffer = new BigUint64Array(buffBuff);
-    const cmPols = useCommitPolsArray(pil, buffer, 0);
-    cmPols.$$fullBuffer = buffer;
-    return cmPols;
-}
 
 module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, pil, starkInfo) {
     const starkStruct = starkInfo.starkStruct;
@@ -51,13 +43,13 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
     if (cmPols.$$nPols != pil.nCommitments) {
         throw new Error(`Number of Commited Polynomials: ${cmPols.length} do not match with the pil definition: ${pil.nCommitments} `)
     };
-    if (!cmPols.$$fullBuffer) {
-        throw new Error("invalid cmPolsBuffer:, use starkgen_alloc to allocate the buffer");
-    }
 
     const ctx = {}
     ctx.F = F;
-    ctx.pols = cmPols.$$fullBuffer;
+    const buffBuff = new SharedArrayBuffer(starkInfo.mapTotalN*8);
+    ctx.pols = new BigUint64Array(buffBuff);
+    cmPols.writeToBuff(ctx.pols, 0);
+
     ctx.nBits = starkInfo.starkStruct.nBits;
     ctx.nBitsExt = starkInfo.starkStruct.nBitsExt;
     ctx.N = 1 << starkInfo.starkStruct.nBits;
@@ -87,7 +79,7 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
     const zhInv = buildZhInv(F, nBits, extendBits);
     ctx.Zi = zhInv;
 
-    ctx.const_n = constPols.$$buffer;
+    ctx.const_n = constPols.$$array;
     ctx.const_2ns = constTree.elements;
 
 // This will calculate all the Q polynomials and extend commits
@@ -211,24 +203,34 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
         const ev = starkInfo.evMap[i];
         let p;
         if (ev.type == "const") {
-            p = new Proxy({
+            p = {
                 buffer: ctx.const_2ns,
                 deg: 1<<nBitsExt,
                 offset: ev.id,
                 size: starkInfo.nConstants,
                 dim: 1
-            }, polHandle);
+            };
         } else if (ev.type == "cm") {
-            p = getPol(ctx.pols, starkInfo, starkInfo.cm_2ns[ev.id]);
+            p = getPolRef(ctx.pols, starkInfo, starkInfo.cm_2ns[ev.id]);
         } else if (ev.type == "q") {
-            p = getPol(ctx.pols, starkInfo, starkInfo.qs[ev.id]);
+            p = getPolRef(ctx.pols, starkInfo, starkInfo.qs[ev.id]);
         } else {
             throw new Error("Invalid ev type: "+ ev.type);
         }
         l = ev.prime ? LpEv : LEv;
         let acc = 0n;
         for (let k=0; k<N; k++) {
-            acc = F.add(acc, F.mul(p[k<<extendBits], l[k]));
+            let v;
+            if (p.dim==1) {
+                v = p.buffer[(k<<extendBits)*p.size + p.offset];
+            } else {
+                v = [
+                    p.buffer[(k<<extendBits)*p.size + p.offset],
+                    p.buffer[(k<<extendBits)*p.size + p.offset+1],
+                    p.buffer[(k<<extendBits)*p.size + p.offset+2]
+                ];
+            }
+            acc = F.add(acc, F.mul(v, l[k]));
         }
         ctx.evals[i] = acc;
     }
@@ -320,9 +322,9 @@ function compileCode(ctx, code, dom, ret) {
             case "const": {
                 if (dom=="n") {
                     if (r.prime) {
-                        return `ctx.const_n[${r.id} + ((i+1)%${N})*${ctx.starkInfo.nConstants}]`;
+                        return `ctx.const_n[${r.id}][(i+1)%${N}]`;
                     } else {
-                        return `ctx.const_n[${r.id} + i*${ctx.starkInfo.nConstants}]`;
+                        return `ctx.const_n[${r.id}][i]`;
                     }
                 } else if (dom=="2ns") {
                     if (r.prime) {
@@ -471,25 +473,21 @@ function calculateExpAtPoint(ctx, code, i) {
 
 
 function setPol(pols, starkInfo, idPol, pol) {
-    let p = starkInfo.varPolMap[idPol];
-    let N = starkInfo.mapDeg[p.section];
-    let offset = starkInfo.mapOffsets[p.section];
-    offset += p.sectionPos;
-    let size = starkInfo.mapSectionsN[p.section];
+    const p = getPolRef(pols, starkInfo, idPol);
     if (p.dim == 1) {
-        for (let i=0; i<N; i++) {
-            pols[offset + i*size] = pol[i];
+        for (let i=0; i<p.deg; i++) {
+            p.buffer[p.offset + i*p.size] = pol[i];
         }
     } else if (p.dim == 3) {
-        for (let i=0; i<N; i++) {
+        for (let i=0; i<p.deg; i++) {
             if (Array.isArray(pol[i])) {
-                for (let e =0; e<3; e++) {
-                    pols[offset + i*size + e] = pol[i][e];
-                }
+                p.buffer[p.offset + i*p.size] = pol[i][0];
+                p.buffer[p.offset + i*p.size + 1] = pol[i][1];
+                p.buffer[p.offset + i*p.size + 2] = pol[i][2];
             } else {
-                pols[offset + i*size] = pol[i];
-                pols[offset + i*size+1] = 0n;
-                pols[offset + i*size+2] = 0n;
+                p.buffer[p.offset + i*p.size] = pol[i];
+                p.buffer[p.offset + i*p.size + 1] = 0n;
+                p.buffer[p.offset + i*p.size + 2] = 0n;
             }
         }
     } else {
@@ -497,76 +495,7 @@ function setPol(pols, starkInfo, idPol, pol) {
     }
 }
 
-/*
-function getPol(pols, starkInfo, idPol) {
-    const res = [];
-    let p = starkInfo.varPolMap[idPol];
-    let N = starkInfo.mapDeg[p.section];
-    let offset = starkInfo.mapOffsets[p.section];
-    offset += p.sectionPos;
-    let size = starkInfo.mapSectionsN[p.section];
-    if (p.dim==1) {
-        for (let i=0; i<N; i++) {
-            res.push(pols[offset + i*size]);
-        }
-    } else if (p.dim == 3) {
-        for (let i=0; i<N; i++) {
-            res.push([
-                pols[offset + i*size],
-                pols[offset + i*size+1],
-                pols[offset + i*size+2]
-            ]);
-        }
-    }
-    return res;
-}
-*/
-
-const polHandle = {
-    get( obj, prop) {
-        if (!isNaN(prop)) {
-            prop = Number(prop);
-            assert(prop<obj.deg, "Out of range");
-            if (obj.dim == 1) {
-                return obj.buffer[obj.offset + obj.size*prop];
-            } else {
-                return [
-                    obj.buffer[obj.offset + obj.size*prop],
-                    obj.buffer[obj.offset + obj.size*prop+1],
-                    obj.buffer[obj.offset + obj.size*prop+2]
-                ];
-            }
-        } else if (prop == "length") {
-            return obj.deg;
-        }
-    },
-    set( obj, prop, v) {
-        if (!isNaN(prop)) {
-            prop = Number(prop);
-            assert(prop<obj.deg, "Out of range");
-            if (obj.dim == 1) {
-                obj.buffer[obj.offset + obj.size*prop] = v;
-            } else {
-                if (Array.isArray(v)) {
-                    [
-                        obj.buffer[obj.offset + obj.size*prop],
-                        obj.buffer[obj.offset + obj.size*prop+1],
-                        obj.buffer[obj.offset + obj.size*prop+2]
-                    ] = v;
-                } else {
-                    [
-                        obj.buffer[obj.offset + obj.size*prop],
-                        obj.buffer[obj.offset + obj.size*prop+1],
-                        obj.buffer[obj.offset + obj.size*prop+2]
-                    ] = [ v, 0n, 0n];
-                }
-            }
-            return true;
-        }
-    }
-}
-
-function getPol(pols, starkInfo, idPol) {
+function getPolRef(pols, starkInfo, idPol) {
     let p = starkInfo.varPolMap[idPol];
     let polRef = {
         buffer: pols,
@@ -575,7 +504,28 @@ function getPol(pols, starkInfo, idPol) {
         size: starkInfo.mapSectionsN[p.section],
         dim: p.dim
     };
-    return new Proxy(polRef, polHandle);
+    return polRef;
+}
+
+function getPol(pols, starkInfo, idPol) {
+    const p = getPolRef(pols, starkInfo, idPol);
+    const res = new Array(p.deg);
+    if (p.dim == 1) {
+        for (let i=0; i<p.deg; i++) {
+            res[i] = p.buffer[p.offset + i*p.size];
+        }
+    } else if (p.dim == 3) {
+        for (let i=0; i<p.deg; i++) {
+            res[i] = [
+                p.buffer[p.offset + i*p.size],
+                p.buffer[p.offset + i*p.size + 1],
+                p.buffer[p.offset + i*p.size + 2]
+            ];
+        }
+    } else {
+        throw new Error("invalid dim" + p.dim)
+    }
+    return res;
 }
 
 

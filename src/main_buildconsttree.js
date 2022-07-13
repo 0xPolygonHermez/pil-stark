@@ -4,7 +4,7 @@ const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig
 
 
 const F1Field = require("./f3g");
-const { useConstantPolsArray, compile } = require("pilcom");
+const { newConstantPolsArray, compile } = require("pilcom");
 const MerkleHashGL = require("./merklehash_p.js");
 const MerkleHashBN128 = require("./merklehash.bn128.js");
 const buildPoseidonGL = require("./poseidon");
@@ -39,18 +39,16 @@ async function run() {
     const n = 1 << nBits;
     const nExt = 1 << nBitsExt;
 
-    const constBuffBuff = new SharedArrayBuffer(pil.nConstants*8*n);
-    const constBuff = new BigUint64Array(constBuffBuff)
-
-    const constPols =  useConstantPolsArray(pil, constBuff, 0);
+    const constPols = newConstantPolsArray(pil);
     await constPols.loadFromFile(constFile);
 
-    const nPols = pil.nConstants;
+    const constBuff  = constPols.writeToBuff();
 
-    const constPolsEBuff = new SharedArrayBuffer(nPols*nExt*8);
-    const constPolsE = new BigUint64Array(constPolsEBuff);
+    const constPolsArrayEbuff = new SharedArrayBuffer(nExt*pil.nConstants*8);
+    const constPolsArrayE = new BigUint64Array(constPolsArrayEbuff);
 
-    await interpolate(constPols.$$buffer, 0, nPols, nBits, constPolsE, 0, nBitsExt);
+    await interpolate(constBuff, 0, pil.nConstants, nBits, constPolsArrayE, 0, nBitsExt );
+
 
     let MH;
     if (starkStruct.verificationHashType == "GL") {
@@ -63,7 +61,7 @@ async function run() {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
 
-    const constTree = await MH.merkelize(constPolsE, 0, nPols, nExt);
+    const constTree = await MH.merkelize(constPolsArrayE, 0, pil.nConstants, nExt);
 
     const constRoot = MH.root(constTree);
 

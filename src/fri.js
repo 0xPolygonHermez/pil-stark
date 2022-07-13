@@ -38,8 +38,7 @@ class FRI {
             const pol2N = 1 << (polBits - reductionBits);
             const nX = pol.length / pol2N;
 
-            const pol2_e = createPol(pol2N);
-
+            const pol2_e = new Array(pol2N);
 
             let special_x = transcript.getField();
 
@@ -67,11 +66,10 @@ class FRI {
 
                 let groupSize = (1 << this.steps[si].nBits) / nGroups;
 
-                const pol2_et = createPol(pol2_e.length);
 
-                await traspose(pol2_et.buffer, pol2_e.buffer, 3, this.steps[si].nBits, this.steps[si+1].nBits);
+                const pol2_etb = getTransposedBuffer(pol2_e, this.steps[si+1].nBits);
 
-                tree[si] = await this.MH.merkelize(pol2_et.buffer, 0, 3* groupSize, nGroups);
+                tree[si] = await this.MH.merkelize(pol2_etb, 0, 3* groupSize, nGroups);
 
                 proof[si+1].root= this.MH.root(tree[si]);
                 transcript.put(this.MH.root(tree[si]));
@@ -274,6 +272,24 @@ function split3(arr) {
 
 function get3(arr, idx) {
     return [arr[idx*3], arr[idx*3+1], arr[idx*3+2]];
+}
+
+function getTransposedBuffer(pol, trasposeBits) {
+    const resBuff = new SharedArrayBuffer(pol.length*3*8);
+    const res = new BigUint64Array(resBuff);
+    const n = pol.length;
+    const w = 1 << trasposeBits;
+    const h = n/w;
+    for (let i=0; i<w; i++) {
+        for (let j=0; j<h; j++) {
+            const fi = j*w + i;
+            const di = i*h*3 +j*3;
+            res[di] = pol[fi][0];
+            res[di+1] = pol[fi][1];
+            res[di+2] = pol[fi][2];
+        }
+    }
+    return res;
 }
 
 

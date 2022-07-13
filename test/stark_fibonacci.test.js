@@ -3,13 +3,13 @@ const assert = chai.assert;
 const F1Field = require("../src/f3g");
 const path = require("path");
 const starkInfoGen = require("../src/starkinfo.js");
-const { starkGen, starkGen_allocate } = require("../src/stark_gen.js");
+const { starkGen } = require("../src/stark_gen.js");
 const starkVerify = require("../src/stark_verify.js");
 const buildPoseidonGL = require("../src/poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 
 
-const { newConstantPolsArray, compile, verifyPil } = require("pilcom");
+const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
 
 const smFibonacci = require("./sm_fibonacci/sm_fibonacci.js");
@@ -43,7 +43,7 @@ describe("test fibonacci sm", async function () {
         await smFibonacci.buildConstants(constPols.Fibonacci);
 
         const starkInfo = starkInfoGen(pil, starkStruct);
-        const cmPols = starkGen_allocate(pil, starkInfo);
+        const cmPols = newCommitPolsArray(pil);
 
         const result = await smFibonacci.execute(cmPols.Fibonacci, [1,2]);
         console.log("Result: " + result);
@@ -64,7 +64,8 @@ describe("test fibonacci sm", async function () {
         const constPolsArrayEbuff = new SharedArrayBuffer(nExt*pil.nConstants*8);
         const constPolsArrayE = new BigUint64Array(constPolsArrayEbuff);
 
-        await interpolate(constPols.$$buffer, 0, pil.nConstants, nBits, constPolsArrayE, 0, nBitsExt );
+        const constBuff  = constPols.writeToBuff();
+        await interpolate(constBuff, 0, pil.nConstants, nBits, constPolsArrayE, 0, nBitsExt );
 
         let MH;
         if (starkStruct.verificationHashType == "GL") {

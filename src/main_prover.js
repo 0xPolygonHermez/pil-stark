@@ -2,7 +2,7 @@ const fs = require("fs");
 const version = require("../package").version;
 
 const F1Field = require("./f3g");
-const { useConstantPolsArray, compile } = require("pilcom");
+const { newConstantPolsArray, newCommitPolsArray, compile } = require("pilcom");
 const starkInfoGen = require("../src/starkinfo.js");
 const { starkGen, starkGen_allocate } = require("../src/stark_gen.js");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true, storeAsString: true });
@@ -44,11 +44,11 @@ async function run() {
     const nBits = starkStruct.nBits;
     const n = 1 << nBits;
 
-    const constBuffBuff = new SharedArrayBuffer(pil.nConstants*8*n);
-    const constBuff = new BigUint64Array(constBuffBuff);
-
-    const constPols =  useConstantPolsArray(pil, constBuff, 0);
+    const constPols =  newConstantPolsArray(pil);
     await constPols.loadFromFile(constFile);
+
+    const cmPols =  newCommitPolsArray(pil);
+    await cmPols.loadFromFile(commitFile);
 
     let MH;
     if (starkStruct.verificationHashType == "GL") {
@@ -64,9 +64,6 @@ async function run() {
     const constTree = await MH.readFromFile(constTreeFile);
 
     const starkInfo = starkInfoGen(pil, starkStruct);
-    const cmPols = starkGen_allocate(pil, starkInfo);
-
-    await cmPols.loadFromFile(commitFile);
 
     const resP = await starkGen(cmPols, constPols, constTree, pil, starkInfo);
 
