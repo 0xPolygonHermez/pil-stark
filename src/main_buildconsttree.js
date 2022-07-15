@@ -5,12 +5,9 @@ const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig
 
 const F1Field = require("./f3g");
 const { newConstantPolsArray, compile } = require("pilcom");
-const MerkleHashGL = require("./merklehash_p.js");
-const MerkleHashBN128 = require("./merklehash.bn128.js");
-const buildPoseidonGL = require("./poseidon");
-const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
+const buildMerkleHashGL = require("./merklehash_p.js");
+const buildMerkleHashBN128 = require("./merklehash_bn128_p.js");
 const {interpolate} = require("./fft_p");
-
 
 const argv = require("yargs")
     .version(version)
@@ -44,7 +41,7 @@ async function run() {
 
     const constBuff  = constPols.writeToBuff();
 
-    const constPolsArrayEbuff = new SharedArrayBuffer(nExt*pil.nConstants*8);
+    const constPolsArrayEbuff = new ArrayBuffer(nExt*pil.nConstants*8);
     const constPolsArrayE = new BigUint64Array(constPolsArrayEbuff);
 
     await interpolate(constBuff, 0, pil.nConstants, nBits, constPolsArrayE, 0, nBitsExt );
@@ -52,11 +49,9 @@ async function run() {
 
     let MH;
     if (starkStruct.verificationHashType == "GL") {
-        const poseidonGL = await buildPoseidonGL();
-        MH = new MerkleHashGL(poseidonGL);
+        MH = await buildMerkleHashGL();
     } else if (starkStruct.verificationHashType == "BN128") {
-        const poseidonBN128 = await buildPoseidonBN128();
-        MH = new MerkleHashBN128(poseidonBN128);
+        MH = await buildMerkleHashBN128();
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }

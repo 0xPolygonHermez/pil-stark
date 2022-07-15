@@ -34,9 +34,12 @@ async function buildWasm(nPages) {
 }
 
 // a deliberately inefficient implementation of the fibonacci sequence
-async function linearHash(buffIn, posIn, width, heigth, buffOut, posOut) {
+async function linearHash(buffIn, width, st_i, st_n) {
+    console.log(`linear hash start.... ${st_i}/${st_n}`);
+    const heigth = buffIn.length / width;
+
     const bytesRequired = width*heigth*8 + heigth*4*8;
-    const pagesRequired = Math.floor((bytesRequired - 1)/(1<<16)) +2;
+    const pagesRequired = Math.floor((bytesRequired - 1)/(1<<16)) +200;
 
     const [glwasm, wasmMem] = await buildWasm(Math.min(pagesRequired, maxPages));
 
@@ -48,22 +51,29 @@ async function linearHash(buffIn, posIn, width, heigth, buffOut, posOut) {
     const pIn = alloc(wasmMem, width * hashesPerStep*8);
     const pOut = alloc(wasmMem, hashesPerStep*4*8);
 
+    const buffOut = new BigUint64Array(heigth*4);
+
     for (let i=0; i<heigth; i+= hashesPerStep) {
         const curN = Math.min(hashesPerStep, heigth-i);
-        const src = new Uint8Array(buffIn.buffer, posIn + i*width*8, width * curN*8);
+        const src = new Uint8Array(buffIn.buffer, buffIn.byteOffset + i*width*8, width * curN*8);
         wasmMem8.set(src, pIn);
         glwasm.multiLinearHash(pIn, width, heigth, pOut);
-        const dst = new Uint8Array(wasmMem.buffer, pOut, curN*4*8);
-        const buffOut8 = new Uint8Array(buffOut.buffer);
-        buffOut8.set(dst, posOut + i*4*8);
+        const dst = new BigUint64Array(wasmMem.buffer, pOut, curN*4);
+        buffOut.set(dst, i*4);
     }
 
+    console.log(`linear hash end.... ${st_i}/${st_n}`);
+
+    return buffOut;
 }
 
 
 // a deliberately inefficient implementation of the fibonacci sequence
-async function merkelizeLevel(buffIn, posIn, nOps, posOut) {
-    const buff8 = new Uint8Array(buffIn.buffer);
+async function merkelizeLevel(buffIn, st_i, st_n) {
+    console.log(`merkelizing hash start.... ${st_i}/${st_n}`);
+
+    const nOps = buffIn.length/8;
+
     const bytesRequired = nOps*12*8;
     const pagesRequired = Math.floor((bytesRequired - 1)/(1<<16)) +2;
 
@@ -77,15 +87,19 @@ async function merkelizeLevel(buffIn, posIn, nOps, posOut) {
     const pIn = alloc(wasmMem, opsPerStep*8*8);
     const pOut = alloc(wasmMem, opsPerStep*4*8);
 
+    const buffOut = new BigUint64Array(nOps*4);
+
     for (let i=0; i<nOps; i+= opsPerStep) {
         const curNOps = Math.min(opsPerStep, nOps-i);
-        const src = new Uint8Array(buff8.buffer, posIn + i*8*8,  curNOps*8*8);
+        const src = new Uint8Array(buffIn.buffer, buffIn.byteOffset + i*8*8,  curNOps*8*8);
         wasmMem8.set(src, pIn);
         glwasm.merkelizeLevel(pIn, curNOps, pOut);
-        const dst = new Uint8Array(wasmMem.buffer, pOut, curNOps*4*8);
-        buff8.set(dst, posOut + i*4*8);
+        const dst = new BigUint64Array(wasmMem.buffer, pOut, curNOps*4);
+        buffOut.set(dst, i*4);
     }
 
+    console.log(`merkelizing hash start.... ${st_i}/${st_n}`);
+    return buffOut;
 }
 
 if (!workerpool.isMainThread) {

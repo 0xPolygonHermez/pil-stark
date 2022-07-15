@@ -4,7 +4,12 @@ function pilCodeGen(ctx, expId, prime, mode) {
     prime = prime || false;
 
     if ((mode=="evalQ")&&(prime)) {
-        prime = false;              // Do not evaluate Qs for primes, instead cualculate for not prime.
+        pilCodeGen(ctx, expId, false, "evalQ");
+        if ((typeof ctx.pil.expressions[expId].idQ === "undefined")&&
+            (!ctx.pil.expressions[expId].keep2ns)) {
+            pilCodeGen(ctx, expId, true);
+        }
+        return;
     }
 
     const primeIdx = prime ? "expsPrime" : "exps";
@@ -305,7 +310,7 @@ function expressionWarning(pil, strErr, e1, e2) {
     if (typeof e2 !== "undefined") {
         str = str + "\n" + getExpressionInfo(pil, e2);
     }
-    console.log("ARNING: " + str);
+    console.log("WARNING: " + str);
 }
 
 function getExpressionInfo(pil, expId) {
@@ -446,6 +451,15 @@ function buildCode(ctx) {
     res.i = buildLinearCode(ctx, "i");
     res.last = buildLinearCode(ctx, "last");
     res.tmpUsed = ctx.tmpUsed;
+
+    // Expressions that are not saved, cannot be reused later on
+    for (let i=0; i<ctx.pil.expressions.length; i++) {
+        const e = ctx.pil.expressions[i];
+        if ((!e.keep)&&(typeof e.idQ === "undefined")) {
+            ctx.calculated.exps[i] = false;
+            ctx.calculated.expsPrime[i] = false;
+        }
+    }
     ctx.code = [];
     return res;
 }

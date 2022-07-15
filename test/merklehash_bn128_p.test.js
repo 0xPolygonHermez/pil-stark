@@ -1,8 +1,8 @@
-const buildMH = require("../src/merklehash_p.js");
+const buildMH = require("../src/merklehash_bn128_p.js");
 const chai = require("chai");
-const fs = require("fs");
 const assert = chai.assert;
 var tmp = require('tmp-promise');
+var fs = require("fs");
 
 describe("merkle hash", async function () {
     let MH;
@@ -28,6 +28,7 @@ describe("merkle hash", async function () {
 
         const [groupElements, mp] = MH.getGroupProof(tree, idx);
         const root = MH.root(tree);
+        console.log(root);
 
         assert(MH.verifyGroupProof(root, mp, idx, groupElements));
     });
@@ -48,16 +49,15 @@ describe("merkle hash", async function () {
 
         const [groupElements, mp] = MH.getGroupProof(tree, idx);
         const root = MH.root(tree);
+        console.log(root);
 
         assert(MH.verifyGroupProof(root, mp, idx, groupElements));
     });
-
     it("Big one (parallel)", async () => {
-        const N = 1<<18;
-        const idx = 33;
+        const N = 1<<17;
+        const idx = 32;
         const nPols = 10;
 
-        console.log("initialize..");
         const pols = new BigUint64Array(nPols*N);
         for (let i=0; i<N; i++) {
             for (let j=0; j<nPols; j++) {
@@ -65,14 +65,16 @@ describe("merkle hash", async function () {
             }
         }
 
-        console.log("computing values...");
         const tree = await MH.merkelize(pols, 0, nPols, N);
 
         const [groupElements, mp] = MH.getGroupProof(tree, idx);
         const root = MH.root(tree);
 
+        console.log(root);
+
         assert(MH.verifyGroupProof(root, mp, idx, groupElements));
     });
+
 
     it("Should save and restore to file", async() => {
         const N = 1<<18;

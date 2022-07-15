@@ -26,7 +26,6 @@ function bitReverse(buff, bits) {
 */
 
 function traspose(buffDst, buffSrc, nPols, nBits, trasposeBits) {
-    const buffDst8 = new Uint8Array(buffDst.buffer, buffDst.byteOffset, buffDst.byteLength);
     const n = 1 << nBits;
     const w = 1 << trasposeBits;
     const h = n/w;
@@ -35,7 +34,8 @@ function traspose(buffDst, buffSrc, nPols, nBits, trasposeBits) {
             const fi = j*w + i;
             const di = i*h +j;
             const src = new Uint8Array(buffSrc.buffer, buffSrc.byteOffset + fi*nPols*8, nPols*8);
-            buffDst8.set(src, di*nPols*8);
+            const dst = new Uint8Array(buffDst.buffer, buffDst.byteOffset + di*nPols*8, nPols*8);
+            dst.set(src);
         }
     }
 }
@@ -43,22 +43,22 @@ function traspose(buffDst, buffSrc, nPols, nBits, trasposeBits) {
 
 async function bitReverse(buffDst, buffSrc, pSrc, nPols, nBits) {
     const n = 1 << nBits;
-    const buffDst8 = new Uint8Array(buffDst.buffer, buffDst.byteOffset, n*nPols*8);
     for (let i=0; i<n; i++) {
         const ri = BR(i, nBits);
+        const dst = new Uint8Array(buffDst.buffer, buffDst.byteOffset + i*nPols*8, nPols*8);
         const src = new Uint8Array(buffSrc.buffer, buffSrc.byteOffset + pSrc + ri*nPols*8, nPols*8);
-        buffDst8.set(src, i*nPols*8);
+        dst.set(src);
     }
 }
 
 async function interpolateBitReverse(buffDst, buffSrc, pSrc, nPols, nBits) {
     const n = 1 << nBits;
-    const buffDst8 = new Uint8Array(buffDst.buffer, buffDst.byteOffset, n*nPols*8);
     for (let i=0; i<n; i++) {
         const ri = BR(i, nBits);
         const rii = (n-ri)%n;
+        const dst = new Uint8Array(buffDst.buffer, buffDst.byteOffset + i*nPols*8, nPols*8);
         const src = new Uint8Array(buffSrc.buffer, buffSrc.byteOffset + pSrc+ rii*nPols*8, nPols*8);
-        buffDst8.set(src, i*nPols*8);
+        dst.set(src);
     }
 }
 
@@ -90,12 +90,14 @@ async function interpolatePrepare(buff, nPols, nBits, nBitsExt ) {
 }
 
 // Adjustable parametees
-const maxBlockBits = 24;
+const maxBlockBits = 16;
 const minBlockBits = 12;
+//const maxBlockBits = 2;
+//const minBlockBits = 2;
 const blocksPerThread = 8;
 async function _fft(buffSrc, pSrc, nPols, nBits, buffDst, pDst, inverse) {
     const n = 1 << nBits;
-    const tmpBuffBuffer = new SharedArrayBuffer(n*nPols*8);
+    const tmpBuffBuffer = new ArrayBuffer(n*nPols*8);
     const tmpBuff = new BigUint64Array(tmpBuffBuffer);
     const outBuff = new BigUint64Array(buffDst.buffer, buffDst.byteOffset + pDst, n*nPols);
 
@@ -136,12 +138,18 @@ async function _fft(buffSrc, pSrc, nPols, nBits, buffDst, pDst, inverse) {
     for (let i=0; i<nBits; i+= blockBits) {
         const sInc = Math.min(blockBits, nBits-i);
         const promisesFFT = [];
-        for (j=0; j<nBlocks; j++) {
-            promisesFFT.push(pool.exec("fft_block", [bIn, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc]));
 
-//            await fft_block(bIn, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc);
+        // let results = [];
+        for (j=0; j<nBlocks; j++) {
+            const bb = bIn.slice(j*blockSize*nPols, (j+1)*blockSize*nPols);
+            promisesFFT.push(pool.exec("fft_block", [bb, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc]));
+
+            // results[j] = await fft_block(bb, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc);
         }
-        await Promise.all(promisesFFT);
+        const results = await Promise.all(promisesFFT);
+        for (let i=0; i<results.length; i++) {
+            bIn.set(results[i], i*blockSize*nPols)
+        }
         if (sInc < nBits) {                // Do not transpose if it's the same
             await traspose(bOut, bIn, nPols, nBits, sInc);
             [bIn, bOut] = [bOut, bIn];
@@ -163,7 +171,7 @@ async function ifft(buffSrc, pSrc, nPols, nBits, buffDst, pDst) {
 async function interpolate(buffSrc, pSrc, nPols, nBits, buffDst, pDst, nBitsExt) {
     const n = 1 << nBits;
     const nExt = 1 << nBitsExt;
-    const tmpBuffBuffer = new SharedArrayBuffer(nExt*nPols*8);
+    const tmpBuffBuffer = new ArrayBuffer(nExt*nPols*8);
     const tmpBuff = new BigUint64Array(tmpBuffBuffer);
     const outBuff = new BigUint64Array(buffDst.buffer, buffDst.byteOffset + pDst, nExt*nPols);
 
@@ -193,7 +201,7 @@ async function interpolate(buffSrc, pSrc, nPols, nBits, buffDst, pDst, nBitsExt)
     if (blockBitsExt > maxBlockBits) blockBitsExt = maxBlockBits;
     blockBitsExt = Math.min(nBitsExt, blockBitsExt);
     const blockSizeExt = 1 << blockBitsExt;
-    const nBlocksExt = n / blockSize;
+    const nBlocksExt = nExt / blockSizeExt;
 
     if (blockBitsExt < nBitsExt) {
         nTrasposes += Math.floor((nBitsExt-1) / blockBitsExt)+1;
@@ -208,40 +216,65 @@ async function interpolate(buffSrc, pSrc, nPols, nBits, buffDst, pDst, nBitsExt)
         bIn = tmpBuff;
     }
 
+    console.log("Interpolating reverse....")
     await interpolateBitReverse(bOut, buffSrc, pSrc, nPols, nBits);
     [bIn, bOut] = [bOut, bIn];
 
     for (let i=0; i<nBits; i+= blockBits) {
+        console.log("Layer ifft"+i);
         const sInc = Math.min(blockBits, nBits-i);
         const promisesFFT = [];
+
+        // let results = [];
         for (j=0; j<nBlocks; j++) {
-            promisesFFT.push(pool.exec("fft_block", [bIn, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc]));
+            const bb = bIn.slice(j*blockSize*nPols, (j+1)*blockSize*nPols);
+            promisesFFT.push(pool.exec("fft_block", [bb, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc]));
+
+            // results[j] = await fft_block(bb, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc);
         }
-        await Promise.all(promisesFFT);
+        const results = await Promise.all(promisesFFT);
+        for (let i=0; i<results.length; i++) {
+            bIn.set(results[i], i*blockSize*nPols)
+        }
+
         if (sInc < nBits) {                // Do not transpose if it's the same
             await traspose(bOut, bIn, nPols, nBits, sInc);
             [bIn, bOut] = [bOut, bIn];
         }
     }
 
+    console.log("Interpolating prepare....")
     await interpolatePrepare(bIn, nPols, nBits, nBitsExt);
+    console.log("Bit reverse....")
     await bitReverse(bOut, bIn, 0, nPols, nBitsExt);
     [bIn, bOut] = [bOut, bIn];
 
     for (let i=0; i<nBitsExt; i+= blockBitsExt) {
+        console.log("Layer fft "+i);
         const sInc = Math.min(blockBitsExt, nBitsExt-i);
         const promisesFFT = [];
+
+        // let results = [];
         for (j=0; j<nBlocksExt; j++) {
-            promisesFFT.push(pool.exec("fft_block", [bIn, j*blockSizeExt, nPols, nBitsExt, i+sInc, blockBitsExt, sInc]));
+            const bb = bIn.slice(j*blockSizeExt*nPols, (j+1)*blockSizeExt*nPols);
+            promisesFFT.push(pool.exec("fft_block", [bb, j*blockSizeExt, nPols, nBitsExt, i+sInc, blockBitsExt, sInc]));
+
+            // results[j] = await fft_block(bb, j*blockSizeExt, nPols, nBitsExt, i+sInc, blockBitsExt, sInc);
         }
-        await Promise.all(promisesFFT);
+        const results = await Promise.all(promisesFFT);
+        for (let i=0; i<results.length; i++) {
+            bIn.set(results[i], i*blockSizeExt*nPols)
+        }
+
         if (sInc < nBitsExt) {                // Do not transpose if it's the same
             await traspose(bOut, bIn, nPols, nBitsExt, sInc);
             [bIn, bOut] = [bOut, bIn];
         }
     }
+    console.log("interpolation terminated");
 
     await pool.terminate();
+    console.log("pool terminated");
 }
 
 module.exports.fft = fft;

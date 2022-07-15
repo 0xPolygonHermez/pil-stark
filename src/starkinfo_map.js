@@ -302,6 +302,7 @@ module.exports = function map(res, pil) {
                             ctx.expMap[p][r.id] = ctx.code.tmpUsed ++;
                         }
                         r.type= "tmp";
+                        r.expId = r.id;
                         r.id= ctx.expMap[p][r.id];
                     }
                     break;
@@ -390,6 +391,9 @@ function setCodeDimensions(code, starkInfo, dimX) {
     function _setCodeDimensions(code) {
 
         for (let i=0; i<code.length; i++) {
+            if (i==11759) {
+                console.log(i);
+            }
             let newDim;
             switch (code[i].op) {
                 case 'add': newDim = Math.max(getDim(code[i].src[0]), getDim(code[i].src[1])); break;

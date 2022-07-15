@@ -217,8 +217,7 @@ class FRI {
 module.exports = FRI;
 
 function createPol(n) {
-    const buffBuff = new SharedArrayBuffer(n*3*64);
-    const buff = new BigUint64Array(buffBuff)
+    const buff = new BigUint64Array(n*3*64)
     return new Proxy({
         buffer: buff,
         deg: n
