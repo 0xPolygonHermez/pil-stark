@@ -20,7 +20,6 @@ class MerkleHash {
         this.F = poseidon.F;
         this.lh = new LinearHash(poseidon);
         this.useThreads = true;
-        this.maxNPerThread = 1 << 17;
     }
 
     _getNNodes(n) {
@@ -50,22 +49,32 @@ class MerkleHash {
 
         const pool = workerpool.pool(__dirname + '/merklehash_worker.js');
 
+
+        const maxNPerThread = 1 << 18;
+        const minNPerThread = 1 << 12;
+
         const promisesLH = [];
         let res = [];
         let nPerThreadF = Math.floor((height-1)/pool.maxWorkers)+1;
-        const mt = Math.floor(self.maxNPerThread / (width/8));
-        if (nPerThreadF>mt) nPerThreadF = mt;
+        const maxCorrected = Math.floor(maxNPerThread / (width/8));
+        const minCorrected = Math.floor(minNPerThread / (width/8));
+
+        if (nPerThreadF>maxCorrected) nPerThreadF = maxCorrected;
+        if (nPerThreadF<minCorrected) nPerThreadF = minCorrected;
         for (let i=0; i< height; i+=nPerThreadF) {
             const curN = Math.min(nPerThreadF, height-i);
+            console.log("slicing buff "+i);
             const bb = tree.elements.slice(i*width, (i+curN)*width);
 //            const bb = new BigUint64Array(tree.elements.buffer, tree.elements.byteOffset + i*width*8, curN*width);
             if (self.useThreads) {
-                promisesLH.push(pool.exec("linearHash", [bb, width, i/nPerThreadF, Math.floor(height/nPerThreadF)]));
+                console.log("creating thread "+i);
+                promisesLH.push(pool.exec("linearHash", [bb, width, i, curN]));
             } else {
-                res.push(await linearHash(bb, width, i/nPerThreadF, Math.floor(height/nPerThreadF)));
+                res.push(await linearHash(bb, width, i, curN));
             }
         }
         if (self.useThreads) {
+            console.log("waiting..");
             res = await Promise.all(promisesLH)
         }
         for (let i=0; i<res.length; i++) {
@@ -93,15 +102,18 @@ class MerkleHash {
         async function _merkelizeLevel(buff, pIn, nOps, pOut) {
             let res = [];
             const promises = [];
-            const nOpsPerThread = Math.floor((nOps-1)/pool.maxWorkers)+1;
-            if (nPerThreadF<self.maxNPerThread) nPerThreadF = self.nPerThreadF;
+            let nOpsPerThread = Math.floor((nOps-1)/pool.maxWorkers)+1;
+            const maxNPerThread = 1<<18;
+            const minNPerThread = 1<<12;
+            if (nOpsPerThread>maxNPerThread) nOpsPerThread = maxNPerThread;
+            if (nOpsPerThread<minNPerThread) nOpsPerThread = minNPerThread;
             for (let i=0; i< nOps; i+=nOpsPerThread) {
                 const curNOps = Math.min(nOpsPerThread, nOps-i);
                 const bb = new BigUint64Array(tree.nodes.buffer, pIn + i*8*8, curNOps*8);
                 if (self.useThreads) {
-                    promises.push(pool.exec("merkelizeLevel", [bb, i/nOpsPerThread, Math.floor(nOps/nOpsPerThread)]));
+                    promises.push(pool.exec("merkelizeLevel", [bb, i, curNOps]));
                 } else {
-                    res.push(await merkelizeLevel(bb, i/nOpsPerThread, Math.floor(nOps/nOpsPerThread)));
+                    res.push(await merkelizeLevel(bb, i, curNOps));
                 }
             }
             if (self.useThreads) {

@@ -5,8 +5,6 @@ const path = require("path");
 const starkInfoGen = require("../src/starkinfo.js");
 const { starkGen } = require("../src/stark_gen.js");
 const starkVerify = require("../src/stark_verify.js");
-const buildPoseidonGL = require("../src/poseidon");
-const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
@@ -18,8 +16,8 @@ const smFibonacci = require("./sm_fibonacci/sm_fibonacci.js");
 const smPermutation = require("./sm_permutation/sm_permutation.js");
 const smConnection = require("./sm_connection/sm_connection.js");
 
-const MerkleHashGL = require("../src/merklehash_p.js");
-const MerkleHashBN128 = require("../src/merklehash.bn128.js");
+const buildMerklehashGL = require("../src/merklehash_p.js");
+const buildMerklehashBN128 = require("../src/merklehash.bn128.js");
 
 const { interpolate } = require("../src/fft_p");
 
@@ -79,11 +77,9 @@ describe("test All sm", async function () {
 
         let MH;
         if (starkStruct.verificationHashType == "GL") {
-            const poseidonGL = await buildPoseidonGL();
-            MH = new MerkleHashGL(poseidonGL);
+            MH = await buildMerklehashGL();
         } else if (starkStruct.verificationHashType == "BN128") {
-            const poseidonBN128 = await buildPoseidonBN128();
-            MH = new MerkleHashBN128(poseidonBN128);
+            MH = await buildMerklehashBN128();
         } else {
             throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
         }

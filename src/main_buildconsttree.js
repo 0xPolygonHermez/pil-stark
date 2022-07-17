@@ -41,11 +41,9 @@ async function run() {
 
     const constBuff  = constPols.writeToBuff();
 
-    const constPolsArrayEbuff = new ArrayBuffer(nExt*pil.nConstants*8);
-    const constPolsArrayE = new BigUint64Array(constPolsArrayEbuff);
+    const constPolsArrayE = new BigUint64Array(nExt*pil.nConstants);
 
     await interpolate(constBuff, 0, pil.nConstants, nBits, constPolsArrayE, 0, nBitsExt );
-
 
     let MH;
     if (starkStruct.verificationHashType == "GL") {
@@ -56,6 +54,8 @@ async function run() {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
 
+
+    console.log("Start merkelizing..");
     const constTree = await MH.merkelize(constPolsArrayE, 0, pil.nConstants, nExt);
 
     const constRoot = MH.root(constTree);

@@ -8,24 +8,29 @@ module.exports = class LinearHash {
     }
 
     hash(vals) {
-        let st = [0n, 0n, 0n, 0n];
-        if (vals.length == 0) return st;
-        let inHash = [];
-        for (let i=0; i<vals.length;i++) {
+        const flatVals = [];
+        for (let i=0; i<vals.length; i++) {
             if (Array.isArray(vals[i])) {
-                for (let k=0; k<vals[i].length; k++) {
-                    inHash.push(vals[i][k]);
-                    if (inHash.length == 8) {
-                        st = this.H(inHash, st);
-                        inHash.length = 0;
-                    }
+                for (let j=0; j<vals[i].length; j++) {
+                    flatVals.push(vals[i][j]);
                 }
             } else {
-                inHash.push(vals[i]);
-                if (inHash.length == 8) {
-                    st = this.H(inHash, st);
-                    inHash.length = 0;
-                }
+                flatVals.push(vals[i]);
+            }
+        }
+        let st = [0n, 0n, 0n, 0n];
+        if (flatVals.length <= 4) {
+            for (let i=0; i<flatVals.length;i++)  {
+                st[i] = flatVals[i];
+            }
+            return st;
+        }
+        let inHash = [];
+        for (let i=0; i<flatVals.length;i++) {
+            inHash.push(flatVals[i]);
+            if (inHash.length == 8) {
+                st = this.H(inHash, st);
+                inHash.length = 0;
             }
         }
         if (inHash.length>0) {

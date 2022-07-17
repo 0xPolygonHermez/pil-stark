@@ -23,8 +23,8 @@ describe("test fft", async function () {
 
 
     it("Check big interpolate", async () => {
-        let nBits = 21;
-        let nPols = 128;
+        let nBits = 18;
+        let nPols = 3;
         let extBits = 1;
 
         const n = 1 << nBits;
@@ -44,7 +44,7 @@ describe("test fft", async function () {
 
     });
 
-    /*
+
     it("Check fft", async () => {
         let nBits = 5;
         let nPols = 2;
@@ -221,5 +221,4 @@ describe("test fft", async function () {
             }
         }
     });
-*/
 });

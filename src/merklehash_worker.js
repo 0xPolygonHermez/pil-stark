@@ -37,6 +37,17 @@ async function buildWasm(nPages) {
 async function linearHash(buffIn, width, st_i, st_n) {
     console.log(`linear hash start.... ${st_i}/${st_n}`);
     const heigth = buffIn.length / width;
+    const buffOut = new BigUint64Array(heigth*4);
+
+    if (width <=4) {
+        for (let i=0; i<heigth; i++) {
+            for (let j=0; j<width; j++) {
+                buffOut[i*4+j] = buffIn[width*i + j];
+            }
+        }
+        return buffOut;
+    }
+
 
     const bytesRequired = width*heigth*8 + heigth*4*8;
     const pagesRequired = Math.floor((bytesRequired - 1)/(1<<16)) +200;
@@ -51,7 +62,6 @@ async function linearHash(buffIn, width, st_i, st_n) {
     const pIn = alloc(wasmMem, width * hashesPerStep*8);
     const pOut = alloc(wasmMem, hashesPerStep*4*8);
 
-    const buffOut = new BigUint64Array(heigth*4);
 
     for (let i=0; i<heigth; i+= hashesPerStep) {
         const curN = Math.min(hashesPerStep, heigth-i);
@@ -98,7 +108,7 @@ async function merkelizeLevel(buffIn, st_i, st_n) {
         buffOut.set(dst, i*4);
     }
 
-    console.log(`merkelizing hash start.... ${st_i}/${st_n}`);
+    console.log(`merkelizing hash end.... ${st_i}/${st_n}`);
     return buffOut;
 }
 

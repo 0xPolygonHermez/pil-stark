@@ -1,16 +1,15 @@
 const fs = require("fs");
 const version = require("../package").version;
 
-const F1Field = require("./f3g");
 const { newConstantPolsArray, newCommitPolsArray, compile } = require("pilcom");
 const starkInfoGen = require("../src/starkinfo.js");
 const { starkGen, starkGen_allocate } = require("../src/stark_gen.js");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true, storeAsString: true });
 const { proof2zkin } = require("./proof2zkin");
-const buildPoseidonGL = require("../src/poseidon");
-const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
-const MerkleHashGL = require("../src/merklehash_p.js");
-const MerkleHashBN128 = require("../src/merklehash.bn128.js");
+const buildMerklehashGL = require("../src/merklehash_p.js");
+const buildMerklehashBN128 = require("../src/merklehash.bn128.js");
+const GL3 = require("./f3g.js");
+
 
 
 const argv = require("yargs")
@@ -27,7 +26,7 @@ const argv = require("yargs")
     .argv;
 
 async function run() {
-    const F = new F1Field();
+    const F = new GL3();
 
     const commitFile = typeof(argv.commit) === "string" ?  argv.commit.trim() : "mycircuit.commit";
     const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "mycircuit.const";
@@ -52,11 +51,9 @@ async function run() {
 
     let MH;
     if (starkStruct.verificationHashType == "GL") {
-        const poseidonGL = await buildPoseidonGL();
-        MH = new MerkleHashGL(poseidonGL);
+        MH = await buildMerklehashGL();
     } else if (starkStruct.verificationHashType == "BN128") {
-        const poseidonBN128 = await buildPoseidonBN128();
-        MH = new MerkleHashBN128(poseidonBN128);
+        MH = await buildMerklehashBN128();
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }

@@ -1,12 +1,12 @@
 const { assert } = require("chai");
 const {polMulAxi, evalPol} = require("./polutils");
 const {log2} = require("./utils");
-const {traspose} = require("./fft_p");
+const GL3 = require("./f3g");
 
 class FRI {
 
-    constructor(poseidon, starkStruct, MH) {
-        this.F = poseidon.F;
+    constructor(starkStruct, MH) {
+        this.F = new GL3();
         this.inNBits = starkStruct.nBitsExt;
         this.maxDegNBits = starkStruct.nBits;
         this.nQueries = starkStruct.nQueries;

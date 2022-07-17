@@ -68,14 +68,13 @@ describe("test plookup sm", async function () {
 
         let MH;
         if (starkStruct.verificationHashType == "GL") {
-            const poseidonGL = await buildPoseidonGL();
-            MH = new MerkleHashGL(poseidonGL);
+            MH = await buildMerklehashGL();
         } else if (starkStruct.verificationHashType == "BN128") {
-            const poseidonBN128 = await buildPoseidonBN128();
-            MH = new MerkleHashBN128(poseidonBN128);
+            MH = await buildMerklehashBN128();
         } else {
             throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
         }
+
 
         const constTree = await MH.merkelize(constPolsArrayE, 0, pil.nConstants, nExt);
 

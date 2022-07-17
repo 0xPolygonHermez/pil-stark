@@ -53,7 +53,7 @@ function generatePermutationLC(res, pil, ctx) {
         for (let j=0; j<pi.f.length; j++) {
             const e = E.exp(pi.f[j]);
             if (fExp) {
-                fExp = E.add(E.mul(fExp, u). e);
+                fExp = E.add(E.mul(fExp, u), e);
             } else {
                 fExp = e;
             }

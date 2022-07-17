@@ -1,8 +1,8 @@
 const Transcript = require("./transcript");
 const TranscriptBN128 = require("./transcript.bn128");
 const FRI = require("../src/fri.js");
-const MerkleHashGL = require("./merklehash.js");
-const MerkleHashBN128 = require("./merklehash.bn128.js");
+const buildMerkleHashGL = require("./merklehash_p.js");
+const buildMerkleHashBN128 = require("./merklehash_bn128_p.js");
 const starkInfoGen = require("./starkinfo.js");
 const { assert } = require("chai");
 const buildPoseidonGL = require("./poseidon");
@@ -17,11 +17,12 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
     let MH;
     let transcript;
     if (starkStruct.verificationHashType == "GL") {
-        MH = new MerkleHashGL(poseidon);
-        transcript = new Transcript(poseidon);
+        const poseidonGL = await buildPoseidonGL();
+        MH = await buildMerkleHashGL();
+        transcript = new Transcript(poseidonGL);
     } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
-        MH = new MerkleHashBN128(poseidonBN128);
+        MH = await buildMerkleHashBN128();
         transcript = new TranscriptBN128(poseidonBN128);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
@@ -63,7 +64,7 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
 
     if (!F.eq(res, 0n)) return false;
 
-    const fri = new FRI( poseidon, starkStruct, MH );
+    const fri = new FRI( starkStruct, MH );
 
     const checkQuery = (query, idx) => {
         console.log("Query:"+  idx)
