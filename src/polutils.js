@@ -32,7 +32,8 @@ module.exports.extendPol = function extendPol(F, p, extendBits) {
     return res;
 }
 
-module.exports.buildZhInv = function buildZhInv(F, Nbits, extendBits) {
+module.exports.buildZhInv = function buildZhInv(F, Nbits, extendBits, _offset) {
+    const offset = _offset || 0;
     const ZHInv = [];
     let w = F.one;
     let sn= F.shift;
@@ -42,7 +43,7 @@ module.exports.buildZhInv = function buildZhInv(F, Nbits, extendBits) {
         w = F.mul(w, F.w[extendBits])
     }
     return function (i) {
-        return ZHInv[i % ZHInv.length];
+        return ZHInv[(i + offset) % ZHInv.length];
     }
 }
 

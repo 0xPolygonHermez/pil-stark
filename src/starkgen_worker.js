@@ -14,7 +14,7 @@ const { buildZhInv } = require("./polutils.js");
     console.log(`start exec ${st_name}... ${st_i}/${st_n} `);
     ctx.F = new GL3();
     ctx.tmp = [];
-    ctx.Zi = buildZhInv(ctx.F, ctx.nBits, ctx.extendBits);
+    ctx.Zi = buildZhInv(ctx.F, ctx.nBits, ctx.extendBits, st_i);
 
     for (let s=0; s<execInfo.outputSections.length; s++) {
         const si = execInfo.outputSections[s];
