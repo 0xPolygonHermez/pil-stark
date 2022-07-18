@@ -28,10 +28,12 @@ async function run() {
     const pil = await compile(F, pilFile);
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
     const verkey = JSONbig.parse(await fs.promises.readFile(verKeyFile, "utf8"));
-    const proof = JSONbig.parse(await fs.promises.readFile(proofFile, "utf8"));
+    let proof = JSONbig.parse(await fs.promises.readFile(proofFile, "utf8"));
     const public = JSONbig.parse(await fs.promises.readFile(publicFile, "utf8"));
 
     const constRoot = verkey.constRoot;
+
+    proof = str2bigInt(proof);
 
     const resV = await starkVerify(proof, public, pil, constRoot, starkStruct);
 
@@ -52,3 +54,21 @@ run().then(()=> {
     process.exit(1);
 });
 
+
+function str2bigInt(obj) {
+    if (typeof obj === "object") {
+        for (k in obj) {
+            obj[k] = str2bigInt(obj[k]);
+        }
+        return obj;
+    } else if (Array.isArray(obj)) {
+        for (let i=0; i<obj.length; i++) {
+            obj[i] = str2bigInt(obj[i]);
+        }
+        return obj;
+    } else if (typeof obj == "string") {
+        return BigInt(obj);
+    } else {
+        return obj;
+    }
+}
