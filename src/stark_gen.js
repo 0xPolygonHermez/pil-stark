@@ -17,6 +17,9 @@ const {starkgen_execute} = require("./starkgen_worker");
 
 const parallelExec = true;
 const useThreads = true;
+const maxNperThread = 1<<18;
+const minNperThread = 1<<6;
+
 
 module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, pil, starkInfo) {
     const starkStruct = starkInfo.starkStruct;
@@ -682,8 +685,6 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
 
     const n = dom=="n" ? ctx.N : ctx.Next;
     const next = dom=="n" ? 1 : 1<< (ctx.nBitsExt - ctx.nBits);
-    const maxNperThread = 1<<18;
-    const minNperThread = 1<<12;
     let nPerThread = Math.floor((n-1)/pool.maxWorkers)+1;
     if (nPerThread>maxNperThread) nPerThread = maxNperThread;
     if (nPerThread<minNperThread) nPerThread = minNperThread;
