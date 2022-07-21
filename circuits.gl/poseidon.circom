@@ -1,6 +1,7 @@
 pragma circom 2.0.4;
+pragma custom_templates;
 
-custom_gate MDS() {
+template custom MDS() {
     signal input in[12];
     signal output out[12];
 
@@ -22,7 +23,7 @@ template MDS() {
     signal input in[12];
     signal output out[12];
 
-    custom_component mds = MDSCG();
+    component mds = MDSCG();
 
     for (var i=0; i<12; i++) {
         mds.in[i] <== in[i];

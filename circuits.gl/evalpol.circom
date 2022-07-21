@@ -1,4 +1,5 @@
 pragma circom 2.0.4;
+pragma custom_templates;
 
 include "cmul.circom";
 
@@ -9,7 +10,7 @@ template EvalPol(n) {
 
     signal acc[n][3];
 
-    custom_component cmul[n-1];
+    component cmul[n-1];
 
     for (var e=0; e<3; e++) {
         acc[0][e] <== pol[n-1][e];

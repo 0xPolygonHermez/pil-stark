@@ -1,4 +1,6 @@
 pragma circom 2.0.4;
+pragma custom_templates;
+
 /*
 template CMul() {
     signal input ina[3];
@@ -17,7 +19,7 @@ template CMul() {
     }
 }
 */
-custom_gate CMul() {
+template custom CMul() {
     signal input ina[3];
     signal input inb[3];
     signal output out[3];

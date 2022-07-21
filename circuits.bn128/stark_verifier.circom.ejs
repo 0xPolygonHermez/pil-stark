@@ -273,7 +273,7 @@ template VerifyEvaluations() {
 
     var p = 0xFFFFFFFF00000001;
 
-    custom_component zMul[<%- starkStruct.nBits %>];
+    component zMul[<%- starkStruct.nBits %>];
     for (var i=0; i< <%- starkStruct.nBits %> ; i++) {
         zMul[i] = GLCMul();
         if (i==0) {

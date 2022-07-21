@@ -2,7 +2,7 @@ const chai = require("chai");
 const assert = chai.assert;
 const { getCurveFromName, Scalar, F1Field } = require("ffjavascript");
 
-const buildPoseidon = require("../src/poseidon_bn128");
+const buildPoseidon = require("../src/poseidon");
 const buildPoseidonRef = require("circomlibjs").buildPoseidon;
 
 describe("Poseidon test", async function () {

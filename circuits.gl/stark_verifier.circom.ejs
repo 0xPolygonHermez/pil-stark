@@ -237,7 +237,7 @@ template VerifyEvaluations() {
     signal input evals[<%- starkInfo.evMap.length %>][3];
     signal input publics[<%- pil.publics.length %>];
 
-    custom_component zMul[<%- starkStruct.nBits %>];
+    component zMul[<%- starkStruct.nBits %>];
     for (var i=0; i< <%- starkStruct.nBits %> ; i++) {
         zMul[i] = CMul();
         if (i==0) {
