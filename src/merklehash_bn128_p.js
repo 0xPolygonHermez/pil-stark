@@ -249,6 +249,7 @@ class MerkleHash {
         async function  readBigBuffer(fd, buff, pos) {
             const MaxBuffSize = 1024*1024*32;  //  256Mb
             for (let i=0; i<buff.byteLength; i+= MaxBuffSize) {
+                if ((i%10000) == 0) console.log(`Loading Merkle tree ${i}/${buff.byteLength}`);
                 const n = Math.min(buff.byteLength -i, MaxBuffSize);
                 const buff8 = new Uint8Array(buff.buffer, i, n);
                 await fd.read(buff8, {offset: 0, length:n, position:pos + i});

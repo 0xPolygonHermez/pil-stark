@@ -51,6 +51,14 @@ async function linearHash(wasmModule, buffIn, width, st_i, st_n) {
     function hash(vals) {
         for (let i=0; i<4; i++) st64[i] = 0n;
 
+        if (vals.length <=4) {
+            for (let i=0; i<vals.length; i++) {
+                st64[i] = vals[i];
+            }
+            instance.exports.frm_toMontgomery(pSt, pSt);
+            return;
+        }
+
         let p=0;
 
         for(let i=0; i<vals.length; i++) {

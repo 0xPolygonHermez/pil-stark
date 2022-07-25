@@ -688,7 +688,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/bn128_verifier.circuit.test.js"
+                "${workspaceFolder}/test/fibonacci_bn128_verifier.circuit.test.js"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
@@ -992,7 +992,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/bn128_verifier.circuit.test.js"
+                "${workspaceFolder}/test/all_bn128_verifier.circuit.test.js"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },

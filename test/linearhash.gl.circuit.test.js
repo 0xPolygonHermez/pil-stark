@@ -9,14 +9,14 @@ const assert = chai.assert;
 const wasm_tester = require("circom_tester").wasm;
 
 describe("Linear Hash Circuit Test", function () {
-    let eddsa;
-    let F;
-    let circuit;
+    let circuitBig;
+    let circuitSmall;
 
     this.timeout(10000000);
 
     before( async() => {
-        circuit = await wasm_tester(path.join(__dirname, "circuits", "linearhash.gl.test.circom"), {O:1, prime: "goldilocks"});
+        circuitBig = await wasm_tester(path.join(__dirname, "circuits", "linearhashbig.gl.test.circom"), {O:1, prime: "goldilocks"});
+        circuitSmall = await wasm_tester(path.join(__dirname, "circuits", "linearhashsmall.gl.test.circom"), {O:1, prime: "goldilocks"});
     });
 
     it("Should calculate linear hash of 9 complex elements", async () => {
@@ -37,12 +37,31 @@ describe("Linear Hash Circuit Test", function () {
             ]
         };
 
-        const w1 = await circuit.calculateWitness(input, true);
+        const w1 = await circuitBig.calculateWitness(input, true);
 
         const lh = new LinearHash(poseidon);
 
         const res = lh.hash(input.in);
 
-        await circuit.assertOut(w1, {out: res});
+        await circuitBig.assertOut(w1, {out: res});
+    });
+
+    it("Should calculate linear hash of 1 complex elements", async () => {
+        const poseidon = await buildPoseidon();
+        const F = poseidon.F;
+
+        const input={
+            in: [
+                [1n,2n,3n]
+            ]
+        };
+
+        const w1 = await circuitSmall.calculateWitness(input, true);
+
+        const lh = new LinearHash(poseidon);
+
+        const res = lh.hash(input.in);
+
+        await circuitSmall.assertOut(w1, {out: res});
     });
 });

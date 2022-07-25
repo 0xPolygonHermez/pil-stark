@@ -41,7 +41,7 @@ const { buildZhInv } = require("./polutils.js");
         ctxOut[si.name] = ctx[si.name];
     }
 
-    console.log(`start exec ${st_name}... ${st_i}/${st_n} `);
+    console.log(`end exec ${st_name}... ${st_i}/${st_n} `);
     return ctxOut;
 }
 

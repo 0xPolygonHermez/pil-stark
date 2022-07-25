@@ -12,6 +12,27 @@ describe("merkle hash", async function () {
         MH = await buildMH();
     });
 
+    it("It should merkelize and validate a proof of a very small tree", async () => {
+        const N = 256;
+        const idx = 3;
+        const nPols = 3;
+
+        const pols = new BigUint64Array(nPols*N);
+        for (let i=0; i<N; i++) {
+            for (let j=0; j<nPols; j++) {
+                pols[i*nPols + j] = BigInt(i + j*1000);
+            }
+        }
+
+        const tree = await MH.merkelize(pols, 0, nPols, N);
+
+        const [groupElements, mp] = MH.getGroupProof(tree, idx);
+        const root = MH.root(tree);
+        console.log(root);
+
+        assert(MH.verifyGroupProof(root, mp, idx, groupElements));
+    });
+
     it("It should merkelize and validate a proof", async () => {
         const N = 256;
         const idx = 3;
