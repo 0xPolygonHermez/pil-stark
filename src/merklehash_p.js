@@ -111,9 +111,9 @@ class MerkleHash {
                 const curNOps = Math.min(nOpsPerThread, nOps-i);
                 const bb = new BigUint64Array(tree.nodes.buffer, pIn + i*8*8, curNOps*8);
                 if (self.useThreads) {
-                    promises.push(pool.exec("merkelizeLevel", [bb, i, curNOps]));
+                    promises.push(pool.exec("merkelizeLevel", [bb, i, nOps]));
                 } else {
-                    res.push(await merkelizeLevel(bb, i, curNOps));
+                    res.push(await merkelizeLevel(bb, i, nOps));
                 }
             }
             if (self.useThreads) {

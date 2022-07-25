@@ -62,9 +62,9 @@ class MerkleHash {
             const curN = Math.min(nPerThreadF, height-i);
             const bb = new BigUint64Array(tree.elements.buffer, tree.elements.byteOffset + i*width*8, curN*width);
             if (self.useThreads) {
-                promisesLH.push(pool.exec("linearHash", [self.wasmModule, bb, width]));
+                promisesLH.push(pool.exec("linearHash", [self.wasmModule, bb, width, i, height]));
             } else {
-                res.push(await linearHash(self.wasmModule, bb, width));
+                res.push(await linearHash(self.wasmModule, bb, width, i, height));
             }
         }
         if (self.useThreads) {
@@ -102,9 +102,9 @@ class MerkleHash {
                 const curNOps = Math.min(nOpsPerThread, nOps-i);
                 const bb = new BigUint64Array(tree.nodes.buffer, pIn + i*16*32, curNOps*16*4);
                 if (self.useThreads) {
-                    promises.push(pool.exec("merkelizeLevel", [self.wasmModule, bb]));
+                    promises.push(pool.exec("merkelizeLevel", [self.wasmModule, bb, i, nOps]));
                 } else {
-                    res.push(await merkelizeLevel(self.wasmModule, bb));
+                    res.push(await merkelizeLevel(self.wasmModule, bb, i, nOps));
                 }
             }
             if (self.useThreads) {
@@ -249,6 +249,7 @@ class MerkleHash {
         async function  readBigBuffer(fd, buff, pos) {
             const MaxBuffSize = 1024*1024*32;  //  256Mb
             for (let i=0; i<buff.byteLength; i+= MaxBuffSize) {
+                if ((i%10000) == 0) console.log(`Loading Merkle tree ${i}/${buff.byteLength}`);
                 const n = Math.min(buff.byteLength -i, MaxBuffSize);
                 const buff8 = new Uint8Array(buff.buffer, i, n);
                 await fd.read(buff8, {offset: 0, length:n, position:pos + i});

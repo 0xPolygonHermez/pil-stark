@@ -410,7 +410,7 @@ template StarkVerifier() {
 <% }                                                     -%>
 
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
-    signal input s<%- s %>_vals[<%- starkStruct.nQueries %>][<%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>][3];
+    signal input s<%- s %>_vals[<%- starkStruct.nQueries %>][<%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits))*3 %>];
     signal input s<%- s %>_siblings[<%- starkStruct.nQueries %>][<%- starkStruct.steps[s].nBits %>][4];
 <% }                                                  -%>
 
@@ -582,7 +582,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 <% if (0 < starkStruct.steps.length-1) {            -%>
         for (var i=0; i<<%- 1 << (starkStruct.steps[0].nBits - starkStruct.steps[1].nBits) %>; i++) {
             for (var e=0; e<3; e++) {
-                s0_lowValues[q].values[i][e] <== s1_vals[q][i][e];
+                s0_lowValues[q].values[i][e] <== s1_vals[q][i*3+e];
             }
         }
         for (var i=0; i<<%- (starkStruct.steps[0].nBits - starkStruct.steps[1].nBits) %>; i++) {
@@ -618,8 +618,8 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
         s<%- s %>_lowValues[q] = TreeSelector(<%- starkStruct.steps[s].nBits - ((s< starkStruct.steps.length-1) ? starkStruct.steps[s+1].nBits : 0)  %>, 3) ;
         for (var i=0; i< <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>; i++) {
             for (var e=0; e<3; e++) {
-                s<%- s %>_merkle[q].values[i][e] <== s<%- s %>_vals[q][i][e];
-                s<%- s %>_fft[q].in[i][e] <== s<%- s %>_vals[q][i][e];
+                s<%- s %>_merkle[q].values[i][e] <== s<%- s %>_vals[q][i*3+e];
+                s<%- s %>_fft[q].in[i][e] <== s<%- s %>_vals[q][i*3+e];
             }
         }
         for (var i=0; i<<%- starkStruct.steps[s].nBits %>; i++) {
@@ -643,7 +643,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 <% if (s < starkStruct.steps.length-1) {            -%>
         for (var i=0; i<<%- 1 << (starkStruct.steps[s].nBits - starkStruct.steps[s+1].nBits) %>; i++) {
             for (var e=0; e<3; e++) {
-                s<%- s %>_lowValues[q].values[i][e] <== s<%- s+1 %>_vals[q][i][e];
+                s<%- s %>_lowValues[q].values[i][e] <== s<%- s+1 %>_vals[q][i*3+e];
             }
         }
         for (var i=0; i<<%- (starkStruct.steps[s].nBits - starkStruct.steps[s+1].nBits) %>; i++) {

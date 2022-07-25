@@ -184,6 +184,19 @@
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
         {
+            "name": "test simple plookup",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/stark_simple_plookup.test.js"
+            ],
+            "runtimeArgs": ["--max-old-space-size=32000"]
+        },
+        {
             "name": "test permutation",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
@@ -675,7 +688,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/bn128_verifier.circuit.test.js"
+                "${workspaceFolder}/test/fibonacci_bn128_verifier.circuit.test.js"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
@@ -979,7 +992,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/bn128_verifier.circuit.test.js"
+                "${workspaceFolder}/test/all_bn128_verifier.circuit.test.js"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },

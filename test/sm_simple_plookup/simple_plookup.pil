@@ -1,0 +1,10 @@
+namespace SimplePlookup(%N);
+
+
+    pol commit a;
+
+    pol constant A;
+    pol constant ONE;
+    pol constant ZERO;
+
+    a in A;

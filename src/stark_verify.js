@@ -47,6 +47,7 @@ module.exports = async function starkVerify(proof, publics, pil, constRoot, star
     transcript.put(proof.root2);
     ctx.challenges[2] = transcript.getField(); // gamma
     ctx.challenges[3] = transcript.getField(); // beta
+
     transcript.put(proof.root3);
     ctx.challenges[4] = transcript.getField(); // vc
 

@@ -11,7 +11,8 @@ function alloc(wasmMem, length) {
 }
 
 // a deliberately inefficient implementation of the fibonacci sequence
-async function linearHash(wasmModule, buffIn, width) {
+async function linearHash(wasmModule, buffIn, width, st_i, st_n) {
+    console.log(`linear hash bn128 start.... ${st_i}/${st_n}`);
 
     const heigth = buffIn.length/width;
 
@@ -44,10 +45,19 @@ async function linearHash(wasmModule, buffIn, width) {
         buffOut64.set(st64,  i*4);
     }
 
+    console.log(`linear hash bn128 end.... ${st_i}/${st_n}`);
     return buffOut64;
 
     function hash(vals) {
         for (let i=0; i<4; i++) st64[i] = 0n;
+
+        if (vals.length <=4) {
+            for (let i=0; i<vals.length; i++) {
+                st64[i] = vals[i];
+            }
+            instance.exports.frm_toMontgomery(pSt, pSt);
+            return;
+        }
 
         let p=0;
 
@@ -85,8 +95,8 @@ async function linearHash(wasmModule, buffIn, width) {
 
 
 // a deliberately inefficient implementation of the fibonacci sequence
-async function merkelizeLevel(wasmModule, buffIn) {
-
+async function merkelizeLevel(wasmModule, buffIn, st_i, st_n) {
+    console.log(`merkelizing bn128 hash start.... ${st_i}/${st_n}`);
     const nOps = buffIn.byteLength / (32*16);
 
     // const bytesRequired = nOps*32*16 + 32 + nOps*32;
@@ -123,6 +133,7 @@ async function merkelizeLevel(wasmModule, buffIn) {
         buffOut64.set(out64, i*4);
     }
 
+    console.log(`merkelizing bn128 hash end.... ${st_i}/${st_n}`);
     return buffOut64;
 }
 

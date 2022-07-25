@@ -1,0 +1,6 @@
+constant %N = 2**3;
+
+namespace Global(%N);
+    pol constant L1;
+
+include "simple_plookup.pil";
