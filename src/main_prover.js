@@ -7,7 +7,7 @@ const { starkGen, starkGen_allocate } = require("../src/stark_gen.js");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true, storeAsString: true });
 const { proof2zkin } = require("./proof2zkin");
 const buildMerklehashGL = require("../src/merklehash_p.js");
-const buildMerklehashBN128 = require("../src/merklehash.bn128.js");
+const buildMerklehashBN128 = require("../src/merklehash_bn128_p.js");
 const GL3 = require("./f3g.js");
 
 

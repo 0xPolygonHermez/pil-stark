@@ -8,4 +8,3 @@ namespace Plookup(%N);
 
     sel {a, b', a*b'} in SEL { A, B, cc};
 
-

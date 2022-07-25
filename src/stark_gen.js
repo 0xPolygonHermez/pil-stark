@@ -1,7 +1,7 @@
 
 const assert = require("assert");
 const buildMerklehashGL = require("./merklehash_p.js");
-const buildMerklehashBN128 = require("./merklehash.bn128.js");
+const buildMerklehashBN128 = require("./merklehash_bn128_p.js");
 const Transcript = require("./transcript");
 const TranscriptBN128 = require("./transcript.bn128");
 const GL3 = require("./f3g");
@@ -280,7 +280,7 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
         ctx.evals[i] = acc;
     }
 
-// Calculate xDivXSubXi, xDivXSubWXi
+// Calculate xDivXSubXi, xDivX4SubWXi
 
     const xi = ctx.challenges[7];
     const wxi = F.mul(ctx.challenges[7], F.w[nBits]);
@@ -513,10 +513,12 @@ function calculateExps(ctx, code, dom) {
     }
     for (let i=next; i<N-next; i++) {
         if ((i%1000) == 0) console.log(`Calculating expression.. ${i}/${N}`);
-        cI(ctx, i);
+        // cI(ctx, i);
+        cFirst(ctx, i);
     }
     for (let i=N-next; i<N; i++) {
-        cLast(ctx, i);
+        // cLast(ctx, i);
+        cFirst(ctx, i);
     }
 }
 

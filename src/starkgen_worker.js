@@ -27,10 +27,12 @@ const { buildZhInv } = require("./polutils.js");
         cFirst(ctx, i);
     }
     for (let i=ctx.next; i<n-ctx.next; i++) {
-        cI(ctx, i);
+        // cI(ctx, i);
+        cFirst(ctx, i);
     }
     for (let i=n-ctx.next; i<n; i++) {
-        cLast(ctx, i);
+        // cLast(ctx, i);
+        cFirst(ctx, i);
     }
 
     const ctxOut = {}
