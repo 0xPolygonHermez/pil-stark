@@ -2,6 +2,7 @@ const starkInfoGen = require("./starkinfo.js");
 const ejs = require("ejs");
 const F1Field = require("./f3g");
 const fs = require("fs");
+const path = require("path");
 
 
 module.exports = async function pil2circom(pil, constRoot, starkStruct) {
@@ -15,9 +16,9 @@ module.exports = async function pil2circom(pil, constRoot, starkStruct) {
 
     let template;
     if (starkStruct.verificationHashType == "GL") {
-        template = await fs.promises.readFile("./circuits.gl/stark_verifier.circom.ejs", "utf8");
+        template = await fs.promises.readFile(path.join(__dirname, "..", "circuits.gl", "stark_verifier.circom.ejs"), "utf8");
     } else if (starkStruct.verificationHashType == "BN128") {
-        template = await fs.promises.readFile("./circuits.bn128/stark_verifier.circom.ejs", "utf8");
+        template = await fs.promises.readFile(path.join(__dirname, "..", "circuits.bn128", "stark_verifier.circom.ejs"), "utf8");
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
