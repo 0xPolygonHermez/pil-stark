@@ -1,6 +1,6 @@
 {
   "name": "pil-stark",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Build a stark from a PIL",
   "main": "index.js",
   "scripts": {
