@@ -77,6 +77,7 @@ module.exports = async function plonkSetup(r1cs) {
     // Paste plonk constraints.
     const partialRows = {};
     for (let i=0; i<plonkConstraints.length; i++) {
+        if ((i%10000) == 0) console.log(`Processing constraint... ${i}/${plonkConstraints.length}`);
         const c = plonkConstraints[i];
         const k= c.slice(3, 8).map( a=> a.toString(16)).join(",");
         if (partialRows[k]) {
@@ -120,6 +121,7 @@ module.exports = async function plonkSetup(r1cs) {
 
     // Generate Custom Gates
     for (let i=0; i<r1cs.customGatesUses.length; i++) {
+        if ((i%10000) == 0) console.log(`Processing custom gates... ${i}/${r1cs.customGatesUses.length}`);
         const cgu = r1cs.customGatesUses[i];
         if (cgu.id == customGatesInfo.CMDSId) {
             assert(cgu.signals.length == 24);
@@ -166,6 +168,7 @@ module.exports = async function plonkSetup(r1cs) {
     const ks = getKs(F, 11);
     let w = F.one;
     for (let i=0; i<N; i++) {
+        if ((i%10000) == 0) console.log(`Preparing S... ${i}/${N}`);
         constPols.Compressor.S[0][i] = w;
         for (let j=1; j<12; j++) {
             constPols.Compressor.S[j][i] = F.mul(w, ks[j-1]);
@@ -175,6 +178,7 @@ module.exports = async function plonkSetup(r1cs) {
 
     const lastSignal = {}
     for (let i=0; i<r; i++) {
+        if ((i%10000) == 0) console.log(`Connection S... ${i}/${r}`);
         for (let j=0; j<12; j++) {
             if (sMap[j][i]) {
                 if (typeof lastSignal[sMap[j][i]] !== "undefined") {
@@ -192,6 +196,7 @@ module.exports = async function plonkSetup(r1cs) {
 
     // Fill unused rows
     while (r<N) {
+        if ((r%100000) == 0) console.log(`Empty gates... ${r}/${N}`);
         constPols.Compressor.Qm[r] = 0n;
         constPols.Compressor.Ql[r] = 0n;
         constPols.Compressor.Qr[r] = 0n;
@@ -224,6 +229,7 @@ module.exports = async function plonkSetup(r1cs) {
 
         const uses = {};
         for (let i=0; i<plonkConstraints.length; i++) {
+            if ((i%10000) == 0) console.log(`Plonk info constraint processing... ${i}/${plonkConstraints.length}`);
             const c = plonkConstraints[i];
             const k= c.slice(3, 8).map( a=> a.toString(16)).join(",");
             uses[k] ||=  0;

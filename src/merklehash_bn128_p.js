@@ -21,6 +21,7 @@ class MerkleHash {
         this.F = poseidon.F;
         this.lh = new LinearHash(poseidon);
         this.minOpsPerThread = 1<<12;
+        this.maxOpsPerThread = 1<<16;
         this.wasmModule = wasmModule;
         this.useThreads = true;
     }
@@ -58,13 +59,21 @@ class MerkleHash {
         let nPerThreadF = Math.floor((height-1)/pool.maxWorkers)+1;
         const minPT = Math.floor(this.minOpsPerThread / (Math.floor((width -1) / (3*16)) + 1));
         if (nPerThreadF < minPT) nPerThreadF = minPT;
+        if (nPerThreadF > this.maxOpsPerThread) nPerThreadF = this.maxOpsPerThread;
         for (let i=0; i< height; i+=nPerThreadF) {
             const curN = Math.min(nPerThreadF, height-i);
-            const bb = new BigUint64Array(tree.elements.buffer, tree.elements.byteOffset + i*width*8, curN*width);
+            const bb = tree.elements.slice(i*width, (i+ curN)*width);
             if (self.useThreads) {
                 promisesLH.push(pool.exec("linearHash", [self.wasmModule, bb, width, i, height]));
             } else {
                 res.push(await linearHash(self.wasmModule, bb, width, i, height));
+            }
+
+            let st = pool.stats();
+            while (st.pendingTasks > pool.maxWorkers) {
+                console.log("active waiting");
+                await new Promise(r => setTimeout(r, 100));
+                st = pool.stats();
             }
         }
         if (self.useThreads) {
@@ -100,7 +109,7 @@ class MerkleHash {
 
             for (let i=0; i< nOps; i+=nOpsPerThread) {
                 const curNOps = Math.min(nOpsPerThread, nOps-i);
-                const bb = new BigUint64Array(tree.nodes.buffer, pIn + i*16*32, curNOps*16*4);
+                const bb = tree.nodes.slice(pIn/8 + i*64, pIn/8 + (i+curNOps)*64);
                 if (self.useThreads) {
                     promises.push(pool.exec("merkelizeLevel", [self.wasmModule, bb, i, nOps]));
                 } else {

@@ -23,7 +23,7 @@ async function run() {
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.c12.pil";
     const execFile = typeof(argv.exec) === "string" ?  argv.exec.trim() : "mycircuit.c12.exec";
 
-    const r1cs = await readR1cs(r1csFile, {F: F });
+    const r1cs = await readR1cs(r1csFile, {F: F, logger:console });
 
     res = await plonkSetup(r1cs);
 
