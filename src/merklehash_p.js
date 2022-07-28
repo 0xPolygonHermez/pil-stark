@@ -2,6 +2,7 @@ const { assert } = require("chai");
 const LinearHash = require("./linearhash");
 const workerpool = require("workerpool");
 const fs = require("fs");
+const { BigBuffer } = require("pilcom");
 
 const {linearHash, merkelizeLevel} = require("./merklehash_worker");
 
@@ -38,10 +39,10 @@ class MerkleHash {
         return acc;
     }
 
-    async merkelize(buff, posIn, width, height) {
+    async merkelize(buff, width, height) {
         const self = this;
         const tree = {
-            elements: new BigUint64Array(buff.buffer, posIn, width*height),
+            elements: buff,
             nodes: new BigUint64Array(this._getNNodes(height*4)),
             width: width,
             height: height
@@ -128,7 +129,7 @@ class MerkleHash {
     // idx is the root of unity
     getElement(tree, idx, subIdx) {
 
-        return tree.elements[tree.width*idx + subIdx];
+        return tree.elements.getElement(tree.width*idx + subIdx);
     }
 
 
@@ -228,12 +229,12 @@ class MerkleHash {
         await writeBigBuffer(fd, tree.nodes);
         await fd.close();
 
-        async function writeBigBuffer(fd, buff8) {
+        async function writeBigBuffer(fd, buff) {
             const MaxBuffSize = 1024*1024*32;  //  256Mb
-            for (let i=0; i<buff8.byteLength; i+= MaxBuffSize) {
-                console.log(`writting tree.. ${i/MaxBuffSize} / ${Math.floor((buff8.byteLength-1)/MaxBuffSize )+1}`);
-                const n = Math.min(buff8.byteLength -i, MaxBuffSize);
-                const sb = new Uint8Array(buff8.buffer, buff8.byteOffset+i, n);
+            for (let i=0; i<buff.length; i+= MaxBuffSize) {
+                console.log(`writting tree.. ${i} / ${buff.length}`);
+                const n = Math.min(buff.length -i, MaxBuffSize);
+                const sb = buff.slice(i, n+i);
                 await fd.write(sb);
             }
         }
@@ -247,18 +248,22 @@ class MerkleHash {
             width: Number(header[0]),
             height: Number(header[1])
         }
-        tree.elements = new BigUint64Array(tree.width*tree.height);
+        tree.elements = new BigBuffer(tree.width*tree.height);
         tree.nodes = new BigUint64Array(this._getNNodes(tree.height*4));
         await readBigBuffer(fd, tree.elements, 16);
-        await readBigBuffer(fd, tree.nodes, 16+ tree.elements.byteLength);
+        await readBigBuffer(fd, tree.nodes, 16+ tree.elements.length*8);
         await fd.close();
 
         async function  readBigBuffer(fd, buff, pos) {
             const MaxBuffSize = 1024*1024*32;  //  256Mb
-            for (let i=0; i<buff.byteLength; i+= MaxBuffSize) {
-                const n = Math.min(buff.byteLength -i, MaxBuffSize);
-                const buff8 = new Uint8Array(buff.buffer, i, n);
-                await fd.read(buff8, {offset: 0, length:n, position:pos + i});
+            let o =0;
+            for (let i=0; i<buff.length; i+= MaxBuffSize) {
+                const n = Math.min(buff.length -i, MaxBuffSize);
+                const buff8 = new Uint8Array(n*8);
+                await fd.read(buff8, {offset: 0, length:n*8, position:pos + i});
+                const buff64 = new BigUint64Array(buff8.buffer);
+                buff.set(buff64, o);
+                o += n;
             }
         }
 

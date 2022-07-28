@@ -11,6 +11,7 @@ const generateFRIPolynomial = require("./starkinfo_fri_prover");
 const generateConstraintPolynomialVerifier = require("./starkinfo_cp_ver");
 const generateVerifierQuery = require("./starkinfo_fri_ver");
 const map = require("./starkinfo_map");
+// const cPolBuilder = require("./cpolbuilder.js")
 
 module.exports = function starkInfoGen(_pil, starkStruct) {
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
@@ -68,6 +69,8 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
     generateVerifierQuery(res, pil);
 
     map(res, pil);
+
+//    cPolBuilder(pil, res.cExp);
 
     return res;
 

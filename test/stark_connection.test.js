@@ -5,16 +5,15 @@ const path = require("path");
 const starkInfoGen = require("../src/starkinfo.js");
 const { starkGen } = require("../src/stark_gen.js");
 const starkVerify = require("../src/stark_verify.js");
-const buildPoseidonGL = require("../src/poseidon");
-const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
+const {BigBuffer} = require("pilcom");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
 const smGlobal = require("../src/sm/sm_global.js");
 const smConnection = require("./sm_connection/sm_connection.js");
 
-const MerkleHashGL = require("../src/merklehash_p.js");
-const MerkleHashBN128 = require("../src/merklehash.bn128.js");
+const buildMerklehashGL = require("../src/merklehash_p.js");
+const buildMerklehashBN128 = require("../src/merklehash.bn128.js");
 
 const { interpolate } = require("../src/fft_p");
 
@@ -60,11 +59,10 @@ describe("test connection sm", async function () {
         const nBits = starkStruct.nBits;
         const nBitsExt = starkStruct.nBitsExt;
         const nExt= 1 << nBitsExt;
-        const constPolsArrayEbuff = new SharedArrayBuffer(nExt*pil.nConstants*8);
-        const constPolsArrayE = new BigUint64Array(constPolsArrayEbuff);
+        const constPolsArrayE = new BigBuffer(nExt*pil.nConstants);
 
         const constBuff  = constPols.writeToBuff();
-        await interpolate(constBuff, 0, pil.nConstants, nBits, constPolsArrayE, 0, nBitsExt );
+        await interpolate(constBuff, pil.nConstants, nBits, constPolsArrayE, nBitsExt );
 
         let MH;
         if (starkStruct.verificationHashType == "GL") {
@@ -75,7 +73,7 @@ describe("test connection sm", async function () {
             throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
         }
 
-        const constTree = await MH.merkelize(constPolsArrayE, 0, pil.nConstants, nExt);
+        const constTree = await MH.merkelize(constPolsArrayE, pil.nConstants, nExt);
 
         const resP = await starkGen(cmPols, constPols, constTree, pil, starkInfo);
 

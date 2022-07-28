@@ -26,6 +26,9 @@ module.exports = class F3G {
         this.k = 12275445934081160404n;  // 7^(2^32) => Generetor of the group 3x5x17x257x65537
         this.s = 32;
         this.t = (this.p-1n) / BigInt(2**this.s);
+        this.n8 = 8;
+        this.n32 = 2;
+        this.n64 = 1;
 
         this.m = 3;
 

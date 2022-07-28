@@ -3,6 +3,7 @@ const chai = require("chai");
 const assert = chai.assert;
 var tmp = require('tmp-promise');
 var fs = require("fs");
+const { BigBuffer } = require("pilcom");
 
 describe("merkle hash", async function () {
     let MH;
@@ -17,14 +18,14 @@ describe("merkle hash", async function () {
         const idx = 3;
         const nPols = 3;
 
-        const pols = new BigUint64Array(nPols*N);
+        const pols = new BigBuffer(nPols*N);
         for (let i=0; i<N; i++) {
             for (let j=0; j<nPols; j++) {
-                pols[i*nPols + j] = BigInt(i + j*1000);
+                pols.setElement(i*nPols + j, BigInt(i + j*1000));
             }
         }
 
-        const tree = await MH.merkelize(pols, 0, nPols, N);
+        const tree = await MH.merkelize(pols, nPols, N);
 
         const [groupElements, mp] = MH.getGroupProof(tree, idx);
         const root = MH.root(tree);
@@ -38,14 +39,14 @@ describe("merkle hash", async function () {
         const idx = 3;
         const nPols = 9;
 
-        const pols = new BigUint64Array(nPols*N);
+        const pols = new BigBuffer(nPols*N);
         for (let i=0; i<N; i++) {
             for (let j=0; j<nPols; j++) {
-                pols[i*nPols + j] = BigInt(i + j*1000);
+                pols.setElement(i*nPols + j, BigInt(i + j*1000));
             }
         }
 
-        const tree = await MH.merkelize(pols, 0, nPols, N);
+        const tree = await MH.merkelize(pols, nPols, N);
 
         const [groupElements, mp] = MH.getGroupProof(tree, idx);
         const root = MH.root(tree);
@@ -59,14 +60,14 @@ describe("merkle hash", async function () {
         const idx = 32;
         const nPols = 6;
 
-        const pols = new BigUint64Array(nPols*N);
+        const pols = new BigBuffer(nPols*N);
         for (let i=0; i<N; i++) {
             for (let j=0; j<nPols; j++) {
-                pols[i*nPols + j] = BigInt(i + j*1000);
+                pols.setElement(i*nPols + j, BigInt(i + j*1000));
             }
         }
 
-        const tree = await MH.merkelize(pols, 0, nPols, N);
+        const tree = await MH.merkelize(pols, nPols, N);
 
         const [groupElements, mp] = MH.getGroupProof(tree, idx);
         const root = MH.root(tree);
@@ -79,14 +80,14 @@ describe("merkle hash", async function () {
         const idx = 32;
         const nPols = 10;
 
-        const pols = new BigUint64Array(nPols*N);
+        const pols = new BigBuffer(nPols*N);
         for (let i=0; i<N; i++) {
             for (let j=0; j<nPols; j++) {
-                pols[i*nPols + j] = BigInt(i + j*1000);
+                pols.setElement(i*nPols + j, BigInt(i + j*1000));
             }
         }
 
-        const tree = await MH.merkelize(pols, 0, nPols, N);
+        const tree = await MH.merkelize(pols, nPols, N);
 
         const [groupElements, mp] = MH.getGroupProof(tree, idx);
         const root = MH.root(tree);
@@ -101,14 +102,14 @@ describe("merkle hash", async function () {
         const N = 1<<18;
         const nPols = 10;
 
-        const pols = new BigUint64Array(nPols*N);
+        const pols = new BigBuffer(nPols*N);
         for (let i=0; i<N; i++) {
             for (let j=0; j<nPols; j++) {
-                pols[i*nPols + j] = BigInt(i + j*1000);
+                pols.setElement(i*nPols + j, BigInt(i + j*1000));
             }
         }
 
-        const tree = await MH.merkelize(pols, 0, nPols, N);
+        const tree = await MH.merkelize(pols, nPols, N);
 
         fileName = await tmp.tmpName();
         await MH.writeToFile(tree, fileName);
@@ -120,7 +121,7 @@ describe("merkle hash", async function () {
         assert.equal(tree2.elements.length, tree.elements.length);
         assert.equal(tree2.nodes.length, tree.nodes.length);
         for (let i=0; i<tree.elements.length; i++) {
-            assert.equal(tree2.elements[i], tree.elements[i]);
+            assert.equal(tree2.elements.getElement(i), tree.elements.getElement(i));
         }
         for (let i=0; i<tree.nodes.length; i++) {
             assert.equal(tree2.nodes[i], tree.nodes[i]);

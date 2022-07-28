@@ -5,6 +5,7 @@ const path = require("path");
 const starkInfoGen = require("../src/starkinfo.js");
 const { starkGen } = require("../src/stark_gen.js");
 const starkVerify = require("../src/stark_verify.js");
+const {BigBuffer} = require("pilcom");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
@@ -58,11 +59,10 @@ describe("test plookup sm", async function () {
         const nBits = starkStruct.nBits;
         const nBitsExt = starkStruct.nBitsExt;
         const nExt= 1 << nBitsExt;
-        const constPolsArrayEbuff = new SharedArrayBuffer(nExt*pil.nConstants*8);
-        const constPolsArrayE = new BigUint64Array(constPolsArrayEbuff);
+        const constPolsArrayE = new BigBuffer(nExt*pil.nConstants);
 
         const constBuff  = constPols.writeToBuff();
-        await interpolate(constBuff, 0, pil.nConstants, nBits, constPolsArrayE, 0, nBitsExt );
+        await interpolate(constBuff, pil.nConstants, nBits, constPolsArrayE, nBitsExt );
 
         let MH;
         if (starkStruct.verificationHashType == "GL") {
@@ -74,7 +74,7 @@ describe("test plookup sm", async function () {
         }
 
 
-        const constTree = await MH.merkelize(constPolsArrayE, 0, pil.nConstants, nExt);
+        const constTree = await MH.merkelize(constPolsArrayE, pil.nConstants, nExt);
 
         const resP = await starkGen(cmPols, constPols, constTree, pil, starkInfo);
 

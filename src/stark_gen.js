@@ -14,9 +14,10 @@ const _ = require("json-bigint");
 const { interpolate } = require("./fft_p.js");
 const workerpool = require("workerpool");
 const {starkgen_execute} = require("./starkgen_worker");
+const {BigBuffer} = require("pilcom");
 
 const parallelExec = true;
-const useThreads = true;
+const useThreads = false;
 const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
 
@@ -66,30 +67,30 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
     ctx.challenges = [];
     let nCm = starkInfo.nCm1;
 
-    ctx.cm1_n = new BigUint64Array(starkInfo.mapSectionsN.cm1_n*ctx.N);
-    cmPols.writeToBuff(ctx.cm1_n, 0);
-    ctx.cm2_n = new BigUint64Array(starkInfo.mapSectionsN.cm2_n*ctx.N);
-    ctx.cm3_n = new BigUint64Array(starkInfo.mapSectionsN.cm3_n*ctx.N);
-    ctx.exps_withq_n = new BigUint64Array(starkInfo.mapSectionsN.exps_withq_n*ctx.N);
-    ctx.exps_withoutq_n = new BigUint64Array(starkInfo.mapSectionsN.exps_withoutq_n*ctx.N);
-    ctx.cm1_2ns = new BigUint64Array(starkInfo.mapSectionsN.cm1_n*ctx.Next);
-    ctx.cm2_2ns = new BigUint64Array(starkInfo.mapSectionsN.cm2_n*ctx.Next);
-    ctx.cm3_2ns = new BigUint64Array(starkInfo.mapSectionsN.cm3_n*ctx.Next);
-    ctx.q_2ns = new BigUint64Array(starkInfo.mapSectionsN.q_2ns*ctx.Next);
-    ctx.exps_withq_2ns = new BigUint64Array(starkInfo.mapSectionsN.exps_withq_2ns*ctx.Next);
-    ctx.exps_withoutq_2ns = new BigUint64Array(starkInfo.mapSectionsN.exps_withoutq_2ns*ctx.Next);
+    ctx.cm1_n = new BigBuffer(starkInfo.mapSectionsN.cm1_n*ctx.N);
+    cmPols.writeToBigBuffer(ctx.cm1_n, 0);
+    ctx.cm2_n = new BigBuffer(starkInfo.mapSectionsN.cm2_n*ctx.N);
+    ctx.cm3_n = new BigBuffer(starkInfo.mapSectionsN.cm3_n*ctx.N);
+    ctx.exps_withq_n = new BigBuffer(starkInfo.mapSectionsN.exps_withq_n*ctx.N);
+    ctx.exps_withoutq_n = new BigBuffer(starkInfo.mapSectionsN.exps_withoutq_n*ctx.N);
+    ctx.cm1_2ns = new BigBuffer(starkInfo.mapSectionsN.cm1_n*ctx.Next);
+    ctx.cm2_2ns = new BigBuffer(starkInfo.mapSectionsN.cm2_n*ctx.Next);
+    ctx.cm3_2ns = new BigBuffer(starkInfo.mapSectionsN.cm3_n*ctx.Next);
+    ctx.q_2ns = new BigBuffer(starkInfo.mapSectionsN.q_2ns*ctx.Next);
+    ctx.exps_withq_2ns = new BigBuffer(starkInfo.mapSectionsN.exps_withq_2ns*ctx.Next);
+    ctx.exps_withoutq_2ns = new BigBuffer(starkInfo.mapSectionsN.exps_withoutq_2ns*ctx.Next);
 
-    ctx.x_n = new BigUint64Array(N);
+    ctx.x_n = new BigBuffer(N);
     let xx = F.one;
     for (let i=0; i<N; i++) {
-        ctx.x_n[i] = xx;
+        ctx.x_n.setElement(i, xx);
         xx = F.mul(xx, F.w[nBits])
     }
 
-    ctx.x_2ns = new BigUint64Array(N << extendBits);
+    ctx.x_2ns = new BigBuffer(N << extendBits);
     xx = F.shift;
     for (let i=0; i<(N << extendBits); i++) {
-        ctx.x_2ns[i] = xx;
+        ctx.x_2ns.setElement(i, xx);
         xx = F.mul(xx, F.w[nBits + extendBits]);
     }
 
@@ -99,8 +100,8 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
     ctx.Zi = zhInv;
 
 
-    ctx.const_n = new BigUint64Array(starkInfo.nConstants*ctx.N);
-    constPols.writeToBuff(ctx.const_n, 0);
+    ctx.const_n = new BigBuffer(starkInfo.nConstants*ctx.N);
+    constPols.writeToBigBuffer(ctx.const_n, 0);
 
     ctx.const_2ns = constTree.elements;
 
@@ -111,7 +112,7 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
     ctx.publics = [];
     for (let i=0; i<pil.publics.length; i++) {
         if (pil.publics[i].polType == "cmP") {
-            ctx.publics[i] = ctx.cm1_n[ pil.publics[i].idx * starkInfo.mapSectionsN.cm1_n + pil.publics[i].polId   ];
+            ctx.publics[i] = ctx.cm1_n.getElement( pil.publics[i].idx * starkInfo.mapSectionsN.cm1_n + pil.publics[i].polId   );
         } else if (pil.publics[i].polType == "imP") {
             // EDU: Do not implement this in the firs version.
             //      we will not use it.
@@ -267,12 +268,12 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
         for (let k=0; k<N; k++) {
             let v;
             if (p.dim==1) {
-                v = p.buffer[(k<<extendBits)*p.size + p.offset];
+                v = p.buffer.getElement((k<<extendBits)*p.size + p.offset);
             } else {
                 v = [
-                    p.buffer[(k<<extendBits)*p.size + p.offset],
-                    p.buffer[(k<<extendBits)*p.size + p.offset+1],
-                    p.buffer[(k<<extendBits)*p.size + p.offset+2]
+                    p.buffer.getElement((k<<extendBits)*p.size + p.offset),
+                    p.buffer.getElement((k<<extendBits)*p.size + p.offset+1),
+                    p.buffer.getElement((k<<extendBits)*p.size + p.offset+2)
                 ];
             }
             acc = F.add(acc, F.mul(v, l[k]));
@@ -285,8 +286,8 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
     const xi = ctx.challenges[7];
     const wxi = F.mul(ctx.challenges[7], F.w[nBits]);
 
-    ctx.xDivXSubXi = new BigUint64Array((N << extendBits)*3);
-    ctx.xDivXSubWXi = new BigUint64Array((N << extendBits)*3);
+    ctx.xDivXSubXi = new BigBuffer((N << extendBits)*3);
+    ctx.xDivXSubWXi = new BigBuffer((N << extendBits)*3);
     let tmp_den = new Array(N << extendBits);
     let tmp_denw = new Array(N << extendBits);
     let x = F.shift;
@@ -299,12 +300,16 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
     tmp_denw = F.batchInverse(tmp_denw);
     x = F.shift;
     for (let k=0; k< N<<extendBits; k++) {
-        [ctx.xDivXSubXi[3*k],
-         ctx.xDivXSubXi[3*k+1],
-         ctx.xDivXSubXi[3*k+2]] = F.mul(tmp_den[k], x);
-         [ctx.xDivXSubWXi[3*k],
-         ctx.xDivXSubWXi[3*k+1],
-         ctx.xDivXSubWXi[3*k+2]] = F.mul(tmp_denw[k], x);
+        const v = F.mul(tmp_den[k], x);
+        ctx.xDivXSubXi.setElement(3*k , v[0]);
+        ctx.xDivXSubXi.setElement(3*k +1 , v[1]);
+        ctx.xDivXSubXi.setElement(3*k +2, v[2]);
+
+        const vw = F.mul(tmp_denw[k], x);
+        ctx.xDivXSubWXi.setElement(3*k , vw[0]);
+        ctx.xDivXSubWXi.setElement(3*k +1, vw[1]);
+        ctx.xDivXSubWXi.setElement(3*k +2, vw[2]);
+
         x = F.mul(x, F.w[nBits + extendBits])
     }
 
@@ -508,17 +513,20 @@ function calculateExps(ctx, code, dom) {
 
     const next = dom=="n" ? 1 : 1<< (ctx.nBitsExt - ctx.nBits);
     const N = dom=="n" ? ctx.N : ctx.Next;
+
+    const pCtx = ctxProxy(ctx);
+
     for (let i=0; i<next; i++) {
-        cFirst(ctx, i);
+        cFirst(pCtx, i);
     }
     for (let i=next; i<N-next; i++) {
         if ((i%1000) == 0) console.log(`Calculating expression.. ${i}/${N}`);
         // cI(ctx, i);
-        cFirst(ctx, i);
+        cFirst(pCtx, i);
     }
     for (let i=N-next; i<N; i++) {
         // cLast(ctx, i);
-        cFirst(ctx, i);
+        cFirst(pCtx, i);
     }
 }
 
@@ -526,7 +534,8 @@ function calculateExpAtPoint(ctx, code, i) {
     ctx.tmp = new Array(code.tmpUsed);
     cFirst = new Function("ctx", "i", compileCode(ctx, code.first, "n", true));
 
-    return cFirst(ctx, i);
+    const pCtx = ctxProxy(ctx);
+    return cFirst(pCtx, i);
 }
 
 
@@ -534,18 +543,18 @@ function setPol(ctx, starkInfo, idPol, pol) {
     const p = getPolRef(ctx, starkInfo, idPol);
     if (p.dim == 1) {
         for (let i=0; i<p.deg; i++) {
-            p.buffer[p.offset + i*p.size] = pol[i];
+            p.buffer.set(p.offset + i*p.size, pol[i]);
         }
     } else if (p.dim == 3) {
         for (let i=0; i<p.deg; i++) {
             if (Array.isArray(pol[i])) {
-                p.buffer[p.offset + i*p.size] = pol[i][0];
-                p.buffer[p.offset + i*p.size + 1] = pol[i][1];
-                p.buffer[p.offset + i*p.size + 2] = pol[i][2];
+                p.buffer.setElement(p.offset + i*p.size, pol[i][0]);
+                p.buffer.setElement(p.offset + i*p.size + 1, pol[i][1]);
+                p.buffer.setElement(p.offset + i*p.size + 2,pol[i][2]);
             } else {
-                p.buffer[p.offset + i*p.size] = pol[i];
-                p.buffer[p.offset + i*p.size + 1] = 0n;
-                p.buffer[p.offset + i*p.size + 2] = 0n;
+                p.buffer.setElement(p.offset + i*p.size, pol[i]);
+                p.buffer.setElement(p.offset + i*p.size + 1, 0n);
+                p.buffer.setElement(p.offset + i*p.size + 2, 0n);
             }
         }
     } else {
@@ -570,14 +579,14 @@ function getPol(ctx, starkInfo, idPol) {
     const res = new Array(p.deg);
     if (p.dim == 1) {
         for (let i=0; i<p.deg; i++) {
-            res[i] = p.buffer[p.offset + i*p.size];
+            res[i] = p.buffer.getElement(p.offset + i*p.size);
         }
     } else if (p.dim == 3) {
         for (let i=0; i<p.deg; i++) {
             res[i] = [
-                p.buffer[p.offset + i*p.size],
-                p.buffer[p.offset + i*p.size + 1],
-                p.buffer[p.offset + i*p.size + 2]
+                p.buffer.getElement(p.offset + i*p.size),
+                p.buffer.getElement(p.offset + i*p.size + 1),
+                p.buffer.getElement(p.offset + i*p.size + 2)
             ];
         }
     } else {
@@ -593,12 +602,12 @@ async function  extendAndMerkelize(MH, buffFrom, buffTo, nPols, nBits, nBitsExt)
 }
 
 async function  extend(buffFrom, buffTo, nPols, nBits, nBitsExt ) {
-    await interpolate(buffFrom, 0, nPols, nBits, buffTo, 0, nBitsExt);
+    await interpolate(buffFrom, nPols, nBits, buffTo, nBitsExt);
 }
 
 async function  merkelize(MH, buff, width, nBitsExt ) {
     const nExt = 1 << nBitsExt;
-    return await MH.merkelize(buff, 0, width, nExt);
+    return await MH.merkelize(buff, width, nExt);
 }
 
 
@@ -705,9 +714,9 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
         for (let s =0; s<execInfo.inputSections.length; s++) {
             const si = execInfo.inputSections[s];
             ctxIn[si.name] = new BigUint64Array((curN+next)*si.width);
-            const s1 = new BigUint64Array(ctx[si.name].buffer, ctx[si.name].byteOffset + i*si.width*8, curN*si.width);
+            const s1 = ctx[si.name].slice(i*si.width, (i + curN)*si.width);
             ctxIn[si.name].set(s1);
-            const sNext = new BigUint64Array(ctx[si.name].buffer, ctx[si.name].byteOffset + ((i+curN)%n) *si.width*8, si.width*next);
+            const sNext = ctx[si.name].slice( ((i+curN)%n) *si.width, ((i+curN)%n) *si.width + si.width*next);
             ctxIn[si.name].set(sNext, curN*si.width);
         }
         if (useThreads) {
@@ -727,4 +736,66 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
         }
     }
 
+}
+
+
+const BigBufferHandler = {
+    get: function(obj, prop) {
+        if (!isNaN(prop)) {
+            return obj.getElement(prop);
+        } else return obj[prop];
+    },
+    set: function(obj, prop, value) {
+        if (!isNaN(prop)) {
+            return obj.setElement(prop, value);
+        } else {
+            obj[prop] = value;
+            return true;
+        }
+    }
+};
+
+function ctxProxy(ctx) {
+
+    const pCtx = {};
+
+    createProxy("cm1_n");
+    createProxy("cm2_n");
+    createProxy("cm3_n");
+    createProxy("exps_withq_n");
+    createProxy("exps_withoutq_n");
+    createProxy("cm1_2ns");
+    createProxy("cm2_2ns");
+    createProxy("cm3_2ns");
+    createProxy("q_2ns");
+    createProxy("exps_withq_2ns");
+    createProxy("exps_withoutq_2ns");
+    createProxy("const");
+    createProxy("const_2ns");
+    createProxy("x_n");
+    createProxy("x_2ns");
+
+    pCtx.Zi = ctx.Zi;
+    pCtx.publics = ctx.publics;
+    pCtx.challenges = ctx.challenges;
+
+    pCtx.nBits = ctx.nBits;
+    pCtx.nBitsExt = ctx.nBitsExt;
+    pCtx.N = ctx.N;
+    pCtx.Next = ctx.Next;
+    pCtx.starkInfo = ctx.starkInfo;
+    pCtx.tmp = ctx.tmp;
+
+    pCtx.evals = ctx.evals;
+
+    pCtx.xDivXSubXi = ctx.xDivXSubXi;
+    pCtx.xDivXSubWXi = ctx.xDivXSubWXi;
+
+    return pCtx;
+
+    function createProxy(section) {
+        if (ctx[section]) {
+            pCtx[section] = new Proxy(ctx[section], BigBufferHandler);
+        }
+    }
 }

@@ -3,6 +3,7 @@ const GL3 = require("./f3g.js");
 const {log2} = require("./utils.js");
 const {fft_block} = require("./fft_worker");
 const workerpool = require("workerpool");
+const {BigBuffer} = require("pilcom");
 
 const F = new GL3();
 const useThreads = true;
@@ -34,44 +35,40 @@ function traspose(buffDst, buffSrc, nPols, nBits, trasposeBits) {
         for (let j=0; j<h; j++) {
             const fi = j*w + i;
             const di = i*h +j;
-            const src = new Uint8Array(buffSrc.buffer, buffSrc.byteOffset + fi*nPols*8, nPols*8);
-            const dst = new Uint8Array(buffDst.buffer, buffDst.byteOffset + di*nPols*8, nPols*8);
-            dst.set(src);
+            const src = buffSrc.slice(fi*nPols, fi*nPols + nPols);
+            buffDst.set(src, di*nPols);
         }
     }
 }
 
 
-async function bitReverse(buffDst, buffSrc, pSrc, nPols, nBits) {
+async function bitReverse(buffDst, buffSrc, nPols, nBits) {
     const n = 1 << nBits;
     for (let i=0; i<n; i++) {
         const ri = BR(i, nBits);
-        const dst = new Uint8Array(buffDst.buffer, buffDst.byteOffset + i*nPols*8, nPols*8);
-        const src = new Uint8Array(buffSrc.buffer, buffSrc.byteOffset + pSrc + ri*nPols*8, nPols*8);
-        dst.set(src);
+        const src = buffSrc.slice(  ri*nPols, ri*nPols + nPols);
+        buffDst.set(src, i*nPols);
     }
 }
 
-async function interpolateBitReverse(buffDst, buffSrc, pSrc, nPols, nBits) {
+async function interpolateBitReverse(buffDst, buffSrc, nPols, nBits) {
     const n = 1 << nBits;
     for (let i=0; i<n; i++) {
         const ri = BR(i, nBits);
         const rii = (n-ri)%n;
-        const dst = new Uint8Array(buffDst.buffer, buffDst.byteOffset + i*nPols*8, nPols*8);
-        const src = new Uint8Array(buffSrc.buffer, buffSrc.byteOffset + pSrc+ rii*nPols*8, nPols*8);
-        dst.set(src);
+        const src = buffSrc.slice(  rii*nPols, rii*nPols + nPols);
+        buffDst.set(src, i*nPols);
     }
 }
 
-async function invBitReverse(buffDst, buffSrc, pSrc, nPols, nBits) {
+async function invBitReverse(buffDst, buffSrc, nPols, nBits) {
     const n = 1 << nBits;
-    const src = new BigUint64Array(buffSrc.buffer, buffSrc.byteOffset + pSrc, n*nPols);
     const nInv = F.inv(BigInt(n));
     for (let i=0; i<n; i++) {
         const ri = BR(i, nBits);
         const rii = (n-ri)%n;
         for (let p=0; p<nPols; p++) {
-            buffDst[i*nPols+p] = F.mul(src[rii*nPols+p], nInv);
+            buffDst.setElement(i*nPols+p, F.mul(buffSrc.getElement(rii*nPols+p), nInv));
         }
     }
 }
@@ -139,11 +136,10 @@ const minBlockBits = 12;
 //const maxBlockBits = 2;
 //const minBlockBits = 2;
 const blocksPerThread = 8;
-async function _fft(buffSrc, pSrc, nPols, nBits, buffDst, pDst, inverse) {
+async function _fft(buffSrc, nPols, nBits, buffDst, inverse) {
     const n = 1 << nBits;
-    const tmpBuffBuffer = new ArrayBuffer(n*nPols*8);
-    const tmpBuff = new BigUint64Array(tmpBuffBuffer);
-    const outBuff = new BigUint64Array(buffDst.buffer, buffDst.byteOffset + pDst, n*nPols);
+    const tmpBuff = new BigBuffer(n*nPols);
+    const outBuff = buffDst;
 
     let bIn, bOut;
 
@@ -173,9 +169,9 @@ async function _fft(buffSrc, pSrc, nPols, nBits, buffDst, pDst, inverse) {
     }
 
     if (inverse) {
-        await invBitReverse(bOut, buffSrc, pSrc, nPols, nBits);
+        await invBitReverse(bOut, buffSrc, nPols, nBits);
     } else {
-        await bitReverse(bOut, buffSrc, pSrc, nPols, nBits);
+        await bitReverse(bOut, buffSrc, nPols, nBits);
     }
     [bIn, bOut] = [bOut, bIn];
 
@@ -203,21 +199,20 @@ async function _fft(buffSrc, pSrc, nPols, nBits, buffDst, pDst, inverse) {
     await pool.terminate();
 }
 
-async function fft(buffSrc, pSrc, nPols, nBits, buffDst, pDst) {
-    await _fft(buffSrc, pSrc, nPols, nBits, buffDst, pDst, false)
+async function fft(buffSrc, nPols, nBits, buffDst) {
+    await _fft(buffSrc, nPols, nBits, buffDst, false)
 }
 
-async function ifft(buffSrc, pSrc, nPols, nBits, buffDst, pDst) {
-    await _fft(buffSrc, pSrc, nPols, nBits, buffDst, pDst, true)
+async function ifft(buffSrc, nPols, nBits, buffDst) {
+    await _fft(buffSrc, nPols, nBits, buffDst, true)
 }
 
 
-async function interpolate(buffSrc, pSrc, nPols, nBits, buffDst, pDst, nBitsExt) {
+async function interpolate(buffSrc, nPols, nBits, buffDst, nBitsExt) {
     const n = 1 << nBits;
     const nExt = 1 << nBitsExt;
-    const tmpBuffBuffer = new ArrayBuffer(nExt*nPols*8);
-    const tmpBuff = new BigUint64Array(tmpBuffBuffer);
-    const outBuff = new BigUint64Array(buffDst.buffer, buffDst.byteOffset + pDst, nExt*nPols);
+    const tmpBuff = new BigBuffer(nExt*nPols);
+    const outBuff = buffDst;
 
     let bIn, bOut;
 
@@ -261,7 +256,7 @@ async function interpolate(buffSrc, pSrc, nPols, nBits, buffDst, pDst, nBitsExt)
     }
 
     console.log("Interpolating reverse....")
-    await interpolateBitReverse(bOut, buffSrc, pSrc, nPols, nBits);
+    await interpolateBitReverse(bOut, buffSrc, nPols, nBits);
     [bIn, bOut] = [bOut, bIn];
 
     for (let i=0; i<nBits; i+= blockBits) {
@@ -290,7 +285,7 @@ async function interpolate(buffSrc, pSrc, nPols, nBits, buffDst, pDst, nBitsExt)
     console.log("Interpolating prepare....")
     await interpolatePrepare(pool, bIn, nPols, nBits, nBitsExt);
     console.log("Bit reverse....")
-    await bitReverse(bOut, bIn, 0, nPols, nBitsExt);
+    await bitReverse(bOut, bIn, nPols, nBitsExt);
     [bIn, bOut] = [bOut, bIn];
 
     for (let i=0; i<nBitsExt; i+= blockBitsExt) {

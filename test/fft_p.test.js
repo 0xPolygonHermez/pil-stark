@@ -1,4 +1,5 @@
 const chai = require("chai");
+const { BigBuffer } = require("pilcom");
 const assert = chai.assert;
 const F3g = require("../src/f3g");
 const {fft, ifft, interpolate} = require("../src/fft_p");
@@ -21,36 +22,35 @@ describe("test fft", async function () {
         F = new F3g();
     })
 
-
     it("Check big interpolate", async () => {
         let nBits = 18;
         let nPols = 3;
         let extBits = 1;
 
         const n = 1 << nBits;
-        const buff1 = new BigUint64Array(n*nPols);
-        const buff2 = new BigUint64Array(n*nPols*(1 << extBits));
+        const buff1 = new BigBuffer(n*nPols);
+        const buff2 = new BigBuffer(n*nPols*(1 << extBits));
 
         console.log("Initializing...");
         for (let i=0; i<nPols; i++) {
             for (let j=0; j<n; j++) {
                 const v = BigInt(i) * 0n + BigInt(j);
-                buff1[j*nPols + i] = v;
+                buff1.setElement(j*nPols + i, v);
             }
         }
 
         console.log("interpolate...");
-        await interpolate(buff1, 0, nPols, nBits, buff2, 0, nBits+extBits);
+        await interpolate(buff1, nPols, nBits, buff2, nBits+extBits);
 
     });
-
 
     it("Check fft", async () => {
         let nBits = 5;
         let nPols = 2;
 
         const n = 1 << nBits;
-        const buff = new BigUint64Array(n*nPols*8*2);
+        const buff = new BigBuffer(n*nPols);
+        const buffOut = new BigBuffer(n*nPols);
 
         console.log("Initializing...");
         const pols = [];
@@ -59,7 +59,7 @@ describe("test fft", async function () {
             for (let j=0; j<n; j++) {
                 const v = BigInt(i) * 0n + BigInt(j);
                 pols[i][j] = v;
-                buff[j*nPols + i] = v;
+                buff.setElement(j*nPols + i, v);
             }
         }
         const polsV = [];
@@ -69,16 +69,15 @@ describe("test fft", async function () {
         }
 
         console.log("fft...");
-        await fft(buff, 0, nPols, nBits, buff, nPols*n*8);
+        await fft(buff, nPols, nBits, buffOut);
 
         console.log("check...");
         for (let i=0; i<nPols; i++) {
             for (let j=0; j<n; j++) {
-                assert(F.eq(polsV[i][j], buff[n*nPols + j*nPols + i]));
+                assert(F.eq(polsV[i][j], buffOut.getElement(j*nPols + i)));
             }
         }
     });
-
 
     it("Check interpolate", async () => {
         let nBits = 3;
@@ -87,7 +86,9 @@ describe("test fft", async function () {
 
         const n = 1 << nBits;
         const nExt = 1 << (nBits + extBits);
-        const buff = new BigUint64Array(n*nPols*8*2);
+        const buff = new BigBuffer(n*nPols);
+        const buffOut = new BigBuffer(nExt*nPols);
+
 
         console.log("Initializing...");
         const pols = [];
@@ -96,7 +97,7 @@ describe("test fft", async function () {
             for (let j=0; j<n; j++) {
                 const v = BigInt(i) * 0n + BigInt(j);
                 pols[i][j] = v;
-                buff[j*nPols + i] = v;
+                buff.setElement(j*nPols + i, v);
             }
         }
         const polsV = [];
@@ -106,12 +107,12 @@ describe("test fft", async function () {
         }
 
         console.log("interpolate...");
-        await interpolate(buff, 0, nPols, nBits, buff, nPols*n*8, nBits+extBits);
+        await interpolate(buff, nPols, nBits, buffOut, nBits+extBits);
 
         console.log("check...");
         for (let i=0; i<nPols; i++) {
             for (let j=0; j<nExt; j++) {
-                assert(F.eq(polsV[i][j], buff[n*nPols + j*nPols + i]));
+                assert(F.eq(polsV[i][j], buffOut.getElement(j*nPols + i)));
             }
         }
     });
@@ -121,7 +122,9 @@ describe("test fft", async function () {
         let nPols = 5;
 
         const n = 1 << nBits;
-        const buff = new BigUint64Array(n*nPols*8*2);
+        const buff = new BigBuffer(n*nPols);
+        const buffOut = new BigBuffer(n*nPols);
+
 
         console.log("Initializing...");
         const pols = [];
@@ -130,7 +133,7 @@ describe("test fft", async function () {
             for (let j=0; j<n; j++) {
                 const v = BigInt(i) * 0n + BigInt(j);
                 pols[i][j] = v;
-                buff[j*nPols + i] = v;
+                buff.setElement(j*nPols + i, v);
             }
         }
         const polsV = [];
@@ -140,23 +143,24 @@ describe("test fft", async function () {
         }
 
         console.log("fft...");
-        await fft(buff, 0, nPols, nBits, buff, nPols*n*8);
+        await fft(buff, nPols, nBits, buffOut);
 
         console.log("check...");
         for (let i=0; i<nPols; i++) {
             for (let j=0; j<n; j++) {
-                assert(F.eq(polsV[i][j], buff[n*nPols + j*nPols + i]));
+                assert(F.eq(polsV[i][j], buffOut.getElement(j*nPols + i)));
             }
         }
     });
-
 
     it("Check ifft", async () => {
         let nBits = 18;
         let nPols = 5;
 
         const n = 1 << nBits;
-        const buff = new BigUint64Array(n*nPols*8*2);
+        const buff = new BigBuffer(n*nPols);
+        const buffOut = new BigBuffer(n*nPols);
+
 
         console.log("Initializing...");
         const pols = [];
@@ -165,7 +169,7 @@ describe("test fft", async function () {
             for (let j=0; j<n; j++) {
                 const v = BigInt(i) * 0n + BigInt(j);
                 pols[i][j] = v;
-                buff[j*nPols + i] = v;
+                buff.setElement(j*nPols + i, v);
             }
         }
         const polsV = [];
@@ -175,12 +179,12 @@ describe("test fft", async function () {
         }
 
         console.log("ifft...");
-        await ifft(buff, 0, nPols, nBits, buff, nPols*n*8);
+        await ifft(buff, nPols, nBits, buffOut);
 
         console.log("check...");
         for (let i=0; i<nPols; i++) {
             for (let j=0; j<n; j++) {
-                assert(F.eq(polsV[i][j], buff[n*nPols + j*nPols + i]));
+                assert(F.eq(polsV[i][j], buffOut.getElement(j*nPols + i)));
             }
         }
     });
@@ -193,7 +197,9 @@ describe("test fft", async function () {
 
         const n = 1 << nBits;
         const nExt = 1 << (nBits + extBits);
-        const buff = new BigUint64Array(n*nPols*8*2);
+        const buff = new BigBuffer(n*nPols);
+        const buffOut = new BigBuffer(nExt*nPols);
+
 
         console.log("Initializing...");
         const pols = [];
@@ -202,7 +208,7 @@ describe("test fft", async function () {
             for (let j=0; j<n; j++) {
                 const v = BigInt(i) * 0n + BigInt(j);
                 pols[i][j] = v;
-                buff[j*nPols + i] = v;
+                buff.setElement(j*nPols + i, v);
             }
         }
         const polsV = [];
@@ -212,13 +218,14 @@ describe("test fft", async function () {
         }
 
         console.log("fft...");
-        await interpolate(buff, 0, nPols, nBits, buff, nPols*n*8, nBits+extBits);
+        await interpolate(buff, nPols, nBits, buffOut, nBits+extBits);
 
         console.log("check...");
         for (let i=0; i<nPols; i++) {
             for (let j=0; j<nExt; j++) {
-                assert(F.eq(polsV[i][j], buff[n*nPols + j*nPols + i]));
+                assert(F.eq(polsV[i][j], buffOut.getElement(j*nPols + i)));
             }
         }
     });
+
 });

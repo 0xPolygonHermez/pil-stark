@@ -1,6 +1,7 @@
 const fs = require("fs");
 const version = require("../package").version;
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
+const {BigBuffer} = require("pilcom");
 
 
 const F1Field = require("./f3g");
@@ -41,9 +42,9 @@ async function run() {
 
     const constBuff  = constPols.writeToBuff();
 
-    const constPolsArrayE = new BigUint64Array(nExt*pil.nConstants);
+    const constPolsArrayE = new BigBuffer(nExt*pil.nConstants);
 
-    await interpolate(constBuff, 0, pil.nConstants, nBits, constPolsArrayE, 0, nBitsExt );
+    await interpolate(constBuff, pil.nConstants, nBits, constPolsArrayE, nBitsExt );
 
     let MH;
     if (starkStruct.verificationHashType == "GL") {
@@ -56,7 +57,7 @@ async function run() {
 
 
     console.log("Start merkelizing..");
-    const constTree = await MH.merkelize(constPolsArrayE, 0, pil.nConstants, nExt);
+    const constTree = await MH.merkelize(constPolsArrayE, pil.nConstants, nExt);
 
     const constRoot = MH.root(constTree);
 
