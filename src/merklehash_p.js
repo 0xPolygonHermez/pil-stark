@@ -258,6 +258,7 @@ class MerkleHash {
             const MaxBuffSize = 1024*1024*32;  //  256Mb
             let o =0;
             for (let i=0; i<buff.length; i+= MaxBuffSize) {
+                console.log(`Loading tree.. ${i}/${buff.length}`);
                 const n = Math.min(buff.length -i, MaxBuffSize);
                 const buff8 = new Uint8Array(n*8);
                 await fd.read(buff8, {offset: 0, length:n*8, position:pos + i});

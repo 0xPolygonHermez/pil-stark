@@ -1045,6 +1045,23 @@
             ],
             "type": "pwa-node",
             "runtimeArgs": ["--max-old-space-size=512000"]
+        },
+        {
+            "name": "zkevm c12 verify",
+            "program": "src/main_verifier.js",
+            "request": "launch",
+            "args": [
+                "-p ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.c12.pil",
+                "-s ${workspaceFolder}/../zkevm-proverjs/src/zkevm.c12.starkstruct.json",
+                "-v ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.c12.verkey.json",
+                "-o ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.c12.proof.json",
+                "-b ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.c12.public.json"
+            ],
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "runtimeArgs": ["--max-old-space-size=512000"]
         }
     ]
 }

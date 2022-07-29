@@ -17,7 +17,7 @@ const {starkgen_execute} = require("./starkgen_worker");
 const {BigBuffer} = require("pilcom");
 
 const parallelExec = true;
-const useThreads = false;
+const useThreads = true;
 const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
 
@@ -543,7 +543,7 @@ function setPol(ctx, starkInfo, idPol, pol) {
     const p = getPolRef(ctx, starkInfo, idPol);
     if (p.dim == 1) {
         for (let i=0; i<p.deg; i++) {
-            p.buffer.set(p.offset + i*p.size, pol[i]);
+            p.buffer.setElement(p.offset + i*p.size, pol[i]);
         }
     } else if (p.dim == 3) {
         for (let i=0; i<p.deg; i++) {
