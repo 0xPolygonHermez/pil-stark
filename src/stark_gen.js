@@ -131,7 +131,6 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
 // 2.- Caluculate plookups h1 and h2
 ///////////
     ctx.challenges[0] = transcript.getField(); // u
-
     ctx.challenges[1] = transcript.getField(); // defVal
 
 
@@ -154,7 +153,6 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
     console.log("Merkelizing 2....");
     const tree2 = await extendAndMerkelize(MH, ctx.cm2_n, ctx.cm2_2ns, starkInfo.mapSectionsN.cm2_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree2));
-
 
 ///////////
 // 3.- Compute Z polynomials
@@ -197,7 +195,6 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
     console.log("Merkelizing 3....");
     const tree3 = await extendAndMerkelize(MH, ctx.cm3_n, ctx.cm3_2ns, starkInfo.mapSectionsN.cm3_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree3));
-
 
 ///////////
 // 4. Compute C Polynomial
