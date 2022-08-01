@@ -28,7 +28,10 @@
     "pilcom": "^0.0.11",
     "wasmbuilder": "^0.0.12",
     "wasmcurves": "^0.1.5",
-    "workerpool": "^6.2.1"
+    "workerpool": "^6.2.1",
+    "circomlib": "^2.0.5",
+    "json-bigint": "^1.0.0",
+    "r1csfile": "^0.0.40"
   },
   "author": "Polygon Hermez",
   "license": "UNLICENSED",
@@ -36,10 +39,7 @@
     "@iden3/bigarray": "^0.0.2",
     "chai": "^4.3.6",
     "circom_tester": "^0.0.14",
-    "circomlib": "^2.0.5",
-    "json-bigint": "^1.0.0",
     "mocha": "^10.0.0",
-    "r1csfile": "^0.0.40",
     "tmp-promise": "^3.0.3"
   }
 }
