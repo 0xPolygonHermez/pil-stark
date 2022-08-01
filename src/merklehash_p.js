@@ -69,7 +69,7 @@ class MerkleHash {
 //            const bb = new BigUint64Array(tree.elements.buffer, tree.elements.byteOffset + i*width*8, curN*width);
             if (self.useThreads) {
                 console.log("creating thread "+i);
-                promisesLH.push(pool.exec("linearHash", [bb, width, i, curN]));
+                promisesLH.push(pool.exec("linearHash", [bb, width, i, height]));
             } else {
                 res.push(await linearHash(bb, width, i, curN));
             }
