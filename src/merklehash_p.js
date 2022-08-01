@@ -261,7 +261,7 @@ class MerkleHash {
                 console.log(`Loading tree.. ${i}/${buff.length}`);
                 const n = Math.min(buff.length -i, MaxBuffSize);
                 const buff8 = new Uint8Array(n*8);
-                await fd.read(buff8, {offset: 0, length:n*8, position:pos + i});
+                await fd.read(buff8, {offset: 0, length:n*8, position:pos + i*8});
                 const buff64 = new BigUint64Array(buff8.buffer);
                 buff.set(buff64, o);
                 o += n;
