@@ -3,11 +3,13 @@ pragma circom 2.0.6;
 include "../circuits.bn128/gl.circom";
 include "../node_modules/circomlib/circuits/poseidon.circom";
 include "../node_modules/circomlib/circuits/bitify.circom";
+include "../node_modules/circomlib/circuits/sha256/sha256.circom";
 include "../circuits.bn128/fft.circom";
 include "../circuits.bn128/merklehash.circom";
 include "../circuits.bn128/evalpol.circom";
 include "../circuits.bn128/treeselector.circom";
 include "../circuits.bn128/bn1togl3.circom";
+include "../circuits.bn128/compconstant.circom";
 
 <%
 class Transcript {
@@ -460,6 +462,7 @@ template MapValues() {
 
 
 template StarkVerifier() {
+    signal input proverAddr;
     signal input publics[<%- pil.publics.length %>];
     signal input root1;
     signal input root2;
@@ -496,6 +499,8 @@ template StarkVerifier() {
 <% }                                                  -%>
 
     signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
+
+    signal output publicsHash;
 
     signal challenges[8][3];
 <% for (let s=0; s<starkStruct.steps.length; s++) {   -%>
@@ -808,7 +813,41 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
         }
     }
 
+//////
+// Calculate Publics Hash
+//////
+
+    component publicsHasher = Sha256(<%- 160 + 64*pil.publics.length %>);
+    component n2bProverAddr = Num2Bits(160);
+    component n2bPublics[<%- pil.publics.length %> ];
+    component cmpPublics[<%- pil.publics.length %> ];
+
+    n2bProverAddr.in <== proverAddr;
+    for (var i=0; i<160; i++) {
+        publicsHasher.in[160 - 1 -i] <== n2bProverAddr.out[i];
+    }
+
+    var offset = 160;
+
+    for (var i=0; i<<%- pil.publics.length %>; i++) {
+        n2bPublics[i] = Num2Bits(64);
+        cmpPublics[i] = CompConstant64(0xFFFFFFFF00000000);
+        n2bPublics[i].in <== publics[i];
+        for (var j=0; j<64; j++) {
+            publicsHasher.in[offset + 64 - 1 -j] <== n2bPublics[i].out[j];
+            cmpPublics[i].in[j] <== n2bPublics[i].out[j];
+        }
+        cmpPublics[i].out === 0;
+        offset += 64;
+    }
+
+    component n2bPublicsHash = Bits2Num(256);
+    for (var i = 0; i < 256; i++) {
+        n2bPublicsHash.in[i] <== publicsHasher.out[255-i];
+    }
+
+    publicsHash <== n2bPublicsHash.out;
 }
 
-component main {public [publics]}= StarkVerifier();
+component main = StarkVerifier();
 

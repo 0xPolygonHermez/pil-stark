@@ -9,6 +9,7 @@ const { proof2zkin } = require("./proof2zkin");
 const buildMerklehashGL = require("../src/merklehash_p.js");
 const buildMerklehashBN128 = require("../src/merklehash_bn128_p.js");
 const GL3 = require("./f3g.js");
+const { createHash } = require("crypto");
 
 
 
@@ -23,6 +24,7 @@ const argv = require("yargs")
     .alias("o", "proof")
     .alias("z", "zkin")
     .alias("b", "public")
+    .string("proverAddr")
     .argv;
 
 async function run() {
@@ -65,10 +67,33 @@ async function run() {
     const resP = await starkGen(cmPols, constPols, constTree, pil, starkInfo);
 
     await fs.promises.writeFile(proofFile, JSONbig.stringify(resP.proof, null, 1), "utf8");
-    await fs.promises.writeFile(publicFile, JSONbig.stringify(resP.publics, null, 1), "utf8");
+
 
     const zkIn = proof2zkin(resP.proof);
     zkIn.publics = resP.publics;
+
+    await fs.promises.writeFile(publicFile, JSONbig.stringify(resP.publics, null, 1), "utf8");
+    if (starkStruct.verificationHashType == "BN128") {
+
+        if (!argv.proverAddr) throw new Error("Prover Address not specified");
+        zkIn.proverAddr = BigInt(argv.proverAddr);
+
+
+        let b= zkIn.proverAddr.toString(16);
+        while (b.length < 40) b = "0" + b;
+
+        for (let i=0; i<resP.publics.length; i++) {
+            let b2 = resP.publics[i].toString(16);
+            while (b2.length<16) b2 = "0" + b2;
+            b = b + b2;
+        }
+
+        const publicsHash = BigInt("0x" + createHash('sha256').update(b, 'hex').digest("hex")) % 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+
+        console.log(`Publics Hash: 0x${publicsHash.toString(16)}`);
+    }
+
+
     await fs.promises.writeFile(zkinFile, JSONbig.stringify(zkIn, (k, v) => {
         if (typeof(v) === "bigint") {
             return v.toString();

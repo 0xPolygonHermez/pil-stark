@@ -643,6 +643,7 @@
                 "-o ${workspaceFolder}/tmp/fibonacci.c12.proof.json",
                 "-z ${workspaceFolder}/tmp/fibonacci.c12.proof.zkin.json",
                 "-b ${workspaceFolder}/tmp/fibonacci.c12.public.json",
+                "--proverAddr=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
@@ -947,6 +948,7 @@
                 "-o ${workspaceFolder}/tmp/all.c12.proof.json",
                 "-z ${workspaceFolder}/tmp/all.c12.proof.zkin.json",
                 "-b ${workspaceFolder}/tmp/all.c12.public.json",
+                "--proverAddr=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
             ],
             "runtimeArgs": ["--max-old-space-size=32000"]
         },
