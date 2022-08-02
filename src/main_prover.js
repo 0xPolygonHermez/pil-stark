@@ -90,7 +90,7 @@ async function run() {
 
         const publicsHash = BigInt("0x" + createHash('sha256').update(b, 'hex').digest("hex")) % 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
-        console.log(`Publics Hash: 0x${publicsHash.toString(16)}`);
+        console.log(`Publics Hash: 0x${publicsHash.toString()}`);
     }
 
 
