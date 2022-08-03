@@ -3,7 +3,7 @@ const version = require("../package").version;
 
 const { newConstantPolsArray, newCommitPolsArray, compile } = require("pilcom");
 const starkInfoGen = require("../src/starkinfo.js");
-const { starkGen, starkGen_allocate } = require("../src/stark_gen.js");
+const starkGen = require("../src/stark_gen.js");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true, storeAsString: true });
 const { proof2zkin } = require("./proof2zkin");
 const buildMerklehashGL = require("../src/merklehash_p.js");
@@ -64,7 +64,7 @@ async function run() {
 
     const starkInfo = starkInfoGen(pil, starkStruct);
 
-    const resP = await starkGen(cmPols, constPols, constTree, pil, starkInfo);
+    const resP = await starkGen(cmPols, constPols, constTree, starkInfo);
 
     await fs.promises.writeFile(proofFile, JSONbig.stringify(resP.proof, null, 1), "utf8");
 

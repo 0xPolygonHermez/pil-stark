@@ -3,14 +3,13 @@ const TranscriptBN128 = require("./transcript.bn128");
 const FRI = require("../src/fri.js");
 const buildMerkleHashGL = require("./merklehash_p.js");
 const buildMerkleHashBN128 = require("./merklehash_bn128_p.js");
-const starkInfoGen = require("./starkinfo.js");
 const { assert } = require("chai");
 const buildPoseidonGL = require("./poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 
-module.exports = async function starkVerify(proof, publics, pil, constRoot, starkStruct) {
+module.exports = async function starkVerify(proof, publics, constRoot, starkInfo) {
 
-    const starkInfo = starkInfoGen(pil, starkStruct);
+    const starkStruct = starkInfo.starkStruct;
 
     const poseidon = await buildPoseidonGL();
 

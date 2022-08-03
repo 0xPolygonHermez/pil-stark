@@ -4,6 +4,7 @@ const version = require("../package").version;
 const F1Field = require("./f3g");
 const { compile } = require("pilcom");
 const starkVerify = require("../src/stark_verify.js");
+const starkInfoGen = require("../src/starkinfo.js");
 var JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });;
 
 const argv = require("yargs")
@@ -35,7 +36,9 @@ async function run() {
 
     proof = str2bigInt(proof);
 
-    const resV = await starkVerify(proof, public, pil, constRoot, starkStruct);
+    const starkInfo = starkInfoGen(pil, starkStruct);
+
+    const resV = await starkVerify(proof, public, constRoot, starkInfo);
 
     if (resV === true) {
         console.log("Verification Ok!!")

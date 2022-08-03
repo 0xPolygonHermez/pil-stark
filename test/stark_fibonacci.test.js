@@ -2,22 +2,13 @@ const chai = require("chai");
 const assert = chai.assert;
 const F1Field = require("../src/f3g");
 const path = require("path");
-const starkInfoGen = require("../src/starkinfo.js");
-const { starkGen } = require("../src/stark_gen.js");
+const starkSetup = require("../src/stark_setup.js");
+const starkGen = require("../src/stark_gen.js");
 const starkVerify = require("../src/stark_verify.js");
-const {BigBuffer} = require("pilcom");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
-
 const smFibonacci = require("./sm_fibonacci/sm_fibonacci.js");
-
-const buildMerklehashGL = require("../src/merklehash_p.js");
-const buildMerklehashBN128 = require("../src/merklehash.bn128.js");
-
-const { interpolate } = require("../src/fft_p");
-
-
 
 describe("test fibonacci sm", async function () {
     this.timeout(10000000);
@@ -40,7 +31,6 @@ describe("test fibonacci sm", async function () {
 
         await smFibonacci.buildConstants(constPols.Fibonacci);
 
-        const starkInfo = starkInfoGen(pil, starkStruct);
         const cmPols = newCommitPolsArray(pil);
 
         const result = await smFibonacci.execute(cmPols.Fibonacci, [1,2]);
@@ -56,28 +46,11 @@ describe("test fibonacci sm", async function () {
             assert(0);
         }
 
-        const nBits = starkStruct.nBits;
-        const nBitsExt = starkStruct.nBitsExt;
-        const nExt= 1 << nBitsExt;
-        const constPolsArrayE = new BigBuffer(nExt*pil.nConstants);
+        const setup = await starkSetup(constPols, pil, starkStruct);
 
-        const constBuff  = constPols.writeToBuff();
-        await interpolate(constBuff, pil.nConstants, nBits, constPolsArrayE, nBitsExt );
+        const resP = await starkGen(cmPols, constPols, setup.constTree, setup.starkInfo);
 
-        let MH;
-        if (starkStruct.verificationHashType == "GL") {
-            MH = await buildMerklehashGL();
-        } else if (starkStruct.verificationHashType == "BN128") {
-            MH = await buildMerklehashBN128();
-        } else {
-            throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
-        }
-
-        const constTree = await MH.merkelize(constPolsArrayE, pil.nConstants, nExt);
-
-        const resP = await starkGen(cmPols, constPols, constTree, pil, starkInfo);
-
-        const resV = await starkVerify(resP.proof, resP.publics, pil, MH.root(constTree), starkStruct);
+        const resV = await starkVerify(resP.proof, resP.publics, setup.constRoot, setup.starkInfo);
 
         assert(resV==true);
     });

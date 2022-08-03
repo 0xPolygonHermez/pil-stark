@@ -22,7 +22,7 @@ const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
 
 
-module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, pil, starkInfo) {
+module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo) {
     const starkStruct = starkInfo.starkStruct;
     const N = 1 << starkStruct.nBits;
     const extendBits = starkStruct.nBitsExt - starkStruct.nBits;
@@ -49,8 +49,8 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
 
     const fri = new FRI( starkStruct, MH );
 
-    if (cmPols.$$nPols != pil.nCommitments) {
-        throw new Error(`Number of Commited Polynomials: ${cmPols.length} do not match with the pil definition: ${pil.nCommitments} `)
+    if (cmPols.$$nPols != starkInfo.nCm1) {
+        throw new Error(`Number of Commited Polynomials: ${cmPols.length} do not match with the starkInfo definition: ${starkInfo.nCm1} `)
     };
 
     const ctx = {}
@@ -110,14 +110,14 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
 //    calculateExps(F, pols, starkInfo.step1prev);
 
     ctx.publics = [];
-    for (let i=0; i<pil.publics.length; i++) {
-        if (pil.publics[i].polType == "cmP") {
-            ctx.publics[i] = ctx.cm1_n.getElement( pil.publics[i].idx * starkInfo.mapSectionsN.cm1_n + pil.publics[i].polId   );
-        } else if (pil.publics[i].polType == "imP") {
+    for (let i=0; i<starkInfo.publics.length; i++) {
+        if (starkInfo.publics[i].polType == "cmP") {
+            ctx.publics[i] = ctx.cm1_n.getElement( starkInfo.publics[i].idx * starkInfo.mapSectionsN.cm1_n + starkInfo.publics[i].polId   );
+        } else if (starkInfo.publics[i].polType == "imP") {
             // EDU: Do not implement this in the firs version.
             //      we will not use it.
-            ctx.publics[i] = calculateExpAtPoint(ctx, starkInfo.publicsCode[i], pil.publics[i].idx);
-//            ctx.publics[i] = ctx.exps[pil.publics[i].polId][pil.publics[i].idx];
+            ctx.publics[i] = calculateExpAtPoint(ctx, starkInfo.publicsCode[i], starkInfo.publics[i].idx);
+//            ctx.publics[i] = ctx.exps[starkInfo.publics[i].polId][starkInfo.publics[i].idx];
         } else {
             throw new Error(`Invalid public type: ${polType.type}`);
         }
@@ -330,6 +330,8 @@ module.exports.starkGen = async function starkGen(cmPols, constPols, constTree, 
     }
 
     const friProof = await fri.prove(transcript, friPol, queryPol);
+
+    await pool.terminate();
 
     return {
         proof: {
