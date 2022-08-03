@@ -163,13 +163,13 @@ module.exports = async function buildCHelpers(starkInfo) {
         let res;
         if (ret) {
             res = [
-                `Goldilocks::Element ${functionName}(Goldilocks::Element *pols, ConstantPolsAll &const_n, Goldilocks3::Element *challenges, uint64_t i) {`,
+                `Goldilocks::Element Stark::${functionName}(Goldilocks::Element *pols,  const Goldilocks::Element *publicInputs, uint64_t i) {`,
                 ...body,
                 `}`
             ].join("\n");
         } else {
             res = [
-                `void ${functionName}(Goldilocks::Element *pols, ConstantPolsAll &const_n, Goldilocks3::Element *challenges, uint64_t i) {`,
+                `void Stark::${functionName}(Goldilocks::Element *pols,  const Goldilocks::Element *publicInputs, uint64_t i) {`,
                 ...body,
                 `}`
             ].join("\n");
@@ -183,15 +183,15 @@ module.exports = async function buildCHelpers(starkInfo) {
                 case "const": {
                     if (dom == "n") {
                         if (r.prime) {
-                            return `const_n.getElement(${r.id},(i+1)%${N})`;
+                            return ` pConstPols->getElement(${r.id},(i+1)%${N})`;
                         } else {
-                            return `const_n.getElement(${r.id},i)`;
+                            return ` pConstPols->getElement(${r.id},i)`;
                         }
                     } else if (dom == "2ns") {
                         if (r.prime) {
-                            return `const_2ns.getElement(${r.id},(i+${next})%${N})`;
+                            return `pConstPols2ns->getElement(${r.id},(i+${next})%${N})`;
                         } else {
-                            return `const_2ns.getElement(${r.id},i)`;
+                            return `pConstPols2ns->getElement(${r.id},i)`;
                         }
                     } else {
                         throw new Error("Invalid dom");
@@ -224,22 +224,22 @@ module.exports = async function buildCHelpers(starkInfo) {
                         throw new Error("Invalid dom");
                     }
                 }
-                case "number": return `Goldilocks::fromString("${r.value.toString()}")`;
-                case "public": return `public[${r.id}]`;
-                case "challenge": return `challenges[${r.id}]`;
-                case "eval": return `evals[${r.id}]`;
-                case "xDivXSubXi": return `xDivXSubXi[i]`;
-                case "xDivXSubWXi": return `xDivXSubWXi[i]`;
+                case "number": return `Goldilocks::fromU64(${BigInt(r.value).toString()}ULL)`;
+                case "public": return `publicInputs[${r.id}]`;
+                case "challenge": return `(Goldilocks3::Element &)*challenges[${r.id}]`;
+                case "eval": return `(Goldilocks3::Element &)*evals[${r.id}]`;
+                case "xDivXSubXi": return `(Goldilocks3::Element &)*xDivXSubXi[i]`;
+                case "xDivXSubWXi": return `(Goldilocks3::Element &)*xDivXSubWXi[i]`;
                 case "x": {
                     if (dom == "n") {
-                        return `x_n[i]`;
+                        return `(Goldilocks::Element &)*x_n[i]`;
                     } else if (dom == "2ns") {
-                        return `x_2ns[i]`;
+                        return `(Goldilocks::Element &)*x_2ns[i]`;
                     } else {
                         throw new Error("Invalid dom");
                     }
                 }
-                case "Zi": return `Zi.zhInv(i)`;
+                case "Zi": return `zi.zhInv(i)`;
                 default: throw new Error("Invalid reference type get: " + r.type);
             }
         }

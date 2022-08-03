@@ -15,7 +15,9 @@
                 "${workspaceFolder}/test/poseidon_bn128.test.js"
             ],
             "type": "pwa-node",
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test workers",
@@ -25,7 +27,9 @@
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test fft parallel",
@@ -38,7 +42,9 @@
             "args": [
                 "${workspaceFolder}/test/fft_p.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=128000"]
+            "runtimeArgs": [
+                "--max-old-space-size=128000"
+            ]
         },
         {
             "name": "test f3g",
@@ -51,7 +57,9 @@
             "args": [
                 "${workspaceFolder}/test/f3g.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test gl Wasm",
@@ -64,7 +72,9 @@
             "args": [
                 "${workspaceFolder}/test/glwasm.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test fft",
@@ -77,7 +87,9 @@
             "args": [
                 "${workspaceFolder}/test/fft.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test sqrt",
@@ -90,7 +102,9 @@
             "args": [
                 "${workspaceFolder}/test/sqrt.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test poseidon",
@@ -103,7 +117,9 @@
             "args": [
                 "${workspaceFolder}/test/poseidon.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test merklehash",
@@ -116,7 +132,9 @@
             "args": [
                 "${workspaceFolder}/test/merklehash.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=64000"]
+            "runtimeArgs": [
+                "--max-old-space-size=64000"
+            ]
         },
         {
             "name": "test merklehash parallel",
@@ -129,7 +147,9 @@
             "args": [
                 "${workspaceFolder}/test/merklehash_p.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=128000"]
+            "runtimeArgs": [
+                "--max-old-space-size=128000"
+            ]
         },
         {
             "name": "test merklehash bn128 parallel",
@@ -142,7 +162,9 @@
             "args": [
                 "${workspaceFolder}/test/merklehash_bn128_p.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=64000"]
+            "runtimeArgs": [
+                "--max-old-space-size=64000"
+            ]
         },
         {
             "name": "test bn128 merklehash",
@@ -155,7 +177,9 @@
             "args": [
                 "${workspaceFolder}/test/merklehash.bn128.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=64000"]
+            "runtimeArgs": [
+                "--max-old-space-size=64000"
+            ]
         },
         {
             "name": "test fibonacci",
@@ -168,7 +192,9 @@
             "args": [
                 "${workspaceFolder}/test/stark_fibonacci.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test plookup",
@@ -181,7 +207,9 @@
             "args": [
                 "${workspaceFolder}/test/stark_plookup.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test simple plookup",
@@ -194,7 +222,9 @@
             "args": [
                 "${workspaceFolder}/test/stark_simple_plookup.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test permutation",
@@ -207,7 +237,9 @@
             "args": [
                 "${workspaceFolder}/test/stark_permutation.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test connection",
@@ -220,7 +252,9 @@
             "args": [
                 "${workspaceFolder}/test/stark_connection.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test all",
@@ -233,7 +267,9 @@
             "args": [
                 "${workspaceFolder}/test/stark_all.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test bn128 verifier circuit",
@@ -246,7 +282,9 @@
             "args": [
                 "${workspaceFolder}/test/gl.bn128.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=64000"]
+            "runtimeArgs": [
+                "--max-old-space-size=64000"
+            ]
         },
         {
             "name": "test poseidon circuit",
@@ -259,7 +297,9 @@
             "args": [
                 "${workspaceFolder}/test/poseidon.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "FFT circuit test",
@@ -272,7 +312,9 @@
             "args": [
                 "${workspaceFolder}/test/fft.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "FFT bn128 circuit test",
@@ -285,7 +327,9 @@
             "args": [
                 "${workspaceFolder}/test/fft.bn128.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "LinearHash GL circuit test",
@@ -298,7 +342,9 @@
             "args": [
                 "${workspaceFolder}/test/linearhash.gl.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "LinearHash BN128 circuit test",
@@ -311,7 +357,9 @@
             "args": [
                 "${workspaceFolder}/test/linearhash.bn128.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test MerkleHash circuit",
@@ -324,7 +372,9 @@
             "args": [
                 "${workspaceFolder}/test/merklehash.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "test MerkleHash bn128 circuit test",
@@ -337,7 +387,9 @@
             "args": [
                 "${workspaceFolder}/test/merklehash.bn128.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "TreeSelector circuit test",
@@ -350,7 +402,9 @@
             "args": [
                 "${workspaceFolder}/test/treeselector.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "evalPol circuit test",
@@ -363,7 +417,9 @@
             "args": [
                 "${workspaceFolder}/test/evalpol.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "evalPol bn128 circuit test",
@@ -376,7 +432,9 @@
             "args": [
                 "${workspaceFolder}/test/evalpol.bn128.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "Aliascheck circuit test",
@@ -389,7 +447,9 @@
             "args": [
                 "${workspaceFolder}/test/aliascheck.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci buildconst",
@@ -402,7 +462,9 @@
             "args": [
                 "-o tmp/fibonacci.const"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci exec",
@@ -416,7 +478,9 @@
                 "-i test/sm_fibonacci/fibonacci.input.json",
                 "-o tmp/fibonacci.commit"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci PIL verify",
@@ -431,7 +495,9 @@
                 "-p test/sm_fibonacci/fibonacci_main.pil",
                 "-c tmp/fibonacci.const"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci gen StarkInfo",
@@ -446,7 +512,9 @@
                 "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.starkstruct.json",
                 "-i tmp/fibonacci.starkinfo.json"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci build CHelpers",
@@ -461,7 +529,9 @@
                 "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.starkstruct.json",
                 "-c tmp/fibonacci.chelpers.cpp"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci build consttree",
@@ -478,7 +548,9 @@
                 "-t ${workspaceFolder}/tmp/fibonacci.consttree",
                 "-v ${workspaceFolder}/tmp/fibonacci.verkey.json",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci prove",
@@ -498,7 +570,9 @@
                 "-z ${workspaceFolder}/tmp/fibonacci.proof.zkin.json",
                 "-b ${workspaceFolder}/tmp/fibonacci.public.json",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci verify proof",
@@ -515,7 +589,9 @@
                 "-b ${workspaceFolder}/tmp/fibonacci.public.json",
                 "-v ${workspaceFolder}/tmp/fibonacci.verkey.json"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci generate circom",
@@ -531,7 +607,9 @@
                 "-v ${workspaceFolder}/tmp/fibonacci.verkey.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.verifier.circom",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci StarkVerifier GL circuit test",
@@ -544,7 +622,9 @@
             "args": [
                 "${workspaceFolder}/test/stark_fibonacci_verification.circuit.test"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci C12 setup",
@@ -560,7 +640,9 @@
                 "-c ${workspaceFolder}/tmp/fibonacci.c12.const",
                 "-e ${workspaceFolder}/tmp/fibonacci.c12.exec",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci C12 genStarkInfo",
@@ -575,7 +657,9 @@
                 "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.c12.starkstruct.json",
                 "-i tmp/fibonacci.c12.starkinfo.json"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci C12 exec",
@@ -592,7 +676,9 @@
                 "-e ${workspaceFolder}/tmp/fibonacci.c12.exec",
                 "-m ${workspaceFolder}/tmp/fibonacci.c12.commit",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci C12 PIL verify",
@@ -607,7 +693,9 @@
                 "-p tmp//fibonacci.c12.pil",
                 "-c tmp/fibonacci.c12.const"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci C12 build consttree",
@@ -624,7 +712,9 @@
                 "-t ${workspaceFolder}/tmp/fibonacci.c12.consttree",
                 "-v ${workspaceFolder}/tmp/fibonacci.c12.verkey.json",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci C12 prove",
@@ -645,7 +735,9 @@
                 "-b ${workspaceFolder}/tmp/fibonacci.c12.public.json",
                 "--proverAddr=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci C12 verify proof",
@@ -662,7 +754,9 @@
                 "-b ${workspaceFolder}/tmp/fibonacci.c12.public.json",
                 "-v ${workspaceFolder}/tmp/fibonacci.c12.verkey.json"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci generate BN128 final circom",
@@ -678,7 +772,9 @@
                 "-v ${workspaceFolder}/tmp/fibonacci.c12.verkey.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.c12.verifier.circom",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "fibonacci bn128 circuit test",
@@ -691,11 +787,10 @@
             "args": [
                 "${workspaceFolder}/test/fibonacci_bn128_verifier.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
-
-
-
         {
             "name": "all buildconst",
             "program": "test/sm_all/main_buildconst_all.js",
@@ -707,7 +802,9 @@
             "args": [
                 "-o tmp/all.const"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all exec",
@@ -721,7 +818,9 @@
                 "-i test/sm_all/all.input.json",
                 "-o tmp/all.commit"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all PIL verify",
@@ -736,7 +835,9 @@
                 "-p test/sm_all/all_main.pil",
                 "-c tmp/all.const"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all gen StarkInfo",
@@ -751,7 +852,9 @@
                 "-s ${workspaceFolder}/test/sm_all/all.starkstruct.json",
                 "-i tmp/all.starkinfo.json"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all build CHelpers",
@@ -766,7 +869,9 @@
                 "-s ${workspaceFolder}/test/sm_all/all.starkstruct.json",
                 "-c tmp/all.chelpers.cpp"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all build consttree",
@@ -783,7 +888,9 @@
                 "-t ${workspaceFolder}/tmp/all.consttree",
                 "-v ${workspaceFolder}/tmp/all.verkey.json",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all prove",
@@ -803,7 +910,9 @@
                 "-z ${workspaceFolder}/tmp/all.proof.zkin.json",
                 "-b ${workspaceFolder}/tmp/all.public.json",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all verify proof",
@@ -820,7 +929,9 @@
                 "-b ${workspaceFolder}/tmp/all.public.json",
                 "-v ${workspaceFolder}/tmp/all.verkey.json"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all generate circom",
@@ -836,7 +947,9 @@
                 "-v ${workspaceFolder}/tmp/all.verkey.json",
                 "-o ${workspaceFolder}/tmp/all.verifier.circom",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all StarkVerifier GL circuit test",
@@ -849,7 +962,9 @@
             "args": [
                 "${workspaceFolder}/test/stark_all_verification.circuit.test"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all C12 setup",
@@ -865,7 +980,9 @@
                 "-c ${workspaceFolder}/tmp/all.c12.const",
                 "-e ${workspaceFolder}/tmp/all.c12.exec",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all C12 genStarkInfo",
@@ -880,7 +997,9 @@
                 "-s ${workspaceFolder}/test/sm_all/all.c12.starkstruct.json",
                 "-i tmp/all.c12.starkinfo.json"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all C12 exec",
@@ -897,7 +1016,9 @@
                 "-e ${workspaceFolder}/tmp/all.c12.exec",
                 "-m ${workspaceFolder}/tmp/all.c12.commit",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all C12 PIL verify",
@@ -912,7 +1033,9 @@
                 "-p tmp//all.c12.pil",
                 "-c tmp/all.c12.const"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all C12 build consttree",
@@ -929,7 +1052,9 @@
                 "-t ${workspaceFolder}/tmp/all.c12.consttree",
                 "-v ${workspaceFolder}/tmp/all.c12.verkey.json",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all C12 prove",
@@ -950,7 +1075,9 @@
                 "-b ${workspaceFolder}/tmp/all.c12.public.json",
                 "--proverAddr=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all C12 verify proof",
@@ -967,7 +1094,9 @@
                 "-b ${workspaceFolder}/tmp/all.c12.public.json",
                 "-v ${workspaceFolder}/tmp/all.c12.verkey.json"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all generate BN128 final circom",
@@ -983,7 +1112,9 @@
                 "-v ${workspaceFolder}/tmp/all.c12.verkey.json",
                 "-o ${workspaceFolder}/tmp/all.c12.verifier.circom",
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "all bn128 circuit test",
@@ -996,7 +1127,9 @@
             "args": [
                 "${workspaceFolder}/test/all_bn128_verifier.circuit.test.js"
             ],
-            "runtimeArgs": ["--max-old-space-size=32000"]
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
         },
         {
             "name": "zkevm build const tree",
@@ -1013,7 +1146,9 @@
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
-            "runtimeArgs": ["--max-old-space-size=512000"]
+            "runtimeArgs": [
+                "--max-old-space-size=512000"
+            ]
         },
         {
             "name": "zkevm build starkinfo",
@@ -1028,7 +1163,29 @@
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
-            "runtimeArgs": ["--max-old-space-size=512000"]
+            "runtimeArgs": [
+                "--max-old-space-size=512000"
+            ]
+        },
+        {
+            "name": "zkevm cHelpers",
+            "program": "src/main_buildchelpers.js",
+            "request": "launch",
+            "args": [
+                "-p ${workspaceFolder}/../zkevm-proverjs/pil/main.pil",
+                "-s ${workspaceFolder}/../zkevm-proverjs/src/zkevm.starkstruct.json",
+                "-c ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.chelpers.cpp"
+            ],
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "runtimeArgs": [
+                "--trace-gc",
+                "--trace-gc-ignore-scavenger",
+                "--max-semi-space-size=1024",
+                "--max-old-space-size=128000"
+            ]
         },
         {
             "name": "zkevm proof",
@@ -1048,7 +1205,9 @@
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
-            "runtimeArgs": ["--max-old-space-size=512000"]
+            "runtimeArgs": [
+                "--max-old-space-size=512000"
+            ]
         },
         {
             "name": "zkevm verify",
@@ -1060,13 +1219,14 @@
                 "-v ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.verkey.json",
                 "-o ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.proof.json",
                 "-b ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.public.json"
-
             ],
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
-            "runtimeArgs": ["--max-old-space-size=512000"]
+            "runtimeArgs": [
+                "--max-old-space-size=512000"
+            ]
         },
         {
             "name": "zkevm c12 verify",
@@ -1083,7 +1243,9 @@
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
-            "runtimeArgs": ["--max-old-space-size=512000"]
+            "runtimeArgs": [
+                "--max-old-space-size=512000"
+            ]
         }
     ]
 }
