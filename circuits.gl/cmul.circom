@@ -1,24 +1,6 @@
 pragma circom 2.0.6;
 pragma custom_templates;
 
-/*
-template CMul() {
-    signal input ina[3];
-    signal input inb[3];
-    signal output out[3];
-
-    custom_component cmul = CMulCG();
-
-    for (var i=0; i<3; i++) {
-        cmul.ina[i] <== ina[i];
-        cmul.inb[i] <== inb[i];
-    }
-
-    for (var i=0; i<3; i++) {
-        out[i] <== cmul.out[i];
-    }
-}
-*/
 template custom CMul() {
     signal input ina[3];
     signal input inb[3];
