@@ -15,11 +15,12 @@ const { createHash } = require("crypto");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_prover.js -m commit.bin -c <const.bin> -t <consttree.bin> -p <pil.json> -s <starkstruct.json> -o <proof.json> -b <public.json>")
+    .usage("node main_prover.js -m commit.bin -c <const.bin> -t <consttree.bin> -p <pil.json> [-P <pilconfig.json>] -s <starkstruct.json> -o <proof.json> -b <public.json>")
     .alias("m", "commit")
     .alias("c", "const")
     .alias("t", "consttree")
     .alias("p", "pil")
+    .alias("P", "pilconfig")
     .alias("s", "starkstruct")
     .alias("o", "proof")
     .alias("z", "zkin")
@@ -34,12 +35,13 @@ async function run() {
     const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "mycircuit.const";
     const constTreeFile = typeof(argv.consttree) === "string" ?  argv.consttree.trim() : "mycircuit.consttree";
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
+    const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
     const starkStructFile = typeof(argv.starkstruct) === "string" ?  argv.starkstruct.trim() : "mycircuit.stark_struct.json";
     const proofFile = typeof(argv.proof) === "string" ?  argv.proof.trim() : "mycircuit.proof.json";
     const zkinFile = typeof(argv.zkin) === "string" ?  argv.zkin.trim() : "mycircuit.proof.zkin.json";
     const publicFile = typeof(argv.public) === "string" ?  argv.public.trim() : "mycircuit.public.json";
 
-    const pil = await compile(F, pilFile);
+    const pil = await compile(F, pilFile, null, pilConfig);
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
 
     const nBits = starkStruct.nBits;

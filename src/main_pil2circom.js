@@ -10,8 +10,9 @@ const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_pil2circom.js -o <verifier.circom> -p <pil.json> -v <verification_key.json>")
+    .usage("node main_pil2circom.js -o <verifier.circom> -p <pil.json> [-P <pilconfig.json>] -v <verification_key.json>")
     .alias("p", "pil")
+    .alias("P", "pilconfig")
     .alias("s", "starkStruct")
     .alias("v", "verkey")
     .alias("o", "output")
@@ -21,11 +22,12 @@ async function run() {
     const F = new F1Field();
 
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
+    const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
     const starkStructFile = typeof(argv.starkStruct) === "string" ?  argv.starkStruct.trim() : "stark_struct.json";
     const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "mycircuit.verkey.json";
     const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "mycircuit.verifier.circom";
 
-    const pil = await compile(F, pilFile);
+    const pil = await compile(F, pilFile, null, pilConfig);
     const verKey = JSONbig.parse(await fs.promises.readFile(verKeyFile, "utf8"));
     const constRoot = verKey.constRoot;
 

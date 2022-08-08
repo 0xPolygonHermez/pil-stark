@@ -12,9 +12,10 @@ const {interpolate} = require("./fft_p");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_buildconsttree.js -c const.bin -p <pil.json> -s <starkstruct.json> -t <consttree.bin>  -v <verification_key.json>")
+    .usage("node main_buildconsttree.js -c const.bin -p <pil.json> [-P <pilconfig.json>] -s <starkstruct.json> -t <consttree.bin>  -v <verification_key.json>")
     .alias("c", "const")
     .alias("p", "pil")
+    .alias("P", "pilconfig")
     .alias("s", "starkstruct")
     .alias("t", "consttree")
     .alias("v", "verkey")
@@ -24,13 +25,14 @@ async function run() {
     const F = new F1Field();
 
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
+    const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
     const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "mycircuit.const";
     const starkStructFile = typeof(argv.starkstruct) === "string" ?  argv.starkstruct.trim() : "mycircuit.stark_struct.json";
     const constTreeFile = typeof(argv.consttree) === "string" ?  argv.consttree.trim() : "mycircuit.consttree";
     const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "mycircuit.verkey.json";
 
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
-    const pil = await compile(F, pilFile);
+    const pil = await compile(F, pilFile, null, pilConfig);
 
     const nBits = starkStruct.nBits;
     const nBitsExt = starkStruct.nBitsExt;
