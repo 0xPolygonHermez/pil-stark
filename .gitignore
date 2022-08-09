@@ -1,9 +1,5 @@
 node_modules
 .vscode
 dist
-proof.json
-logs.json
 package-lock.json
-testvectors/commit.bin
-testvectors/constants.bin
 tmp/*
