@@ -16,6 +16,16 @@ const map = require("./starkinfo_map");
 module.exports = function starkInfoGen(_pil, starkStruct) {
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
     const F = new F1Field();
+    const pilDeg = Object.values(pil.references)[0].polDeg;
+    const starkDeg = 2 ** starkStruct.nBits;
+
+    if ( starkDeg != pilDeg) {
+        throw new Error(`Starkpil and pil have degree mismatch (starkpil:${starkDeg} pil:${pilDeg})`);
+    }
+
+    if ( starkStruct.nBitsExt != starkStruct.steps[0].nBits) {
+        throw new Error(`Starkpil.nBitsExt and first step of Starkpil have a mismatch (nBitsExt:${starkStruct.nBitsExt} pil:${starkStruct.steps[0].nBits})`);
+    }
 
     const res = {
         varPolMap: [],

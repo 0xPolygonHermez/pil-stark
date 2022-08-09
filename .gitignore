@@ -3,9 +3,7 @@ node_modules
 dist
 proof.json
 logs.json
-logs-trace
-logs-full-trace
-cache-main-pil.json
+package-lock.json
 testvectors/commit.bin
 testvectors/constants.bin
 tmp/*
