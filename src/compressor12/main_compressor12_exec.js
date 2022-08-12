@@ -10,10 +10,11 @@ const { log2 } = require("../utils.js")
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_compressor12_exec.js -r <r1cs.circom> -p <pil.json> -v <verification_key.json>")
+    .usage("node main_compressor12_exec.js -r <r1cs.circom> -p <pil.json> [-P <pilconfig.json] -v <verification_key.json>")
     .alias("i", "input")
     .alias("w", "wasm")
     .alias("p", "pil")
+    .alias("P", "pilconfig")
     .alias("e", "exec")
     .alias("m", "commit")
     .argv;
@@ -24,6 +25,7 @@ async function run() {
     const inputFile = typeof(argv.input) === "string" ?  argv.input.trim() : "mycircuit.proof.zkin.json";
     const wasmFile = typeof(argv.wasm) === "string" ?  argv.wasm.trim() : "mycircuit.verifier.wasm";
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.c12.pil";
+    const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
     const execFile = typeof(argv.exec) === "string" ?  argv.exec.trim() : "mycircuit.c12.exec";
     const commitFile = typeof(argv.commit) === "string" ?  argv.commit.trim() : "mycircuit.c12.exec";
 
@@ -37,7 +39,7 @@ async function run() {
     await fd.read(wasm, 0, st.size);
     await fd.close();
 
-    const pil = await compile(F, pilFile);
+    const pil = await compile(F, pilFile, null, pilConfig);
 
     const cmPols = newCommitPolsArray(pil);
 

@@ -25,7 +25,7 @@
     "circom_runtime": "^0.1.18",
     "circomlibjs": "^0.1.6",
     "ejs": "^3.1.8",
-    "pilcom": "^0.0.11",
+    "pilcom": "^0.0.13",
     "wasmbuilder": "^0.0.12",
     "wasmcurves": "^0.1.5",
     "workerpool": "^6.2.1",
