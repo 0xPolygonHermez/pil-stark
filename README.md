@@ -1,6 +1,6 @@
-# PIL Stark
+# PIL STARK
 
-Generates a stark from a SM written in pil.
+Generates a STARK proof from a State Machine written in PIL Language.
 
 ## License
 
