@@ -1,0 +1,26 @@
+constant %N = 2**<%- nBits %>;
+
+namespace Global(%N);
+    pol constant L1;
+<% for (let i=1; i<nPublics; i++) { -%>
+    pol constant L<%- i+1 %>;
+<% } -%>
+
+namespace PlonkCircuit(%N);
+    pol constant S[3];
+    pol constant Qm, Ql, Qr, Qo, Qk;
+    pol commit a[3];
+
+<% for (let i=0; i<nPublics; i++) { -%>
+    public pub<%- i%> = a[0](<%- i %>);
+<% } -%>
+<% for (let i=0; i<nPublics; i++) { -%>
+    Global.L<%- i+1 %> * (a[0] - :pub<%- i %>) = 0;
+<% } -%>
+
+// Normal plonk ecuations
+    pol a01 = a[0]*a[1];
+    Qm*a01 + Ql*a[0] + Qr*a[1] + Qo*a[2] + Qk = 0;
+
+// Connection equations
+    {a[0], a[1], a[2]} connect {S[0], S[1], S[2]};

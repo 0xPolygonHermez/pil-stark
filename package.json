@@ -11,7 +11,9 @@
     "fibonacci_compileverifier": "circom --O1 --prime goldilocks --r1cs --sym --wasm --verbose tmp/fibonacci.verifier.circom -o tmp",
     "fibonacci_compileC12verifier": "circom --O1 --r1cs --sym --wasm --verbose tmp/fibonacci.c12.verifier.circom -o tmp",
     "all_compileverifier": "circom --O1 --prime goldilocks --r1cs --sym --wasm --c --verbose tmp/all.verifier.circom -o tmp",
-    "all_compileC12verifier": "circom --O1 --r1cs --sym --wasm --verbose tmp/all.c12.verifier.circom -o tmp"
+    "all_compileC12verifier": "circom --O1 --r1cs --sym --wasm --verbose tmp/all.c12.verifier.circom -o tmp",
+    "plonktest_compile": "circom --O1 --prime goldilocks --r1cs --sym --wasm --c --verbose test/circuits/plonktest.circom -o tmp",
+    "plonktest_wc": "snarkjs wc tmp/plonktest_js/plonktest.wasm test/circuits/plonkinput.json tmp/plonktest.wtns"
   },
   "keywords": [
     "stark",
@@ -22,16 +24,17 @@
     "hermez"
   ],
   "dependencies": {
+    "@iden3/binfileutils": "^0.0.11",
     "circom_runtime": "^0.1.18",
+    "circomlib": "^2.0.5",
     "circomlibjs": "^0.1.6",
     "ejs": "^3.1.8",
+    "json-bigint": "^1.0.0",
     "pilcom": "^0.0.13",
+    "r1csfile": "^0.0.40",
     "wasmbuilder": "^0.0.12",
     "wasmcurves": "^0.1.5",
-    "workerpool": "^6.2.1",
-    "circomlib": "^2.0.5",
-    "json-bigint": "^1.0.0",
-    "r1csfile": "^0.0.40"
+    "workerpool": "^6.2.1"
   },
   "author": "Polygon Hermez",
   "license": "UNLICENSED",

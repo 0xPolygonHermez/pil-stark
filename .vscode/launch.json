@@ -1246,6 +1246,57 @@
             "runtimeArgs": [
                 "--max-old-space-size=512000"
             ]
-        }
+        },
+        {
+            "name": "plonktest setup",
+            "program": "src/main_plonksetup.js",
+            "request": "launch",
+            "args": [
+                "-r ${workspaceFolder}/tmp/plonktest.r1cs",
+                "-p ${workspaceFolder}/tmp/plonktest.pil",
+                "-c ${workspaceFolder}/tmp/plonktest.const",
+                "-e ${workspaceFolder}/tmp/plonktest.exec"            ],
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "runtimeArgs": [
+                "--max-old-space-size=512000"
+            ]
+        },
+        {
+            "name": "plonktest exec",
+            "program": "src/main_plonkexec.js",
+            "request": "launch",
+            "args": [
+                "-e ${workspaceFolder}/tmp/plonktest.exec",
+                "-w ${workspaceFolder}/tmp/plonktest.wtns",
+                "-p ${workspaceFolder}/tmp/plonktest.pil",
+                "-m ${workspaceFolder}/tmp/plonktest.commit"]
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "runtimeArgs": [
+                "--max-old-space-size=512000"
+            ]
+        },
+        {
+            "name": "plonktest verify",
+            "program": "node_modules/pilcom/src/main_pilverifier.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/tmp/plonktest.commit",
+                "-p ${workspaceFolder}/tmp/plonktest.pil",
+                "-c ${workspaceFolder}/tmp/plonktest.const"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
     ]
 }
