@@ -1,3 +1,4 @@
+// TODO: Explain ALL the tricks
 
 const assert = require("assert");
 const buildMerklehashGL = require("./merklehash_p.js");
@@ -68,6 +69,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     let nCm = starkInfo.nCm1;
 
     ctx.cm1_n = new BigBuffer(starkInfo.mapSectionsN.cm1_n*ctx.N);
+    // Prepare committed polynomials
     cmPols.writeToBigBuffer(ctx.cm1_n, 0);
     ctx.cm2_n = new BigBuffer(starkInfo.mapSectionsN.cm2_n*ctx.N);
     ctx.cm3_n = new BigBuffer(starkInfo.mapSectionsN.cm3_n*ctx.N);
@@ -80,13 +82,20 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     ctx.exps_withq_2ns = new BigBuffer(starkInfo.mapSectionsN.exps_withq_2ns*ctx.Next);
     ctx.exps_withoutq_2ns = new BigBuffer(starkInfo.mapSectionsN.exps_withoutq_2ns*ctx.Next);
 
-    ctx.x_n = new BigBuffer(N);
+    // x_n = [1, w, w^2, ..., w^{N-1}]
+    // w is the generator of the subgroup of order N
+    // w = 7^{(p-1)/N}
+    ctx.x_n = new BigBuffer(N); 
     let xx = F.one;
     for (let i=0; i<N; i++) {
         ctx.x_n.setElement(i, xx);
         xx = F.mul(xx, F.w[nBits])
     }
 
+    // x_2ns = [s, sw, sw^2, ..., sw^{Next-1}]
+    // w is the generator of the subgroup of order Next
+    // w = 7^{(p-1)/Next}
+    // s is the shift
     ctx.x_2ns = new BigBuffer(N << extendBits);
     xx = F.shift;
     for (let i=0; i<(N << extendBits); i++) {
@@ -94,27 +103,32 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         xx = F.mul(xx, F.w[nBits + extendBits]);
     }
 
-
-    // Build ZHInv
+    // Build zhInv, where zh(X) = X^N - 1
+    // The following functions evaluates zhInv at x_2ns
     const zhInv = buildZhInv(F, nBits, extendBits);
     ctx.Zi = zhInv;
 
-
     ctx.const_n = new BigBuffer(starkInfo.nConstants*ctx.N);
+    // Prepare constant polynomials
     constPols.writeToBigBuffer(ctx.const_n, 0);
 
+    // Prepare constant polynomials at the extended domain
     ctx.const_2ns = constTree.elements;
 
-// This will calculate all the Q polynomials and extend commits
+///////////
+// 1. Calculate all the Q polynomials and extend commits
+///////////
 
 //    calculateExps(F, pols, starkInfo.step1prev);
 
+    // Obtain the public values as requested in the PIL
+    // Recall that these public values are evaluations of committed and intermediate polynomials at some point
     ctx.publics = [];
     for (let i=0; i<starkInfo.publics.length; i++) {
         if (starkInfo.publics[i].polType == "cmP") {
             ctx.publics[i] = ctx.cm1_n.getElement( starkInfo.publics[i].idx * starkInfo.mapSectionsN.cm1_n + starkInfo.publics[i].polId   );
         } else if (starkInfo.publics[i].polType == "imP") {
-            // EDU: Do not implement this in the firs version.
+            // EDU: Do not implement this in the first version.
             //      we will not use it.
             ctx.publics[i] = calculateExpAtPoint(ctx, starkInfo.publicsCode[i], starkInfo.publics[i].idx);
 //            ctx.publics[i] = ctx.exps[starkInfo.publics[i].polId][starkInfo.publics[i].idx];
@@ -123,12 +137,15 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         }
     }
 
+    // Interpolate the committed polynomials, evaluate them at the evaluation domain and Merkelize them
+    // TODO: Check how the Merkleization is performed
     console.log("Merkelizing 1....");
     const tree1 = await extendAndMerkelize(MH, ctx.cm1_n, ctx.cm1_2ns, starkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.nBitsExt );
+    // The first element of the proof is the root of the Merkle tree
     transcript.put(MH.root(tree1));
 
 ///////////
-// 2.- Caluculate plookups h1 and h2
+// 2. Calculate plookups h1 and h2
 ///////////
     ctx.challenges[0] = transcript.getField(); // u
     ctx.challenges[1] = transcript.getField(); // defVal
@@ -155,7 +172,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     transcript.put(MH.root(tree2));
 
 ///////////
-// 3.- Compute Z polynomials
+// 3. Compute Z polynomials
 ///////////
     ctx.challenges[2] = transcript.getField(); // gamma
     ctx.challenges[3] = transcript.getField(); // betta
@@ -226,12 +243,17 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     ctx.challenges[6] = transcript.getField(); // v2
     ctx.challenges[7] = transcript.getField(); // xi
 
-// Calculate Evals
+// 5.1 Calculate Evals
 
+    // Computing the evaluation of the Lagrange polynomials at xi
+    // L_i(X) = [w^i(X^N - 1)] / [N(X - w^i)]
+    // TODO: Check and explain Jordi's trick
     let LEv = new Array(N);
     let LpEv = new Array(N);
     LEv[0] = 1n;
     LpEv[0] = 1n;
+    // xis = [1, xi/s, (xi/s)^2, ..., (xi/s)^{N-1}]
+    // wxis = [1, (xi*w)/s, ((xi*w)/s)^2, ..., ((xi*w)/s)^{N-1}]
     const xis = F.div(ctx.challenges[7], F.shift);
     const wxis = F.div(F.mul(ctx.challenges[7], F.w[nBits]), F.shift);
     for (let k=1; k<N; k++) {
@@ -241,6 +263,9 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     LEv = F.ifft(LEv);
     LpEv = F.ifft(LpEv);
 
+    // Computing the evaluations that the Prover has to send to the Verifier (either constant, committed or quotient)
+    // evMap: The evaluations
+    // prime means the "next one": Given a value x, the next one is wx (denoted as x')
     ctx.evals = [];
     for (let i=0; i<starkInfo.evMap.length; i++) {
         const ev = starkInfo.evMap[i];
@@ -278,7 +303,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         ctx.evals[i] = acc;
     }
 
-// Calculate xDivXSubXi, xDivX4SubWXi
+// 5.2 Calculate xDivXSubXi, xDivX4SubWXi
+// xDivXSubXi = X / (X - xi), xDivX4SubWXi = X / (X - w*xi)
 
     const xi = ctx.challenges[7];
     const wxi = F.mul(ctx.challenges[7], F.w[nBits]);
@@ -311,6 +337,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     }
 
 
+// 5.3 Calculate the FRI polynomial
+
     if (parallelExec) {
         await calculateExpsParallel(pool, ctx, "step52ns", starkInfo);
     } else {
@@ -318,6 +346,10 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     }
 
     const friPol = getPol(ctx, starkInfo, starkInfo.exps_2ns[starkInfo.friExpId]);
+
+///////////
+// 6. Compute the FRI proof
+///////////
 
     const queryPol = (idx) => {
         return [
@@ -330,6 +362,10 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     }
 
     const friProof = await fri.prove(transcript, friPol, queryPol);
+
+///////////
+// 7. Compute the full proof
+///////////
 
     await pool.terminate();
 
@@ -537,7 +573,6 @@ function calculateExpAtPoint(ctx, code, i) {
     return cFirst(pCtx, i);
 }
 
-
 function setPol(ctx, starkInfo, idPol, pol) {
     const p = getPolRef(ctx, starkInfo, idPol);
     if (p.dim == 1) {
@@ -608,9 +643,6 @@ async function  merkelize(MH, buff, width, nBitsExt ) {
     const nExt = 1 << nBitsExt;
     return await MH.merkelize(buff, width, nExt);
 }
-
-
-
 
 async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
 
@@ -736,7 +768,6 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
     }
 
 }
-
 
 const BigBufferHandler = {
     get: function(obj, prop) {
