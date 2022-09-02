@@ -1,6 +1,6 @@
 pragma circom 2.0.6;
 
-include "../node_modules/circomlib/circuits/bitify.circom";
+include "bitify.circom";
 
 template CompConstant64(ct) {
     signal input in[64];
