@@ -153,9 +153,9 @@ class Transcript {
         } else if (r.type == "tree1") {
             return "mapValues.tree1_" + r.id;
         } else if (r.type == "tree2") {
-            return "mapValues.tree2_" + (r.id - starkInfo.mapSectionsN.cm1_2ns);
+            return "mapValues.tree2_" + (r.id - starkInfo.nCm1);
         } else if (r.type == "tree3") {
-            return "mapValues.tree3_" + (r.id - starkInfo.mapSectionsN.cm1_2ns - starkInfo.mapSectionsN.cm2_2ns);
+            return "mapValues.tree3_" + (r.id - starkInfo.nCm1 - starkInfo.nCm2);
         } else if (r.type == "tree4") {
             return "mapValues.tree4_" + r.id;
         } else if (r.type == "const") {
