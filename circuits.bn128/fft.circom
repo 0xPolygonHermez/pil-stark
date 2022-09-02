@@ -1,7 +1,7 @@
 pragma circom 2.0.6;
 
 include "gl.circom";
-include "../node_modules/circomlib/circuits/bitify.circom";
+include "bitify.circom";
 
 
 function roots(i) {

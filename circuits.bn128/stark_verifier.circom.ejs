@@ -1,15 +1,15 @@
 pragma circom 2.0.6;
 
-include "../circuits.bn128/gl.circom";
-include "../node_modules/circomlib/circuits/poseidon.circom";
-include "../node_modules/circomlib/circuits/bitify.circom";
-include "../node_modules/circomlib/circuits/sha256/sha256.circom";
-include "../circuits.bn128/fft.circom";
-include "../circuits.bn128/merklehash.circom";
-include "../circuits.bn128/evalpol.circom";
-include "../circuits.bn128/treeselector.circom";
-include "../circuits.bn128/bn1togl3.circom";
-include "../circuits.bn128/compconstant.circom";
+include "gl.circom";
+include "circuits/poseidon.circom";
+include "circuits/bitify.circom";
+include "sha256/sha256.circom";
+include "fft.circom";
+include "merklehash.circom";
+include "evalpol.circom";
+include "treeselector.circom";
+include "bn1togl3.circom";
+include "compconstant.circom";
 
 <%
 class Transcript {
