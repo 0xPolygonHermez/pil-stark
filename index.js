@@ -5,4 +5,4 @@ module.exports.FGL = new FGL();
 module.exports.starkSetup = require("./src/stark_setup.js");
 module.exports.starkGen = require("./src/stark_gen.js");
 module.exports.starkVerify = require("./src/stark_verify.js");
-module.exports.r1cs2plonk = require("./r1cs2plonk");
+module.exports.r1cs2plonk = require("./src/r1cs2plonk");
