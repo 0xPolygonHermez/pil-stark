@@ -24,6 +24,9 @@ const minNperThread = 1<<12;
 
 
 module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo) {
+///////////
+// 0. Preparation for the STARK generation
+///////////
     const starkStruct = starkInfo.starkStruct;
     const N = 1 << starkStruct.nBits;
     const extendBits = starkStruct.nBitsExt - starkStruct.nBits;
@@ -108,20 +111,20 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     const zhInv = buildZhInv(F, nBits, extendBits);
     ctx.Zi = zhInv;
 
-    ctx.const_n = new BigBuffer(starkInfo.nConstants*ctx.N);
     // Prepare constant polynomials
+    ctx.const_n = new BigBuffer(starkInfo.nConstants*ctx.N);
     constPols.writeToBigBuffer(ctx.const_n, 0);
 
     // Prepare constant polynomials at the extended domain
     ctx.const_2ns = constTree.elements;
 
 ///////////
-// 1. Calculate all the Q polynomials and extend commits
+// 1. Commit to the committed polynomials
 ///////////
 
 //    calculateExps(F, pols, starkInfo.step1prev);
 
-    // Obtain the public values as requested in the PIL
+    // Get the public values as coded in the PIL
     // Recall that these public values are evaluations of committed and intermediate polynomials at some point
     ctx.publics = [];
     for (let i=0; i<starkInfo.publics.length; i++) {
@@ -141,11 +144,10 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     // TODO: Check how the Merkleization is performed
     console.log("Merkelizing 1....");
     const tree1 = await extendAndMerkelize(MH, ctx.cm1_n, ctx.cm1_2ns, starkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.nBitsExt );
-    // The first element of the proof is the root of the Merkle tree
     transcript.put(MH.root(tree1));
 
 ///////////
-// 2. Calculate plookups h1 and h2
+// 2. Calculate the plookup polynomials h1 and h2
 ///////////
     ctx.challenges[0] = transcript.getField(); // u
     ctx.challenges[1] = transcript.getField(); // defVal
@@ -175,7 +177,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 // 3. Compute Z polynomials
 ///////////
     ctx.challenges[2] = transcript.getField(); // gamma
-    ctx.challenges[3] = transcript.getField(); // betta
+    ctx.challenges[3] = transcript.getField(); // beta
 
 
     if (parallelExec) {

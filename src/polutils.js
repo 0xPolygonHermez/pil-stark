@@ -37,9 +37,9 @@ module.exports.buildZhInv = function buildZhInv(F, Nbits, extendBits, _offset) {
     const ZHInv = [];
     let w = F.one;
     let sn= F.shift;
-    for (i=0; i<Nbits; i++) sn = F.square(sn); // sn = 49^{2^(Nbits)} = 49^(N)
+    for (i=0; i<Nbits; i++) sn = F.square(sn); // sn = 49^{2^(Nbits)} = 49^N
     for (let i=0; i<(1 << extendBits); i++) {
-        // ZHInv[i] = [1 / (49^(N) - 1), 1 / (49^(N)*w - 1), 1 / (49^(N)*w^2 - 1), ...]
+        // ZHInv[i] = [1 / (49^N - 1), 1 / (49^N*w - 1), 1 / (49^N*w^2 - 1), ...]
         // w is the generator of the subgroup of order Next
         ZHInv[i] =F.inv(F.sub(F.mul(sn, w), F.one)); 
         w = F.mul(w, F.w[extendBits])

@@ -27,7 +27,7 @@ module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
 
     let fri1exp = null;
     let fri2exp = null;
-    const xi = E.challenge("xi");
+    const xi = E.challenge("xi"); // This has to be eliminated
     for (let i=0; i<res.evMap.length; i++) {
         const ev = res.evMap[i];
         let friExp = ev.prime ? fri2exp : fri1exp;
