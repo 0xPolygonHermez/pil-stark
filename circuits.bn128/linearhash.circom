@@ -26,13 +26,18 @@ template LinearHash(nInputs, eSize) {
         nHashes = (nElements256 - 1)\16 +1;
     }
 
-    component hash[nHashes-1];
-    var nLastHash = nElements256 - (nHashes - 1)*16;
-    component lastHash = PoseidonEx(nLastHash, 1);
+    component hash[nHashes>0 ? nHashes-1 : 0];
+    var nLastHash;
+    component lastHash;
 
 
     for (var i=0; i<nHashes-1; i++) {
         hash[i] = PoseidonEx(16, 1);
+    }
+
+    if (nHashes>0) {
+        nLastHash = nElements256 - (nHashes - 1)*16;
+        lastHash = PoseidonEx(nLastHash, 1);
     }
 
     var curHash =0;
