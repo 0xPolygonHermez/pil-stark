@@ -26,10 +26,12 @@ template LinearHash(nInputs, eSize) {
         nHashes = (nElements256 - 1)\16 +1;
     }
 
-    component hash[nHashes];
+    component hash[nHashes-1];
+    var nLastHash = nElements256 - (nHashes - 1)*16;
+    component lastHash = PoseidonEx(nLastHash, 1);
 
 
-    for (var i=0; i<nHashes; i++) {
+    for (var i=0; i<nHashes-1; i++) {
         hash[i] = PoseidonEx(16, 1);
     }
 
@@ -43,7 +45,11 @@ template LinearHash(nInputs, eSize) {
                 sAc = sAc + 2**(64*nAc) * in[i][j];
                 nAc ++;
                 if (nAc == 3) {
-                    hash[curHash].inputs[curHashIdx] <== sAc;
+                    if (curHash == nHashes - 1) {
+                        lastHash.inputs[curHashIdx] <== sAc;
+                    } else {
+                        hash[curHash].inputs[curHashIdx] <== sAc;
+                    }
                     sAc =0;
                     nAc =0;
                     curHashIdx ++;
@@ -55,28 +61,32 @@ template LinearHash(nInputs, eSize) {
             }
         }
         if (nAc > 0) {
-            hash[curHash].inputs[curHashIdx] <== sAc;
+            if (curHash == nHashes - 1) {
+                lastHash.inputs[curHashIdx] <== sAc;
+            } else {
+                hash[curHash].inputs[curHashIdx] <== sAc;
+            }
             curHashIdx ++;
             if (curHashIdx == 16) {
                 curHash = 0;
                 curHashIdx = 0;
             }
         }
-        if (curHash <nHashes) {
-            for (var i= curHashIdx; i< 16; i++) {
-                hash[curHash].inputs[i] <== 0;
-            }
-        }
 
-        for (var i=0; i<nHashes;i++) {
+        for (var i=0; i<nHashes-1;i++) {
             if (i==0) {
                 hash[i].initialState <== 0;
             } else {
                 hash[i].initialState <== hash[i-1].out[0];
             }
         }
+        if (nHashes == 1) {
+            lastHash.initialState <== 0;
+        } else {
+            lastHash.initialState <== hash[nHashes-2].out[0];
+        }
 
-        out <== hash[nHashes -1].out[0];
+        out <== lastHash.out[0];
     }
 }
 

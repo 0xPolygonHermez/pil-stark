@@ -27,7 +27,7 @@ describe("Linear Hash Circuit Test", function () {
         poseidon = await buildPoseidon();
         MH = new MerkleHash(poseidon);
 
-        circuit = await wasm_tester(path.join(__dirname, "circuits", "merklehash.bn128.test.circom"), {O:1});
+        circuit = await wasm_tester(path.join(__dirname, "circuits", "merklehash.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
     });
 
     it("Should calculate linear hash of 9 complex elements", async () => {

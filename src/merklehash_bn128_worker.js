@@ -10,7 +10,6 @@ function alloc(wasmMem, length) {
     return res;
 }
 
-// a deliberately inefficient implementation of the fibonacci sequence
 async function linearHash(wasmModule, buffIn, width, st_i, st_n) {
     console.log(`linear hash bn128 start.... ${st_i}/${st_n}`);
 
@@ -80,14 +79,15 @@ async function linearHash(wasmModule, buffIn, width, st_i, st_n) {
             }
         }
         if (p>0) {
-            while (p<16*4) {
+            const nLast = Math.floor((p-1)/4)+1;
+            while (p<nLast*4) {
                 in64[p] = 0n;
                 p++;
                 if (p%4 == 0) {
                     instance.exports.frm_toMontgomery(pIn + p*8 - 32,pIn + p*8 - 32);
                 }
             }
-            instance.exports.poseidon(pSt, pIn, 16, pSt, 1);
+            instance.exports.poseidon(pSt, pIn, nLast, pSt, 1);
             p=0;
         }
     }
