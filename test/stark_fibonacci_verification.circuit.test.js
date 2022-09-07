@@ -48,7 +48,7 @@ describe("Stark Verification Circuit Test", function () {
         await fs.promises.writeFile(circomFile, circuitSrc, "utf8");
 
         console.log("Start comliling...");
-        circuit = await wasm_tester(circomFile, {O:1, prime: "goldilocks"});
+        circuit = await wasm_tester(circomFile, {O:1, prime: "goldilocks", include: "circuits.gl"});
         console.log("End comliling...");
 
         const proof= JSONbig.parse( await fs.promises.readFile(proofFile, "utf8") );
