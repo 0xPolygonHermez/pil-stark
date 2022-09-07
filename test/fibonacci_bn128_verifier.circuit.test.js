@@ -17,7 +17,7 @@ describe("Fibonacci bn128 Verifier circuit Tester", function () {
 
     before( async() => {
         input = JSONbig.parse(await fs.promises.readFile(path.join(__dirname, "..", "tmp", "fibonacci.c12.proof.zkin.json"),  "utf8"));
-        circuit = await wasm_tester(path.join(__dirname, "..", "tmp", "fibonacci.c12.verifier.circom"), {O:1, verbose:true});
+        circuit = await wasm_tester(path.join(__dirname, "..", "tmp", "fibonacci.c12.verifier.circom"), {O:1, verbose:true, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
     });
 
     it("Should calculate Fibonacci witness", async () => {
