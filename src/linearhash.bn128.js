@@ -53,7 +53,7 @@ module.exports = class LinearHashBN {
             }
         }
         if (inHash.length>0) {
-            while (inHash.length<16) inHash.push(this.F.zero);
+//            while (inHash.length<16) inHash.push(this.F.zero);
             st = this.H(inHash, st);
         }
         return st;
