@@ -1,4 +1,5 @@
 const fs = require("fs");
+const path = require("path");
 const version = require("../package").version;
 
 const F1Field = require("./f3g");
@@ -13,6 +14,7 @@ const argv = require("yargs")
     .alias("P", "pilconfig")
     .alias("s", "starkstruct")
     .alias("c", "chelpers")
+    .alias("m", "multiple")
     .argv;
 
 async function run() {
@@ -23,15 +25,29 @@ async function run() {
 
     const starkStructFile = typeof(argv.starkstruct) === "string" ?  argv.starkstruct.trim() : "mycircuit.stark_struct.json";
     const chelpersFile = typeof(argv.chelpers) === "string" ?  argv.chelpers.trim() : "mycircuit.chelpers.cpp";
+    const multipleCodeFiles = argv.multiple;
 
     const pil = await compile(F, pilFile, null, pilConfig);
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
 
     const starkInfo = starkInfoGen(pil, starkStruct);
 
-    const cCode = await buildCHelpers(starkInfo);
+    const cCode = await buildCHelpers(starkInfo, multipleCodeFiles ? {multipleCodeFiles: true}:{});
 
-    await fs.promises.writeFile(chelpersFile, cCode, "utf8");
+    if (multipleCodeFiles) {
+        const baseDir = path.dirname(chelpersFile);
+        if (!fs.existsSync(baseDir)){
+            fs.mkdirSync(baseDir, { recursive: true });
+        }
+        const dotPos = chelpersFile.lastIndexOf('.');
+        const leftFilename = dotPos < 0 ? chelpersFile : chelpersFile.substr(0, dotPos);
+        const ext = dotPos < 0 ? '.cpp' : chelpersFile.substr(dotPos);
+        for(cpart in cCode) {
+            await fs.promises.writeFile(leftFilename + '.' + cpart + ext, cCode[cpart], "utf8");
+        }
+    } else {
+        await fs.promises.writeFile(chelpersFile, cCode, "utf8");
+    }
 
     console.log("files Generated Correctly");
 }

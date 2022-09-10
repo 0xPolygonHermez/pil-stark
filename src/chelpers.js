@@ -1,9 +1,10 @@
 
 
 
-module.exports = async function buildCHelpers(starkInfo) {
+module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
     const code = [];
+    const multipleCodeFiles = config && config.multipleCodeFiles;
 
     for (let i = 0; i < starkInfo.nPublics; i++) {
         if (starkInfo.publicsCode[i]) {
@@ -25,28 +26,59 @@ module.exports = async function buildCHelpers(starkInfo) {
     }
     pubTable.push(");");
 
-    code.push(pubTable.join("\n"));
+    let result = {};
 
+    if (multipleCodeFiles) {
+        result.public = pubTable.join("\n")+"\n";
+    }
+    else {
+        code.push(pubTable.join("\n"));
+    }
 
     code.push(compileCode("step2prev_first", starkInfo.step2prev.first, "n"));
     code.push(compileCode("step2prev_i", starkInfo.step2prev.first, "n"));
     code.push(compileCode("step2prev_last", starkInfo.step2prev.first, "n"));
 
+    if (multipleCodeFiles) {
+        result.step2 = code.join("\n\n")+"\n";
+        code.length = 0;
+    }
+
     code.push(compileCode("step3prev_first", starkInfo.step3prev.first, "n"));
     code.push(compileCode("step3prev_i", starkInfo.step3prev.first, "n"));
     code.push(compileCode("step3prev_last", starkInfo.step3prev.first, "n"));
+
+    if (multipleCodeFiles) {
+        result.step3 = code.join("\n\n")+"\n";
+        code.length = 0;
+    }
 
     code.push(compileCode("step4_first", starkInfo.step4.first, "n"));
     code.push(compileCode("step4_i", starkInfo.step4.first, "n"));
     code.push(compileCode("step4_last", starkInfo.step4.first, "n"));
 
+    if (multipleCodeFiles) {
+        result.step4 = code.join("\n\n")+"\n";
+        code.length = 0;
+    }
+
     code.push(compileCode("step42ns_first", starkInfo.step42ns.first, "2ns"));
     code.push(compileCode("step42ns_i", starkInfo.step42ns.first, "2ns"));
     code.push(compileCode("step42ns_last", starkInfo.step42ns.first, "2ns"));
 
+    if (multipleCodeFiles) {
+        result.step42ns = code.join("\n\n")+"\n";
+        code.length = 0;
+    }
+
     code.push(compileCode("step52ns_first", starkInfo.step52ns.first, "2ns"));
     code.push(compileCode("step52ns_i", starkInfo.step52ns.first, "2ns"));
     code.push(compileCode("step52ns_last", starkInfo.step52ns.first, "2ns"));
+
+    if (multipleCodeFiles) {
+        result.step52ns = code.join("\n\n")+"\n";
+        return result;
+    }
 
     return code.join("\n\n");
 
