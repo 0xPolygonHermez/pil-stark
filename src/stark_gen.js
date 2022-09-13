@@ -141,7 +141,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     }
 
     // Interpolate the committed polynomials, evaluate them at the evaluation domain and Merkelize them
-    // TODO: Check how the Merkleization is performed
+    // TODO: Check how exactly the Merkleization of a set of polynomials is performed
     console.log("Merkelizing 1....");
     const tree1 = await extendAndMerkelize(MH, ctx.cm1_n, ctx.cm1_2ns, starkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree1));

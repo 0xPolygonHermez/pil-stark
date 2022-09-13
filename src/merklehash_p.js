@@ -27,7 +27,7 @@ class MerkleHash {
         let nextN = (Math.floor((n-1)/8)+1)*4;
         let acc = nextN*2;
         while (n>4) {
-            // FIll with zeros if n nodes in the leve is not even
+            // Fill with zeros if the number of nodes in the leaf is not even
             n = nextN;
             nextN = (Math.floor((n-1)/8)+1)*4;
             if (n>4) {
@@ -87,7 +87,7 @@ class MerkleHash {
         let nextN64 = (Math.floor((n64-1)/8)+1)*4;
         let pOut = pIn + nextN64*2*8;
         while (n64>4) {
-            // FIll with zeros if n nodes in the leve is not even
+            // Fill with zeros if the number of nodes in the leaf is not even
             await _merkelizeLevel(tree.nodes, pIn, nextN64/4, pOut);
 
             n64 = nextN64;
