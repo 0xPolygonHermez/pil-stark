@@ -54,7 +54,7 @@ async function run() {
 
     for (let i=nSMap; i<N; i++) {
         for (let j=0; j<3; j++) {
-            cmPols.Circuit.a[j][i] = 0n;
+            cmPols.PlonkCircuit.a[j][i] = 0n;
         }
     }
 
