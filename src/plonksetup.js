@@ -111,11 +111,11 @@ module.exports = async function plonkSetup(r1cs) {
     // Fill unused rows
     while (r<N) {
         if ((r%100000) == 0) console.log(`Empty gates... ${r}/${N}`);
-        constPols.Compressor.Qm[r] = 0n;
-        constPols.Compressor.Ql[r] = 0n;
-        constPols.Compressor.Qr[r] = 0n;
-        constPols.Compressor.Qo[r] = 0n;
-        constPols.Compressor.Qk[r] = 0n;
+        constPols.PlonkCircuit.Qm[r] = 0n;
+        constPols.PlonkCircuit.Ql[r] = 0n;
+        constPols.PlonkCircuit.Qr[r] = 0n;
+        constPols.PlonkCircuit.Qo[r] = 0n;
+        constPols.PlonkCircuit.Qk[r] = 0n;
         r +=1;
     }
 
