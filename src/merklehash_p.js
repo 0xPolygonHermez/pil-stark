@@ -241,9 +241,9 @@ class MerkleHash {
     }
 
     async readFromFile(fileName) {
-        const fd =await fs.promises.open(fileName, "r");
+        const fd = await fs.promises.open(fileName, "r");
         const header = new BigUint64Array(2);
-        await fd.read(header, {offset:0, length: 16, position:0});
+        await fd.read({buffer: header, offset:0, length: 16, position:0});
         const tree = {
             width: Number(header[0]),
             height: Number(header[1])
@@ -261,7 +261,7 @@ class MerkleHash {
                 console.log(`Loading tree.. ${i}/${buff.length}`);
                 const n = Math.min(buff.length -i, MaxBuffSize);
                 const buff8 = new Uint8Array(n*8);
-                await fd.read(buff8, {offset: 0, length:n*8, position:pos + i*8});
+                await fd.read({buffer: buff8, offset: 0, length:n*8, position:pos + i*8});
                 const buff64 = new BigUint64Array(buff8.buffer);
                 buff.set(buff64, o);
                 o += n;
