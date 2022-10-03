@@ -119,9 +119,12 @@ module.exports = async function plonkSetup(r1cs) {
         r +=1;
     }
 
-    constPols.Global.L1[0] = 1n;
-    for (let i=1; i<N; i++) {
-        constPols.Global.L1[i] = 0n;
+    for (let j=0; j<nPublics; ++j) {
+        let lPol = constPols.Global[`L${j+1}`];
+        for (let i=0; i<N; i++) {
+            lPol[i] = 0n;
+        }
+        lPol[j] = 1n;
     }
 
     return {
