@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 
 
-module.exports = async function pil2circom(pil, constRoot, starkStruct) {
+module.exports = async function pil2circom(pil, constRoot, starkStruct, options) {
 
     const starkInfo = starkInfoGen(pil, starkStruct);
 
@@ -29,7 +29,8 @@ module.exports = async function pil2circom(pil, constRoot, starkStruct) {
         starkInfo: starkInfo,
         starkStruct: starkStruct,
         constRoot: constRoot,
-        pil: pil
+        pil: pil,
+        options: options
     };
 
     return ejs.render(template ,  obj);

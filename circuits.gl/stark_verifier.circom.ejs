@@ -1,4 +1,4 @@
-pragma circom 2.0.6;
+pragma circom 2.1.0;
 pragma custom_templates;
 
 include "cmul.circom";
@@ -237,6 +237,7 @@ template VerifyEvaluations() {
     signal input challenges[8][3];
     signal input evals[<%- starkInfo.evMap.length %>][3];
     signal input publics[<%- pil.publics.length %>];
+    signal input enable;
 
     component zMul[<%- starkStruct.nBits %>];
     for (var i=0; i< <%- starkStruct.nBits %> ; i++) {
@@ -267,9 +268,9 @@ template VerifyEvaluations() {
 <% const evalP = unrollCode(starkInfo.verifierCode.first) -%>
 
 // Final Verification
-    <%- evalP %>[0] === 0;
-    <%- evalP %>[1] === 0;
-    <%- evalP %>[2] === 0;
+    enable * <%- evalP %>[0] === 0;
+    enable * <%- evalP %>[1] === 0;
+    enable * <%- evalP %>[2] === 0;
 
 }
 
@@ -385,6 +386,17 @@ template StarkVerifier() {
     signal input root2[4];
     signal input root3[4];
     signal input root4[4];
+
+<% if (options.verkeyInput) {  -%>
+    signal input rootC[4];
+<% } else { -%>
+    signal rootC[4];
+    rootC[0] <== <%- constRoot[0] %>;
+    rootC[1] <== <%- constRoot[1] %>;
+    rootC[2] <== <%- constRoot[2] %>;
+    rootC[3] <== <%- constRoot[3] %>;
+<% } %>
+
     signal input evals[<%- starkInfo.evMap.length %>][3];
 
     signal input s0_vals1[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_2ns %>];
@@ -416,6 +428,15 @@ template StarkVerifier() {
 <% }                                                  -%>
 
     signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
+
+<% if (options.enableInput) { -%>
+    signal input enable;
+    enable * (enable -1 ) === 0;
+<% } else { -%>
+    signal enable;
+    enable <== 1;
+<% } -%>
+
 
     signal challenges[8][3];
 <% for (let s=0; s<starkStruct.steps.length; s++) {   -%>
@@ -463,6 +484,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 // Constrain polynomial check in vauations
 ///////////
     component verifyEvaluations = VerifyEvaluations();
+    verifyEvaluations.enable <== enable;
     for (var i=0; i<8; i++) {
         for (var k=0; k<3; k++) {
             verifyEvaluations.challenges[i][k] <== challenges[i][k];
@@ -566,19 +588,16 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
             }
         }
         for (var j=0; j<4; j++) {
-            s0_merkle1[q].root[j] === root1[j];
+            enable * (s0_merkle1[q].root[j] - root1[j]) === 0;
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
-            s0_merkle2[q].root[j] === root2[j];
+            enable * (s0_merkle2[q].root[j] - root2[j]) === 0;
 <% }                                         %>
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
-            s0_merkle3[q].root[j] === root3[j];
+            enable * (s0_merkle3[q].root[j] - root3[j]) === 0;
 <% }                                         %>
-            s0_merkle4[q].root[j] === root4[j];
+            enable * (s0_merkle4[q].root[j] - root4[j]) === 0;
+            enable * (s0_merkleC[q].root[j] - rootC[j]) === 0;
         }
-        s0_merkleC[q].root[0] === <%- constRoot[0] %>;
-        s0_merkleC[q].root[1] === <%- constRoot[1] %>;
-        s0_merkleC[q].root[2] === <%- constRoot[2] %>;
-        s0_merkleC[q].root[3] === <%- constRoot[3] %>;
 
 <% if (0 < starkStruct.steps.length-1) {            -%>
         for (var i=0; i<<%- 1 << (starkStruct.steps[0].nBits - starkStruct.steps[1].nBits) %>; i++) {
@@ -600,7 +619,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
         }
 <% }      -%>
         for (var e=0; e<3; e++) {
-            s0_lowValues[q].out[e] === verifyQueries[q].out[e];
+            enable * (s0_lowValues[q].out[e] - verifyQueries[q].out[e]) === 0;
         }
 
     }
@@ -661,13 +680,13 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
         }
 <% }      -%>
         for (var e=0; e<3; e++) {
-            s<%- s %>_lowValues[q].out[e] === s<%- s %>_evalPol[q].out[e];
+            enable * (s<%- s %>_lowValues[q].out[e] - s<%- s %>_evalPol[q].out[e]) === 0;
         }
 
-        s<%- s %>_merkle[q].root[0] === s<%- s %>_root[0];
-        s<%- s %>_merkle[q].root[1] === s<%- s %>_root[1];
-        s<%- s %>_merkle[q].root[2] === s<%- s %>_root[2];
-        s<%- s %>_merkle[q].root[3] === s<%- s %>_root[3];
+        enable * (s<%- s %>_merkle[q].root[0] - s<%- s %>_root[0]) === 0;
+        enable * (s<%- s %>_merkle[q].root[1] - s<%- s %>_root[1]) === 0;
+        enable * (s<%- s %>_merkle[q].root[2] - s<%- s %>_root[2]) === 0;
+        enable * (s<%- s %>_merkle[q].root[3] - s<%- s %>_root[3]) === 0;
     }
 <% }                                                  -%>
 
@@ -687,11 +706,12 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 
     for (var k= <%- 1 << maxDegBits %>; k< <%- 1 << nLastBits %>; k++ ) {
         for (var e=0; e<3; e++) {
-            lastIFFT.out[k][e] === 0;
+            enable * lastIFFT.out[k][e] === 0;
         }
     }
 
 }
 
+<% if (!options.skipMain) {  -%>
 component main {public [publics]}= StarkVerifier();
-
+<% } -%>

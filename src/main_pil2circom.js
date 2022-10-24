@@ -10,7 +10,7 @@ const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_pil2circom.js -o <verifier.circom> -p <pil.json> [-P <pilconfig.json>] -v <verification_key.json>")
+    .usage("node main_pil2circom.js -o <verifier.circom> -p <pil.json> [-P <pilconfig.json>] -v <verification_key.json> [--skipMain] [--enableInput] [--verkeyInput]")
     .alias("p", "pil")
     .alias("P", "pilconfig")
     .alias("s", "starkStruct")
@@ -33,7 +33,13 @@ async function run() {
 
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
 
-    const verifier = await pil2circom(pil, constRoot, starkStruct);
+    const options = {
+        skipMain: argv.skipMain || false,
+        enableInput: argv.enableInput || false,
+        verkeyInput: argv.verkeyInput || false
+    }
+
+    const verifier = await pil2circom(pil, constRoot, starkStruct, options);
 
     await fs.promises.writeFile(outputFile, verifier, "utf8");
 

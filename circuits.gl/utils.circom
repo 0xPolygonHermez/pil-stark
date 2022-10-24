@@ -1,4 +1,4 @@
-pragma circom 2.0.6;
+pragma circom 2.1.0;
 
 function log2(a) {
     if (a==0) {
