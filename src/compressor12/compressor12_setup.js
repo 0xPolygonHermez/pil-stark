@@ -23,7 +23,10 @@ module.exports = async function plonkSetup(r1cs, options) {
 
     const customGatesInfo = getCustomGatesInfo();
 
-    const nPublics = r1cs.nOutputs + r1cs.nPubInputs;
+    let nPublics = r1cs.nOutputs + r1cs.nPubInputs;
+    if (options.verkeyInput) {
+        nPublics += 4;
+    }
     const nPublicRows = Math.floor((nPublics - 1)/12) +1;
 
     const NUsed = nPublicRows + plonkInfo.N + customGatesInfo.nCMul + customGatesInfo.nMDS*2;
