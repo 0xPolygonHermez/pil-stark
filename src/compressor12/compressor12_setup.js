@@ -11,7 +11,7 @@ const r1cs2plonk = require("../r1cs2plonk");
 
 
 
-module.exports = async function plonkSetup(r1cs) {
+module.exports = async function plonkSetup(r1cs, options) {
     const F = new F3G();
     const [plonkConstraints, plonkAdditions] = r1cs2plonk(F, r1cs);
 
@@ -27,7 +27,14 @@ module.exports = async function plonkSetup(r1cs) {
     const nPublicRows = Math.floor((nPublics - 1)/12) +1;
 
     const NUsed = nPublicRows + plonkInfo.N + customGatesInfo.nCMul + customGatesInfo.nMDS*2;
-    const nBits = log2(NUsed - 1) + 1;
+    let nBits = log2(NUsed - 1) + 1;
+
+    if (options.forceNBits) {
+        if (options.forceNBits < nBits) {
+            throw new Error("ForceNBits is less than required");
+        }
+        nBits = options.forceNBits;
+    }
     const N = 1 << nBits;
 
     const template = await fs.promises.readFile(path.join(__dirname, "compressor12.pil.ejs"), "utf8");
