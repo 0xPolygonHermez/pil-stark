@@ -8,7 +8,7 @@ const plonkSetup = require("./compressor12_setup.js");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_compressor12_setup.js -r <verifier.c12.r1cs> -p <verifier.c12.pil> -c <verifier.c12.const> -e <verifier.c12.exec> [--forceNBits=23] [--verkeyInput]")
+    .usage("node main_compressor12_setup.js -r <verifier.c12.r1cs> -p <verifier.c12.pil> -c <verifier.c12.const> -e <verifier.c12.exec> [--forceNBits=23]")
     .alias("r", "r1cs")
     .alias("c", "const")  // Output file required to build the constants
     .alias("p", "pil")    // Proposed PIL
@@ -26,8 +26,7 @@ async function run() {
     const r1cs = await readR1cs(r1csFile, {F: F, logger:console });
 
     const options = {
-        forceNBits: argv.forceNBits,
-        verkeyInput: argv.verkeyInput
+        forceNBits: argv.forceNBits
     };
     const res = await plonkSetup(r1cs, options);
 
