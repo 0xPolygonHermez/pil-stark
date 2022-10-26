@@ -272,6 +272,7 @@ template VerifyEvaluations() {
     signal input challenges[8][3];
     signal input evals[<%- starkInfo.evMap.length %>][3];
     signal input publics[<%- pil.publics.length %>];
+    signal input enable;
 
     var p = 0xFFFFFFFF00000001;
 
@@ -309,9 +310,9 @@ template VerifyEvaluations() {
     normC.in[1] <== <%- evalP %>[1];
     normC.in[2] <== <%- evalP %>[2];
 
-    normC.out[0] === 0;
-    normC.out[1] === 0;
-    normC.out[2] === 0;
+    enable * normC.out[0] === 0;
+    enable * normC.out[1] === 0;
+    enable * normC.out[2] === 0;
 
 }
 
@@ -462,12 +463,19 @@ template MapValues() {
 
 
 template StarkVerifier() {
-    signal input proverAddr;
     signal input publics[<%- pil.publics.length %>];
     signal input root1;
     signal input root2;
     signal input root3;
     signal input root4;
+
+    <% if (options.verkeyInput) {  -%>
+        signal input rootC;
+    <% } else { -%>
+        signal rootC;
+        rootC <== <%- constRoot %>;
+    <% } %>
+
     signal input evals[<%- starkInfo.evMap.length %>][3];
 
     signal input s0_vals1[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_2ns %>];
@@ -500,7 +508,13 @@ template StarkVerifier() {
 
     signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
 
-    signal output publicsHash;
+<% if (options.enableInput) { -%>
+    signal input enable;
+    enable * (enable -1 ) === 0;
+<% } else { -%>
+    signal enable;
+    enable <== 1;
+<% } -%>
 
     signal challenges[8][3];
 <% for (let s=0; s<starkStruct.steps.length; s++) {   -%>
@@ -651,15 +665,16 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
                 s0_merkleC[q].siblings[i][j] <== s0_siblingsC[q][i][j];
             }
         }
-        s0_merkle1[q].root === root1;
+        enable * (s0_merkle1[q].root - root1) === 0;
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
-        s0_merkle2[q].root === root2;
+        enable * (s0_merkle2[q].root - root2) === 0;
 <% }                                         %>
 <% if (starkInfo.mapSectionsN.cm2_3ns > 0) { %>
-        s0_merkle3[q].root === root3;
+        enable * (s0_merkle3[q].root - root3) === 0;
 <% }                                         %>
-        s0_merkle4[q].root === root4;
-        s0_merkleC[q].root === <%- constRoot %>;
+        enable * (s0_merkle4[q].root - root4) === 0;
+
+        enable * (s0_merkleC[q].root - rootC) === 0;
 
 <% if (0 < starkStruct.steps.length-1) {            -%>
         for (var i=0; i<<%- 1 << (starkStruct.steps[0].nBits - starkStruct.steps[1].nBits) %>; i++) {
@@ -681,7 +696,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
         }
 <% }      -%>
         for (var e=0; e<3; e++) {
-            s0_lowValues[q].out[e] === verifyQueries[q].out[e];
+            enable * (s0_lowValues[q].out[e] - verifyQueries[q].out[e]) === 0;
         }
 
     }
@@ -786,10 +801,10 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
             s<%- s %>_cNorm[q].in[e] <== s<%- s %>_evalPol[q].out[e] - s<%- s %>_lowValues[q].out[e] + p;
         }
         for (var e=0; e<3; e++) {
-            s<%- s %>_cNorm[q].out[e] === 0;
+            enable * s<%- s %>_cNorm[q].out[e] === 0;
         }
 
-        s<%- s %>_merkle[q].root === s<%- s %>_root;
+        enable * (s<%- s %>_merkle[q].root - s<%- s %>_root) === 0;
     }
 <% }                                                  -%>
 
@@ -809,9 +824,94 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 
     for (var k= <%- 1 << maxDegBits %>; k< <%- 1 << nLastBits %>; k++ ) {
         for (var e=0; e<3; e++) {
-            lastIFFT.out[k][e] === 0;
+            enable * lastIFFT.out[k][e] === 0;
         }
     }
+
+}
+
+<% if (!options.skipMain) {  -%>
+
+template Main() {
+    signal input proverAddr;
+    signal output publicsHash;
+
+    signal input publics[<%- pil.publics.length %>];
+    signal input root1;
+    signal input root2;
+    signal input root3;
+    signal input root4;
+    signal input evals[<%- starkInfo.evMap.length %>][3];
+
+    signal input s0_vals1[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_2ns %>];
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
+    signal input s0_vals2[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm2_2ns %>];
+<% }                                         %>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
+    signal input s0_vals3[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm3_2ns %>];
+<% }                                         %>
+    signal input s0_vals4[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.q_2ns %>];
+    signal input s0_valsC[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants%>];
+    signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
+    signal input s0_siblings2[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
+<% }                                         %>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
+    signal input s0_siblings3[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
+<% }                                         %>
+    signal input s0_siblings4[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
+    signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
+
+<% for (let s=0; s<starkStruct.steps.length-1; s++) {   -%>
+    signal input s<%- s+1 %>_root;
+<% }                                                     -%>
+
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    signal input s<%- s %>_vals[<%- starkStruct.nQueries %>][<%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits))*3 %>];
+    signal input s<%- s %>_siblings[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[s].nBits -1) /4) +1 %>][16];
+<% }                                                  -%>
+
+    signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
+
+
+    component sv = StarkVerifier();
+
+    sv.publics <== publics;
+    sv.root1 <== root1;
+    sv.root2 <== root2;
+    sv.root3 <== root3;
+    sv.root4 <== root4;
+    sv.evals <== evals;
+
+
+    sv.s0_vals1 <== s0_vals;
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
+    sv.s0_vals2 <== s0_vals2;
+<% }                                         %>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
+    sv.s0_vals3 <== s0_vals3;
+<% }                                         %>
+    sv.s0_vals4 <== s0_vals4;
+    sv.s0_valsC <== s0_valsC;
+    sv.s0_siblings1 <== s0_siblings1;
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
+    sv.s0_siblings2 <== s0_siblings2;
+<% }                                         %>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
+    sv.s0_siblings3 <== s0_siblings3;
+<% }                                         %>
+    sv.s0_siblings4 <== s0_siblings4;
+    sv.s0_siblingsC <== s0_siblingsC;
+
+<% for (let s=0; s<starkStruct.steps.length-1; s++) {   -%>
+    sv.s<%- s+1 %>_root <== sv.s<%- s+1 %>_root;
+<% }                                                     -%>
+
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    sv.s<%- s %>_vals <== s<%- s %>_vals;
+    sv.s<%- s %>_siblings <== s<%- s %>_siblings;
+<% }                                                  -%>
+    sv.finalPol <== finalPol;
 
 //////
 // Calculate Publics Hash
@@ -849,5 +949,6 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
     publicsHash <== n2bPublicsHash.out;
 }
 
-component main = StarkVerifier();
+component main = Main();
+<% } -%>
 
