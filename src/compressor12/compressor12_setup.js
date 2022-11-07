@@ -73,11 +73,11 @@ module.exports = async function plonkSetup(r1cs, options) {
     }
 
     for (let i=0; i<nPublics; i++) {
-        sMap[i%12][r+Math.floor(1/12)] = 1+i;
+        sMap[i%12][r+Math.floor(i/12)] = 1+i;
     }
 
     for (let i=nPublics; i<nPublicRows*12; i++) {
-        sMap[i%12][r+Math.floor(1/12)] = 0;
+        sMap[i%12][r+Math.floor(i/12)] = 0;
     }
     r += nPublicRows;
 
