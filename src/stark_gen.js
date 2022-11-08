@@ -125,6 +125,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     console.log("Merkelizing 1....");
     const tree1 = await extendAndMerkelize(MH, ctx.cm1_n, ctx.cm1_2ns, starkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.nBitsExt );
+    console.log(["Merkel1 ROOT:", MH.root(tree1)]);
     transcript.put(MH.root(tree1));
 
 ///////////
@@ -152,6 +153,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     console.log("Merkelizing 2....");
     const tree2 = await extendAndMerkelize(MH, ctx.cm2_n, ctx.cm2_2ns, starkInfo.mapSectionsN.cm2_n, ctx.nBits, ctx.nBitsExt );
+    console.log(["Merkel2 ROOT:", MH.root(tree2)]);
     transcript.put(MH.root(tree2));
 
 ///////////
@@ -194,6 +196,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     console.log("Merkelizing 3....");
     const tree3 = await extendAndMerkelize(MH, ctx.cm3_n, ctx.cm3_2ns, starkInfo.mapSectionsN.cm3_n, ctx.nBits, ctx.nBitsExt );
+    console.log(["Merkel3 ROOT:", MH.root(tree3)]);
     transcript.put(MH.root(tree3));
 
 ///////////
@@ -216,6 +219,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     console.log("Merkelizing 4....");
     tree4 = await merkelize(MH, ctx.q_2ns , starkInfo.mapSectionsN.q_2ns, ctx.nBitsExt);
+    console.log(["Merkel4 ROOT:", MH.root(tree4)]);
     transcript.put(MH.root(tree4));
 
 
