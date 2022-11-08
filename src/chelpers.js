@@ -195,13 +195,13 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         let res;
         if (ret) {
             res = [
-                `Goldilocks::Element Stark::${functionName}(Goldilocks::Element *pols,  const Goldilocks::Element *publicInputs, uint64_t i) {`,
+                `Goldilocks::Element ${config.className}::${functionName}(Goldilocks::Element *pols,  const Goldilocks::Element *publicInputs, uint64_t i) {`,
                 ...body,
                 `}`
             ].join("\n");
         } else {
             res = [
-                `void Stark::${functionName}(Goldilocks::Element *pols,  const Goldilocks::Element *publicInputs, uint64_t i) {`,
+                `void ${config.className}::${functionName}(Goldilocks::Element *pols,  const Goldilocks::Element *publicInputs, uint64_t i) {`,
                 ...body,
                 `}`
             ].join("\n");

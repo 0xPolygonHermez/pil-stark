@@ -9,11 +9,12 @@ const buildCHelpers = require("./chelpers.js");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_buildchelpers.js -p <pil.json> [-P <pilconfig.json] -s <starkstruct.json> -c <chelpers.cpp>")
+    .usage("node main_buildchelpers.js -p <pil.json> [-P <pilconfig.json] -s <starkstruct.json> -c <chelpers.cpp> [-C <classname>]")
     .alias("p", "pil")
     .alias("P", "pilconfig")
     .alias("s", "starkstruct")
     .alias("c", "chelpers")
+    .alias("C", "cls")
     .alias("m", "multiple")
     .argv;
 
@@ -23,6 +24,8 @@ async function run() {
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
     const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
 
+
+    const cls = typeof(argv.cls) === "string" ?  argv.cls.trim() : "Stark";
     const starkStructFile = typeof(argv.starkstruct) === "string" ?  argv.starkstruct.trim() : "mycircuit.stark_struct.json";
     const chelpersFile = typeof(argv.chelpers) === "string" ?  argv.chelpers.trim() : "mycircuit.chelpers.cpp";
     const multipleCodeFiles = argv.multiple;
@@ -32,7 +35,7 @@ async function run() {
 
     const starkInfo = starkInfoGen(pil, starkStruct);
 
-    const cCode = await buildCHelpers(starkInfo, multipleCodeFiles ? {multipleCodeFiles: true}:{});
+    const cCode = await buildCHelpers(starkInfo, multipleCodeFiles ? {multipleCodeFiles: true, className: cls}:{});
 
     if (multipleCodeFiles) {
         const baseDir = path.dirname(chelpersFile);
@@ -42,8 +45,10 @@ async function run() {
         const dotPos = chelpersFile.lastIndexOf('.');
         const leftFilename = dotPos < 0 ? chelpersFile : chelpersFile.substr(0, dotPos);
         const ext = dotPos < 0 ? '.cpp' : chelpersFile.substr(dotPos);
+        const classInclude = cls.charAt(0).toLowerCase() + cls.slice(1) + ".hpp";
         for(cpart in cCode) {
-            await fs.promises.writeFile(leftFilename + '.' + cpart + ext, cCode[cpart], "utf8");
+            const code = `#include "goldilocks_cubic_extension.hpp"\n#include "zhInv.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
+            await fs.promises.writeFile(leftFilename + '.' + cpart + ext, code, "utf8");
         }
     } else {
         await fs.promises.writeFile(chelpersFile, cCode, "utf8");
