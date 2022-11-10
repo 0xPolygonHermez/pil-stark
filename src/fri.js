@@ -74,6 +74,7 @@ class FRI {
 
                 proof[si+1].root= this.MH.root(tree[si]);
                 transcript.put(this.MH.root(tree[si]));
+                console.log([`FRI${si} ROOT`, this.MH.root(tree[si])]);
             } else {
                 for (let i=0; i<pol2_e.length; i++) {
                     transcript.put(pol2_e[i]);

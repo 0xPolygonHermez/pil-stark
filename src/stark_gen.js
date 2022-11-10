@@ -126,6 +126,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     console.log("Merkelizing 1....");
     const tree1 = await extendAndMerkelize(MH, ctx.cm1_n, ctx.cm1_2ns, starkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree1));
+    console.log(["Merkel1 ROOT:", MH.root(tree1)]);
 
 ///////////
 // 2.- Caluculate plookups h1 and h2
@@ -153,6 +154,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     console.log("Merkelizing 2....");
     const tree2 = await extendAndMerkelize(MH, ctx.cm2_n, ctx.cm2_2ns, starkInfo.mapSectionsN.cm2_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree2));
+    console.log(["Merkel2 ROOT:", MH.root(tree2)]);
 
 ///////////
 // 3.- Compute Z polynomials
@@ -195,6 +197,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     console.log("Merkelizing 3....");
     const tree3 = await extendAndMerkelize(MH, ctx.cm3_n, ctx.cm3_2ns, starkInfo.mapSectionsN.cm3_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree3));
+    console.log(["Merkel3 ROOT:", MH.root(tree3)]);
 
 ///////////
 // 4. Compute C Polynomial
@@ -217,7 +220,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     console.log("Merkelizing 4....");
     tree4 = await merkelize(MH, ctx.q_2ns , starkInfo.mapSectionsN.q_2ns, ctx.nBitsExt);
     transcript.put(MH.root(tree4));
-
+    console.log(["Merkel4 ROOT:", MH.root(tree4)]);
 
 ///////////
 // 5. Compute FRI Polynomial
