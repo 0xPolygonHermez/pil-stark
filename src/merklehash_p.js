@@ -5,6 +5,7 @@ const fs = require("fs");
 const { BigBuffer } = require("pilcom");
 
 const {linearHash, merkelizeLevel} = require("./merklehash_worker");
+const { copySection } = require("@iden3/binfileutils");
 
 buildPoseidon = require("./poseidon");
 
@@ -89,6 +90,10 @@ class MerkleHash {
         while (n64>4) {
             // FIll with zeros if n nodes in the leve is not even
             await _merkelizeLevel(tree.nodes, pIn, nextN64/4, pOut);
+            if (global.gc) {
+                console.log("cleaning");
+                global.gc();
+            }
 
             n64 = nextN64;
             nextN64 = (Math.floor((n64-1)/8)+1)*4;

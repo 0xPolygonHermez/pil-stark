@@ -45,7 +45,6 @@ template CompConstant(ct) {
     signal output out;
 
     signal parts[32];
-    signal sout;
 
     var clsb;
     var cmsb;

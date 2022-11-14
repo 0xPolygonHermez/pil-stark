@@ -1233,11 +1233,11 @@
             "program": "src/main_verifier.js",
             "request": "launch",
             "args": [
-                "-p ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.c12.pil",
-                "-s ${workspaceFolder}/../zkevm-proverjs/src/zkevm.c12.starkstruct.json",
-                "-v ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.c12.verkey.json",
-                "-o ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.c12.proof.json",
-                "-b ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.c12.public.json"
+                "-p ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursivef.pil",
+                "-s ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursivef.starkstruct.json",
+                "-v ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursivef.verkey.json",
+                "-o ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/zkevm.recursiveF.proof.json",
+                "-b ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/zkevm.recursiveF.public.json"
             ],
             "skipFiles": [
                 "<node_internals>/**"
@@ -1293,6 +1293,43 @@
                 "${workspaceFolder}/tmp/plonktest.commit",
                 "-p ${workspaceFolder}/tmp/plonktest.pil",
                 "-c ${workspaceFolder}/tmp/plonktest.const"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "zkevm recursive2 setup",
+            "program": "src/compressor12/main_compressor12_setup.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-r ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.r1cs",
+                "-p ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.pil",
+                "-c ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.const",
+                "-e ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.exec",
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "zkevm recursive2 exec",
+            "program": "src/compressor12/main_compressor12_exec.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-i ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/zkevm.recursive2.zkin.proof_01.json",
+                "-w ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2_js/recursive2.wasm",
+                "-p ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.pil",
+                "-e ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.exec",
+                "-m ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.commit",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"

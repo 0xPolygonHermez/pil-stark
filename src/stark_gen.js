@@ -151,6 +151,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     }
 
     console.log("Merkelizing 2....");
+    if (global.gc) {global.gc();}
     const tree2 = await extendAndMerkelize(MH, ctx.cm2_n, ctx.cm2_2ns, starkInfo.mapSectionsN.cm2_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree2));
 
@@ -193,6 +194,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     }
 
     console.log("Merkelizing 3....");
+    if (global.gc) {global.gc();}
     const tree3 = await extendAndMerkelize(MH, ctx.cm3_n, ctx.cm3_2ns, starkInfo.mapSectionsN.cm3_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree3));
 
@@ -215,6 +217,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     }
 
     console.log("Merkelizing 4....");
+    if (global.gc) {global.gc();}
     tree4 = await merkelize(MH, ctx.q_2ns , starkInfo.mapSectionsN.q_2ns, ctx.nBitsExt);
     transcript.put(MH.root(tree4));
 
@@ -241,6 +244,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     LEv = F.ifft(LEv);
     LpEv = F.ifft(LpEv);
 
+    if (global.gc) {global.gc();}
     ctx.evals = [];
     for (let i=0; i<starkInfo.evMap.length; i++) {
         const ev = starkInfo.evMap[i];
@@ -279,7 +283,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     }
 
 // Calculate xDivXSubXi, xDivX4SubWXi
-
+    if (global.gc) {global.gc();}
     const xi = ctx.challenges[7];
     const wxi = F.mul(ctx.challenges[7], F.w[nBits]);
 
@@ -310,7 +314,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         x = F.mul(x, F.w[nBits + extendBits])
     }
 
-
+    if (global.gc) {global.gc();}
     if (parallelExec) {
         await calculateExpsParallel(pool, ctx, "step52ns", starkInfo);
     } else {
@@ -329,6 +333,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         ];
     }
 
+    if (global.gc) {global.gc();}
     const friProof = await fri.prove(transcript, friPol, queryPol);
 
     await pool.terminate();

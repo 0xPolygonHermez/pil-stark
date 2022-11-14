@@ -209,7 +209,7 @@ class MerkleHash {
     }
 
     eqRoot(r1, r2) {
-        return r1 === r2;
+        return BigInt(r1) === BigInt(r2);
     }
 
     verifyGroupProof(root, mp, idx, groupElements) {
