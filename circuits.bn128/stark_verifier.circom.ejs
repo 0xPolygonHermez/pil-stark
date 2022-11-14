@@ -563,6 +563,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 // Constrain polynomial check in vauations
 ///////////
     component verifyEvaluations = VerifyEvaluations();
+    verifyEvaluations.enable <== enable;
     for (var i=0; i<8; i++) {
         for (var k=0; k<3; k++) {
             verifyEvaluations.challenges[i][k] <== challenges[i][k];
