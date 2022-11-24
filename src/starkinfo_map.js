@@ -10,9 +10,9 @@ module.exports = function map(res, pil) {
 
     res.cm_n  = [];
     res.cm_2ns  = [];
-    res.exps_n = [];
-    res.exps_2ns = [];
-    res.qs = [];
+    res.tmpExp_n = [];
+    res.q_2ns = [];
+    res.f_2ns = [];
     res.mapSections = {
         cm1_n: [],
         cm1_2ns: [],
@@ -20,11 +20,11 @@ module.exports = function map(res, pil) {
         cm2_2ns:[],
         cm3_n:[],
         cm3_2ns:[],
+        cm4_n:[],
+        cm4_2ns:[],
+        tmpExp_n:[],
         q_2ns:[],
-        exps_withq_n:[],
-        exps_withq_2ns:[],
-        exps_withoutq_n:[],
-        exps_withoutq_2ns:[]
+        f_2ns:[]
     }
     res.mapSectionsN1 = {}    // Number of pols of base field i section
     res.mapSectionsN3 = {}    // Number of pols of base field i section
@@ -76,9 +76,22 @@ module.exports = function map(res, pil) {
         res.mapSections.cm2_n.push(pph2_n);
         res.mapSections.cm2_2ns.push(pph2_2ns);
         pil.cmDims[res.nCm1 + i*2+1] = dim;
+
+        const ppf_n = addPol({
+            section: "tmpExp_n",
+            dim:dim
+        });
+        res.tmpExp_n.push(ppf_n);
+        res.mapSections.tmpExp_n.push(ppf_n);
+        const ppt_n = addPol({
+            section: "tmpExp_n",
+            dim:dim
+        });
+        res.tmpExp_n.push(ppt_n);
+        res.mapSections.tmpExp_n.push(ppt_n);
     }
 
-    for (let i=0; i<res.nCm3; i++) {
+    for (let i=0; i<res.puCtx.length + res.puCtx.length + res.ciCtx.length; i++) {
         const ppz_n = addPol({
             section: "cm3_n",
             dim:3
@@ -92,88 +105,67 @@ module.exports = function map(res, pil) {
         res.mapSections.cm3_n.push(ppz_n);
         res.mapSections.cm3_2ns.push(ppz_2ns);
         pil.cmDims[res.nCm1 + res.nCm2 + i] = 3;
-    }
 
-    const qDims = [];
-    pil.q2exp = [];
-    for (let i=0; i<pil.expressions.length; i++) {
-        const e = pil.expressions[i];
-        if (typeof e.idQ !== "undefined") {
-            qDims[e.idQ] = getExpDim(pil, i);
-            pil.q2exp[e.idQ] = i;
-        }
-    }
-
-    const usedQs = {};
-    for (let i=0; i<res.evMap.length; i++) {
-        const ev = res.evMap[i];
-        if (ev.type === "q") {
-            usedQs[ev.id] = true;
-        }
-    }
-
-    for (let i=0; i<pil.nQ; i++) {
-        let dim;
-        if (usedQs[i]) {
-            dim = getExpDim(pil, pil.q2exp[i]);
-        } else {
-            dim = 0;
-            expressionWarning(pil, "Expression with Q not used", pil.q2exp[i]);
-        }
-        const ppq = addPol({
-            section: "q_2ns",
-            dim:dim,
-            expId: pil.q2exp[i]
+        const ppNum_n = addPol({
+            section: "tmpExp_n",
+            dim:3
         });
-        res.qs.push(ppq);
-        if (dim>0) {
-            res.mapSections.q_2ns.push(ppq);
-        }
+        res.tmpExp_n.push(ppNum_n);
+        res.mapSections.tmpExp_n.push(ppNum_n);
+        const ppDen_n = addPol({
+            section: "tmpExp_n",
+            dim:3
+        });
+        res.tmpExp_n.push(ppDen_n);
+        res.mapSections.tmpExp_n.push(ppDen_n);
     }
 
-    for (let i=0; i<pil.expressions.length; i++) {
-        const e = pil.expressions[i];
-        if (typeof e.idQ !== "undefined") {
-            const dim = getExpDim(pil, i);
-            const pp_n = addPol({
-                section: "exps_withq_n",
-                dim:dim,
-                expId: i
-            });
-            const pp_2ns = addPol({
-                section: "exps_withq_2ns",
-                dim:dim,
-                expId: i
-            });
-            res.mapSections.exps_withq_n.push(pp_n);
-            res.mapSections.exps_withq_2ns.push(pp_2ns);
-            res.exps_n.push(pp_n);
-            res.exps_2ns.push(pp_2ns);
-        } else if (e.keep) {
-            const dim = getExpDim(pil, i);
-            const pp_n = addPol({
-                section: "exps_withoutq_n",
-                dim:dim,
-                expId: i
-            });
-            res.mapSections.exps_withoutq_n.push(pp_n);
-            res.exps_n.push(pp_n);
-            res.exps_2ns.push(null);
-        } else if (e.keep2ns) {
-            const dim = getExpDim(pil, i);
-            const pp_2ns = addPol({
-                section: "exps_withoutq_2ns",
-                dim:dim,
-                expId: i
-            });
-            res.mapSections.exps_withoutq_2ns.push(pp_2ns);
-            res.exps_n.push(null);
-            res.exps_2ns.push(pp_2ns);
-        } else {
-            res.exps_n[i] = null;
-            res.exps_2ns[i] = null;
-        }
+    for (let i=0; i<res.imExpsList.length; i++) {
+        const dim = getExpDim(pil, res.imExpsList[i]);
+        const ppz_n = addPol({
+            section: "cm3_n",
+            dim:dim
+        });
+        const ppz_2ns = addPol({
+            section: "cm3_2ns",
+            dim:dim
+        });
+        res.cm_n.push(ppz_n);
+        res.cm_2ns.push(ppz_2ns);
+        res.mapSections.cm3_n.push(ppz_n);
+        res.mapSections.cm3_2ns.push(ppz_2ns);
+        pil.cmDims[res.nCm1 + res.nCm2 + i] = dim;
     }
+
+    res.qDim = getExpDim(pil, res.cExp);
+    for (let i=0; i<res.qDeg; i++) {
+        const ppz_n = addPol({
+            section: "cm4_n",
+            dim:res.qDim
+        });
+        const ppz_2ns = addPol({
+            section: "cm4_2ns",
+            dim:res.qDim
+        });
+        res.cm_n.push(ppz_n);
+        res.cm_2ns.push(ppz_2ns);
+        res.mapSections.cm4_n.push(ppz_n);
+        res.mapSections.cm4_2ns.push(ppz_2ns);
+        pil.cmDims[res.nCm1 + res.nCm2 + res.nCm3 + i] = res.qDim;
+    }
+
+    const ppq_2ns = addPol({
+        section: "q_2ns",
+        dim:res.qDim
+    });
+    res.q_2ns.push(ppq_2ns);
+
+    const ppf_2ns = addPol({
+        section: "f_2ns",
+        dim:3
+    });
+    res.f_2ns.push(ppf_2ns);
+
 
     mapSections(res);
     let N = 1 << res.starkStruct.nBits;
@@ -182,39 +174,35 @@ module.exports = function map(res, pil) {
     res.mapOffsets.cm1_n = 0;
     res.mapOffsets.cm2_n = res.mapOffsets.cm1_n +  N * res.mapSectionsN.cm1_n;
     res.mapOffsets.cm3_n = res.mapOffsets.cm2_n +  N * res.mapSectionsN.cm2_n;
-    res.mapOffsets.exps_withq_n = res.mapOffsets.cm3_n +  N * res.mapSectionsN.cm3_n;
-    res.mapOffsets.exps_withoutq_n = res.mapOffsets.exps_withq_n +  N * res.mapSectionsN.exps_withq_n;
-    res.mapOffsets.cm1_2ns = res.mapOffsets.exps_withoutq_n +  N * res.mapSectionsN.exps_withoutq_n;
+    res.mapOffsets.tmpExp_n = res.mapOffsets.cm3_n +  N * res.mapSectionsN.cm3_n;
+    res.mapOffsets.cm1_2ns = res.mapOffsets.tmpExp_n +  N * res.mapSectionsN.tmpExp_n;
     res.mapOffsets.cm2_2ns = res.mapOffsets.cm1_2ns +  Next * res.mapSectionsN.cm1_2ns;
     res.mapOffsets.cm3_2ns = res.mapOffsets.cm2_2ns +  Next * res.mapSectionsN.cm2_2ns;
-    res.mapOffsets.q_2ns = res.mapOffsets.cm3_2ns +  Next * res.mapSectionsN.cm3_2ns;
-    res.mapOffsets.exps_withq_2ns = res.mapOffsets.q_2ns +  Next * res.mapSectionsN.q_2ns;
-    res.mapOffsets.exps_withoutq_2ns = res.mapOffsets.exps_withq_2ns +  Next * res.mapSectionsN.exps_withq_2ns;
-    res.mapTotalN = res.mapOffsets.exps_withoutq_2ns +  Next * res.mapSectionsN.exps_withoutq_2ns;
+    res.mapOffsets.cm4_2ns = res.mapOffsets.cm3_2ns +  Next * res.mapSectionsN.cm3_2ns;
+    res.mapOffsets.q_2ns = res.mapOffsets.cm4_2ns +  Next * res.mapSectionsN.cm4_2ns;
+    res.mapOffsets.f_2ns = res.mapOffsets.q_2ns +  Next * res.mapSectionsN.q_2ns;
 
     res.mapDeg = {};
     res.mapDeg.cm1_n = N;
     res.mapDeg.cm2_n = N;
     res.mapDeg.cm3_n = N;
-    res.mapDeg.exps_withq_n = N;
-    res.mapDeg.exps_withoutq_n = N;
+    res.mapDeg.tmpExp_n = N;
     res.mapDeg.cm1_2ns = Next;
     res.mapDeg.cm2_2ns = Next;
     res.mapDeg.cm3_2ns = Next;
+    res.mapDeg.cm4_2ns = Next;
     res.mapDeg.q_2ns = Next;
-    res.mapDeg.exps_withq_2ns = Next;
-    res.mapDeg.exps_withoutq_2ns = Next;
-
-
+    res.mapDeg.f_2ns = Next;
 
     for (let i=0; i< res.publicsCode.length; i++) {
         fixProverCode(res.publicsCode[i], "n");
     }
     fixProverCode(res.step2prev, "n");
     fixProverCode(res.step3prev, "n");
-    fixProverCode(res.step4, "n");
+    fixProverCode(res.step3, "n");
     fixProverCode(res.step42ns, "2ns");
     fixProverCode(res.step52ns, "2ns");
+    fixProverCode(res.verifierQueryCode, "2ns");
 
     iterateCode(res.verifierQueryCode, function fixRef(r, ctx) {
         if (r.type == "cm") {
@@ -223,15 +211,11 @@ module.exports = function map(res, pil) {
                 case "cm1_2ns": r.type = "tree1"; break;
                 case "cm2_2ns": r.type = "tree2"; break;
                 case "cm3_2ns": r.type = "tree3"; break;
+                case "cm4_2ns": r.type = "tree4"; break;
                 default: throw new Error("Invalid cm section");
             }
             r.treePos = p1.sectionPos;
             r.dim = p1.dim;
-        } else if (r.type == "q") {
-            const p2 = res.varPolMap[res.qs[r.id]];
-            r.type = "tree4";
-            r.treePos = p2.sectionPos;
-            r.dim = p2.dim;
         }
     });
 
@@ -243,7 +227,7 @@ module.exports = function map(res, pil) {
 
     setCodeDimensions(res.step2prev, res, 1);
     setCodeDimensions(res.step3prev,res, 1);
-    setCodeDimensions(res.step4, res, 1);
+    setCodeDimensions(res.step3, res, 1);
     setCodeDimensions(res.step42ns, res, 1);
     setCodeDimensions(res.step52ns, res, 1);
     setCodeDimensions(res.verifierCode, res, 3);
@@ -268,34 +252,11 @@ module.exports = function map(res, pil) {
                         throw ("Invalid domain", ctx.dom);
                     }
                     break;
-                case "q":
-                    if (ctx.dom == "n") {
-                        throw new Error("Accession q in domain n");
-                    } else if (ctx.dom == "2ns") {
-                        r.p = res.qs[r.id];
-                    } else {
-                        throw ("Invalid domain", ctx.dom);
-                    }
-                    break;
                 case "exp":
-                    if (typeof pil.expressions[r.id].idQ !== "undefined") {
-                        if (ctx.dom == "n") {
-                            r.p = res.exps_n[r.id];
-                        } else if (ctx.dom == "2ns") {
-                            r.p = res.exps_2ns[r.id];
-                        } else {
-                            throw ("Invalid domain", ctx.dom);
-                        }
-                    } else if ((pil.expressions[r.id].keep)&&(ctx.dom=="n")) {
-                        r.p = res.exps_n[r.id];
-                    } else if (pil.expressions[r.id].keep2ns) {
-                        if (ctx.dom == "n") {
-                            throw new Error("Accession keep2ns expresion in n domain");
-                        } else if (ctx.dom == "2ns") {
-                            r.p = res.exps_2ns[r.id];
-                        } else {
-                            throw ("Invalid domain", ctx.dom);
-                        }
+                    const idx = res.imExpsList.indexOf(r.id);
+                    if (idx >= 0) {
+                        r.type = "cm";
+                        r.id = res.imExp2cm[res.imExpsList[idx]];
                     } else {
                         const p = r.prime ? 1 : 0;
                         if (typeof ctx.expMap[p][r.id] === "undefined") {
@@ -316,7 +277,10 @@ module.exports = function map(res, pil) {
                 case "xDivXSubWXi":
                 case "eval":
                 case "x":
-                    break;
+                case "q":
+                case "f":
+                case "tmpExp":
+                        break;
                 default:
                     throw new Error("Invalid reference type " + r.type);
             }
@@ -391,7 +355,7 @@ function setCodeDimensions(code, starkInfo, dimX) {
     function _setCodeDimensions(code) {
 
         for (let i=0; i<code.length; i++) {
-            if (i==11759) {
+            if (i==27) {
                 console.log(i);
             }
             let newDim;
@@ -443,6 +407,8 @@ function setCodeDimensions(code, starkInfo, dimX) {
                 case "tmp": tmpDim[r.id] = dim; r.dim=dim; return;
                 case "exp":
                 case "cm":
+                case "tmpExp":
+                case "f":
                 case "q": r.dim=dim; return;
                 default: throw new Error("Invalid reference type set: " + r.type);
             }
@@ -450,5 +416,6 @@ function setCodeDimensions(code, starkInfo, dimX) {
     }
 
 }
+
 
 

@@ -17,13 +17,6 @@ module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
             friExp = E.cm(i);
         }
     }
-    for (let i=0; i<pil.nQ; i++) {
-        if (friExp) {
-            friExp = E.add(E.mul(vf1, friExp), E.q(i));
-        } else {
-            friExp = E.q(i);
-        }
-    }
 
     let fri1exp = null;
     let fri2exp = null;
@@ -45,25 +38,34 @@ module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
     }
 
 
-    fri1exp = E.mul(fri1exp, E.xDivXSubXi() );
-    if (friExp) {
-        friExp = E.add(E.mul(vf1, friExp),  fri1exp );
-    } else {
-        friExp = fri1exp;
+    if (fri1exp) {
+        fri1exp = E.mul(fri1exp, E.xDivXSubXi() );
+        if (friExp) {
+            friExp = E.add(E.mul(vf1, friExp),  fri1exp );
+        } else {
+            friExp = fri1exp;
+        }
     }
 
-    fri2exp =  E.mul(fri2exp, E.xDivXSubWXi() );
-    if (friExp) {
-        friExp = E.add(E.mul(vf1, friExp),  fri2exp );
-    } else {
-        friExp = fri2exp;
+    if (fri2exp) {
+        fri2exp =  E.mul(fri2exp, E.xDivXSubWXi() );
+        if (friExp) {
+            friExp = E.add(E.mul(vf1, friExp),  fri2exp );
+        } else {
+            friExp = fri2exp;
+        }
     }
 
     res.friExpId = pil.expressions.length;
     friExp.keep2ns = true;
     pil.expressions.push(friExp);
 
-    pilCodeGen(ctx2ns, res.friExpId);
+    pilCodeGen(ctx2ns, res.friExpId, false, "f");
+
+    const code = ctx2ns.code[ctx2ns.code.length-1].code;
+
+    code[code.length-1].dest = { type: "f" };
+
     res.step52ns = buildCode(ctx2ns);
 
 }

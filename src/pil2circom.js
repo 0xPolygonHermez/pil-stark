@@ -7,6 +7,7 @@ const path = require("path");
 
 module.exports = async function pil2circom(pil, constRoot, starkStruct, options) {
 
+    options = options || {};
     const starkInfo = starkInfoGen(pil, starkStruct);
 
     const F = new F1Field();

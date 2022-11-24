@@ -37,6 +37,7 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
     res.starkStruct = starkStruct;
     res.nConstants = pil.nConstants;
     res.nPublics = pil.publics.length;
+    res.nTmpExps = 0;
 
     generatePublicCalculators(res, pil);
     res.nCm1 = pil.nCommitments;
@@ -63,14 +64,10 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
 
 
     generateStep2(res, pil, ctx);                        // H1, H2
-    res.nCm2 = pil.nCommitments - res.nCm1;
 
     generateStep3(res, pil, ctx);                        // Z Polynomials and LC of permutation chcks.
-    res.nCm3 = pil.nCommitments - res.nCm1 - res.nCm2;
 
     generateConstraintPolynomial(res, pil, ctx, ctx2ns);            // Step4
-    res.nCm4 = pil.nCommitments - res.nCm3 -res.nCm2-res.nCm1;
-    res.nQ = pil.nQ;
 
     generateConstraintPolynomialVerifier(res, pil);
 

@@ -53,12 +53,12 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         code.length = 0;
     }
 
-    code.push(compileCode("step4_first", starkInfo.step4.first, "n"));
-    code.push(compileCode("step4_i", starkInfo.step4.first, "n"));
-    code.push(compileCode("step4_last", starkInfo.step4.first, "n"));
+    code.push(compileCode("step3_first", starkInfo.step3.first, "n"));
+    code.push(compileCode("step3_i", starkInfo.step3.first, "n"));
+    code.push(compileCode("step3_last", starkInfo.step3.first, "n"));
 
     if (multipleCodeFiles) {
-        result.step4 = code.join("\n\n")+"\n";
+        result.step3 = code.join("\n\n")+"\n";
         code.length = 0;
     }
 
@@ -247,15 +247,6 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                         throw new Error("Invalid dom");
                     }
                 }
-                case "exp": {
-                    if (dom == "n") {
-                        return evalMap(starkInfo.exps_n[r.id], r.prime)
-                    } else if (dom == "2ns") {
-                        return evalMap(starkInfo.exps_2ns[r.id], r.prime)
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                }
                 case "number": return `Goldilocks::fromU64(${BigInt(r.value).toString()}ULL)`;
                 case "public": return `publicInputs[${r.id}]`;
                 case "challenge": return `(Goldilocks3::Element &)*challenges[${r.id}]`;
@@ -290,21 +281,31 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                     eDst = `tmp_${r.dest.id}`;
                     break;
                 }
-                case "exp": {
+                case "q": {
                     if (dom == "n") {
-                        eDst = evalMap(starkInfo.exps_n[r.dest.id], r.dest.prime)
+                        throw new Error("Accessing q in domain n");
                     } else if (dom == "2ns") {
-                        eDst = evalMap(starkInfo.exps_2ns[r.dest.id], r.dest.prime)
+                        eDst = `q`
                     } else {
                         throw new Error("Invalid dom");
                     }
                     break;
                 }
-                case "q": {
+                case "cm": {
+                    if (dom == "n") {
+                        eDst = evalMap(starkInfo.cm_n[r.dest.id], r.dest.prime)
+                    } else if (dom == "2ns") {
+                        eDst = evalMap(starkInfo.cm_2ns[r.dest.id], r.dest.prime)
+                    } else {
+                        throw new Error("Invalid dom");
+                    }
+                    break;
+                }
+                case "f": {
                     if (dom == "n") {
                         throw new Error("Accessing q in domain n");
                     } else if (dom == "2ns") {
-                        eDst = evalMap(starkInfo.qs[r.dest.id], r.dest.prime)
+                        eDst = `f`
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -317,6 +318,9 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
         function evalMap(polId, prime) {
             let p = starkInfo.varPolMap[polId];
+            if (!p) {
+                console.log("xx");
+            }
             let offset = starkInfo.mapOffsets[p.section];
             offset += p.sectionPos;
             let size = starkInfo.mapSectionsN[p.section];
