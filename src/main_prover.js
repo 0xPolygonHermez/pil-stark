@@ -15,13 +15,13 @@ const { createHash } = require("crypto");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_prover.js -m commit.bin -c <const.bin> -t <consttree.bin> -p <pil.json> [-P <pilconfig.json>] -s <starkstruct.json> -o <proof.json> -b <public.json>")
+    .usage("node main_prover.js -m commit.bin -c <const.bin> -t <consttree.bin> -p <pil.json> [-P <pilconfig.json>] -s <starkinfo.json> -o <proof.json> -b <public.json>")
     .alias("m", "commit")
     .alias("c", "const")
     .alias("t", "consttree")
     .alias("p", "pil")
     .alias("P", "pilconfig")
-    .alias("s", "starkstruct")
+    .alias("s", "starkinfo")
     .alias("o", "proof")
     .alias("z", "zkin")
     .alias("b", "public")
@@ -36,15 +36,15 @@ async function run() {
     const constTreeFile = typeof(argv.consttree) === "string" ?  argv.consttree.trim() : "mycircuit.consttree";
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
     const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
-    const starkStructFile = typeof(argv.starkstruct) === "string" ?  argv.starkstruct.trim() : "mycircuit.stark_struct.json";
+    const starkInfoFile = typeof(argv.starkinfo) === "string" ?  argv.starkinfo.trim() : "mycircuit.starkinfo.json";
     const proofFile = typeof(argv.proof) === "string" ?  argv.proof.trim() : "mycircuit.proof.json";
     const zkinFile = typeof(argv.zkin) === "string" ?  argv.zkin.trim() : "mycircuit.proof.zkin.json";
     const publicFile = typeof(argv.public) === "string" ?  argv.public.trim() : "mycircuit.public.json";
 
     const pil = await compile(F, pilFile, null, pilConfig);
-    const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
+    const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
-    const nBits = starkStruct.nBits;
+    const nBits = starkInfo.starkStruct.nBits;
     const n = 1 << nBits;
 
     const constPols =  newConstantPolsArray(pil);
@@ -54,28 +54,25 @@ async function run() {
     await cmPols.loadFromFile(commitFile);
 
     let MH;
-    if (starkStruct.verificationHashType == "GL") {
+    if (starkInfo.starkStruct.verificationHashType == "GL") {
         MH = await buildMerklehashGL();
-    } else if (starkStruct.verificationHashType == "BN128") {
+    } else if (starkInfo.starkStruct.verificationHashType == "BN128") {
         MH = await buildMerklehashBN128();
     } else {
-        throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
+        throw new Error("Invalid Hash Type: "+ starkInfo.starkStruct.verificationHashType);
     }
 
     const constTree = await MH.readFromFile(constTreeFile);
-
-    const starkInfo = starkInfoGen(pil, starkStruct);
 
     const resP = await starkGen(cmPols, constPols, constTree, starkInfo);
 
     await fs.promises.writeFile(proofFile, JSONbig.stringify(resP.proof, null, 1), "utf8");
 
-
     const zkIn = proof2zkin(resP.proof);
     zkIn.publics = resP.publics;
 
     await fs.promises.writeFile(publicFile, JSONbig.stringify(resP.publics, null, 1), "utf8");
-    if (starkStruct.verificationHashType == "BN128") {
+    if (starkInfo.starkStruct.verificationHashType == "BN128") {
 
         if (!argv.proverAddr) throw new Error("Prover Address not specified");
         zkIn.proverAddr = BigInt(argv.proverAddr);

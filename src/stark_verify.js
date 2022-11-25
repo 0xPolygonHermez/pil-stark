@@ -40,6 +40,11 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         evals: proof.evals,
         publics: publics
     };
+
+    for (let i=0; i<publics.length; i++) {
+        transcript.put(publics[i]);
+    }
+
     transcript.put(proof.root1);
     ctx.challenges[0] = transcript.getField(); // u
     ctx.challenges[1] = transcript.getField(); // defVal
@@ -51,9 +56,14 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
     ctx.challenges[4] = transcript.getField(); // vc
 
     transcript.put(proof.root4);
+    ctx.challenges[7] = transcript.getField(); // xi
+
+    for (let i=0; i<ctx.evals.length; i++) {
+        transcript.put(ctx.evals[i]);
+    }
+
     ctx.challenges[5] = transcript.getField(); // v1
     ctx.challenges[6] = transcript.getField(); // v2
-    ctx.challenges[7] = transcript.getField(); // xi
 
     const xN = F.exp(ctx.challenges[7], N)
     ctx.Z = F.sub(xN, 1n);

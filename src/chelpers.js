@@ -301,6 +301,16 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                     }
                     break;
                 }
+                case "tmpExp": {
+                    if (dom == "n") {
+                        eDst = evalMap(starkInfo.tmpExp_n[r.dest.id], r.dest.prime)
+                    } else if (dom == "2ns") {
+                        throw new Error("Accessing tmpExp in 2ns domain");
+                    } else {
+                        throw new Error("Invalid dom");
+                    }
+                    break;
+                }
                 case "f": {
                     if (dom == "n") {
                         throw new Error("Accessing q in domain n");

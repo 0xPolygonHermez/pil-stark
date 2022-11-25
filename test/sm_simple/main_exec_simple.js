@@ -19,7 +19,7 @@ async function run() {
     const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "simple.commit";
 
     const F = new F1Field();
-    const pil = await compile(F, path.join(__dirname, "simple_main.pil"));
+    const pil = await compile(F, path.join(__dirname, "simple1.pil"));
 
     const cmPols =  newCommitPolsArray(pil);
 

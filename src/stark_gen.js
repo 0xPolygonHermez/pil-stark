@@ -122,6 +122,10 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         }
     }
 
+    for (let i=0; i<starkInfo.publics.length; i++) {
+        transcript.put(ctx.publics[i]);
+    }
+
     console.log("Merkelizing 1....");
     const tree1 = await extendAndMerkelize(MH, ctx.cm1_n, ctx.cm1_2ns, starkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree1));
@@ -240,8 +244,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 ///////////
 // 5. Compute FRI Polynomial
 ///////////
-    ctx.challenges[5] = transcript.getField(); // v1
-    ctx.challenges[6] = transcript.getField(); // v2
     ctx.challenges[7] = transcript.getField(); // xi
 
 // Calculate Evals
@@ -294,6 +296,14 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         }
         ctx.evals[i] = acc;
     }
+
+    for (let i=0; i<ctx.evals.length; i++) {
+        transcript.put(ctx.evals[i]);
+    }
+
+    ctx.challenges[5] = transcript.getField(); // v1
+    ctx.challenges[6] = transcript.getField(); // v2
+
 
 // Calculate xDivXSubXi, xDivX4SubWXi
     if (global.gc) {global.gc();}
