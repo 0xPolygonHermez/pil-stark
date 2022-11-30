@@ -757,6 +757,298 @@ function build(module) {
         );
     }
 
+
+    function buildLinearHash() {
+        const f = module.addFunction("linearHash");
+        f.addParam("pIn", "i32");       // 0
+        f.addParam("width", "i32");     // 1
+        f.addParam("pOut", "i32");      // 2
+        f.addLocal("j", "i32");         // 4
+        f.addLocal("curN", "i32");      // 5
+
+        const c = f.getCodeBuilder();
+        f.addCode(
+            c.i64_store(
+                c.getLocal("pOut"),
+                0,
+                0,
+                c.i64_const(0)
+            ),
+            c.i64_store(
+                c.getLocal("pOut"),
+                8,
+                0,
+                c.i64_const(0)
+            ),
+            c.i64_store(
+                c.getLocal("pOut"),
+                16,
+                0,
+                c.i64_const(0)
+            ),
+            c.i64_store(
+                c.getLocal("pOut"),
+                24,
+                0,
+                c.i64_const(0)
+            ),
+            c.setLocal("j", c.i32_const(0)),
+            c.block(c.loop(
+                c.br_if(
+                    1,
+                    c.i32_ge_s(
+                        c.getLocal("j"),
+                        c.getLocal("width"),
+                    )
+                ),
+                c.setLocal("curN",
+                    c.i32_sub(
+                        c.getLocal("width"),
+                        c.getLocal("j")
+                    ),
+                ),
+                c.if(
+                    c.i32_gt_s(
+                        c.getLocal("curN"),
+                        c.i32_const(8)
+                    ),
+                    c.setLocal("curN", c.i32_const(8))
+                ),
+                c.call(
+                    "poseidon",
+                    c.getLocal("pIn"),
+                    c.getLocal("curN"),
+                    c.getLocal("pOut"),
+                    c.i32_const(4),
+                    c.getLocal("pOut"),
+                    c.i32_const(4)
+                ),
+                c.setLocal("j", c.i32_add(c.getLocal("j"), c.i32_const(8))),
+                c.setLocal(
+                    "pIn",
+                    c.i32_add(
+                        c.getLocal("pIn"),
+                        c.i32_mul(
+                            c.getLocal("curN"),
+                            c.i32_const(8)
+                        )
+                    )
+                ),
+                c.br(0)
+            ))
+        );
+    }
+
+    function buildGroupLinear() {
+        const f = module.addFunction("linearGroupHash");
+        f.addParam("pIn", "i32");       // 0
+        f.addParam("width", "i32");     // 1
+        f.addParam("pOut", "i32");      // 2
+        f.addLocal("batchSize", "i32");
+        f.addLocal("nBatches", "i32");
+        f.addLocal("i", "i32");
+        f.addLocal("size", "i32");
+        f.addLocal("imBuff", "i32");
+        const c = f.getCodeBuilder();
+        f.addCode(
+            c.if(
+                c.i32_le_u(
+                    c.getLocal("width"),
+                    c.i32_const(4)
+                ),
+                [
+                    ...c.setLocal("i", c.i32_const(0)),
+                    ...c.block(c.loop(
+                        c.br_if(
+                            1,
+                            c.i32_eq(
+                                c.getLocal("i"),
+                                c.getLocal("width"),
+                            )
+                        ),
+                        c.i64_store(
+                            c.i32_add(
+                                c.getLocal("pOut"),
+                                c.i32_mul(
+                                    c.getLocal("i"),
+                                    c.i32_const(8)
+                                )
+                            ),
+                            c.i64_load(
+                                c.i32_add(
+                                    c.getLocal("pIn"),
+                                    c.i32_mul(
+                                        c.getLocal("i"),
+                                        c.i32_const(8)
+                                    )
+                                )
+                            )
+                        ),
+                        c.setLocal("i", c.i32_add(c.getLocal("i"), c.i32_const(1))),
+                        c.br(0)
+                    )),
+                    ...c.block(c.loop(
+                        c.br_if(
+                            1,
+                            c.i32_eq(
+                                c.getLocal("i"),
+                                c.i32_const(4),
+                            )
+                        ),
+                        c.i64_store(
+                            c.i32_add(
+                                c.getLocal("pOut"),
+                                c.i32_mul(
+                                    c.getLocal("i"),
+                                    c.i32_const(8)
+                                )
+                            ),
+                            c.i64_const(0)
+                        ),
+                        c.setLocal("i", c.i32_add(c.getLocal("i"), c.i32_const(1))),
+                        c.br(0)
+                    )),
+                    c.ret([])
+                ]
+            ),
+            // Math.max(8,(width+3)/4);
+            c.setLocal("batchSize",
+                c.i32_div_u(
+                    c.i32_add(
+                        c.getLocal("width"),
+                        c.i32_const(3)
+                    ),
+                    c.i32_const(4)
+                )
+            ),
+            c.if(
+                c.i32_lt_u(
+                    c.getLocal("batchSize"),
+                    c.i32_const(8)
+                ),
+                c.setLocal("batchSize", c.i32_const(8))
+            ),
+            // nMatches = Math.floor((width - 1) / batchSize) + 1
+            c.setLocal("nBatches", c.i32_add(
+                c.i32_div_u(
+                    c.i32_sub(
+                        c.getLocal("width"),
+                        c.i32_const(1)
+                    ),
+                    c.getLocal("batchSize")
+                ),
+                c.i32_const(1),
+            )),
+            c.setLocal("imBuff", c.i32_load( c.i32_const(0) )),
+            c.i32_store(
+                c.i32_const(0),
+                c.i32_add(
+                    c.getLocal("imBuff"),
+                    c.i32_mul(
+                        c.getLocal("nBatches"),
+                        c.i32_const(8*4)
+                    )
+                )
+            ),
+            c.setLocal("i", c.i32_const(0)),
+            c.block(c.loop(
+                c.br_if(
+                    1,
+                    c.i32_ge_s(
+                        c.getLocal("i"),
+                        c.getLocal("width"),
+                    )
+                ),
+                // size = min(batchSize, with-i)
+                c.setLocal("size",
+                    c.i32_sub(
+                        c.getLocal("width"),
+                        c.getLocal("i")
+                    )
+                ),
+                c.if(
+                    c.i32_gt_u(
+                        c.getLocal("size"),
+                        c.getLocal("batchSize")
+                    ),
+                    c.setLocal("size", c.getLocal("batchSize"))
+                ),
+                c.call(
+                    "linearHash",
+                    c.getLocal("pIn"),
+                    c.getLocal("size"),
+                    c.i32_add(
+                        c.getLocal("imBuff"),
+                        c.i32_mul(
+                            c.i32_div_u(c.getLocal("i"), c.getLocal("batchSize")),
+                            c.i32_const(32)
+                        )
+                    )
+                ),
+                c.setLocal("pIn", c.i32_add(
+                    c.getLocal("pIn"),
+                    c.i32_mul(
+                        c.getLocal("size"),
+                        c.i32_const(8)
+                    )
+                )),
+                c.setLocal("i", c.i32_add(c.getLocal("i"), c.getLocal("batchSize"))),
+                c.br(0)
+            )),
+            c.if(
+                c.i32_eq(
+                    c.getLocal("nBatches"),
+                    c.i32_const(1)
+                ),
+                [
+                    ...c.setLocal("i", c.i32_const(0)),
+                    ...c.block(c.loop(
+                        c.br_if(
+                            1,
+                            c.i32_eq(
+                                c.getLocal("i"),
+                                c.i32_const(4),
+                            )
+                        ),
+                        c.i64_store(
+                            c.i32_add(
+                                c.getLocal("pOut"),
+                                c.i32_mul(
+                                    c.getLocal("i"),
+                                    c.i32_const(8)
+                                )
+                            ),
+                            c.i64_load(
+                                c.i32_add(
+                                    c.getLocal("imBuff"),
+                                    c.i32_mul(
+                                        c.getLocal("i"),
+                                        c.i32_const(8)
+                                    )
+                                )
+                            )
+                        ),
+                        c.setLocal("i", c.i32_add(c.getLocal("i"), c.i32_const(1))),
+                        c.br(0)
+                    )),
+                    ...c.i32_store(c.i32_const(0), c.getLocal("imBuff")),
+                    ...c.ret([])
+                ]
+            ),
+            c.call(
+                "linearHash",
+                c.getLocal("imBuff"),
+                c.i32_mul(
+                    c.getLocal("nBatches"),
+                    c.i32_const(4)
+                ),
+                c.getLocal("pOut")
+            ),
+            c.i32_store(c.i32_const(0), c.getLocal("imBuff"))
+        );
+
+    }
+
     function buildMultiLinearHash() {
         const f = module.addFunction("multiLinearHash");
         f.addParam("pIn", "i32");       // 0
@@ -773,80 +1065,19 @@ function build(module) {
             c.block(c.loop(
                 c.br_if(
                     1,
-                    c.i32_ge_s(
+                    c.i32_eq(
                         c.getLocal("i"),
                         c.getLocal("heigth"),
                     )
                 ),
-                c.i64_store(
-                    c.getLocal("pOut"),
-                    0,
-                    0,
-                    c.i64_const(0)
+                c.call(
+                    "linearGroupHash",
+                    c.getLocal("pIn"),
+                    c.getLocal("width"),
+                    c.getLocal("pOut")
                 ),
-                c.i64_store(
-                    c.getLocal("pOut"),
-                    8,
-                    0,
-                    c.i64_const(0)
-                ),
-                c.i64_store(
-                    c.getLocal("pOut"),
-                    16,
-                    0,
-                    c.i64_const(0)
-                ),
-                c.i64_store(
-                    c.getLocal("pOut"),
-                    24,
-                    0,
-                    c.i64_const(0)
-                ),
-                c.setLocal("j", c.i32_const(0)),
-                c.block(c.loop(
-                    c.br_if(
-                        1,
-                        c.i32_ge_s(
-                            c.getLocal("j"),
-                            c.getLocal("width"),
-                        )
-                    ),
-                    c.setLocal("curN",
-                        c.i32_sub(
-                            c.getLocal("width"),
-                            c.getLocal("j")
-                        ),
-                    ),
-                    c.if(
-                        c.i32_gt_s(
-                            c.getLocal("curN"),
-                            c.i32_const(8)
-                        ),
-                        c.setLocal("curN", c.i32_const(8))
-                    ),
-                    c.call(
-                        "poseidon",
-                        c.getLocal("pIn"),
-                        c.getLocal("curN"),
-                        c.getLocal("pOut"),
-                        c.i32_const(4),
-                        c.getLocal("pOut"),
-                        c.i32_const(4)
-                    ),
-                    c.setLocal("j", c.i32_add(c.getLocal("j"), c.i32_const(8))),
-                    c.setLocal(
-                        "pIn",
-                        c.i32_add(
-                            c.getLocal("pIn"),
-                            c.i32_mul(
-                                c.getLocal("curN"),
-                                c.i32_const(8)
-                            )
-                        )
-                    ),
-                    c.br(0)
-                )),
                 c.setLocal("i", c.i32_add(c.getLocal("i"), c.i32_const(1))),
+                c.setLocal("pIn", c.i32_add(c.getLocal("pIn"), c.i32_mul(c.getLocal("width"), c.i32_const(8)))),
                 c.setLocal("pOut", c.i32_add(c.getLocal("pOut"), c.i32_const(32))),
                 c.br(0)
             ))
@@ -896,6 +1127,8 @@ function build(module) {
     buildMul();
     buildSquare();
     buildPoseidon();
+    buildLinearHash();
+    buildGroupLinear();
     buildMultiLinearHash();
     buildMerkelizeLevel();
 

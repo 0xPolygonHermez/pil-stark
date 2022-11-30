@@ -3,10 +3,41 @@ const assert = chai.assert;
 const buildGLWasm = require("../src/glwasm.js").buildProtoboard;
 const F3g = require("../src/f3g.js");
 const { P } = require("../src/poseidon_constants_opt.js");
+const LinearHash = require("../src/linearhash");
+const buildPoseidon = require("../src/poseidon");
 
 describe("Goldilocks Wasm test", function () {
     let glwasm;
     let pIn, pOut;
+    let poseidon;
+    let lh;
+
+    function testLinearHash(width, heigth) {
+        let res;
+        const F = new F3g();
+
+        const pIn = glwasm.alloc(width*heigth*8);
+        const pOut = glwasm.alloc(heigth*4*8);
+        for (let i=0; i<heigth; i++) {
+            for (let j=0; j<width; j++) {
+                glwasm.set(pIn+(i*width+j)*8, i*width+j);
+            }
+        }
+
+        glwasm.multiLinearHash(pIn, width, heigth, pOut);
+
+        for (let i=0; i<heigth; i++) {
+            let input = glwasm.get(pIn + (i*width)*8, width, 8);
+            if (!Array.isArray(input)) input = [input];
+            const output = glwasm.get(pOut+ i*4*8, 4, 8);
+            const expectedOutput = lh.hash(input);
+
+            for (let j = 0; j < 4; j++) {
+                assert(F.eq(F.e(output[j].toString()), F.e(expectedOutput[j])));
+            }
+        }
+    }
+
 
     this.timeout(10000000);
 
@@ -14,7 +45,8 @@ describe("Goldilocks Wasm test", function () {
         glwasm = await buildGLWasm();
         pIn = glwasm.alloc(12*8);
         pOut = glwasm.alloc(4*8);
-
+        poseidon = await buildPoseidon();
+        lh = new LinearHash(poseidon);
     });
 
     it("Should do a normal adition", async () => {
@@ -146,6 +178,7 @@ describe("Goldilocks Wasm test", function () {
             assert(F.eq(F.e(res[i].toString()), expectedRes[i]));
         }
     });
+    /*
     it("poseidon Performance", async() => {
         let res;
 
@@ -153,6 +186,40 @@ describe("Goldilocks Wasm test", function () {
             glwasm.set(pIn, i);
             glwasm.poseidon(pIn, 0, pIn+8*8, 0, pOut, 4);
         }
+    });
+    */
+    it("it should do lineaHash", async() => {
+        testLinearHash(0,0);
+        testLinearHash(0,1);
+        testLinearHash(1,0);
+        testLinearHash(1,1);
+        testLinearHash(2,1);
+        testLinearHash(3,1);
+        testLinearHash(4,1);
+        testLinearHash(5,1);
+        testLinearHash(8,1);
+        testLinearHash(9,1);
+        testLinearHash(15,1);
+        testLinearHash(16,1);
+        testLinearHash(24,1);
+        testLinearHash(25,1);
+        testLinearHash(32,1);
+        testLinearHash(33,1);
+        testLinearHash(50,1);
+        testLinearHash(1,10);
+        testLinearHash(2,10);
+        testLinearHash(3,10);
+        testLinearHash(4,10);
+        testLinearHash(5,10);
+        testLinearHash(8,10);
+        testLinearHash(9,10);
+        testLinearHash(15,10);
+        testLinearHash(16,10);
+        testLinearHash(24,10);
+        testLinearHash(25,10);
+        testLinearHash(32,10);
+        testLinearHash(33,10);
+        testLinearHash(50,10);
     });
 
 });
