@@ -40,6 +40,11 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         evals: proof.evals,
         publics: publics
     };
+
+    for (let i=0; i<publics.length; i++) {
+        transcript.put(publics[i]);
+    }
+
     transcript.put(proof.root1);
     ctx.challenges[0] = transcript.getField(); // u
     ctx.challenges[1] = transcript.getField(); // defVal
@@ -51,18 +56,31 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
     ctx.challenges[4] = transcript.getField(); // vc
 
     transcript.put(proof.root4);
-    ctx.challenges[5] = transcript.getField(); // v1
-    ctx.challenges[6] = transcript.getField(); // v2
     ctx.challenges[7] = transcript.getField(); // xi
 
-    ctx.Z = F.sub(F.exp(ctx.challenges[7], N), 1n);
+    for (let i=0; i<ctx.evals.length; i++) {
+        transcript.put(ctx.evals[i]);
+    }
+
+    ctx.challenges[5] = transcript.getField(); // v1
+    ctx.challenges[6] = transcript.getField(); // v2
+
+    const xN = F.exp(ctx.challenges[7], N)
+    ctx.Z = F.sub(xN, 1n);
     ctx.Zp = F.sub(F.exp(F.mul(ctx.challenges[7], F.w[nBits]), N), 1n);
-
-
 
     const res=executeCode(F, ctx, starkInfo.verifierCode.first);
 
-    if (!F.eq(res, 0n)) return false;
+    let xAcc = 1n;
+    let q = 0n;
+    for (let i=0; i<starkInfo.qDeg; i++) {
+        q = F.add(q, F.mul(xAcc, ctx.evals[starkInfo.evIdx.cm[0][starkInfo.qs[i]]]));
+        xAcc = F.mul(xAcc, xN);
+    }
+
+    const qZ = F.mul(q, ctx.Z);
+
+    if (!F.eq(res, qZ)) return false;
 
     const fri = new FRI( starkStruct, MH );
 

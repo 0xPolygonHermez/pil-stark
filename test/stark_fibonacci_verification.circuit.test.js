@@ -6,6 +6,7 @@ const F1Field = require("../src/f3g");
 const { compile } = require("pilcom");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 const proof2zkin = require("../src/proof2zkin").proof2zkin;
+const starkInfoGen = require("../src/starkinfo.js");
 
 const assert = chai.assert;
 
@@ -42,8 +43,8 @@ describe("Stark Verification Circuit Test", function () {
         const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
         const publics = JSONbig.parse(await fs.promises.readFile(publicsFile, "utf8"));
 
-
-        const circuitSrc = await pil2circom(pil, constRoot, starkStruct)
+        const starkInfo = starkInfoGen(pil, starkStruct);
+        const circuitSrc = await pil2circom(pil, constRoot, starkInfo);
 
         await fs.promises.writeFile(circomFile, circuitSrc, "utf8");
 

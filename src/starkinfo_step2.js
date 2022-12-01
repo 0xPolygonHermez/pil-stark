@@ -58,8 +58,10 @@ module.exports = function generateStep2(res, pil, ctx) {
         fExp.keep = true;
         pil.expressions.push(fExp);
 
-        pilCodeGen(ctx, puCtx.fExpId, false);
-        pilCodeGen(ctx, puCtx.tExpId, false);
+        puCtx.fTmpExpId = res.nTmpExps;
+        pilCodeGen(ctx, puCtx.fExpId, false, "tmpExp", res.nTmpExps++);
+        puCtx.tTmpExpId = res.nTmpExps;
+        pilCodeGen(ctx, puCtx.tExpId, false, "tmpExp", res.nTmpExps++);
 
         puCtx.h1Id = pil.nCommitments++;
         puCtx.h2Id = pil.nCommitments++;
@@ -68,4 +70,7 @@ module.exports = function generateStep2(res, pil, ctx) {
     }
 
     res.step2prev = buildCode(ctx);
+    ctx.calculated =  { exps: {}, expsPrime: {} }
+
+    res.nCm2 = pil.nCommitments - res.nCm1;
 }

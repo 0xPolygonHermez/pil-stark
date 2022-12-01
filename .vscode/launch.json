@@ -452,6 +452,147 @@
             ]
         },
         {
+            "name": "simple test",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/stark_simple.test"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "simple buildconst",
+            "program": "test/sm_simple/main_buildconst_simple.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-o tmp/simple.const"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "simple exec",
+            "program": "test/sm_simple/main_exec_simple.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-o tmp/simple.commit"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "simple PIL verify",
+            "program": "node_modules/pilcom/src/main_pilverifier.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "tmp/simple.commit",
+                "-p test/sm_simple/simple1.pil",
+                "-c tmp/simple.const"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "simple gen StarkInfo",
+            "program": "${workspaceFolder}/src/main_genstarkinfo.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p test/sm_simple/simple1.pil",
+                "-s ${workspaceFolder}/test/sm_simple/simple.starkstruct.json",
+                "-i tmp/simple.starkinfo.json"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "simple build consttree",
+            "program": "src/main_buildconsttree.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-c ${workspaceFolder}/tmp/simple.const",
+                "-p ${workspaceFolder}/test/sm_simple/simple1.pil",
+                "-s ${workspaceFolder}/test/sm_simple/simple.starkstruct.json",
+                "-t ${workspaceFolder}/tmp/simple.consttree",
+                "-v ${workspaceFolder}/tmp/simple.verkey.json",
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "simple prove",
+            "program": "src/main_prover.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-m ${workspaceFolder}/tmp/simple.commit",
+                "-c ${workspaceFolder}/tmp/simple.const",
+                "-t ${workspaceFolder}/tmp/simple.consttree",
+                "-p ${workspaceFolder}/test/sm_simple/simple1.pil",
+                "-s ${workspaceFolder}/tmp/simple.starkinfo.json",
+                "-o ${workspaceFolder}/tmp/simple.proof.json",
+                "-z ${workspaceFolder}/tmp/simple.proof.zkin.json",
+                "-b ${workspaceFolder}/tmp/simple.public.json",
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "simple verify proof",
+            "program": "src/main_verifier.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p ${workspaceFolder}/test/sm_simple/simple1.pil",
+                "-s ${workspaceFolder}/tmp/simple.starkinfo.json",
+                "-o ${workspaceFolder}/tmp/simple.proof.json",
+                "-b ${workspaceFolder}/tmp/simple.public.json",
+                "-v ${workspaceFolder}/tmp/simple.verkey.json"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+
+
+        {
             "name": "fibonacci buildconst",
             "program": "test/sm_fibonacci/main_buildconst_fibonacci.js",
             "request": "launch",
@@ -565,7 +706,7 @@
                 "-c ${workspaceFolder}/tmp/fibonacci.const",
                 "-t ${workspaceFolder}/tmp/fibonacci.consttree",
                 "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci_main.pil",
-                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.starkstruct.json",
+                "-s ${workspaceFolder}/tmp/fibonacci.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.proof.json",
                 "-z ${workspaceFolder}/tmp/fibonacci.proof.zkin.json",
                 "-b ${workspaceFolder}/tmp/fibonacci.public.json",
@@ -584,7 +725,7 @@
             "type": "pwa-node",
             "args": [
                 "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci_main.pil",
-                "-s ${workspaceFolder}/test/sm_fibonacci//fibonacci.starkstruct.json",
+                "-s ${workspaceFolder}/tmp/fibonacci.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.proof.json",
                 "-b ${workspaceFolder}/tmp/fibonacci.public.json",
                 "-v ${workspaceFolder}/tmp/fibonacci.verkey.json"
@@ -603,7 +744,7 @@
             "type": "pwa-node",
             "args": [
                 "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci_main.pil",
-                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.starkstruct.json",
+                "-s ${workspaceFolder}/tmp/fibonacci.starkinfo.json",
                 "-v ${workspaceFolder}/tmp/fibonacci.verkey.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.verifier.circom",
             ],
@@ -729,7 +870,7 @@
                 "-c ${workspaceFolder}/tmp/fibonacci.c12.const",
                 "-t ${workspaceFolder}/tmp/fibonacci.c12.consttree",
                 "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
-                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.c12.starkstruct.json",
+                "-s ${workspaceFolder}/tmp/fibonacci.c12.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.c12.proof.json",
                 "-z ${workspaceFolder}/tmp/fibonacci.c12.proof.zkin.json",
                 "-b ${workspaceFolder}/tmp/fibonacci.c12.public.json",
@@ -749,7 +890,7 @@
             "type": "pwa-node",
             "args": [
                 "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
-                "-s ${workspaceFolder}/test/sm_fibonacci//fibonacci.c12.starkstruct.json",
+                "-s ${workspaceFolder}/tmp/fibonacci.c12.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.c12.proof.json",
                 "-b ${workspaceFolder}/tmp/fibonacci.c12.public.json",
                 "-v ${workspaceFolder}/tmp/fibonacci.c12.verkey.json"
@@ -768,7 +909,7 @@
             "type": "pwa-node",
             "args": [
                 "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
-                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.c12.starkstruct.json",
+                "-s ${workspaceFolder}/tmp/fibonacci.c12.starkinfo.json",
                 "-v ${workspaceFolder}/tmp/fibonacci.c12.verkey.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.c12.verifier.circom",
             ],
@@ -905,7 +1046,7 @@
                 "-c ${workspaceFolder}/tmp/all.const",
                 "-t ${workspaceFolder}/tmp/all.consttree",
                 "-p ${workspaceFolder}/test/sm_all/all_main.pil",
-                "-s ${workspaceFolder}/test/sm_all/all.starkstruct.json",
+                "-s ${workspaceFolder}/tmp/all.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/all.proof.json",
                 "-z ${workspaceFolder}/tmp/all.proof.zkin.json",
                 "-b ${workspaceFolder}/tmp/all.public.json",
@@ -924,7 +1065,7 @@
             "type": "pwa-node",
             "args": [
                 "-p ${workspaceFolder}/test/sm_all/all_main.pil",
-                "-s ${workspaceFolder}/test/sm_all//all.starkstruct.json",
+                "-s ${workspaceFolder}/tmp/all.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/all.proof.json",
                 "-b ${workspaceFolder}/tmp/all.public.json",
                 "-v ${workspaceFolder}/tmp/all.verkey.json"
@@ -943,7 +1084,7 @@
             "type": "pwa-node",
             "args": [
                 "-p ${workspaceFolder}/test/sm_all/all_main.pil",
-                "-s ${workspaceFolder}/test/sm_all/all.starkstruct.json",
+                "-s ${workspaceFolder}/tmp/all.starkinfo.json",
                 "-v ${workspaceFolder}/tmp/all.verkey.json",
                 "-o ${workspaceFolder}/tmp/all.verifier.circom",
             ],
@@ -1069,7 +1210,7 @@
                 "-c ${workspaceFolder}/tmp/all.c12.const",
                 "-t ${workspaceFolder}/tmp/all.c12.consttree",
                 "-p ${workspaceFolder}/tmp/all.c12.pil",
-                "-s ${workspaceFolder}/test/sm_all/all.c12.starkstruct.json",
+                "-s ${workspaceFolder}/tmp/all.c12.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/all.c12.proof.json",
                 "-z ${workspaceFolder}/tmp/all.c12.proof.zkin.json",
                 "-b ${workspaceFolder}/tmp/all.c12.public.json",
@@ -1089,7 +1230,7 @@
             "type": "pwa-node",
             "args": [
                 "-p ${workspaceFolder}/tmp/all.c12.pil",
-                "-s ${workspaceFolder}/test/sm_all//all.c12.starkstruct.json",
+                "-s ${workspaceFolder}/tmp/all.c12.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/all.c12.proof.json",
                 "-b ${workspaceFolder}/tmp/all.c12.public.json",
                 "-v ${workspaceFolder}/tmp/all.c12.verkey.json"
@@ -1108,7 +1249,7 @@
             "type": "pwa-node",
             "args": [
                 "-p ${workspaceFolder}/tmp/all.c12.pil",
-                "-s ${workspaceFolder}/test/sm_all/all.c12.starkstruct.json",
+                "-s ${workspaceFolder}/tmp/all.c12.starkinfo.json",
                 "-v ${workspaceFolder}/tmp/all.c12.verkey.json",
                 "-o ${workspaceFolder}/tmp/all.c12.verifier.circom",
             ],

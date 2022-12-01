@@ -1,0 +1,9 @@
+constant %N = 2**3;
+
+namespace Simple(%N);
+
+    pol commit a, b;
+
+    pol a2 = a*a;
+
+    a2'*a2' = b'*b';

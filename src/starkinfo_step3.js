@@ -11,8 +11,8 @@ module.exports = function generateStep3(res, pil, ctx) {
     generatePermutationZ(res, pil, ctx);
     generateConnectionsZ(res, pil, ctx);
 
-
     res.step3prev = buildCode(ctx);
+    ctx.calculated =  { exps: {}, expsPrime: {} }
 }
 
 
@@ -69,9 +69,6 @@ function generatePermutationLC(res, pil, ctx) {
 
         peCtx.fExpId = pil.expressions.length;
         pil.expressions.push(fExp);
-
-        pilCodeGen(ctx, peCtx.fExpId, false);
-        pilCodeGen(ctx, peCtx.tExpId, false);
 
         res.peCtx.push(peCtx);
     }
@@ -165,8 +162,10 @@ function generatePlookupZ(res, pil, ctx) {
         pil.expressions.push(c2);
         pil.polIdentities.push({e: puCtx.c2Id});
 
-        pilCodeGen(ctx, puCtx.numId, false);
-        pilCodeGen(ctx, puCtx.denId, false);
+        puCtx.numTmpExpId = res.nTmpExps;
+        pilCodeGen(ctx, puCtx.numId, false, "tmpExp", res.nTmpExps++);
+        puCtx.denTmpExpId = res.nTmpExps;
+        pilCodeGen(ctx, puCtx.denId, false, "tmpExp", res.nTmpExps++);
     }
 }
 
@@ -212,8 +211,10 @@ function generatePermutationZ(res, pil, ctx) {
         pil.expressions.push(c2);
         pil.polIdentities.push({e: peCtx.c2Id});
 
-        pilCodeGen(ctx, peCtx.numId, false);
-        pilCodeGen(ctx, peCtx.denId, false);
+        peCtx.numTmpExpId = res.nTmpExps;
+        pilCodeGen(ctx, peCtx.numId, false, "tmpExp", res.nTmpExps++);
+        peCtx.denTmpExpId = res.nTmpExps;
+        pilCodeGen(ctx, peCtx.denId, false, "tmpExp", res.nTmpExps++);
     }
 }
 
@@ -305,8 +306,10 @@ function generateConnectionsZ(res, pil, ctx) {
         pil.expressions.push(c2);
         pil.polIdentities.push({e: ciCtx.c2Id});
 
-        pilCodeGen(ctx, ciCtx.numId, false);
-        pilCodeGen(ctx, ciCtx.denId, false);
+        ciCtx.numTmpExpId = res.nTmpExps;
+        pilCodeGen(ctx, ciCtx.numId, false, "tmpExp", res.nTmpExps++);
+        ciCtx.denTmpExpId = res.nTmpExps;
+        pilCodeGen(ctx, ciCtx.denId, false, "tmpExp", res.nTmpExps++);
 
         res.ciCtx.push(ciCtx);
     }

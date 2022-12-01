@@ -1,23 +1,27 @@
 
 
-function pilCodeGen(ctx, expId, prime, mode) {
+function pilCodeGen(ctx, expId, prime, resType, resId) {
     prime = prime || false;
 
-    if ((mode=="evalQ")&&(prime)) {
-        pilCodeGen(ctx, expId, false, "evalQ");
-        if ((typeof ctx.pil.expressions[expId].idQ === "undefined")&&
-            (!ctx.pil.expressions[expId].keep2ns)) {
-            pilCodeGen(ctx, expId, true);
+    const primeIdx = prime ? "expsPrime" : "exps";
+
+    if (ctx.calculated[primeIdx][expId]) {
+        if (resType) {
+            const c = ctx.code.find(r => (r.expId == expId) && (r.prime == prime));
+            c.code.push({
+                op: "copy",
+                dest: {
+                    type: resType,
+                    prime: prime,
+                    id: resId
+                },
+                src: [c.code[c.code.length-1].dest]
+            });
         }
         return;
     }
 
-    const primeIdx = prime ? "expsPrime" : "exps";
-
-
-    if (ctx.calculated[primeIdx][expId]) return;
-
-    calculateDeps(ctx, ctx.pil.expressions[expId], prime, expId, mode);
+    calculateDeps(ctx, ctx.pil.expressions[expId], prime, expId);
 
     const codeCtx = {
         pil: ctx.pil,
@@ -29,89 +33,46 @@ function pilCodeGen(ctx, expId, prime, mode) {
 
     const retRef = evalExp(codeCtx, ctx.pil.expressions[expId], prime);
 
-    if ((mode=="evalQ")&&(typeof ctx.pil.expressions[expId].idQ !== "undefined")) {
-        if (prime) {
-            throw new Error("EvalQ cannot be prime");
+    if (retRef.type == "tmp") {
+        codeCtx.code[codeCtx.code.length-1].dest = {
+            type: "exp",
+            prime: prime,
+            id: expId
         }
-        const rqz = {
-            type: "tmp",
-            id: codeCtx.tmpUsed++
-        };
+        codeCtx.tmpUsed --;
+    } else {
         codeCtx.code.push({
-            op: "sub",
-            src: [retRef, {
-                type: "exp",
-                prime: prime,
-                id: expId
-            }],
-            dest: rqz
-        });
-        codeCtx.code.push({
-            op: "mul",
-            src: [{
-                type: "Zi",
-            }, rqz],
-            dest: {
-                type: "q",
-                id: ctx.pil.expressions[expId].idQ,
-                prime: prime
-            }
-        });
-    } else if ((mode=="correctQ")&&(typeof ctx.pil.expressions[expId].idQ !== "undefined")) {
-        const rqz = {
-            type: "tmp",
-            id: codeCtx.tmpUsed++
-        };
-        codeCtx.code.push({
-            op: "mul",
-            dest: rqz,
-            src: [
-                {
-                    type: "q",
-                    id: ctx.pil.expressions[expId].idQ,
-                    prime: prime
-                },
-                {
-                    type: "Z",
-                    prime: prime
-                }
-            ]
-        });
-        codeCtx.code.push({
-            op: "sub",
+            op: "copy",
             dest: {
                 type: "exp",
                 prime: prime,
                 id: expId
             },
-            src: [ retRef, rqz]
-        });
-    } else {
-        if (retRef.type == "tmp") {
-            codeCtx.code[codeCtx.code.length-1].dest = {
+            src: [ retRef ]
+        })
+    }
+
+    if (resType) {
+        if (prime) throw new Error("Prime in restype");
+        codeCtx.code.push({
+            op: "copy",
+            dest: {
+                type: resType,
+                prime: prime,
+                id: resId
+            },
+            src: [{
                 type: "exp",
                 prime: prime,
                 id: expId
-            }
-            codeCtx.tmpUsed --;
-        } else {
-            codeCtx.code.push({
-                op: "copy",
-                dest: {
-                    type: "exp",
-                    prime: prime,
-                    id: expId
-                },
-                src: [ retRef ]
-            })
-        }
+            }]
+        });
     }
 
     ctx.code.push({
         expId: expId,
         prime: prime,
         code: codeCtx.code,
-        idQ: (typeof ctx.pil.expressions[expId].idQ !== "undefined") ? ctx.pil.expressions[expId].idQ : undefined
     });
 
     ctx.calculated[primeIdx][expId] = true;
@@ -278,14 +239,14 @@ function evalExp(codeCtx, exp, prime) {
 }
 
 
-function calculateDeps(ctx, exp, prime, expIdErr, mode) {
+function calculateDeps(ctx, exp, prime, expIdErr) {
     if (exp.op == "exp") {
         if (prime && exp.next) expressionError(ctx.pil, `Double prime`, expIdErr, exp.id);
-        pilCodeGen(ctx, exp.id, prime || exp.next, mode);
+        pilCodeGen(ctx, exp.id, prime || exp.next);
     }
     if (exp.values) {
         for (let i=0; i<exp.values.length; i++) {
-            calculateDeps(ctx, exp.values[i], prime, expIdErr, mode);
+            calculateDeps(ctx, exp.values[i], prime, expIdErr);
         }
     }
 }
