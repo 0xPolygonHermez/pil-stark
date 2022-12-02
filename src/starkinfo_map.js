@@ -91,7 +91,7 @@ module.exports = function map(res, pil) {
         res.mapSections.tmpExp_n.push(ppt_n);
     }
 
-    for (let i=0; i<res.puCtx.length + res.puCtx.length + res.ciCtx.length; i++) {
+    for (let i=0; i<res.puCtx.length + res.peCtx.length + res.ciCtx.length; i++) {
         const ppz_n = addPol({
             section: "cm3_n",
             dim:3
