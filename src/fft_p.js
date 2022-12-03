@@ -1,7 +1,7 @@
 const { assert } = require("chai");
 const GL3 = require("./f3g.js");
 const {log2} = require("./utils.js");
-const {fft_block} = require("./fft_worker");
+const {fft_block, interpolatePrepareBlock} = require("./fft_worker");
 const workerpool = require("workerpool");
 const {BigBuffer} = require("pilcom");
 
