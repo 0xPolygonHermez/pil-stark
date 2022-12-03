@@ -73,3 +73,4 @@ if (!workerpool.isMainThread) {
     });
 }
 module.exports.fft_block = fft_block;
+module.exports.interpolatePrepareBlock = interpolatePrepareBlock;
