@@ -344,7 +344,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         calculateExps(ctx, starkInfo.step52ns, "2ns");
     }
 
-    const friPol = new Array( 3 * ctx.Next);
+    const friPol = new Array( 3 * ctx.nBitsExt);
 
     for (let i=0; i<N<<extendBits; i++) {
         friPol[i] = [
