@@ -181,6 +181,7 @@ module.exports = function map(res, pil) {
     res.mapOffsets.cm4_2ns = res.mapOffsets.cm3_2ns +  Next * res.mapSectionsN.cm3_2ns;
     res.mapOffsets.q_2ns = res.mapOffsets.cm4_2ns +  Next * res.mapSectionsN.cm4_2ns;
     res.mapOffsets.f_2ns = res.mapOffsets.q_2ns +  Next * res.mapSectionsN.q_2ns;
+    res.mapTotalN = res.mapOffsets.f_2ns +  Next * res.mapSectionsN.f_2ns;
 
     res.mapDeg = {};
     res.mapDeg.cm1_n = N;
