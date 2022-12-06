@@ -64,6 +64,7 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns) {
         op: "mul",
         dest: {
             type: "q",
+            id: 0
         },
         src: [
            code[code.length-1].dest,
