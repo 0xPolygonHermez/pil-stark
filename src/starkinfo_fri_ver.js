@@ -13,7 +13,7 @@ module.exports = function generateVerifierQuery(res, pil) {
         code: []
     };
 
-    pilCodeGen(ctxFri, res.friExpId);
+    pilCodeGen(ctxFri, res.friExpId, false, null, null, true);
     res.verifierQueryCode = buildCode(ctxFri);
     res.nExps = pil.expressions.length;
 

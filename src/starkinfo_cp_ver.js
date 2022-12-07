@@ -11,7 +11,7 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil) {
         code: []
     };
 
-    pilCodeGen(ctxC, res.cExp);
+    pilCodeGen(ctxC, res.cExp, false, null, null, true);
 
     res.verifierCode = buildCode(ctxC);
 
