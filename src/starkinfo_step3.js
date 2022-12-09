@@ -162,10 +162,8 @@ function generatePlookupZ(res, pil, ctx) {
         pil.expressions.push(c2);
         pil.polIdentities.push({e: puCtx.c2Id});
 
-        puCtx.numTmpExpId = res.nTmpExps;
-        pilCodeGen(ctx, puCtx.numId, false, "tmpExp", res.nTmpExps++);
-        puCtx.denTmpExpId = res.nTmpExps;
-        pilCodeGen(ctx, puCtx.denId, false, "tmpExp", res.nTmpExps++);
+        pilCodeGen(ctx, puCtx.numId, false);
+        pilCodeGen(ctx, puCtx.denId, false);
     }
 }
 
@@ -211,10 +209,8 @@ function generatePermutationZ(res, pil, ctx) {
         pil.expressions.push(c2);
         pil.polIdentities.push({e: peCtx.c2Id});
 
-        peCtx.numTmpExpId = res.nTmpExps;
-        pilCodeGen(ctx, peCtx.numId, false, "tmpExp", res.nTmpExps++);
-        peCtx.denTmpExpId = res.nTmpExps;
-        pilCodeGen(ctx, peCtx.denId, false, "tmpExp", res.nTmpExps++);
+        pilCodeGen(ctx, peCtx.numId, false);
+        pilCodeGen(ctx, peCtx.denId, false);
     }
 }
 
@@ -306,10 +302,8 @@ function generateConnectionsZ(res, pil, ctx) {
         pil.expressions.push(c2);
         pil.polIdentities.push({e: ciCtx.c2Id});
 
-        ciCtx.numTmpExpId = res.nTmpExps;
-        pilCodeGen(ctx, ciCtx.numId, false, "tmpExp", res.nTmpExps++);
-        ciCtx.denTmpExpId = res.nTmpExps;
-        pilCodeGen(ctx, ciCtx.denId, false, "tmpExp", res.nTmpExps++);
+        pilCodeGen(ctx, ciCtx.numId, false);
+        pilCodeGen(ctx, ciCtx.denId, false);
 
         res.ciCtx.push(ciCtx);
     }

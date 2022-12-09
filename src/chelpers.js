@@ -229,6 +229,15 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                         throw new Error("Invalid dom");
                     }
                 }
+                case "tmpExp": {
+                    if (dom == "n") {
+                        return evalMap(starkInfo.tmpExp_n[r.id], r.prime)
+                    } else if (dom == "2ns") {
+                        throw new Error("Invalid dom");
+                    } else {
+                        throw new Error("Invalid dom");
+                    }
+                }
                 case "cm": {
                     if (dom == "n") {
                         return evalMap(starkInfo.cm_n[r.id], r.prime)
@@ -305,7 +314,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                     if (dom == "n") {
                         eDst = evalMap(starkInfo.tmpExp_n[r.dest.id], r.dest.prime)
                     } else if (dom == "2ns") {
-                        throw new Error("Accessing tmpExp in 2ns domain");
+                        throw new Error("Invalid dom");
                     } else {
                         throw new Error("Invalid dom");
                     }
