@@ -8,6 +8,12 @@ module.exports = class LinearHash {
     _hash(flatVals) {
         let inHash = [];
         let st = [0n, 0n, 0n, 0n];
+        if (flatVals.length<4) {
+            for (let i=0; i<flatVals.length;i++) {
+                st[i] = flatVals[i];
+            }
+            return st;
+        }
         for (let i=0; i<flatVals.length;i++) {
             inHash.push(flatVals[i]);
             if (inHash.length == 8) {

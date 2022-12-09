@@ -1476,5 +1476,23 @@
                 "--max-old-space-size=32000"
             ]
         },
+        {
+            "name": "zkevm generate circom",
+            "program": "src/main_pil2circom.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p ${workspaceFolder}/../zkevm-proverjs/pil/main.pil",
+                "-s ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-rc.1-stark/zkevm.starkinfo.json",
+                "-v ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-rc.1-stark/zkevm.verkey.json",
+                "-o ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-rc.1-stark/zkevm.verifier.circom",
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
     ]
 }

@@ -146,8 +146,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     for (let i=0; i<starkInfo.puCtx.length; i++) {
         const puCtx = starkInfo.puCtx[i];
-        const fPol = getPol(ctx, starkInfo, starkInfo.tmpExp_n[puCtx.fTmpExpId]);
-        const tPol = getPol(ctx, starkInfo, starkInfo.tmpExp_n[puCtx.tTmpExpId]);
+        const fPol = getPol(ctx, starkInfo, starkInfo.exp2pol[puCtx.fExpId]);
+        const tPol = getPol(ctx, starkInfo, starkInfo.exp2pol[puCtx.tExpId]);
         const [h1, h2] = calculateH1H2(F, fPol, tPol);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], h1);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], h2);
@@ -174,24 +174,24 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     for (let i=0; i<starkInfo.puCtx.length; i++) {
         console.log(`Calculating z for plookup ${i}`);
         const pu = starkInfo.puCtx[i];
-        const pNum = getPol(ctx, starkInfo, starkInfo.tmpExp_n[pu.numTmpExpId]);
-        const pDen = getPol(ctx, starkInfo, starkInfo.tmpExp_n[pu.denTmpExpId]);
+        const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[pu.numId]);
+        const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[pu.denId]);
         const z = calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
     for (let i=0; i<starkInfo.peCtx.length; i++) {
         console.log(`Calculating z for permutation check ${i}`);
         const pe = starkInfo.peCtx[i];
-        const pNum = getPol(ctx, starkInfo, starkInfo.tmpExp_n[pe.numTmpExpId]);
-        const pDen = getPol(ctx, starkInfo, starkInfo.tmpExp_n[pe.denTmpExpId]);
+        const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[pe.numId]);
+        const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[pe.denId]);
         const z = calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
     for (let i=0; i<starkInfo.ciCtx.length; i++) {
         console.log(`Calculating z for connection ${i}`);
         const ci = starkInfo.ciCtx[i];
-        const pNum = getPol(ctx, starkInfo, starkInfo.tmpExp_n[ci.numTmpExpId]);
-        const pDen = getPol(ctx, starkInfo, starkInfo.tmpExp_n[ci.denTmpExpId]);
+        const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[ci.numId]);
+        const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[ci.denId]);
         const z = calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
@@ -437,6 +437,15 @@ function compileCode(ctx, code, dom, ret) {
                     return evalMap( ctx.starkInfo.cm_n[r.id], r.prime)
                 } else if (dom=="2ns") {
                     return evalMap( ctx.starkInfo.cm_2ns[r.id], r.prime)
+                } else {
+                    throw new Error("Invalid dom");
+                }
+            }
+            case "tmpExp": {
+                if (dom=="n") {
+                    return evalMap( ctx.starkInfo.tmpExp_n[r.id], r.prime)
+                } else if (dom=="2ns") {
+                    throw new Error("Invalid dom");
                 } else {
                     throw new Error("Invalid dom");
                 }

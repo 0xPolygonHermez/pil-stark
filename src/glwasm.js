@@ -792,6 +792,44 @@ function build(module) {
                 0,
                 c.i64_const(0)
             ),
+            c.if(
+                c.i32_le_u(
+                    c.getLocal("width"),
+                    c.i32_const(4)
+                ),
+                [
+                    ...c.setLocal("j", c.i32_const(0)),
+                    ...c.block(c.loop(
+                        c.br_if(
+                            1,
+                            c.i32_ge_u(
+                                c.getLocal("j"),
+                                c.i32_mul(
+                                    c.getLocal("width"),
+                                    c.i32_const(8)
+                                )
+                            )
+                        ),
+                        c.i64_store(
+                            c.i32_add(
+                                c.getLocal("pOut"),
+                                c.getLocal("j")
+                            ),
+                            0,
+                            0,
+                            c.i64_load(
+                                c.i32_add(
+                                    c.getLocal("pIn"),
+                                    c.getLocal("j")
+                                )
+                            )
+                        ),
+                        c.setLocal("j", c.i32_add(c.getLocal("j"), c.i32_const(8))),
+                        c.br(0)
+                    )),
+                    ...c.ret([])
+                ]
+            ),
             c.setLocal("j", c.i32_const(0)),
             c.block(c.loop(
                 c.br_if(

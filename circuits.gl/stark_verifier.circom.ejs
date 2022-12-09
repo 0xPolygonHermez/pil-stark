@@ -611,6 +611,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
                 s0_merkleC[q].siblings[i][j] <== s0_siblingsC[q][i][j];
             }
         }
+
         for (var j=0; j<4; j++) {
             enable * (s0_merkle1[q].root[j] - root1[j]) === 0;
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>

@@ -37,7 +37,6 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
     res.starkStruct = starkStruct;
     res.nConstants = pil.nConstants;
     res.nPublics = pil.publics.length;
-    res.nTmpExps = 0;
 
     generatePublicCalculators(res, pil);
     res.nCm1 = pil.nCommitments;
