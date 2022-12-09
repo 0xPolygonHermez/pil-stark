@@ -130,7 +130,7 @@ function evalExp(codeCtx, exp, prime) {
             src: [a, b]
         });
         return r;
-    } else if (exp.op == "addmul") {
+    } else if (exp.op == "muladd") {
         const a = evalExp(codeCtx, exp.values[0], prime);
         const b = evalExp(codeCtx, exp.values[1], prime);
         const c = evalExp(codeCtx, exp.values[2], prime);
@@ -139,7 +139,7 @@ function evalExp(codeCtx, exp, prime) {
             id: codeCtx.tmpUsed++
         };
         codeCtx.code.push({
-            op: "addmul",
+            op: "muladd",
             dest: r,
             src: [a, b, c]
         });
@@ -462,7 +462,7 @@ function iterateCode(code, f, ctx) {
 function findAddMul(exp) {
     if ((exp.op == "add") && (exp.values[0].op == "mul")) {
         return {
-            op: "addmul",
+            op: "muladd",
             values: [
                 findAddMul(exp.values[0].values[0]),
                 findAddMul(exp.values[0].values[1]),
@@ -471,7 +471,7 @@ function findAddMul(exp) {
         }
     } else if ((exp.op == "add") && (exp.values[1].op == "mul")) {
         return {
-            op: "addmul",
+            op: "muladd",
             values: [
                 findAddMul(exp.values[1].values[0]),
                 findAddMul(exp.values[1].values[1]),

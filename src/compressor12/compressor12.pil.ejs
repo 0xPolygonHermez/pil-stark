@@ -39,11 +39,11 @@ namespace Compressor(%N);
     // C[10]-> Qc_23
 
     pol a01 = a[0]*a[1];
-    pol g012 = C[3]*a01 + C[0]*a[0] + C[1]*a[1] + C[2]*a[2] + C[5] = 0;
+    pol g012 = C[3]*a01 + C[0]*a[0] + C[1]*a[1] + C[2]*a[2] + C[4] = 0;
     g012*GATE = 0;
 
     pol a34 = a[3]*a[4];
-    pol g345 = C[3]*a34 + C[0]*a[3] + C[1]*a[4] + C[2]*a[5] + C[5] = 0;
+    pol g345 = C[3]*a34 + C[0]*a[3] + C[1]*a[4] + C[2]*a[5] + C[4] = 0;
     g345*GATE = 0;
 
     pol a67 = a[6]*a[7];
@@ -81,17 +81,20 @@ namespace Compressor(%N);
 
 // CMULADD GATE
 
-// [ a[0]*C[0], a[1]*C[1], a[2]**C[2] ] * [ a[3], a[4], a[5] ] + [ a[6]*C[3], a[7]*C[4], a[8]*C[5] ] + [C[9], C[10], C[11]] = [ a[9], a[10], a[11]]
+//  C[9]  * ( [a[0],a[1],a[2]] + [C[0],C[1],C[2]] ) *
+//          ( [a[3],a[4],a[5]] + [C[3],C[4],C[5]] ) +
+//  C[10] * ( [a[6],a[7],a[8]] + [C[6],C[7],C[8]] ) =
+//  [ a[9], a[10], a[11]]
 
-    pol ca0 = a[0] * C[0];
-    pol ca1 = a[1] * C[1];
-    pol ca2 = a[2] * C[2];
-    pol ca3 = a[3];
-    pol ca4 = a[4];
-    pol ca5 = a[5];
-    pol ca6 = a[6] * C[3];
-    pol ca7 = a[7] * C[4];
-    pol ca8 = a[8] * C[5];
+    pol ca0 = (a[0] + C[0])*C[9];
+    pol ca1 = (a[1] + C[1])*C[9];
+    pol ca2 = (a[2] + C[2])*C[9];
+    pol ca3 = a[3] + C[3];
+    pol ca4 = a[4] + C[4];
+    pol ca5 = a[5] + C[5];
+    pol ca6 = (a[6] * C[6])*C[10];
+    pol ca7 = (a[7] * C[7])*C[10];
+    pol ca8 = (a[8] * C[8])*C[10];
     pol ca9 = a[9];
     pol ca10 = a[10];
     pol ca11 = a[11];
@@ -103,11 +106,23 @@ namespace Compressor(%N);
     pol cE = ca1*ca4;
     pol cF = ca2*ca5;
 
-    CMULADD * (ca9 - (cC + cD - cE - cF) - ca6 - C[6]) = 0;
-    CMULADD * (ca10 - (cA + cC - 2*cE - cD) - ca7 - C[7]) = 0;
-    CMULADD * (ca11 - (cB - cD + cE) - ca8 - C[8]) = 0;
+    CMULADD * (ca9 - (cC + cD - cE - cF) - ca6) = 0;
+    CMULADD * (ca10 - (cA + cC - 2*cE - cD) - ca7) = 0;
+    CMULADD * (ca11 - (cB - cD + cE) - ca8) = 0;
 
 // FFT
+
+/*
+    params[0] = scale
+    params[1] = firstW
+    params[2] = incW
+
+    C[1]  = C[0]*firstW
+    C[2]  = C[0]*firstW*incW
+    C[4]  = C[0]*(firstW)^2
+    C[8]  = C[0]*(firstW*incW)^2
+    C[6]  = C[0]*firstW^3 * incW
+    C[10] = C[0]*firstW^3 * incW^3
 
     pol f0  = a[0] + C[1]*a[3];
     pol f1  = a[1] + C[1]*a[4];
@@ -121,14 +136,16 @@ namespace Compressor(%N);
     pol f9  = a[6] - C[2]*a[9];
     pol f10 = a[7] - C[2]*a[10];
     pol f11 = a[8] - C[2]*a[11];
+*/
+
 
     pol g0 = C[0]*a[0] + C[1]*a[3] + C[4]*a[6] + C[6]*a[9]; // g0 = f0 + C[4]*f6 =  ( a[0] + C[1]*a[3] ) + C[4] * (  a[6] + C[2]*a[9] ) = a[0] + C[1]*a[3] + C[4]*a[6] + C[6]*a[9]
     pol g1 = C[0]*a[1] + C[1]*a[4] + C[4]*a[7] + C[6]*a[10];
     pol g2 = C[0]*a[2] + C[1]*a[5] + C[4]*a[8] + C[6]*a[11];
 
     pol g6 = C[0]*a[0] + C[1]*a[3] - C[4]*a[6] - C[6]*a[9]; // g6 = f0 - C[4]*f6 =  ( a[0] + C[1]*a[3] ) - C[4] * (  a[6] + C[2]*a[9] ) = a[0] + C[1]*a[3] - C[4]*a[6] - C[6]*a[9]
-    pol g7 = C[0]*a[1] + C[1]*a[4] - C[4]*a[7] - C[7]*a[10];
-    pol g8 = C[0]*a[2] + C[1]*a[5] - C[4]*a[8] - C[8]*a[11];
+    pol g7 = C[0]*a[1] + C[1]*a[4] - C[4]*a[7] - C[6]*a[10];
+    pol g8 = C[0]*a[2] + C[1]*a[5] - C[4]*a[8] - C[6]*a[11];
 
     pol g3 = C[0]*a[0] - C[1]*a[3] + C[8]*a[6] - C[10]*a[9]; // g3 = f3 + C[8]*f9 =  ( a[0] - C[1]*a[3] ) + C[8] * (  a[6] - C[2]*a[9] ) = a[0] - C[1]*a[3] + C[8]*a[6] - C[10]*a[9]
     pol g4 = C[0]*a[1] - C[1]*a[4] + C[8]*a[7] - C[10]*a[10];
