@@ -49,7 +49,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     code.push(compileCode("step3prev_last", starkInfo.step3prev.first, "n"));
 
     if (multipleCodeFiles) {
-        result.step3 = code.join("\n\n")+"\n";
+        result.step3prev = code.join("\n\n")+"\n";
         code.length = 0;
     }
 
