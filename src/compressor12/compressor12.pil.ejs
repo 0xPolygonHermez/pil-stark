@@ -117,12 +117,12 @@ namespace Compressor(%N);
     params[1] = firstW
     params[2] = incW
 
-    C[1]  = C[0]*firstW
-    C[2]  = C[0]*firstW*incW
-    C[4]  = C[0]*(firstW)^2
-    C[8]  = C[0]*(firstW*incW)^2
-    C[6]  = C[0]*firstW^3 * incW
-    C[10] = C[0]*firstW^3 * incW^3
+    C[1]  = C[0]*firstW;
+    C[2]  = C[0]*firstW*incW;
+    C[4]  = C[0]*(firstW)^2;
+    C[8]  = C[0]*(firstW*incW)^2;
+    C[6]  = C[0]*firstW^3 * incW;
+    C[10] = C[0]*firstW^3 * incW^3;
 
     pol f0  = a[0] + C[1]*a[3];
     pol f1  = a[1] + C[1]*a[4];

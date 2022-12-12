@@ -10,50 +10,61 @@ const wasm_tester = require("circom_tester").wasm;
 describe("FFT Circuit Test", function () {
     let eddsa;
     let F;
-    let circuitFFT;
-    let circuitIFFT;
+    const circuitFFT = [];
+    const circuitIFFT = [];
 
     this.timeout(10000000);
 
     before( async() => {
-        circuitFFT = await wasm_tester(path.join(__dirname, "circuits", "fft.test.circom"), {O:1, prime: "goldilocks"});
-        circuitIFFT = await wasm_tester(path.join(__dirname, "circuits", "ifft.test.circom"), {O:1, prime: "goldilocks"});
+        for (let i=2; i<=7; i++) {
+            circuitFFT[i] = await wasm_tester(path.join(__dirname, "circuits", `fft${i}.test.circom`), {O:1, prime: "goldilocks"});
+            circuitIFFT[i] = await wasm_tester(path.join(__dirname, "circuits", `fft${i}i.test.circom`), {O:1, prime: "goldilocks"});
+        }
     });
 
-    it("Should calculate shifted fft and shifted ifft size 8", async () => {
+    async function testFFT(nBits) {
         const F = new F3g();
 
         const input={
-            in: [
-                [1n,2n,3n],
-                [4n,5n,6n],
-                [7n,8n,9n],
-                [10n,11n,12n],
-                [13n,14n,15n],
-                [16n,17n,18n],
-                [19n,20n,21n],
-                [22n,23n,24n]
-            ]
+            in: []
         };
 
-        const w1 = await circuitFFT.calculateWitness(input, true);
+        const N=1 << nBits;
+        let p=1n;
+        for (let i=0; i<N; i++) {
+            input.in[i] = [];
+            for (let j=0; j<3; j++) {
+                input.in[i][j] = p++;
+            }
+        }
+
+        const w1 = await circuitFFT[nBits].calculateWitness(input, true);
 
         const e = [];
         for (let i=0; i<input.in.length; i++) {
             e[i] = input.in[i].slice();
         }
-        polMulAxi(F, e, F.one, F.shift);
         const e2 = F.fft(e);
+        const e3 = F.ifft(e2);
+        for (let i=0; i<input.in.length; i++) {
+            assert(F.eq(e3[i], input.in[i]));
+        }
 
-        await circuitFFT.assertOut(w1, {out: e2});
+
+        await circuitFFT[nBits].assertOut(w1, {out: e2});
 
         const input2={
             in: e2
         };
 
-        const w2 = await circuitIFFT.calculateWitness(input2, true);
+        const w2 = await circuitIFFT[nBits].calculateWitness(input2, true);
 
-        await circuitIFFT.assertOut(w2, {out: input.in });
+        await circuitIFFT[nBits].assertOut(w2, {out: input.in });
+    }
 
-    });
+    for (let i=2; i<=7; i++) {
+        it(`Should fft and ifft size ${1<<i}`, async () => {
+            await testFFT(i);
+        });
+    }
 });
