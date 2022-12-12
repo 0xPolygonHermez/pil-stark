@@ -1333,14 +1333,14 @@
             "program": "src/main_prover.js",
             "request": "launch",
             "args": [
-                "-m ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.commit",
-                "-c ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.const",
-                "-t ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.consttree",
-                "-p ${workspaceFolder}/../zkevm-proverjs/pil/main.pil",
-                "-s ${workspaceFolder}/../zkevm-proverjs/src/zkevm.starkstruct.json",
-                "-o ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.proof.json",
-                "-z ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.zkin.proof.json",
-                "-b ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.public.json"
+                "-m ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.commit",
+                "-c ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.const",
+                "-t ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.consttree",
+                "-p ${workspaceFolder}/../zkevm-proverjs/pilred/main.pil",
+                "-s ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.starkinfo.json",
+                "-o ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.proof.json",
+                "-z ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.zkin.proof.json",
+                "-b ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.public.json"
             ],
             "skipFiles": [
                 "<node_internals>/**"
@@ -1355,11 +1355,11 @@
             "program": "src/main_verifier.js",
             "request": "launch",
             "args": [
-                "-p ${workspaceFolder}/../zkevm-proverjs/pil/main.pil",
-                "-s ${workspaceFolder}/../zkevm-proverjs/src/zkevm.starkstruct.json",
-                "-v ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.verkey.json",
-                "-o ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.proof.json",
-                "-b ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.public.json"
+                "-p ${workspaceFolder}/../zkevm-proverjs/pilred/main.pil",
+                "-s ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.starkinfo.json",
+                "-v ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.verkey.json",
+                "-o ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.proof.json.good",
+                "-b ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.public.json.good"
             ],
             "skipFiles": [
                 "<node_internals>/**"
