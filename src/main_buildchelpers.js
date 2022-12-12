@@ -45,7 +45,7 @@ async function run() {
         const ext = dotPos < 0 ? '.cpp' : chelpersFile.substr(dotPos);
         const classInclude = cls.charAt(0).toLowerCase() + cls.slice(1) + ".hpp";
         for(cpart in cCode) {
-            const code = `#include "goldilocks_cubic_extension.hpp"\n#include "zhInv.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
+            const code = `#include "goldilocks_cubic_extension.hpp"\n#include "zhInv.hpp"\n#include "starks.hpp"\n#include "constant_pols_starks.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
             await fs.promises.writeFile(leftFilename + '.' + cpart + ext, code, "utf8");
         }
     } else {

@@ -154,7 +154,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                         } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
                             body.push(`     Goldilocks3::mul(${lexp}, ${src[1]}, ${src[0]});`)
                         } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                            body.push(`     gl_mul_3(${lexp}, ${src[0]}, ${src[1]});`)
+                            body.push(`     Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
                         } else {
                             throw new Error("Invalid dimension")
                         }
@@ -171,9 +171,9 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                         body.push(`     Goldilocks::copy(${lexp}, ${src[0]});`)
                     } else if (r.dest.dim == 3) {
                         if (r.src[0].dim == 1) {
-                            body.push(`     gl_copy13(${lexp}, ${src[0]});`)
+                            body.push(`     Goldilocks3::copy(${lexp}, ${src[0]});`)
                         } else if (r.src[0].dim == 3) {
-                            body.push(`     gl_copy3(${lexp}, ${src[0]});`)
+                            body.push(`     Goldilocks3::copy(${lexp}, ${src[0]});`)
                         } else {
                             throw new Error("Invalid dimension")
                         }
@@ -195,13 +195,13 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         let res;
         if (ret) {
             res = [
-                `Goldilocks::Element ${config.className}::${functionName}(Goldilocks::Element *pols,  const Goldilocks::Element *publicInputs, uint64_t i) {`,
+                `Goldilocks::Element ${config.className}::${functionName}(StepsParams &params, uint64_t i) {`,
                 ...body,
                 `}`
             ].join("\n");
         } else {
             res = [
-                `void ${config.className}::${functionName}(Goldilocks::Element *pols,  const Goldilocks::Element *publicInputs, uint64_t i) {`,
+                `void ${config.className}::${functionName}(StepsParams &params, uint64_t i) {`,
                 ...body,
                 `}`
             ].join("\n");
@@ -215,15 +215,15 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                 case "const": {
                     if (dom == "n") {
                         if (r.prime) {
-                            return ` pConstPols->getElement(${r.id},(i+1)%${N})`;
+                            return ` params.pConstPols->getElement(${r.id},(i+1)%${N})`;
                         } else {
-                            return ` pConstPols->getElement(${r.id},i)`;
+                            return ` params.pConstPols->getElement(${r.id},i)`;
                         }
                     } else if (dom == "2ns") {
                         if (r.prime) {
-                            return `pConstPols2ns->getElement(${r.id},(i+${next})%${N})`;
+                            return `params.pConstPols2ns->getElement(${r.id},(i+${next})%${N})`;
                         } else {
-                            return `pConstPols2ns->getElement(${r.id},i)`;
+                            return `params.pConstPols2ns->getElement(${r.id},i)`;
                         }
                     } else {
                         throw new Error("Invalid dom");
@@ -257,21 +257,21 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                     }
                 }
                 case "number": return `Goldilocks::fromU64(${BigInt(r.value).toString()}ULL)`;
-                case "public": return `publicInputs[${r.id}]`;
-                case "challenge": return `(Goldilocks3::Element &)*challenges[${r.id}]`;
-                case "eval": return `(Goldilocks3::Element &)*evals[${r.id}]`;
-                case "xDivXSubXi": return `(Goldilocks3::Element &)*xDivXSubXi[i]`;
-                case "xDivXSubWXi": return `(Goldilocks3::Element &)*xDivXSubWXi[i]`;
+                case "public": return `params.publicInputs[${r.id}]`;
+                case "challenge": return `(Goldilocks3::Element &)*params.challenges[${r.id}]`;
+                case "eval": return `(Goldilocks3::Element &)*params.evals[${r.id}]`;
+                case "xDivXSubXi": return `(Goldilocks3::Element &)*params.xDivXSubXi[i]`;
+                case "xDivXSubWXi": return `(Goldilocks3::Element &)*params.xDivXSubWXi[i]`;
                 case "x": {
                     if (dom == "n") {
-                        return `(Goldilocks::Element &)*x_n[i]`;
+                        return `(Goldilocks::Element &)*params.x_n[i]`;
                     } else if (dom == "2ns") {
-                        return `(Goldilocks::Element &)*x_2ns[i]`;
+                        return `(Goldilocks::Element &)*params.x_2ns[i]`;
                     } else {
                         throw new Error("Invalid dom");
                     }
                 }
-                case "Zi": return `zi.zhInv(i)`;
+                case "Zi": return `params.zi.zhInv(i)`;
                 default: throw new Error("Invalid reference type get: " + r.type);
             }
         }
@@ -294,7 +294,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                     if (dom == "n") {
                         throw new Error("Accessing q in domain n");
                     } else if (dom == "2ns") {
-                        eDst = `q`
+                        eDst = `(Goldilocks3::Element &)(params.q_2ns[i * 3])`
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -324,7 +324,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                     if (dom == "n") {
                         throw new Error("Accessing q in domain n");
                     } else if (dom == "2ns") {
-                        eDst = `f`
+                        eDst = `(Goldilocks3::Element &)(params.f_2ns[i * 3])`
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -345,15 +345,15 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
             let size = starkInfo.mapSectionsN[p.section];
             if (p.dim == 1) {
                 if (prime) {
-                    return `pols[${offset} + ((i + ${next})%${N})*${size}]`;
+                    return `params.pols[${offset} + ((i + ${next})%${N})*${size}]`;
                 } else {
-                    return `pols[${offset} + i*${size}]`;
+                    return `params.pols[${offset} + i*${size}]`;
                 }
             } else if (p.dim == 3) {
                 if (prime) {
-                    return `(Goldilocks3::Element &)(pols[${offset} + ((i + ${next})%${N})*${size}])`;
+                    return `(Goldilocks3::Element &)(params.pols[${offset} + ((i + ${next})%${N})*${size}])`;
                 } else {
-                    return `(Goldilocks3::Element &)(pols[${offset} + i*${size}])`;
+                    return `(Goldilocks3::Element &)(params.pols[${offset} + i*${size}])`;
                 }
             } else {
                 throw new Error("invalid dim");
