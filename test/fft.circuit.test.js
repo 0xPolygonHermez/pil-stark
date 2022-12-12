@@ -16,7 +16,7 @@ describe("FFT Circuit Test", function () {
     this.timeout(10000000);
 
     before( async() => {
-        for (let i=2; i<=7; i++) {
+        for (let i=0; i<=7; i++) {
             circuitFFT[i] = await wasm_tester(path.join(__dirname, "circuits", `fft${i}.test.circom`), {O:1, prime: "goldilocks"});
             circuitIFFT[i] = await wasm_tester(path.join(__dirname, "circuits", `fft${i}i.test.circom`), {O:1, prime: "goldilocks"});
         }
@@ -62,7 +62,7 @@ describe("FFT Circuit Test", function () {
         await circuitIFFT[nBits].assertOut(w2, {out: input.in });
     }
 
-    for (let i=2; i<=7; i++) {
+    for (let i=0; i<=7; i++) {
         it(`Should fft and ifft size ${1<<i}`, async () => {
             await testFFT(i);
         });

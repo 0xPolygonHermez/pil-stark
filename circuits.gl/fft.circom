@@ -76,91 +76,45 @@ template BitReverse(nBits, eSize) {
     }
 }
 
-template custom FFT4(scale, firstW, incW) {
+template custom FFT4(type, scale, firstW, incW) {
     signal input in[4][3];
     signal output out[4][3];
 
     var firstW2 = firstW*firstW;
+    var C0,C1,C2,C3,C4,C5, C6,C7,C8;
 
-    var C0  = scale;
-    var C1  = scale*firstW2;
-    var C2  = scale*firstW;
-    var C3  = scale*firstW*firstW2;
-    var C4  = scale*firstW    * incW;
-    var C5  = scale*firstW*firstW2 * incW;
-
-    log(88888888);
-    log(scale);
-    log(firstW);
-    log(incW);
-/*
-    log(C0);
-    log(C1);
-    log(C2);
-    log(C3);
-    log(C4);
-    log(C5);
-*/
-    log(7777777);
-    log(in[0][0]);
-    log(in[1][0]);
-    log(in[2][0]);
-    log(in[3][0]);
-
-    for (var e=0; e<3; e++) {
-        out[0][e] <-- C0*in[0][e] + C1*in[1][e] + C2*in[2][e] + C3*in[3][e];
-        out[1][e] <-- C0*in[0][e] - C1*in[1][e] + C4*in[2][e] - C5*in[3][e];
-        out[2][e] <-- C0*in[0][e] + C1*in[1][e] - C2*in[2][e] - C3*in[3][e];
-        out[3][e] <-- C0*in[0][e] - C1*in[1][e] - C4*in[2][e] + C5*in[3][e];
+    if (type == 4) {
+        C0  = scale;
+        C1  = scale*firstW2;
+        C2  = scale*firstW;
+        C3  = scale*firstW*firstW2;
+        C4  = scale*firstW    * incW;
+        C5  = scale*firstW*firstW2 * incW;
+        C6  = 0;
+        C7  = 0;
+        C8  = 0;
+    } else if (type == 2) {
+        C0  = 0;
+        C1  = 0;
+        C2  = 0;
+        C3  = 0;
+        C4  = 0;
+        C5  = 0;
+        C6  = scale;
+        C7  = scale*firstW;
+        C8  = scale*firstW*incW;
+    } else {
+        assert(0);
     }
 
-
-    log(out[0][0]);
-    log(out[1][0]);
-    log(out[2][0]);
-    log(out[3][0]);
-
-}
-
-
-template custom FFT4_2(scale, firstW, incW) {
-    signal input in[4][3];
-    signal output out[4][3];
-
-    var firstW2 = firstW*firstW;
-
-    var C6  = scale;
-    var C7  = scale*firstW;
-    var C8  = scale*firstW*incW;
-
-    log(88888888);
-    log(scale);
-    log(firstW);
-    log(incW);
-/*
-    log(C6);
-    log(C7);
-    log(C8);
-*/
-    log(7777777);
-    log(in[0][0]);
-    log(in[1][0]);
-    log(in[2][0]);
-    log(in[3][0]);
-
     for (var e=0; e<3; e++) {
-        out[0][e] <-- C6*in[0][e] + C7*in[1][e];
-        out[1][e] <-- C6*in[0][e] - C7*in[1][e];
-        out[2][e] <-- C6*in[2][e] + C8*in[3][e];
-        out[3][e] <-- C6*in[2][e] - C8*in[3][e];
+        out[0][e] <-- C0*in[0][e] + C1*in[1][e] + C2*in[2][e] + C3*in[3][e] + C6*in[0][e] + C7*in[1][e];
+        out[1][e] <-- C0*in[0][e] - C1*in[1][e] + C4*in[2][e] - C5*in[3][e] + C6*in[0][e] - C7*in[1][e];
+        out[2][e] <-- C0*in[0][e] + C1*in[1][e] - C2*in[2][e] - C3*in[3][e] + C6*in[2][e] + C8*in[3][e];
+        out[3][e] <-- C0*in[0][e] - C1*in[1][e] - C4*in[2][e] + C5*in[3][e] + C6*in[2][e] - C8*in[3][e];
     }
-
-    log(out[0][0]);
-    log(out[1][0]);
-    log(out[2][0]);
-    log(out[3][0]);
-
 }
+
 
 template Permute(nBits, nBitsWidth) {
     var n= 1 << nBits;
@@ -170,11 +124,6 @@ template Permute(nBits, nBitsWidth) {
 
     var width = 1 << nBitsWidth;
     var heigth = 1 << (nBits - nBitsWidth);
-
-    log(6666);
-    log(nBitsWidth);
-    log(width);
-    log(heigth);
 
     for (var x=0; x<width; x++) {
         for (var y=0; y<heigth; y++) {
@@ -187,9 +136,8 @@ template Permute(nBits, nBitsWidth) {
 
 
 
-template FFT(nBits, eSize, inv) {
+template FFTBig(nBits, eSize, inv) {
     var n = 1<<nBits;
-    log(12121212);
 
     assert((eSize <= 3)&&(eSize>=1));
 
@@ -203,7 +151,6 @@ template FFT(nBits, eSize, inv) {
     var nSteps2 = nBits -nSteps4*2;
     var fft4PerRow = n\4;
 
-    log(1313131313);
     component bitReverse = BitReverse(nBits, 3);
 
     for (var i=0; i<n; i++) {
@@ -215,11 +162,7 @@ template FFT(nBits, eSize, inv) {
             }
         }
     }
-/*
-    for (var i=0; i<n; i++) {
-        log(bitReverse.out[i][0]);
-    }
-*/
+
     component fft4[nSteps4][fft4PerRow];
     component fft4_2[nSteps2][fft4PerRow];
 
@@ -241,9 +184,7 @@ template FFT(nBits, eSize, inv) {
                 var p = x*width + y;
                 w = roots(i*2+2) ** p;
             }
-            log(32323232323);
-            log(w);
-            fft4[i][j] = FFT4(scalar, w, roots(2));
+            fft4[i][j] = FFT4(4, scalar, w, roots(2));
         }
         for (var j=0; j<fft4PerRow;j++) {
             for (var k=0; k<4; k++) {
@@ -261,31 +202,6 @@ template FFT(nBits, eSize, inv) {
             }
         }
 
-/*
-        log(1111111);
-        for (var j=0; j<fft4PerRow; j++) {
-            for (var k=0; k<4; k++) {
-                log(fft4[0][j].out[k][0]);
-            }
-        }
-*/
-/*
-        BUG in circom
-        log(22222222);
-        for (var j=0; j<fft4PerRow; j++) {
-            for (var k=0; k<4; k++) {
-                log(fft4[1][j].in[k][0]);
-            }
-        }
-*/
-/*
-        log(99999999999);
-        for (var j=0; j<fft4PerRow;j++) {
-            for (var k=0; k<4; k++) {
-                log(fft4[i][j].out[k][0]);
-            }
-        }
-*/
         scalar = 1;
     }
 
@@ -294,7 +210,7 @@ template FFT(nBits, eSize, inv) {
         var w = 1;
         accPm += 2;
         for (var j=0; j<fft4PerRow;j++) {
-            fft4_2[0][j] = FFT4_2(scalar, w, roots(nBits));
+            fft4_2[0][j] = FFT4(2, scalar, w, roots(nBits));
             w=w*roots(nBits-1);
         }
         for (var j=0; j<fft4PerRow;j++) {
@@ -313,11 +229,6 @@ template FFT(nBits, eSize, inv) {
             }
         }
     }
-
-    log(67766776677);
-    log(accPm);
-    log(nBits);
-    log((nBits+nBits-accPm)%nBits);
 
     component permute = Permute(nBits, (nBits+nBits-accPm)%nBits);
 
@@ -341,12 +252,41 @@ template FFT(nBits, eSize, inv) {
         }
     }
 
+}
 
-    log(5555555555);
-    for (var k=0; k<n; k++) {
-        log(out[k][0]);
+
+
+
+template FFT(nBits, eSize, inv) {
+    var n = 1<<nBits;
+
+    assert((eSize <= 3)&&(eSize>=1));
+
+    signal input in[n][eSize];
+    signal output out[n][eSize];
+
+    assert( (1 << nBits) == n);
+    assert(nBits <= 32);
+
+    component fft2;
+    component fftBig;
+
+    if (nBits == 0) {
+        out <== in;
+    } else if (nBits == 1) {
+        fft2 = FFT4(2, inv ? (1/2) : 1, 1, 1);
+        fft2.in[0] <== in[0];
+        fft2.in[1] <== in[1];
+        fft2.in[2] <== [0,0,0];
+        fft2.in[3] <== [0,0,0];
+        for (var e=0; e<eSize; e++) {
+            out[0][e] <== fft2.out[0][e];
+            out[1][e] <== fft2.out[1][e];
+        }
+    } else {
+        fftBig = FFTBig(nBits, eSize, inv);
+        fftBig.in <== in;
+        fftBig.out ==> out;
     }
-
-
 }
 
