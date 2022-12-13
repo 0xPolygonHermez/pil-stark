@@ -1,7 +1,9 @@
 const chai = require("chai");
 const path = require("path");
 const F3g = require("../src/f3g");
-const {polMulAxi} = require("../src/polutils");
+const tmp = require('temporary');
+const fs = require("fs");
+const ejs = require("ejs");
 
 const assert = chai.assert;
 
@@ -17,8 +19,17 @@ describe("FFT Circuit Test", function () {
 
     before( async() => {
         for (let i=0; i<=7; i++) {
-            circuitFFT[i] = await wasm_tester(path.join(__dirname, "circuits", `fft${i}.test.circom`), {O:1, prime: "goldilocks"});
-            circuitIFFT[i] = await wasm_tester(path.join(__dirname, "circuits", `fft${i}i.test.circom`), {O:1, prime: "goldilocks"});
+            const template = await fs.promises.readFile(path.join(__dirname, "circuits", "fft.test.circom.ejs"), "utf8");
+            const content = ejs.render(template, {n: i, dirName:path.join(__dirname, "circuits")});
+            const circuitFile = path.join(new tmp.Dir().path, "circuit.circom");
+            await fs.promises.writeFile(circuitFile, content);
+            circuitFFT[i] = await wasm_tester(circuitFile, {O:1, prime: "goldilocks"});
+
+            const templatei = await fs.promises.readFile(path.join(__dirname, "circuits", "ffti.test.circom.ejs"), "utf8");
+            const contenti = ejs.render(templatei, {n: i, dirName:path.join(__dirname, "circuits")});
+            const circuitFileI = path.join(new tmp.Dir().path, "circuit.circom");
+            await fs.promises.writeFile(circuitFileI, contenti);
+            circuitIFFT[i] = await wasm_tester(circuitFileI, {O:1, prime: "goldilocks"});
         }
     });
 

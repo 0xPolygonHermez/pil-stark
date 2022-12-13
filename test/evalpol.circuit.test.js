@@ -2,7 +2,9 @@ const chai = require("chai");
 const path = require("path");
 const {evalPol} = require("../src/polutils");
 const F3g = require("../src/f3g");
-
+const tmp = require('temporary');
+const fs = require("fs");
+const ejs = require("ejs");
 
 const assert = chai.assert;
 
@@ -10,21 +12,12 @@ const wasm_tester = require("circom_tester").wasm;
 
 
 describe("EvalPol Circuit Test", function () {
-    let eddsa;
-    let F;
-    let circuit;
+    let circuit = [];
 
     this.timeout(10000000);
 
-    before( async() => {
-        circuit = await wasm_tester(path.join(__dirname, "circuits", "evalpol.test.circom"), {O:1, prime: "goldilocks"});
-    });
-
-    it("Should calculate polynomial evaluation selector", async () => {
+    async function testEvPol(N) {
         const F = new F3g();
-
-        const nBits = 5;
-        const N = 1 << nBits;
 
         const pol = [];
         for (let j=0; j<N; j++) {
@@ -40,10 +33,28 @@ describe("EvalPol Circuit Test", function () {
             x: x
         };
 
-        const res = evalPol(F, pol, x);
+        const w1 = await circuit[N].calculateWitness(input, true);
 
-        const w1 = await circuit.calculateWitness(input, true);
+        let res = evalPol(F, pol, x);
 
-        await circuit.assertOut(w1, {out: res});
+        if (!Array.isArray(res)) res = [res, 0n, 0n];
+
+        await circuit[N].assertOut(w1, {out: res});
+    }
+
+    before( async() => {
+        for (let i=0;i<=16;i++) {
+            const template = await fs.promises.readFile(path.join(__dirname, "circuits", "evalpol.test.circom.ejs"), "utf8");
+            const content = ejs.render(template, {n: i, dirName:path.join(__dirname, "circuits")});
+            const circuitFile = path.join(new tmp.Dir().path, "circuit.circom");
+            await fs.promises.writeFile(circuitFile, content);
+            circuit[i] = await wasm_tester(circuitFile, {O:1, prime: "goldilocks"});
+        }
     });
+
+    for (let i=0;i<=16;i++) {
+        it(`Should calculate polynomial evaluation n = ${i}`, async () => {
+            await testEvPol(i);
+        });
+    };
 });
