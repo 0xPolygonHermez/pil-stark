@@ -290,6 +290,7 @@ module.exports = async function plonkSetup(r1cs, options) {
         } else if (cgu.id == customGatesInfo.CMulAddId) {
             for (let i=0; i<12; i++) {
                 sMap[i][r] = cgu.signals[i];
+                constPols.Compressor.C[i] = 0n;
             }
             constPols.Compressor.CMULADD[r] = 1n;
             constPols.Compressor.GATE[r] = 0n;
@@ -297,6 +298,18 @@ module.exports = async function plonkSetup(r1cs, options) {
             constPols.Compressor.PARTIAL[r] = 0n;
             constPols.Compressor.POLEV[r] = 0n;
             constPols.Compressor.FFT4[r] = 0n;
+            constPols.Compressor.C0[r] = 0n;
+            constPols.Compressor.C1[r] = 0n;
+            constPols.Compressor.C2[r] = 0n;
+            constPols.Compressor.C3[r] = 0n;
+            constPols.Compressor.C4[r] = 0n;
+            constPols.Compressor.C5[r] = 0n;
+            constPols.Compressor.C6[r] = 0n;
+            constPols.Compressor.C7[r] = 0n;
+            constPols.Compressor.C8[r] = 0n;
+            constPols.Compressor.C9[r] = 1n;
+            constPols.Compressor.C10[r] = 1n;
+            constPols.Compressor.C11[r] = 0n;
             r+= 1;
         } else if (cgu.id == customGatesInfo.FFT4Id) {
             for (let i=0; i<12; i++) {
@@ -317,17 +330,35 @@ module.exports = async function plonkSetup(r1cs, options) {
             constPols.Compressor.PARTIAL[r+1] = 0n;
             constPols.Compressor.POLEV[r+1] = 0n;
             constPols.Compressor.FFT4[r+1] = 0n;
-            constPols.Compressor.C[0] = cgu.parameters[0];
-            constPols.Compressor.C[1] = F.mul(cgu.parameters[0], cgu.parameters[1]);
-            constPols.Compressor.C[2] = F.mul(constPols.Compressor.C[1], cgu.parameters[2]);
-            constPols.Compressor.C[4] = F.mul(cgu.parameters[0], F.square(cgu.parameters[1]));
-            constPols.Compressor.C[8] = F.mul(constPols.Compressor.C[4], F.sqare(cgu.parameters[2]));
-            constPols.Compressor.C[6] = F.mul(constPols.Compressor.C[2], F.square(cgu.parameters[1]));
-            constPols.Compressor.C[10] = F.mul(constPols.Compressor.C[2], F.square(F.mul(cgu.parameters[1], cgu.parameters[2])));
-            constPols.Compressor.C[3] = 0n;
-            constPols.Compressor.C[5] = 0n;
-            constPols.Compressor.C[7] = 0n;
+            const scale = cgu.parameters[1]
+            const firstW = cgu.parameters[2];
+            const firstW2 = F.square(firstW);
+            const incW = cgu.parameters[3];
+            if (cgu.parameters[0] == 4) {
+                constPols.Compressor.C[0] = scale;
+                constPols.Compressor.C[1] = F.mul(scale, firstW2);
+                constPols.Compressor.C[2] = F.mul(scale, firstW);
+                constPols.Compressor.C[3] = F.mul(scale, F.mul(firstW, firstW2));
+                constPols.Compressor.C[4] = F.mul(scale, F.mul(firstW, incW));
+                constPols.Compressor.C[5] = F.mul(F.mul(scale,firstW), F.mul(firstW2, incW));
+                constPols.Compressor.C[6] = 0n;
+                constPols.Compressor.C[7] = 0n;
+                constPols.Compressor.C[8] = 0n;
+            } else if (cgu.parameters[0] == 2) {
+                constPols.Compressor.C[0] = 0n;
+                constPols.Compressor.C[1] = 0n;
+                constPols.Compressor.C[2] = 0n;
+                constPols.Compressor.C[3] = 0n;
+                constPols.Compressor.C[4] = 0n;
+                constPols.Compressor.C[5] = 0n;
+                constPols.Compressor.C[6] = scale;
+                constPols.Compressor.C[7] = F.mul(scale, firstW);
+                constPols.Compressor.C[8] = F.mul(scale, F.mul(firstW, incW));
+            } else {
+                throw new Error("invalit FFT4 type: "+cgu.parameters[0]);
+            }
             constPols.Compressor.C[9] = 0n;
+            constPols.Compressor.C[10] = 0n;
             constPols.Compressor.C[11] = 0n;
             r+= 2;
         } else if (cgu.id == customGatesInfo.PolEv4Id) {
@@ -476,7 +507,7 @@ module.exports = async function plonkSetup(r1cs, options) {
                     break;
                 case "FFT4":
                     FFT4Id =i;
-                    assert(r1cs.customGates[0].parameters.length == 3);
+                    assert(r1cs.customGates[0].parameters.length == 4);
                     break;
                 default:
                     throw new Error("Invalid custom gate: " , r1cs.customGates[0].name);

@@ -15,7 +15,7 @@ template custom CMulAdd() {
     var F = ina[2]*inb[2];
     var G = D-E;
 
-    out[0] <-- C+G-F+inC[0];
-    out[1] <-- A+C-E-E-D+inC[1];
-    out[2] <-- B-G+inC[2];
+    out[0] <-- C+G-F+inc[0];
+    out[1] <-- A+C-E-E-D+inc[1];
+    out[2] <-- B-G+inc[2];
 }
