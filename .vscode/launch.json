@@ -1496,5 +1496,24 @@
                 "--max-old-space-size=32000"
             ]
         },
+        {
+            "name": "recursive1 exec",
+            "program": "src/compressor12/main_compressor12_exec.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-i /tmp/zkinC12a.json",
+                "-w ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-evals2-20221212/recursive1_js/recursive1.wasm",
+                "-p ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-evals2-20221212/recursive1.pil",
+                "-e ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-evals2-20221212/recursive1.exec",
+                "-m /tmp/recursive1.commit",
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
     ]
 }

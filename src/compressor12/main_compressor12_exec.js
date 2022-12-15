@@ -50,8 +50,7 @@ async function run() {
         w.push( F.add( F.mul( w[addsBuff[i*4]], addsBuff[i*4 + 2]), F.mul( w[addsBuff[i*4+1]],  addsBuff[i*4+3]  )));
     }
 
-    const Nbits = log2(nSMap -1) +1;
-    const N = 1 << Nbits
+    const N = cmPols.Compressor.a[0].length;
 
     for (let i=0; i<nSMap; i++) {
         for (let j=0; j<12; j++) {
