@@ -1022,7 +1022,7 @@
             "type": "pwa-node",
             "args": [
                 "-p test/sm_all/all_main.pil",
-                "-s ${workspaceFolder}/test/sm_all/all.starkstruct.json",
+                "-s tmp/all.starkinfo.json",
                 "-c tmp/all.chelpers.cpp"
             ],
             "runtimeArgs": [

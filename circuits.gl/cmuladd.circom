@@ -19,3 +19,17 @@ template custom CMulAdd() {
     out[1] <-- A+C-E-E-D+inc[1];
     out[2] <-- B-G+inc[2];
 }
+
+template CMul() {
+    signal input ina[3];
+    signal input inb[3];
+    signal output out[3];
+
+    component mulAdd = CMulAdd();
+
+    mulAdd.ina <== ina;
+    mulAdd.inb <== inb;
+    mulAdd.inc <== [0,0,0];
+
+    out <== mulAdd.out;
+}

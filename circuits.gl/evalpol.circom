@@ -2,7 +2,7 @@ pragma circom 2.1.0;
 pragma custom_templates;
 
 
-function CMulAdd(ina, inb, inc) {
+function CMulAddF(ina, inb, inc) {
 
     var A = (ina[0] + ina[1])  * (inb[0] + inb[1]);
     var B = (ina[0] + ina[2])  * (inb[0] + inb[2]);
@@ -28,10 +28,10 @@ template custom EvPol4() {
     signal output out[3];
 
     var acc[3] = cIn;
-    acc = CMulAdd(acc, x, coefs[3]);
-    acc = CMulAdd(acc, x, coefs[2]);
-    acc = CMulAdd(acc, x, coefs[1]);
-    acc = CMulAdd(acc, x, coefs[0]);
+    acc = CMulAddF(acc, x, coefs[3]);
+    acc = CMulAddF(acc, x, coefs[2]);
+    acc = CMulAddF(acc, x, coefs[1]);
+    acc = CMulAddF(acc, x, coefs[0]);
     out <-- acc;
 }
 

@@ -121,7 +121,7 @@ module.exports = async function plonkSetup(r1cs, options) {
     let nPublics = r1cs.nOutputs + r1cs.nPubInputs;
     const nPublicRows = Math.floor((nPublics - 1)/12) +1;
 
-    const NUsed = nPublicRows + plonkInfo.N + customGatesInfo.nCMulAdd + customGatesInfo.nPoseidon*31 + customGatesInfo.nFFT4*2 + customGatesInfo*nPolEv4*2;
+    const NUsed = nPublicRows + plonkInfo.N + customGatesInfo.nCMulAdd + customGatesInfo.nPoseidon*31 + customGatesInfo.nFFT4*2 + customGatesInfo*nEvPol4*2;
     let nBits = log2(NUsed - 1) + 1;
 
     if (options.forceNBits) {
@@ -272,7 +272,7 @@ module.exports = async function plonkSetup(r1cs, options) {
     for (let i=0; i<r1cs.customGatesUses.length; i++) {
         if ((i%10000) == 0) console.log(`Processing custom gates... ${i}/${r1cs.customGatesUses.length}`);
         const cgu = r1cs.customGatesUses[i];
-        if (cgu.id == customGatesInfo.PoseidonId) {
+        if (cgu.id == customGatesInfo.Poseidon12Id) {
             assert(cgu.signals.length == 31*12);
             for (let i=0; i<31; i++) {
                 for (let j=0; j<12; j++) {
@@ -311,7 +311,7 @@ module.exports = async function plonkSetup(r1cs, options) {
             constPols.Compressor.C10[r] = 1n;
             constPols.Compressor.C11[r] = 0n;
             r+= 1;
-        } else if (cgu.id == customGatesInfo.FFT4Id) {
+        } else if ( typeof customGatesInfo.FFT4Parameters[cgu.id] !== "undefined") {
             for (let i=0; i<12; i++) {
                 sMap[i][r] = cgu.signals[i];
             }
@@ -330,11 +330,12 @@ module.exports = async function plonkSetup(r1cs, options) {
             constPols.Compressor.PARTIAL[r+1] = 0n;
             constPols.Compressor.POLEV[r+1] = 0n;
             constPols.Compressor.FFT4[r+1] = 0n;
-            const scale = cgu.parameters[1]
-            const firstW = cgu.parameters[2];
+            const t = customGatesInfo.FFT4Parameters[cgu.id][0];
+            const scale = customGatesInfo.FFT4Parameters[cgu.id][1];
+            const firstW = customGatesInfo.FFT4Parameters[cgu.id][2];
             const firstW2 = F.square(firstW);
-            const incW = cgu.parameters[3];
-            if (cgu.parameters[0] == 4) {
+            const incW = customGatesInfo.FFT4Parameters[cgu.id][3];
+            if (t == 4) {
                 constPols.Compressor.C[0] = scale;
                 constPols.Compressor.C[1] = F.mul(scale, firstW2);
                 constPols.Compressor.C[2] = F.mul(scale, firstW);
@@ -344,7 +345,7 @@ module.exports = async function plonkSetup(r1cs, options) {
                 constPols.Compressor.C[6] = 0n;
                 constPols.Compressor.C[7] = 0n;
                 constPols.Compressor.C[8] = 0n;
-            } else if (cgu.parameters[0] == 2) {
+            } else if (t == 2) {
                 constPols.Compressor.C[0] = 0n;
                 constPols.Compressor.C[1] = 0n;
                 constPols.Compressor.C[2] = 0n;
@@ -361,7 +362,7 @@ module.exports = async function plonkSetup(r1cs, options) {
             constPols.Compressor.C[10] = 0n;
             constPols.Compressor.C[11] = 0n;
             r+= 2;
-        } else if (cgu.id == customGatesInfo.PolEv4Id) {
+        } else if (cgu.id == customGatesInfo.EvPol4Id) {
             for (let i=0; i<12; i++) {
                 sMap[i][r] = cgu.signals[i];
                 constPols.Compressor.C[i][r] = 0n;
@@ -387,6 +388,8 @@ module.exports = async function plonkSetup(r1cs, options) {
             constPols.Compressor.PARTIAL[r+1] = 0n;
             constPols.Compressor.FFT4[r+1] = 0n;
             r+= 2;
+        } else {
+            throw new Error("Custom gate not defined", cgu.id);
         }
     }
 
@@ -486,58 +489,57 @@ module.exports = async function plonkSetup(r1cs, options) {
     }
 
     function getCustomGatesInfo() {
-        let PoseidonId;
+        let Poseidon12Id;
         let CMulAddId;
-        let FFT4Id;
-        let PolEv4Id;
-        assert(r1cs.customGates.length == 2);
+        let FFT4Parameters = {} ;
+        let EvPol4Id;
         for (let i=0; i<r1cs.customGates.length; i++) {
             switch (r1cs.customGates[i].templateName) {
                 case "CMulAdd":
                     CMulAddId =i;
-                    assert(r1cs.customGates[0].parameters.length == 0);
+                    assert(r1cs.customGates[i].parameters.length == 0);
                     break;
-                case "Poseidon":
-                    PoseidonId =i;
-                    assert(r1cs.customGates[0].parameters.length == 0);
+                case "Poseidon12":
+                    Poseidon12Id =i;
+                    assert(r1cs.customGates[i].parameters.length == 0);
                     break;
-                case "PolEv4":
-                    PolEv4Id =i;
-                    assert(r1cs.customGates[0].parameters.length == 0);
+                case "EvPol4":
+                    EvPol4Id =i;
+                    assert(r1cs.customGates[i].parameters.length == 0);
                     break;
                 case "FFT4":
-                    FFT4Id =i;
-                    assert(r1cs.customGates[0].parameters.length == 4);
+                    FFT4Parameters[i] = r1cs.customGates[i].parameters;
                     break;
                 default:
-                    throw new Error("Invalid custom gate: " , r1cs.customGates[0].name);
+                    throw new Error("Invalid custom gate: " + r1cs.customGates[i].templateName);
             }
         }
+    /*
         if (typeof CMulAddId === "undefined") throw new Error("CMulAdd custom gate not defined");
-        if (typeof PoseidonId === "undefined") throw new Error("Poseidon custom gate not defined");
+        if (typeof Poseidon12Id === "undefined") throw new Error("Poseidon12 custom gate not defined");
         if (typeof FFT4Id === "undefined") throw new Error("FFT4 custom gate not defined");
-        if (typeof PolEv4Id === "undefined") throw new Error("PolEv custom gate not defined");
-
+        if (typeof EvPol4Id === "undefined") throw new Error("EvPol4 custom gate not defined");
+    */
         const res = {
-            PoseidonId: PoseidonId,
+            Poseidon12Id: Poseidon12Id,
             CMulAddId: CMulAddId,
-            FFT4Id: FFT4Id,
-            PolEv4Id: PolEv4Id,
+            FFT4Parameters: FFT4Parameters,
+            EvPol4Id: EvPol4Id,
             nCMulAdd: 0,
-            nPoseidon: 0,
+            nPoseidon12: 0,
             nFFT4: 0,
-            nPolEv4: 0
+            nEvPol4: 0
         }
 
         for (let i=0; i< r1cs.customGatesUses.length; i++) {
             if (r1cs.customGatesUses[i].id == CMulAddId) {
                 res.nCMulAdd ++;
             } else if (r1cs.customGatesUses[i].id == PoseidonId) {
-                res.nPoseidon ++;
+                res.nPoseidon12 ++;
             } else if (r1cs.customGatesUses[i].id == FFT4Id) {
                 res.nFFT4 ++;
-            } else if (r1cs.customGatesUses[i].id == PolEv4Id) {
-                res.nPolEv4 ++;
+            } else if (r1cs.customGatesUses[i].id == EvPol4Id) {
+                res.nEvPol44 ++;
             } else {
                 throw new Error("Custom gate not defined" + r1cs.customGatesUses[i].id);
             }
