@@ -100,9 +100,9 @@ const CPOSEIDON = [
     0xf3c12fe54d5c653bn, 0x40b9e922ed9771e2n, 0x551f5b0fbe7b1840n, 0x25032aa7c4cb1811n,
     0xaaed34074b164346n, 0x8ffd96bbf9c9c81dn, 0x70fc91eb5937085cn, 0x7f795e2a5f915440n,
     0x4543d9df5476d3cbn, 0xf172d73e004fc90dn, 0xdfd1c4febcc81238n, 0xbc8dfb627fe558fcn,
-    0n, 0n, 0, 0n,
-    0n, 0n, 0, 0n,
-    0n, 0n, 0, 0n
+    0n, 0n, 0n, 0n,
+    0n, 0n, 0n, 0n,
+    0n, 0n, 0n, 0n
 ];
 
 
@@ -121,7 +121,7 @@ module.exports = async function plonkSetup(r1cs, options) {
     let nPublics = r1cs.nOutputs + r1cs.nPubInputs;
     const nPublicRows = Math.floor((nPublics - 1)/12) +1;
 
-    const NUsed = nPublicRows + plonkInfo.N + customGatesInfo.nCMulAdd + customGatesInfo.nPoseidon*31 + customGatesInfo.nFFT4*2 + customGatesInfo*nEvPol4*2;
+    const NUsed = nPublicRows + plonkInfo.N + customGatesInfo.nCMulAdd + customGatesInfo.nPoseidon12*31 + customGatesInfo.nFFT4*2 + customGatesInfo.nEvPol4*2;
     let nBits = log2(NUsed - 1) + 1;
 
     if (options.forceNBits) {
@@ -143,7 +143,6 @@ module.exports = async function plonkSetup(r1cs, options) {
     const pilStr = ejs.render(template ,  obj);
     const pilFile = await tmpName();
     await fs.promises.writeFile(pilFile, pilStr, "utf8");
-
     const pil = await compile(F, pilFile);
     const constPols =  newConstantPolsArray(pil);
 
@@ -158,13 +157,15 @@ module.exports = async function plonkSetup(r1cs, options) {
 
     // Paste public inputs.
     for (let i=0; i<nPublicRows; i++) {
-        constPols.Compressor.Qm[r+i] = 0n;
-        constPols.Compressor.Ql[r+i] = 0n;
-        constPols.Compressor.Qr[r+i] = 0n;
-        constPols.Compressor.Qo[r+i] = 0n;
-        constPols.Compressor.Qk[r+i] = 0n;
-        constPols.Compressor.QCMul[r+i] = 0n;
-        constPols.Compressor.QMDS[r+i] = 0n;
+        constPols.Compressor.EVPOL4[r+i] = 0n;
+        constPols.Compressor.CMULADD[r+i] = 0n;
+        constPols.Compressor.GATE[r+i] = 0n;
+        constPols.Compressor.POSEIDON12[r+i] = 0n;
+        constPols.Compressor.PARTIAL[r+i] = 0n;
+        constPols.Compressor.FFT4[r+i] = 0n;
+        for (let k=0; k<12; k++) {
+            constPols.Compressor.C[k][r+i] = 0n;
+        }
     }
 
     for (let i=0; i<nPublics; i++) {
@@ -197,12 +198,12 @@ module.exports = async function plonkSetup(r1cs, options) {
             }
         } else if (halfRows.length>0) {
             const pr = halfRows.shift();
-            constPols.Compressor.C[9][r] = c[3];
-            constPols.Compressor.C[6][r] = c[4];
-            constPols.Compressor.C[7][r] = c[5];
-            constPols.Compressor.C[8][r] = c[6];
-            constPols.Compressor.C[10][r] = c[7];
-            constPols.Compressor.C[11][r] = 0n;
+            constPols.Compressor.C[9][pr.row] = c[3];
+            constPols.Compressor.C[6][pr.row] = c[4];
+            constPols.Compressor.C[7][pr.row] = c[5];
+            constPols.Compressor.C[8][pr.row] = c[6];
+            constPols.Compressor.C[10][pr.row] = c[7];
+            constPols.Compressor.C[11][pr.row] = 0n;
 
             sMap[pr.nUsed*3][pr.row] = c[0];
             sMap[pr.nUsed*3+1][pr.row] = c[1];
@@ -217,10 +218,10 @@ module.exports = async function plonkSetup(r1cs, options) {
             constPols.Compressor.C[4][r] = c[7];
             constPols.Compressor.C[5][r] = 0n;
             constPols.Compressor.GATE[r] = 1n;
-            constPols.Compressor.POSEIDON[r] = 0n;
+            constPols.Compressor.POSEIDON12[r] = 0n;
             constPols.Compressor.PARTIAL[r] = 0n;
             constPols.Compressor.CMULADD[r] = 0n;
-            constPols.Compressor.POLEV[r] = 0n;
+            constPols.Compressor.EVPOL4[r] = 0n;
             constPols.Compressor.FFT4[r] = 0n;
             sMap[0][r] = c[0];
             sMap[1][r] = c[1];
@@ -254,18 +255,18 @@ module.exports = async function plonkSetup(r1cs, options) {
 
     for (let i=0; i<halfRows.length; i++) {
         const pr = halfRows[i];
-        sMap[6][pr.row] = 0n;
-        sMap[7][pr.row] = 0n;
-        sMap[8][pr.row] = 0n;
-        sMap[9][pr.row] = 0n;
-        sMap[10][pr.row] = 0n;
-        sMap[11][pr.row] = 0n;
-        constPols.Compressor.C[9][r] = 0n;
-        constPols.Compressor.C[6][r] = 0n;
-        constPols.Compressor.C[7][r] = 0n;
-        constPols.Compressor.C[8][r] = 0n;
-        constPols.Compressor.C[10][r] = 0n;
-        constPols.Compressor.C[11][r] = 0n;
+        sMap[6][pr.row] = 0;
+        sMap[7][pr.row] = 0;
+        sMap[8][pr.row] = 0;
+        sMap[9][pr.row] = 0;
+        sMap[10][pr.row] = 0;
+        sMap[11][pr.row] = 0;
+        constPols.Compressor.C[9][pr.row] = 0n;
+        constPols.Compressor.C[6][pr.row] = 0n;
+        constPols.Compressor.C[7][pr.row] = 0n;
+        constPols.Compressor.C[8][pr.row] = 0n;
+        constPols.Compressor.C[10][pr.row] = 0n;
+        constPols.Compressor.C[11][pr.row] = 0n;
     }
 
     // Generate Custom Gates
@@ -280,36 +281,35 @@ module.exports = async function plonkSetup(r1cs, options) {
                     constPols.Compressor.C[j][r+i] = CPOSEIDON[i*12+j];
                 }
                 constPols.Compressor.GATE[r+i] = 0n;
-                constPols.Compressor.POSEIDON[r+i] = i<30 ? 1n : 0n;
-                constPols.Compressor.PARTIAL[r+i] = i<30 ? ((i<4)||(i>=26) ? 1n : 0n) : 0n;
+                constPols.Compressor.POSEIDON12[r+i] = i<30 ? 1n : 0n;
+                constPols.Compressor.PARTIAL[r+i] = i<30 ? ((i<4)||(i>=26) ? 0n : 1n) : 0n;
                 constPols.Compressor.CMULADD[r+i] = 0n;
-                constPols.Compressor.POLEV[r+i] = 0n;
+                constPols.Compressor.EVPOL4[r+i] = 0n;
                 constPols.Compressor.FFT4[r+i] = 0n;
             }
             r+=31;
         } else if (cgu.id == customGatesInfo.CMulAddId) {
             for (let i=0; i<12; i++) {
                 sMap[i][r] = cgu.signals[i];
-                constPols.Compressor.C[i] = 0n;
             }
             constPols.Compressor.CMULADD[r] = 1n;
             constPols.Compressor.GATE[r] = 0n;
-            constPols.Compressor.POSEIDON[r] = 0n;
+            constPols.Compressor.POSEIDON12[r] = 0n;
             constPols.Compressor.PARTIAL[r] = 0n;
-            constPols.Compressor.POLEV[r] = 0n;
+            constPols.Compressor.EVPOL4[r] = 0n;
             constPols.Compressor.FFT4[r] = 0n;
-            constPols.Compressor.C0[r] = 0n;
-            constPols.Compressor.C1[r] = 0n;
-            constPols.Compressor.C2[r] = 0n;
-            constPols.Compressor.C3[r] = 0n;
-            constPols.Compressor.C4[r] = 0n;
-            constPols.Compressor.C5[r] = 0n;
-            constPols.Compressor.C6[r] = 0n;
-            constPols.Compressor.C7[r] = 0n;
-            constPols.Compressor.C8[r] = 0n;
-            constPols.Compressor.C9[r] = 1n;
-            constPols.Compressor.C10[r] = 1n;
-            constPols.Compressor.C11[r] = 0n;
+            constPols.Compressor.C[0][r] = 0n;
+            constPols.Compressor.C[1][r] = 0n;
+            constPols.Compressor.C[2][r] = 0n;
+            constPols.Compressor.C[3][r] = 0n;
+            constPols.Compressor.C[4][r] = 0n;
+            constPols.Compressor.C[5][r] = 0n;
+            constPols.Compressor.C[6][r] = 0n;
+            constPols.Compressor.C[7][r] = 0n;
+            constPols.Compressor.C[8][r] = 0n;
+            constPols.Compressor.C[9][r] = 1n;
+            constPols.Compressor.C[10][r] = 1n;
+            constPols.Compressor.C[11][r] = 0n;
             r+= 1;
         } else if ( typeof customGatesInfo.FFT4Parameters[cgu.id] !== "undefined") {
             for (let i=0; i<12; i++) {
@@ -320,47 +320,50 @@ module.exports = async function plonkSetup(r1cs, options) {
             }
             constPols.Compressor.CMULADD[r] = 0n;
             constPols.Compressor.GATE[r] = 0n;
-            constPols.Compressor.POSEIDON[r] = 0n;
+            constPols.Compressor.POSEIDON12[r] = 0n;
             constPols.Compressor.PARTIAL[r] = 0n;
-            constPols.Compressor.POLEV[r] = 0n;
+            constPols.Compressor.EVPOL4[r] = 0n;
             constPols.Compressor.FFT4[r] = 1n;
             constPols.Compressor.CMULADD[r+1] = 0n;
             constPols.Compressor.GATE[r+1] = 0n;
-            constPols.Compressor.POSEIDON[r+1] = 0n;
+            constPols.Compressor.POSEIDON12[r+1] = 0n;
             constPols.Compressor.PARTIAL[r+1] = 0n;
-            constPols.Compressor.POLEV[r+1] = 0n;
+            constPols.Compressor.EVPOL4[r+1] = 0n;
             constPols.Compressor.FFT4[r+1] = 0n;
-            const t = customGatesInfo.FFT4Parameters[cgu.id][0];
-            const scale = customGatesInfo.FFT4Parameters[cgu.id][1];
-            const firstW = customGatesInfo.FFT4Parameters[cgu.id][2];
+            const t = customGatesInfo.FFT4Parameters[cgu.id][3];
+            const scale = customGatesInfo.FFT4Parameters[cgu.id][2];
+            const firstW = customGatesInfo.FFT4Parameters[cgu.id][0];
             const firstW2 = F.square(firstW);
-            const incW = customGatesInfo.FFT4Parameters[cgu.id][3];
-            if (t == 4) {
-                constPols.Compressor.C[0] = scale;
-                constPols.Compressor.C[1] = F.mul(scale, firstW2);
-                constPols.Compressor.C[2] = F.mul(scale, firstW);
-                constPols.Compressor.C[3] = F.mul(scale, F.mul(firstW, firstW2));
-                constPols.Compressor.C[4] = F.mul(scale, F.mul(firstW, incW));
-                constPols.Compressor.C[5] = F.mul(F.mul(scale,firstW), F.mul(firstW2, incW));
-                constPols.Compressor.C[6] = 0n;
-                constPols.Compressor.C[7] = 0n;
-                constPols.Compressor.C[8] = 0n;
-            } else if (t == 2) {
-                constPols.Compressor.C[0] = 0n;
-                constPols.Compressor.C[1] = 0n;
-                constPols.Compressor.C[2] = 0n;
-                constPols.Compressor.C[3] = 0n;
-                constPols.Compressor.C[4] = 0n;
-                constPols.Compressor.C[5] = 0n;
-                constPols.Compressor.C[6] = scale;
-                constPols.Compressor.C[7] = F.mul(scale, firstW);
-                constPols.Compressor.C[8] = F.mul(scale, F.mul(firstW, incW));
+            const incW = customGatesInfo.FFT4Parameters[cgu.id][1];
+            if (t == 4n) {
+                constPols.Compressor.C[0][r] = scale;
+                constPols.Compressor.C[1][r] = F.mul(scale, firstW2);
+                constPols.Compressor.C[2][r] = F.mul(scale, firstW);
+                constPols.Compressor.C[3][r] = F.mul(scale, F.mul(firstW, firstW2));
+                constPols.Compressor.C[4][r] = F.mul(scale, F.mul(firstW, incW));
+                constPols.Compressor.C[5][r] = F.mul(F.mul(scale,firstW), F.mul(firstW2, incW));
+                constPols.Compressor.C[6][r] = 0n;
+                constPols.Compressor.C[7][r] = 0n;
+                constPols.Compressor.C[8][r] = 0n;
+            } else if (t == 2n) {
+                constPols.Compressor.C[0][r] = 0n;
+                constPols.Compressor.C[1][r] = 0n;
+                constPols.Compressor.C[2][r] = 0n;
+                constPols.Compressor.C[3][r] = 0n;
+                constPols.Compressor.C[4][r] = 0n;
+                constPols.Compressor.C[5][r] = 0n;
+                constPols.Compressor.C[6][r] = scale;
+                constPols.Compressor.C[7][r] = F.mul(scale, firstW);
+                constPols.Compressor.C[8][r] = F.mul(scale, F.mul(firstW, incW));
             } else {
                 throw new Error("invalit FFT4 type: "+cgu.parameters[0]);
             }
-            constPols.Compressor.C[9] = 0n;
-            constPols.Compressor.C[10] = 0n;
-            constPols.Compressor.C[11] = 0n;
+            constPols.Compressor.C[9][r] = 0n;
+            constPols.Compressor.C[10][r] = 0n;
+            constPols.Compressor.C[11][r] = 0n;
+            for (let k=0; k<12; k++) {
+                constPols.Compressor.C[k][r+1] = 0n;
+            }
             r+= 2;
         } else if (cgu.id == customGatesInfo.EvPol4Id) {
             for (let i=0; i<12; i++) {
@@ -368,23 +371,23 @@ module.exports = async function plonkSetup(r1cs, options) {
                 constPols.Compressor.C[i][r] = 0n;
             }
             for (let i=0; i<9; i++) {
-                sMap[i][r+1] = cgu.signals[12+ii];
+                sMap[i][r+1] = cgu.signals[12+i];
                 constPols.Compressor.C[i][r+1] = 0n;
             }
             for (let i=9; i<12; i++) {
                 sMap[i][r+1] = 0;
                 constPols.Compressor.C[i][r+1] = 0n;
             }
-            constPols.Compressor.POLEV[r] = 1n;
+            constPols.Compressor.EVPOL4[r] = 1n;
             constPols.Compressor.CMULADD[r] = 0n;
             constPols.Compressor.GATE[r] = 0n;
-            constPols.Compressor.POSEIDON[r] = 0n;
-            constPols.Compressor.PARTIAL[r+i] = 0n;
+            constPols.Compressor.POSEIDON12[r] = 0n;
+            constPols.Compressor.PARTIAL[r] = 0n;
             constPols.Compressor.FFT4[r] = 0n;
-            constPols.Compressor.POLEV[r+1] = 0n;
+            constPols.Compressor.EVPOL4[r+1] = 0n;
             constPols.Compressor.CMULADD[r+1] = 0n;
             constPols.Compressor.GATE[r+1] = 0n;
-            constPols.Compressor.POSEIDON[r+1] = 0n;
+            constPols.Compressor.POSEIDON12[r+1] = 0n;
             constPols.Compressor.PARTIAL[r+1] = 0n;
             constPols.Compressor.FFT4[r+1] = 0n;
             r+= 2;
@@ -426,13 +429,15 @@ module.exports = async function plonkSetup(r1cs, options) {
     // Fill unused rows
     while (r<N) {
         if ((r%100000) == 0) console.log(`Empty gates... ${r}/${N}`);
-        constPols.Compressor.Qm[r] = 0n;
-        constPols.Compressor.Ql[r] = 0n;
-        constPols.Compressor.Qr[r] = 0n;
-        constPols.Compressor.Qo[r] = 0n;
-        constPols.Compressor.Qk[r] = 0n;
-        constPols.Compressor.QCMul[r] = 0n;
-        constPols.Compressor.QMDS[r] = 0n;
+        constPols.Compressor.EVPOL4[r] = 0n;
+        constPols.Compressor.CMULADD[r] = 0n;
+        constPols.Compressor.GATE[r] = 0n;
+        constPols.Compressor.POSEIDON12[r] = 0n;
+        constPols.Compressor.PARTIAL[r] = 0n;
+        constPols.Compressor.FFT4[r] = 0n;
+        for (let k=0; k<12; k++) {
+            constPols.Compressor.C[k][r] = 0n;
+        }
         r +=1;
     }
 
@@ -534,12 +539,12 @@ module.exports = async function plonkSetup(r1cs, options) {
         for (let i=0; i< r1cs.customGatesUses.length; i++) {
             if (r1cs.customGatesUses[i].id == CMulAddId) {
                 res.nCMulAdd ++;
-            } else if (r1cs.customGatesUses[i].id == PoseidonId) {
+            } else if (r1cs.customGatesUses[i].id == Poseidon12Id) {
                 res.nPoseidon12 ++;
-            } else if (r1cs.customGatesUses[i].id == FFT4Id) {
+            } else if (typeof FFT4Parameters[r1cs.customGatesUses[i].id] !== "undefined") {
                 res.nFFT4 ++;
             } else if (r1cs.customGatesUses[i].id == EvPol4Id) {
-                res.nEvPol44 ++;
+                res.nEvPol4 ++;
             } else {
                 throw new Error("Custom gate not defined" + r1cs.customGatesUses[i].id);
             }

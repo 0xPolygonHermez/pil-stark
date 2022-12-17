@@ -83,6 +83,12 @@ template custom FFT4(type, scale, firstW, incW) {
     var firstW2 = firstW*firstW;
     var C0,C1,C2,C3,C4,C5, C6,C7,C8;
 
+    log(1111111);
+    log(type);
+    log(scale);
+    log(firstW);
+    log(incW);
+
     if (type == 4) {
         C0  = scale;
         C1  = scale*firstW2;
@@ -112,6 +118,19 @@ template custom FFT4(type, scale, firstW, incW) {
         out[1][e] <-- C0*in[0][e] - C1*in[1][e] + C4*in[2][e] - C5*in[3][e] + C6*in[0][e] - C7*in[1][e];
         out[2][e] <-- C0*in[0][e] + C1*in[1][e] - C2*in[2][e] - C3*in[3][e] + C6*in[2][e] + C8*in[3][e];
         out[3][e] <-- C0*in[0][e] - C1*in[1][e] - C4*in[2][e] + C5*in[3][e] + C6*in[2][e] - C8*in[3][e];
+    }
+
+    log(22222);
+    for (var i=0;i<4;i++) {
+        for (var j=0; j<3; j++) {
+            log(in[i][j])
+        }
+    }
+    log(33333);
+    for (var i=0;i<4;i++) {
+        for (var j=0; j<3; j++) {
+            log(out[i][j])
+        }
     }
 }
 
