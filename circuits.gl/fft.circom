@@ -83,12 +83,6 @@ template custom FFT4(type, scale, firstW, incW) {
     var firstW2 = firstW*firstW;
     var C0,C1,C2,C3,C4,C5, C6,C7,C8;
 
-    log(1111111);
-    log(type);
-    log(scale);
-    log(firstW);
-    log(incW);
-
     if (type == 4) {
         C0  = scale;
         C1  = scale*firstW2;
