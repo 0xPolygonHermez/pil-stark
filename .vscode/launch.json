@@ -302,6 +302,21 @@
             ]
         },
         {
+            "name": "test muladd circuit",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/cmuladd.test.circuit.js"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "FFT circuit test",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",

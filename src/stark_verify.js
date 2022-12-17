@@ -134,6 +134,7 @@ function executeCode(F, ctx, code) {
             case 'add': res = F.add(src[0], src[1]); break;
             case 'sub': res = F.sub(src[0], src[1]); break;
             case 'mul': res = F.mul(src[0], src[1]); break;
+            case 'muladd': res = F.add(F.mul(src[0], src[1]), src[2]); break;
             case 'copy': res = src[0]; break;
             default: throw new Error("Invalid op:"+ code[i].op);
         }

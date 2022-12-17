@@ -80,6 +80,7 @@ class FFT {
         }
     }
 
+    /*
     fft(p) {
         if (p.length <= 1) return p;
         const bits = log2(p.length-1)+1;
@@ -111,6 +112,66 @@ class FFT {
 
         return resn;
     }
+    */
+
+    fft(p) {
+        if (p.length <= 1) return p;
+        const bits = log2(p.length-1)+1;
+        this._setRoots(bits);
+
+
+        const n = 1 << bits;
+        if (p.length != n) {
+            throw new Error("Size must be multiple of 2");
+        }
+
+        const buff = new Array(n);
+
+        for (let i=0; i<p.length; i++) {
+            const r = rev(i, bits);
+            buff[r] = p[i];
+        }
+
+        for (let s=1; s<=bits; s++) {
+            const m = 1 << s;
+            const mdiv2 = m >> 1;
+            const winc = this.roots[s][1];
+            for (let k=0; k<n; k+=m) {
+                let w = 1n;
+                for (let j=0; j<mdiv2; j++) {
+                    const t = this.F.mul(w, buff[k+j+mdiv2]);
+                    const u = buff[k+j];
+                    buff[k+j] = this.F.add(u,t);
+                    buff[k+j+mdiv2] = this.F.sub(u,t);
+                    w = this.F.mul(w, winc);
+                }
+            }
+        }
+
+        return buff;
+
+        function rev(x, nBits) {
+            x = ((x >> 1) & 0x55555555) | ((x & 0x55555555) << 1);
+            x = ((x >> 2) & 0x33333333) | ((x & 0x33333333) << 2);
+            x = ((x >> 4) & 0x0F0F0F0F) | ((x & 0x0F0F0F0F) << 4);
+            x = ((x >> 8) & 0x00FF00FF) | ((x & 0x00FF00FF) << 8);
+            x = (x >>> 16) | (x << 16);
+
+            return x >>> (32-nBits);
+        }
+    }
+
+    ifft(p) {
+        const q = this.fft(p);
+        const n = p.length;
+        const n2inv = this.F.inv(BigInt(p.length));
+        const res = new Array(q.length);
+        for (let i=0; i<n; i++) {
+            res[ (n - i)%n ] = this.F.mul(q[i], n2inv);
+        }
+        return res;
+    }
+
 
 
 }
