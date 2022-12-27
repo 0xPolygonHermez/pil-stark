@@ -9,10 +9,10 @@ const buildCHelpers = require("./chelpers.js");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_buildchelpers.js -p <pil.json> [-P <pilconfig.json] -s <starkstruct.json> -c <chelpers.cpp> [-C <classname>]")
+    .usage("node main_buildchelpers.js -p <pil.json> [-P <pilconfig.json] -s <starkinfo.json> -c <chelpers.cpp> [-C <classname>]")
     .alias("p", "pil")
     .alias("P", "pilconfig")
-    .alias("s", "starkstruct")
+    .alias("s", "starkinfo")
     .alias("c", "chelpers")
     .alias("C", "cls")
     .alias("m", "multiple")
@@ -26,14 +26,12 @@ async function run() {
 
 
     const cls = typeof(argv.cls) === "string" ?  argv.cls.trim() : "Stark";
-    const starkStructFile = typeof(argv.starkstruct) === "string" ?  argv.starkstruct.trim() : "mycircuit.stark_struct.json";
+    const starkInfoFile = typeof(argv.starkinfo) === "string" ?  argv.starkinfo.trim() : "mycircuit.starkinfo.json";
     const chelpersFile = typeof(argv.chelpers) === "string" ?  argv.chelpers.trim() : "mycircuit.chelpers.cpp";
     const multipleCodeFiles = argv.multiple;
 
     const pil = await compile(F, pilFile, null, pilConfig);
-    const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
-
-    const starkInfo = starkInfoGen(pil, starkStruct);
+    const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
     const cCode = await buildCHelpers(starkInfo, multipleCodeFiles ? {multipleCodeFiles: true, className: cls}:{});
 
@@ -47,7 +45,7 @@ async function run() {
         const ext = dotPos < 0 ? '.cpp' : chelpersFile.substr(dotPos);
         const classInclude = cls.charAt(0).toLowerCase() + cls.slice(1) + ".hpp";
         for(cpart in cCode) {
-            const code = `#include "goldilocks_cubic_extension.hpp"\n#include "zhInv.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
+            const code = `#include "goldilocks_cubic_extension.hpp"\n#include "zhInv.hpp"\n#include "starks.hpp"\n#include "constant_pols_starks.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
             await fs.promises.writeFile(leftFilename + '.' + cpart + ext, code, "utf8");
         }
     } else {

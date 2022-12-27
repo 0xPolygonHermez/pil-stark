@@ -302,6 +302,21 @@
             ]
         },
         {
+            "name": "test muladd circuit",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/cmuladd.test.circuit.js"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "FFT circuit test",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
@@ -1007,8 +1022,10 @@
             "type": "pwa-node",
             "args": [
                 "-p test/sm_all/all_main.pil",
-                "-s ${workspaceFolder}/test/sm_all/all.starkstruct.json",
-                "-c tmp/all.chelpers.cpp"
+                "-s ${workspaceFolder}/tmp/all.starkinfo.json",
+                "-c tmp/all.chelpers.cpp",
+                "-C AllSteps",
+                "-m"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1333,14 +1350,14 @@
             "program": "src/main_prover.js",
             "request": "launch",
             "args": [
-                "-m ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.commit",
-                "-c ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.const",
-                "-t ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.consttree",
-                "-p ${workspaceFolder}/../zkevm-proverjs/pil/main.pil",
-                "-s ${workspaceFolder}/../zkevm-proverjs/src/zkevm.starkstruct.json",
-                "-o ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.proof.json",
-                "-z ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.zkin.proof.json",
-                "-b ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.public.json"
+                "-m ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.commit",
+                "-c ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.const",
+                "-t ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.consttree",
+                "-p ${workspaceFolder}/../zkevm-proverjs/pilred/main.pil",
+                "-s ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.starkinfo.json",
+                "-o ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.proof.json",
+                "-z ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.zkin.proof.json",
+                "-b ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.public.json"
             ],
             "skipFiles": [
                 "<node_internals>/**"
@@ -1355,11 +1372,11 @@
             "program": "src/main_verifier.js",
             "request": "launch",
             "args": [
-                "-p ${workspaceFolder}/../zkevm-proverjs/pil/main.pil",
-                "-s ${workspaceFolder}/../zkevm-proverjs/src/zkevm.starkstruct.json",
-                "-v ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.verkey.json",
-                "-o ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.proof.json",
-                "-b ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.public.json"
+                "-p ${workspaceFolder}/../zkevm-proverjs/pilred/main.pil",
+                "-s ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.starkinfo.json",
+                "-v ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.verkey.json",
+                "-o ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.proof.json.good",
+                "-b ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.public.json.good"
             ],
             "skipFiles": [
                 "<node_internals>/**"
@@ -1471,6 +1488,43 @@
                 "-p ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.pil",
                 "-e ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.exec",
                 "-m ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.commit",
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "zkevm generate circom",
+            "program": "src/main_pil2circom.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p ${workspaceFolder}/../zkevm-proverjs/pil/main.pil",
+                "-s ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-rc.1-stark/zkevm.starkinfo.json",
+                "-v ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-rc.1-stark/zkevm.verkey.json",
+                "-o ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-rc.1-stark/zkevm.verifier.circom",
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "recursive1 exec",
+            "program": "src/compressor12/main_compressor12_exec.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-i /tmp/zkinC12a.json",
+                "-w ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-evals2-20221212/recursive1_js/recursive1.wasm",
+                "-p ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-evals2-20221212/recursive1.pil",
+                "-e ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-evals2-20221212/recursive1.exec",
+                "-m /tmp/recursive1.commit",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"

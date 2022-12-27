@@ -261,6 +261,55 @@ class Transcript {
     <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1];
     <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2];
 <%          } else throw new Error("Invalid src dimmensions");                          -%>
+<%      } else if (inst.op == "muladd") {                                                   -%>
+<%              if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
+<%                  const cmpName = "muladd_" + tmpNameId++;                               -%>
+    component <%- cmpName%> = GLMulAdd();
+    <%- cmpName %>.ina <== <%- ref(inst.src[0]) %>;
+    <%- cmpName %>.inb <== <%- ref(inst.src[1]) %>;
+<%                  if (inst.src[2].dim==1) {                                                -%>
+    <%- cmpName %>.inc <== <%- ref(inst.src[2]) %>;
+    <%- ref(inst.dest) %> <== <%- cmpName %>.out;
+<%                  } else {                                                                 -%>
+    <%- cmpName %>.inc <== <%- ref(inst.src[2]) %>[0];
+    <%- ref(inst.dest) %>[0] <== <%- cmpName %>.out;
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[2]) %>[1];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[2]) %>[2];
+<%                  }                                                                       -%>
+<%              } else {                                                                    -%>
+<%                  const cmpName = "cmuladd_" + tmpNameId++;                               -%>
+    component <%- cmpName%> = GLCMulAdd();
+<%                  if (inst.src[0].dim==1) {                                               -%>
+    <%- cmpName %>.ina[0] <== <%- ref(inst.src[0]) %>;
+    <%- cmpName %>.ina[1] <== 0;
+    <%- cmpName %>.ina[2] <== 0;
+<%                  } else {                                                                -%>
+    <%- cmpName %>.ina[0] <== <%- ref(inst.src[0]) %>[0];
+    <%- cmpName %>.ina[1] <== <%- ref(inst.src[0]) %>[1];
+    <%- cmpName %>.ina[2] <== <%- ref(inst.src[0]) %>[2];
+<%                  }                                                                       -%>
+<%                  if (inst.src[1].dim==1) {                                               -%>
+    <%- cmpName %>.inb[0] <== <%- ref(inst.src[1]) %>;
+    <%- cmpName %>.inb[1] <== 0;
+    <%- cmpName %>.inb[2] <== 0;
+<%                  } else {                                                                -%>
+    <%- cmpName %>.inb[0] <== <%- ref(inst.src[1]) %>[0];
+    <%- cmpName %>.inb[1] <== <%- ref(inst.src[1]) %>[1];
+    <%- cmpName %>.inb[2] <== <%- ref(inst.src[1]) %>[2];
+<%                  }                                                                       -%>
+<%                  if (inst.src[2].dim==1) {                                               -%>
+    <%- cmpName %>.inc[0] <== <%- ref(inst.src[2]) %>;
+    <%- cmpName %>.inc[1] <== 0;
+    <%- cmpName %>.inc[2] <== 0;
+<%                  } else {                                                                -%>
+    <%- cmpName %>.inc[0] <== <%- ref(inst.src[2]) %>[0];
+    <%- cmpName %>.inc[1] <== <%- ref(inst.src[2]) %>[1];
+    <%- cmpName %>.inc[2] <== <%- ref(inst.src[2]) %>[2];
+<%                  }                                                                       -%>
+    <%- ref(inst.dest) %>[0] <== <%- cmpName %>.out[0];
+    <%- ref(inst.dest) %>[1] <== <%- cmpName %>.out[1];
+    <%- ref(inst.dest) %>[2] <== <%- cmpName %>.out[2];
+<%              }                                                                           -%>
 <%      } else throw new Error("Invalid op");                                           -%>
 //    log(<%- i %>);
 <% }                                                                                    -%>

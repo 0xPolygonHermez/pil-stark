@@ -1,7 +1,7 @@
 pragma circom 2.1.0;
 pragma custom_templates;
 
-include "cmul.circom";
+include "cmuladd.circom";
 
 template CInv() {
     signal input in[3];

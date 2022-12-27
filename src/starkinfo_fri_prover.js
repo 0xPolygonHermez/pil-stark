@@ -64,7 +64,7 @@ module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
 
     const code = ctx2ns.code[ctx2ns.code.length-1].code;
 
-    code[code.length-1].dest = { type: "f" };
+    code[code.length-1].dest = { type: "f", id: 0 };
 
     res.step52ns = buildCode(ctx2ns);
 

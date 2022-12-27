@@ -1,7 +1,7 @@
 pragma circom 2.1.0;
 pragma custom_templates;
 
-include "cmul.circom";
+include "cmuladd.circom";
 include "cinv.circom";
 include "poseidon.circom";
 include "bitify.circom";
@@ -162,7 +162,6 @@ class Transcript {
     signal tmp_<%- inst.dest.id %>[3];
 <%          } else throw new Error("Invalid dimension");                                -%>
 <%      }                                                                               -%>
-
 <%      if (inst.op == "add") {                                                         -%>
 <%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
     <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>;
@@ -218,7 +217,75 @@ class Transcript {
     <%- ref(inst.dest) %>[0] <== <%- cmpName %>.out[0];
     <%- ref(inst.dest) %>[1] <== <%- cmpName %>.out[1];
     <%- ref(inst.dest) %>[2] <== <%- cmpName %>.out[2];
-<%          } else throw new Error("Invalid src dimmensions");                          -%>
+<%          } else throw new Error("Invalid src dimmensions");                              -%>
+<%      } else if (inst.op == "muladd") {                                                   -%>
+<%          if (inst.src[2].dim==1) {                                                      -%>
+<%              if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
+    <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %> +  <%- ref(inst.src[2]) %>;
+<%              } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %>[0] +  <%- ref(inst.src[2]) %>;
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %>[1];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %>[2];
+<%              } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %>[0] * <%- ref(inst.src[1]) %> +  <%- ref(inst.src[2]) %>;
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1] * <%- ref(inst.src[1]) %>;
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2] * <%- ref(inst.src[1]) %>;
+<%              } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
+<%                  const cmpName = "cmuladd_" + tmpNameId++;                                  -%>
+    component <%- cmpName%> = CMulAdd();
+    <%- cmpName %>.ina[0] <== <%- ref(inst.src[0]) %>[0];
+    <%- cmpName %>.ina[1] <== <%- ref(inst.src[0]) %>[1];
+    <%- cmpName %>.ina[2] <== <%- ref(inst.src[0]) %>[2];
+    <%- cmpName %>.inb[0] <== <%- ref(inst.src[1]) %>[0];
+    <%- cmpName %>.inb[1] <== <%- ref(inst.src[1]) %>[1];
+    <%- cmpName %>.inb[2] <== <%- ref(inst.src[1]) %>[2];
+    <%- cmpName %>.inc[0] <== <%- ref(inst.src[2]) %>;
+    <%- cmpName %>.inc[1] <== 0;
+    <%- cmpName %>.inc[2] <== 0;
+    <%- ref(inst.dest) %>[0] <== <%- cmpName %>.out[0];
+    <%- ref(inst.dest) %>[1] <== <%- cmpName %>.out[1];
+    <%- ref(inst.dest) %>[2] <== <%- cmpName %>.out[2];
+<%              } else throw new Error("Invalid src dimmensions");                          -%>
+<%          } else if (inst.src[2].dim==3) {                         -%>
+<%              if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
+    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> * <%- ref(inst.src[1]) %> +  <%- ref(inst.src[2]) %>[0];
+    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[2]) %>[1];
+    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[2]) %>[2];
+<%              } else {                                                                    -%>
+<%                  const cmpName = "cmuladd_" + tmpNameId++;                                  -%>
+    component <%- cmpName%> = CMulAdd();
+<%                  if (inst.src[0].dim==3) {                                              -%>
+    <%- cmpName %>.ina[0] <== <%- ref(inst.src[0]) %>[0];
+    <%- cmpName %>.ina[1] <== <%- ref(inst.src[0]) %>[1];
+    <%- cmpName %>.ina[2] <== <%- ref(inst.src[0]) %>[2];
+<%                  } else if (inst.src[0].dim==1) {                                       -%>
+    <%- cmpName %>.ina[0] <== <%- ref(inst.src[0]) %>;
+    <%- cmpName %>.ina[1] <== 0;
+    <%- cmpName %>.ina[2] <== 0;
+<%                  } else throw new Error("Invalid src dimmensions");                      -%>
+<%                  if (inst.src[1].dim==3) {                                              -%>
+    <%- cmpName %>.inb[0] <== <%- ref(inst.src[1]) %>[0];
+    <%- cmpName %>.inb[1] <== <%- ref(inst.src[1]) %>[1];
+    <%- cmpName %>.inb[2] <== <%- ref(inst.src[1]) %>[2];
+<%                  } else if (inst.src[1].dim==1) {                                       -%>
+    <%- cmpName %>.inb[0] <== <%- ref(inst.src[1]) %>;
+    <%- cmpName %>.inb[1] <== 0;
+    <%- cmpName %>.inb[2] <== 0;
+<%                  } else throw new Error("Invalid src dimmensions");                      -%>
+<%                  if (inst.src[2].dim==3) {                                              -%>
+    <%- cmpName %>.inc[0] <== <%- ref(inst.src[2]) %>[0];
+    <%- cmpName %>.inc[1] <== <%- ref(inst.src[2]) %>[1];
+    <%- cmpName %>.inc[2] <== <%- ref(inst.src[2]) %>[2];
+<%                  } else if (inst.src[2].dim==1) {                                       -%>
+    <%- cmpName %>.inc[0] <== <%- ref(inst.src[2]) %>;
+    <%- cmpName %>.inc[1] <== 0;
+    <%- cmpName %>.inc[2] <== 0;
+<%                  } else throw new Error("Invalid src dimmensions");                      -%>
+    <%- ref(inst.dest) %>[0] <== <%- cmpName %>.out[0];
+    <%- ref(inst.dest) %>[1] <== <%- cmpName %>.out[1];
+    <%- ref(inst.dest) %>[2] <== <%- cmpName %>.out[2];
+<%              }                                                                           -%>
+<%          } else throw new Error("Invalid src dimmensions");                              -%>
 <%      } else if (inst.op == "copy") {                                                 -%>
 <%          if (inst.src[0].dim==1) {                                                   -%>
     <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %>;
@@ -611,6 +678,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
                 s0_merkleC[q].siblings[i][j] <== s0_siblingsC[q][i][j];
             }
         }
+
         for (var j=0; j<4; j++) {
             enable * (s0_merkle1[q].root[j] - root1[j]) === 0;
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
@@ -657,7 +725,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         s<%- s %>_merkle[q] = MerkleHash(3, <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>, <%- 1 << starkStruct.steps[s].nBits %>);
-        s<%- s %>_fft[q] = FFT(<%- starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits %>, 3, 1, 1);
+        s<%- s %>_fft[q] = FFT(<%- starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits %>, 3, 1);
         s<%- s %>_evalPol[q] = EvalPol(<%- 1 << starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits %>);
         s<%- s %>_lowValues[q] = TreeSelector(<%- starkStruct.steps[s].nBits - ((s< starkStruct.steps.length-1) ? starkStruct.steps[s+1].nBits : 0)  %>, 3) ;
         for (var i=0; i< <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>; i++) {
@@ -720,7 +788,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 // Last FFT
 <% const nLastBits = starkStruct.steps[ starkStruct.steps.length-1].nBits;  -%>
 <% const maxDegBits =  nLastBits -  (starkStruct.nBitsExt - starkStruct.nBits); -%>
-    component lastIFFT = FFT(<%- nLastBits %>, 3, 1, 1 );
+    component lastIFFT = FFT(<%- nLastBits %>, 3, 1 );
 
     for (var k=0; k< <%- 1 << nLastBits %>; k++ ){
         for (var e=0; e<3; e++) {

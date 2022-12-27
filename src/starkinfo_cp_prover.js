@@ -64,6 +64,7 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns) {
         op: "mul",
         dest: {
             type: "q",
+            id: 0
         },
         src: [
            code[code.length-1].dest,
@@ -115,6 +116,10 @@ function calculateImPols(pil, _exp, maxDeg) {
             if (["number", "public", "challenge"].indexOf(exp.values[1].op) >= 0 ) {
                 return _calculateImPols(pil, exp.values[0], imExpressions, maxDeg);
             }
+            const maxDegHere = getExpDim(pil, exp);
+            if (maxDegHere <= maxDeg) {
+                return [imExpressions, maxDegHere];
+            }
             for (let l=0; l<=maxDeg; l++) {
                 let r = maxDeg-l;
                 const [e1, d1] = _calculateImPols(pil, exp.values[0], imExpressions, l);
@@ -156,4 +161,34 @@ function calculateImPols(pil, _exp, maxDeg) {
         }
     }
 
+}
+
+
+function getExpDim(pil, exp) {
+    switch (exp.op) {
+        case "add":
+        case "sub":
+        case "addc":
+        case "mulc":
+        case "neg":
+            let md = 1;
+            for (let i=0; i<exp.values.length; i++) {
+                const d = getExpDim(pil, exp.values[i]);
+                if (d>md) md=d;
+            }
+            return md;
+        case "mul":
+            return getExpDim(pil, exp.values[0]) + getExpDim(pil, exp.values[1])
+        case "muladd":
+            return Math.max(getExpDim(pil, exp.values[0]) + getExpDim(pil, exp.values[1]), getExpDim(pil, exp.values[2]));
+        case "cm": return 1;
+        case "const": return 1;
+        case "exp": return getExpDim(pil, pil.expressions[exp.id]);
+        case "number": return 0;
+        case "public": return 0;
+        case "challenge": return 0;
+        case "eval": return 0;
+        case "x": return 1;
+        default: throw new Error("Exp op not defined: " + exp.op);
+    }
 }

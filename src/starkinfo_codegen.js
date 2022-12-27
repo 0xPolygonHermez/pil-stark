@@ -1,6 +1,6 @@
 
 
-function pilCodeGen(ctx, expId, prime, resType, resId) {
+function pilCodeGen(ctx, expId, prime, resType, resId, addMul) {
     prime = prime || false;
 
     const primeIdx = prime ? "expsPrime" : "exps";
@@ -30,8 +30,13 @@ function pilCodeGen(ctx, expId, prime, resType, resId) {
         code: []
     }
 
-
-    const retRef = evalExp(codeCtx, ctx.pil.expressions[expId], prime);
+    let e;
+    if (addMul) {
+        e = findAddMul(ctx.pil.expressions[expId]);
+    } else {
+        e = ctx.pil.expressions[expId];
+    }
+    const retRef = evalExp(codeCtx, e, prime);
 
     if (retRef.type == "tmp") {
         codeCtx.code[codeCtx.code.length-1].dest = {
@@ -123,6 +128,20 @@ function evalExp(codeCtx, exp, prime) {
             op: "mul",
             dest: r,
             src: [a, b]
+        });
+        return r;
+    } else if (exp.op == "muladd") {
+        const a = evalExp(codeCtx, exp.values[0], prime);
+        const b = evalExp(codeCtx, exp.values[1], prime);
+        const c = evalExp(codeCtx, exp.values[2], prime);
+        const r = {
+            type: "tmp",
+            id: codeCtx.tmpUsed++
+        };
+        codeCtx.code.push({
+            op: "muladd",
+            dest: r,
+            src: [a, b, c]
         });
         return r;
     } else if (exp.op == "addc") {
@@ -239,14 +258,14 @@ function evalExp(codeCtx, exp, prime) {
 }
 
 
-function calculateDeps(ctx, exp, prime, expIdErr) {
+function calculateDeps(ctx, exp, prime, expIdErr, addMul) {
     if (exp.op == "exp") {
         if (prime && exp.next) expressionError(ctx.pil, `Double prime`, expIdErr, exp.id);
-        pilCodeGen(ctx, exp.id, prime || exp.next);
+        pilCodeGen(ctx, exp.id, prime || exp.next, null, null , addMul);
     }
     if (exp.values) {
         for (let i=0; i<exp.values.length; i++) {
-            calculateDeps(ctx, exp.values[i], prime, expIdErr);
+            calculateDeps(ctx, exp.values[i], prime, expIdErr, addMul);
         }
     }
 }
@@ -437,6 +456,36 @@ function iterateCode(code, f, ctx) {
             }
             f(subCode[i].dest, ctx);
         }
+    }
+}
+
+function findAddMul(exp) {
+    if ((exp.op == "add") && (exp.values[0].op == "mul")) {
+        return {
+            op: "muladd",
+            values: [
+                findAddMul(exp.values[0].values[0]),
+                findAddMul(exp.values[0].values[1]),
+                findAddMul(exp.values[1]),
+            ]
+        }
+    } else if ((exp.op == "add") && (exp.values[1].op == "mul")) {
+        return {
+            op: "muladd",
+            values: [
+                findAddMul(exp.values[1].values[0]),
+                findAddMul(exp.values[1].values[1]),
+                findAddMul(exp.values[0]),
+            ]
+        }
+    } else {
+        const r = Object.assign({}, exp);
+        if (r.values) {
+            for (let i=0; i<exp.values.length; i++) {
+                r.values[i] = findAddMul(exp.values[i]);
+            }
+        }
+        return r;
     }
 }
 

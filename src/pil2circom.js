@@ -48,6 +48,7 @@ function setDimensions(code) {
             case 'add': newDim = Math.max(getDim(code[i].src[0]), getDim(code[i].src[1])); break;
             case 'sub': newDim = Math.max(getDim(code[i].src[0]), getDim(code[i].src[1])); break;
             case 'mul': newDim = Math.max(getDim(code[i].src[0]), getDim(code[i].src[1])); break;
+            case 'muladd': newDim = Math.max(getDim(code[i].src[0]), getDim(code[i].src[1]), getDim(code[i].src[1])); break;
             case 'copy': newDim = getDim(code[i].src[0]); break;
             default: throw new Error("Invalid op:"+ code[i].op);
         }
