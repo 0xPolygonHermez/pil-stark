@@ -212,6 +212,7 @@ class Transcript {
 <%          } else throw new Error("Invalid src dimmensions");                          -%>
 <%      } else if (inst.op == "mul") {                                                  -%>
 <%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
+    <%              const cmpName = "cmul_" + tmpNameId++;                                  -%>
     component <%- cmpName%> = GLMul1();
     <%- cmpName %>.ina <== <%- ref(inst.src[0]) %>;
     <%- cmpName %>.inb <== <%- ref(inst.src[1]) %>;
