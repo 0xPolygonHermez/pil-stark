@@ -71,12 +71,12 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         code.length = 0;
     }
 
-    code.push(compileCode("step52ns_first", starkInfo.step52ns.first, "2ns"));
-    code.push(compileCode("step52ns_i", starkInfo.step52ns.first, "2ns"));
-    code.push(compileCode("step52ns_last", starkInfo.step52ns.first, "2ns"));
+    code.push(compileCode("step5n_first", starkInfo.step5n.first, "n"));
+    code.push(compileCode("step5n_i", starkInfo.step5n.first, "n"));
+    code.push(compileCode("step5n_last", starkInfo.step5n.first, "n"));
 
     if (multipleCodeFiles) {
-        result.step52ns = code.join("\n\n")+"\n";
+        result.step2n = code.join("\n\n")+"\n";
         return result;
     }
 
@@ -322,9 +322,9 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                 }
                 case "f": {
                     if (dom == "n") {
-                        throw new Error("Accessing q in domain n");
+                        eDst = `(Goldilocks3::Element &)(params.f_n[i * 3])`
                     } else if (dom == "2ns") {
-                        eDst = `(Goldilocks3::Element &)(params.f_2ns[i * 3])`
+                        throw new Error("Accessing q in domain 2ns");
                     } else {
                         throw new Error("Invalid dom");
                     }

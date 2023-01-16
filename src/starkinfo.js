@@ -70,7 +70,7 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
 
     generateConstraintPolynomialVerifier(res, pil);
 
-    generateFRIPolynomial(res, pil, ctx2ns);
+    generateFRIPolynomial(res, pil, ctx);
 
     generateVerifierQuery(res, pil);
 

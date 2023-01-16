@@ -3,7 +3,7 @@ const {pilCodeGen, buildCode, fixCode} = require("./starkinfo_codegen.js");
 const ExpressionOps = require("./expressionops.js");
 
 
-module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
+module.exports = function generateFRIPolynomial(res, pil, ctx) {
     const E = new ExpressionOps();
 
     const vf1 = E.challenge("vf1");
@@ -60,12 +60,12 @@ module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
     friExp.keep2ns = true;
     pil.expressions.push(friExp);
 
-    pilCodeGen(ctx2ns, res.friExpId, false, "f");
+    pilCodeGen(ctx, res.friExpId, false, "f");
 
-    const code = ctx2ns.code[ctx2ns.code.length-1].code;
+    const code = ctx.code[ctx.code.length-1].code;
 
     code[code.length-1].dest = { type: "f", id: 0 };
 
-    res.step52ns = buildCode(ctx2ns);
+    res.step5n = buildCode(ctx);
 
 }

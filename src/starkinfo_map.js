@@ -12,7 +12,7 @@ module.exports = function map(res, pil) {
     res.cm_2ns  = [];
     res.tmpExp_n = [];
     res.q_2ns = [];
-    res.f_2ns = [];
+    res.f_n = [];
     res.mapSections = {
         cm1_n: [],
         cm1_2ns: [],
@@ -24,6 +24,7 @@ module.exports = function map(res, pil) {
         cm4_2ns:[],
         tmpExp_n:[],
         q_2ns:[],
+        f_n:[],
         f_2ns:[]
     }
     res.mapSectionsN1 = {}    // Number of pols of base field i section
@@ -197,11 +198,11 @@ module.exports = function map(res, pil) {
     });
     res.q_2ns.push(ppq_2ns);
 
-    const ppf_2ns = addPol({
-        section: "f_2ns",
+    const ppf_n = addPol({
+        section: "f_n",
         dim:3
     });
-    res.f_2ns.push(ppf_2ns);
+    res.f_n.push(ppf_n);
 
 
     mapSections(res);
@@ -213,7 +214,8 @@ module.exports = function map(res, pil) {
     res.mapOffsets.cm3_n = res.mapOffsets.cm2_n +  N * res.mapSectionsN.cm2_n;
     res.mapOffsets.cm4_n = res.mapOffsets.cm3_n +  N * res.mapSectionsN.cm3_n;
     res.mapOffsets.tmpExp_n = res.mapOffsets.cm4_n +  N * res.mapSectionsN.cm4_n;
-    res.mapOffsets.cm1_2ns = res.mapOffsets.tmpExp_n +  N * res.mapSectionsN.tmpExp_n;
+    res.mapOffsets.f_n = res.mapOffsets.tmpExp_n +  N * res.mapSectionsN.tmpExp_n;
+    res.mapOffsets.cm1_2ns = res.mapOffsets.f_n +  N * res.mapSectionsN.f_n;
     res.mapOffsets.cm2_2ns = res.mapOffsets.cm1_2ns +  Next * res.mapSectionsN.cm1_2ns;
     res.mapOffsets.cm3_2ns = res.mapOffsets.cm2_2ns +  Next * res.mapSectionsN.cm2_2ns;
     res.mapOffsets.cm4_2ns = res.mapOffsets.cm3_2ns +  Next * res.mapSectionsN.cm3_2ns;
@@ -227,6 +229,7 @@ module.exports = function map(res, pil) {
     res.mapDeg.cm3_n = N;
     res.mapDeg.cm4_n = N;
     res.mapDeg.tmpExp_n = N;
+    res.mapDeg.f_n = N;
     res.mapDeg.cm1_2ns = Next;
     res.mapDeg.cm2_2ns = Next;
     res.mapDeg.cm3_2ns = Next;
@@ -241,7 +244,7 @@ module.exports = function map(res, pil) {
     fixProverCode(res.step3prev, "n");
     fixProverCode(res.step3, "n");
     fixProverCode(res.step42ns, "2ns");
-    fixProverCode(res.step52ns, "2ns");
+    fixProverCode(res.step5n, "n");
     fixProverCode(res.verifierQueryCode, "2ns");
 
     iterateCode(res.verifierQueryCode, function fixRef(r, ctx) {
@@ -269,7 +272,7 @@ module.exports = function map(res, pil) {
     setCodeDimensions(res.step3prev,res, 1);
     setCodeDimensions(res.step3, res, 1);
     setCodeDimensions(res.step42ns, res, 1);
-    setCodeDimensions(res.step52ns, res, 1);
+    setCodeDimensions(res.step5n, res, 1);
     setCodeDimensions(res.verifierCode, res, 3);
     setCodeDimensions(res.verifierQueryCode, res, 1);
 

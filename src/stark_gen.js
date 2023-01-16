@@ -16,8 +16,8 @@ const workerpool = require("workerpool");
 const {starkgen_execute} = require("./starkgen_worker");
 const {BigBuffer} = require("pilcom");
 
-const parallelExec = true;
-const useThreads = true;
+const parallelExec = false;
+const useThreads = false;
 const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
 
@@ -71,7 +71,9 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     cmPols.writeToBigBuffer(ctx.cm1_n, 0);
     ctx.cm2_n = new BigBuffer(starkInfo.mapSectionsN.cm2_n*ctx.N);
     ctx.cm3_n = new BigBuffer(starkInfo.mapSectionsN.cm3_n*ctx.N);
+    ctx.cm4_n = new BigBuffer(starkInfo.mapSectionsN.cm4_n*ctx.N);
     ctx.tmpExp_n = new BigBuffer(starkInfo.mapSectionsN.tmpExp_n*ctx.N);
+    ctx.f_n = new BigBuffer(starkInfo.mapSectionsN.f_n*ctx.N);
     ctx.cm1_2ns = new BigBuffer(starkInfo.mapSectionsN.cm1_n*ctx.Next);
     ctx.cm2_2ns = new BigBuffer(starkInfo.mapSectionsN.cm2_n*ctx.Next);
     ctx.cm3_2ns = new BigBuffer(starkInfo.mapSectionsN.cm3_n*ctx.Next);
@@ -220,17 +222,31 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     const qq1 = new BigBuffer(starkInfo.qDim*ctx.Next);
     const qq2 = new BigBuffer(starkInfo.qDim*starkInfo.qDeg*ctx.Next);
+
     await ifft(ctx.q_2ns, starkInfo.qDim, ctx.nBitsExt, qq1);
 
     let curS = 1n;
-    const shiftIn = F.exp(F.inv(F.shift), N);
+    const shiftIn = F.inv(F.shift);
     for (let p =0; p<starkInfo.qDeg; p++) {
         for (let i=0; i<N; i++) {
             for (let k=0; k<starkInfo.qDim; k++) {
                 qq2.setElement(i*starkInfo.qDim*starkInfo.qDeg + starkInfo.qDim*p + k, F.mul(qq1.getElement(p*N*starkInfo.qDim + i*starkInfo.qDim + k), curS));
             }
+            curS = F.mul(curS, shiftIn);
         }
-        curS = F.mul(curS, shiftIn);
+    }
+
+    await fft(qq2, starkInfo.qDim * starkInfo.qDeg, ctx.nBits, ctx.cm4_n);
+
+    let curS2 = 1n;
+    const shiftIn2 = F.shift;
+    for (let i=0; i<N; i++) {
+        for (let p =0; p<starkInfo.qDeg; p++) {
+            for (let k=0; k<starkInfo.qDim; k++) {
+                qq2.setElement(i*starkInfo.qDim*starkInfo.qDeg + starkInfo.qDim*p + k, F.mul(qq2.getElement(i*starkInfo.qDim*starkInfo.qDeg + starkInfo.qDim*p + k), curS2));
+            }
+        }
+        curS2 = F.mul(curS2, shiftIn2);
     }
 
     await fft(qq2, starkInfo.qDim * starkInfo.qDeg, ctx.nBitsExt, ctx.cm4_2ns);
@@ -310,20 +326,20 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     const xi = ctx.challenges[7];
     const wxi = F.mul(ctx.challenges[7], F.w[nBits]);
 
-    ctx.xDivXSubXi = new BigBuffer((N << extendBits)*3);
-    ctx.xDivXSubWXi = new BigBuffer((N << extendBits)*3);
-    let tmp_den = new Array(N << extendBits);
-    let tmp_denw = new Array(N << extendBits);
-    let x = F.shift;
-    for (let k=0; k< N<<extendBits; k++) {
+    ctx.xDivXSubXi = new BigBuffer(N *3);
+    ctx.xDivXSubWXi = new BigBuffer(N *3);
+    let tmp_den = new Array(N);
+    let tmp_denw = new Array(N);
+    let x = F.one;
+    for (let k=0; k< N; k++) {
         tmp_den[k] = F.sub(x, xi);
         tmp_denw[k] = F.sub(x, wxi);
-        x = F.mul(x, F.w[nBits + extendBits])
+        x = F.mul(x, F.w[nBits])
     }
     tmp_den = F.batchInverse(tmp_den);
     tmp_denw = F.batchInverse(tmp_denw);
-    x = F.shift;
-    for (let k=0; k< N<<extendBits; k++) {
+    x = F.one;
+    for (let k=0; k< N; k++) {
         const v = F.mul(tmp_den[k], x);
         ctx.xDivXSubXi.setElement(3*k , v[0]);
         ctx.xDivXSubXi.setElement(3*k +1 , v[1]);
@@ -334,15 +350,18 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         ctx.xDivXSubWXi.setElement(3*k +1, vw[1]);
         ctx.xDivXSubWXi.setElement(3*k +2, vw[2]);
 
-        x = F.mul(x, F.w[nBits + extendBits])
+        x = F.mul(x, F.w[nBits])
     }
 
     if (global.gc) {global.gc();}
+
     if (parallelExec) {
-        await calculateExpsParallel(pool, ctx, "step52ns", starkInfo);
+        await calculateExpsParallel(pool, ctx, "step5n", starkInfo);
     } else {
-        calculateExps(ctx, starkInfo.step52ns, "2ns");
+        calculateExps(ctx, starkInfo.step5n, "n");
     }
+
+    await extend(ctx.f_n, ctx.f_2ns, 3,  ctx.nBits, ctx.nBitsExt );
 
     const friPol = new Array( 3 * ctx.nBitsExt);
 
@@ -491,9 +510,9 @@ function compileCode(ctx, code, dom, ret) {
                 break;
             case "f":
                 if (dom=="n") {
-                    throw new Error("Accessing q in domain n");
+                    eDst = `[ ctx.f_n[i*3], ctx.f_n[i*3+1], ctx.f_n[i*3+2]] `;
                 } else if (dom=="2ns") {
-                    eDst = `[ ctx.f_2ns[i*3], ctx.f_2ns[i*3+1], ctx.f_2ns[i*3+2]] `;
+                    throw new Error("Invalid dom");
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -702,16 +721,16 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
         execInfo.inputSections.push({ name: "x_2ns" });
         execInfo.outputSections.push({ name: "q_2ns" });
         dom = "2ns";
-    } else if (execPart == "step52ns") {
-        execInfo.inputSections.push({ name: "cm1_2ns" });
-        execInfo.inputSections.push({ name: "cm2_2ns" });
-        execInfo.inputSections.push({ name: "cm3_2ns" });
-        execInfo.inputSections.push({ name: "cm4_2ns" });
-        execInfo.inputSections.push({ name: "const_2ns" });
+    } else if (execPart == "step5n") {
+        execInfo.inputSections.push({ name: "cm1_n" });
+        execInfo.inputSections.push({ name: "cm2_n" });
+        execInfo.inputSections.push({ name: "cm3_n" });
+        execInfo.inputSections.push({ name: "cm4_n" });
+        execInfo.inputSections.push({ name: "const_n" });
         execInfo.inputSections.push({ name: "xDivXSubXi" });
         execInfo.inputSections.push({ name: "xDivXSubWXi" });
-        execInfo.outputSections.push({ name: "f_2ns" });
-        dom = "2ns";
+        execInfo.outputSections.push({ name: "f_n" });
+        dom = "n";
     } else {
         throw new Error("Exec type not defined" + execPart);
     }
@@ -723,7 +742,7 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
             section.width = starkInfo.mapSectionsN[section.name];
         } else if (["x_n", "x_2ns"].indexOf(section.name) >= 0 ) {
             section.width = 1;
-        } else if (["xDivXSubXi", "xDivXSubWXi","f_2ns"].indexOf(section.name) >= 0 ) {
+        } else if (["xDivXSubXi", "xDivXSubWXi","f_n"].indexOf(section.name) >= 0 ) {
             section.width = 3;
         } else if (["q_2ns"].indexOf(section.name) >= 0 ) {
             section.width = starkInfo.qDim;
@@ -808,12 +827,14 @@ function ctxProxy(ctx) {
     createProxy("cm1_n");
     createProxy("cm2_n");
     createProxy("cm3_n");
+    createProxy("cm4_n");
     createProxy("tmpExp_n");
     createProxy("cm1_2ns");
     createProxy("cm2_2ns");
     createProxy("cm3_2ns");
     createProxy("cm4_2ns");
     createProxy("q_2ns");
+    createProxy("f_n");
     createProxy("f_2ns");
     createProxy("const_n");
     createProxy("const_2ns");
