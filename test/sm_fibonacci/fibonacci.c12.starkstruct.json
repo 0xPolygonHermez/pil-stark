@@ -1,5 +1,5 @@
 {
-    "nBits": 17,
+    "nBits": 15,
     "nBitsExt": 19,
     "nQueries": 8,
     "verificationHashType": "BN128",

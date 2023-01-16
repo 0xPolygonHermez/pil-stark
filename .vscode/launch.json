@@ -682,8 +682,10 @@
             "type": "pwa-node",
             "args": [
                 "-p test/sm_fibonacci/fibonacci_main.pil",
-                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.starkstruct.json",
-                "-c tmp/fibonacci.chelpers.cpp"
+                "-s tmp/fibonacci.starkinfo.json",
+                "-c tmp/fibonacci.chelpers.cpp",
+                "-C AllSteps",
+                "-m"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
