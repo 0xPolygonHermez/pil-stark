@@ -361,7 +361,7 @@ template VerifyEvaluations() {
     enable * (<%- evalP %>[2] - qZ[2]) === 0;
 }
 
-template VerifyQuery() {
+template parallel VerifyQuery() {
     signal input ys[<%- starkStruct.steps[0].nBits %>];
     signal input challenges[8][3];
     signal input evals[<%- starkInfo.evMap.length %>][3];
@@ -679,18 +679,6 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
             }
         }
 
-        for (var j=0; j<4; j++) {
-            enable * (s0_merkle1[q].root[j] - root1[j]) === 0;
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
-            enable * (s0_merkle2[q].root[j] - root2[j]) === 0;
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
-            enable * (s0_merkle3[q].root[j] - root3[j]) === 0;
-<% }                                         %>
-            enable * (s0_merkle4[q].root[j] - root4[j]) === 0;
-            enable * (s0_merkleC[q].root[j] - rootC[j]) === 0;
-        }
-
 <% if (0 < starkStruct.steps.length-1) {            -%>
         for (var i=0; i<<%- 1 << (starkStruct.steps[0].nBits - starkStruct.steps[1].nBits) %>; i++) {
             for (var e=0; e<3; e++) {
@@ -710,9 +698,6 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
             s0_lowValues[q].key[i] <== ys[q][i];
         }
 <% }      -%>
-        for (var e=0; e<3; e++) {
-            enable * (s0_lowValues[q].out[e] - verifyQueries[q].out[e]) === 0;
-        }
 
     }
 
@@ -771,6 +756,29 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
             s<%- s %>_lowValues[q].key[i] <== ys[q][i];
         }
 <% }      -%>
+    }
+<% }                                                  -%>
+
+//// Checks
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
+        for (var j=0; j<4; j++) {
+            enable * (s0_merkle1[q].root[j] - root1[j]) === 0;
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
+            enable * (s0_merkle2[q].root[j] - root2[j]) === 0;
+<% }                                         %>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
+            enable * (s0_merkle3[q].root[j] - root3[j]) === 0;
+<% }                                         %>
+            enable * (s0_merkle4[q].root[j] - root4[j]) === 0;
+            enable * (s0_merkleC[q].root[j] - rootC[j]) === 0;
+        }
+        for (var e=0; e<3; e++) {
+            enable * (s0_lowValues[q].out[e] - verifyQueries[q].out[e]) === 0;
+        }
+    }
+
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         for (var e=0; e<3; e++) {
             enable * (s<%- s %>_lowValues[q].out[e] - s<%- s %>_evalPol[q].out[e]) === 0;
         }
@@ -781,6 +789,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
         enable * (s<%- s %>_merkle[q].root[3] - s<%- s %>_root[3]) === 0;
     }
 <% }                                                  -%>
+
 
 ///////
 // Check Degree last pol
@@ -801,7 +810,6 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
             enable * lastIFFT.out[k][e] === 0;
         }
     }
-
 }
 
 <% if (!options.skipMain) {  -%>

@@ -1,6 +1,6 @@
 pragma circom 2.1.0;
 
-template TreeSelector(nLevels, eSize) {
+template parallel TreeSelector(nLevels, eSize) {
 
     var n = 1 << nLevels;
     signal input values[n][eSize];

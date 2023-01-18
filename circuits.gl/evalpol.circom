@@ -35,7 +35,7 @@ template custom EvPol4() {
     out <-- acc;
 }
 
-template EvalPol(n) {
+template parallel EvalPol(n) {
     signal input pol[n][3];
     signal input x[3];
     signal output out[3];

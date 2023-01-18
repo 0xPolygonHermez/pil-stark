@@ -5,7 +5,7 @@ include "linearhash.circom";
 include "merkle.circom";
 include "utils.circom";
 
-template MerkleHash(eSize, elementsInLinear, nLinears) {
+template parallel MerkleHash(eSize, elementsInLinear, nLinears) {
     var nBits = log2(nLinears);
     assert(1 << nBits == nLinears);
     signal input values[elementsInLinear][eSize];

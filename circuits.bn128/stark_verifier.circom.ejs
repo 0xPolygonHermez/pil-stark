@@ -388,7 +388,7 @@ template VerifyEvaluations() {
 
 }
 
-template VerifyQuery() {
+template parallel VerifyQuery() {
     signal input ys[<%- starkStruct.steps[0].nBits %>];
     signal input challenges[8][3];
     signal input evals[<%- starkInfo.evMap.length %>][3];
@@ -742,16 +742,6 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
                 s0_merkleC[q].siblings[i][j] <== s0_siblingsC[q][i][j];
             }
         }
-        enable * (s0_merkle1[q].root - root1) === 0;
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
-        enable * (s0_merkle2[q].root - root2) === 0;
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm2_3ns > 0) { %>
-        enable * (s0_merkle3[q].root - root3) === 0;
-<% }                                         %>
-        enable * (s0_merkle4[q].root - root4) === 0;
-
-        enable * (s0_merkleC[q].root - rootC) === 0;
 
 <% if (0 < starkStruct.steps.length-1) {            -%>
         for (var i=0; i<<%- 1 << (starkStruct.steps[0].nBits - starkStruct.steps[1].nBits) %>; i++) {
@@ -772,9 +762,6 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
             s0_lowValues[q].key[i] <== ys[q][i];
         }
 <% }      -%>
-        for (var e=0; e<3; e++) {
-            enable * (s0_lowValues[q].out[e] - verifyQueries[q].out[e]) === 0;
-        }
 
     }
 
@@ -877,11 +864,37 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
         for (var e=0; e<3; e++) {
             s<%- s %>_cNorm[q].in[e] <== s<%- s %>_evalPol[q].out[e] - s<%- s %>_lowValues[q].out[e] + p;
         }
+    }
+<% }                                                  -%>
+
+
+/// Checks
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
+        enable * (s0_merkle1[q].root - root1) === 0;
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
+        enable * (s0_merkle2[q].root - root2) === 0;
+<% }                                         %>
+<% if (starkInfo.mapSectionsN.cm2_3ns > 0) { %>
+        enable * (s0_merkle3[q].root - root3) === 0;
+<% }                                         %>
+        enable * (s0_merkle4[q].root - root4) === 0;
+
+        enable * (s0_merkleC[q].root - rootC) === 0;
+
+        for (var e=0; e<3; e++) {
+            enable * (s0_lowValues[q].out[e] - verifyQueries[q].out[e]) === 0;
+        }
+
+    }
+
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         for (var e=0; e<3; e++) {
             enable * s<%- s %>_cNorm[q].out[e] === 0;
         }
 
         enable * (s<%- s %>_merkle[q].root - s<%- s %>_root) === 0;
+
     }
 <% }                                                  -%>
 
