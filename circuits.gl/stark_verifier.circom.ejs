@@ -1,5 +1,4 @@
 pragma circom 2.1.0;
-pragma custom_templates;
 
 include "cmuladd.circom";
 include "cinv.circom";
@@ -234,7 +233,7 @@ template parallel VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits) 
         sx[i] <== sx[i-1] *  ( ys[i] * ((1/roots(prevStepBits -i)) -1) +1);
     }
         
-    // Perform an IFFT to obtain the coefficients of the polynomial given s_vals and evaluate it at ????
+    // Perform an IFFT to obtain the coefficients of the polynomial given s_vals and evaluate it at ??????
     signal evalPol[3] <== EvalPol(2**step)(FFT(step, 3, 1)(vals_currStep),[specialX[0] *  sx[currStepBits - 1], specialX[1] * sx[currStepBits - 1], specialX[2] *  sx[currStepBits - 1]]);
 
     var keys_lowValues[nextStep];
@@ -244,7 +243,7 @@ template parallel VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits) 
    
     signal lowValues[3] <== TreeSelector(nextStep, 3)(vals_nextStep, keys_lowValues);
 
-    // Check that ???????
+    // Check that ??????
     enable * (lowValues[0] - evalPol[0]) === 0;
     enable * (lowValues[1] - evalPol[1]) === 0;
     enable * (lowValues[2] - evalPol[2]) === 0;
@@ -300,7 +299,6 @@ template VerifyEvaluations() {
     signal QZ[3] <== CMul()(qAcc[<%- starkInfo.qDeg-1 %>], Z); // Stores the result of multiplying Q(X) per Zg(X)
 
     // Final Verification. Check that Q(X)*Zg(X) = sum of linear combination of q_i, which is stored at <%- evalP %> 
-
     enable * (<%- evalP %>[0] - QZ[0]) === 0;
     enable * (<%- evalP %>[1] - QZ[1]) === 0;
     enable * (<%- evalP %>[2] - QZ[2]) === 0;
@@ -353,7 +351,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     var den2inv[3] = CInv()([xacc[<%- starkStruct.steps[0].nBits-1 %>] - roots(<%- starkStruct.nBits %>)*challenges[7][0], -roots(<%- starkStruct.nBits %>)*challenges[7][1],-roots(<%- starkStruct.nBits %>)*challenges[7][2] ]);
     signal xDivXSubWXi[3] <== [xacc[<%- starkStruct.steps[0].nBits-1 %>] * den2inv[0], xacc[<%- starkStruct.steps[0].nBits-1 %>] * den2inv[1],  xacc[<%- starkStruct.steps[0].nBits-1 %>] * den2inv[2]];
 
-    <% const evalQ = unrollCode(starkInfo.verifierQueryCode.first) -%>
+<% const evalQ = unrollCode(starkInfo.verifierQueryCode.first) -%>
 
     signal queryVals[3] <== [<%- evalQ %>[0], <%- evalQ %>[1], <%- evalQ %>[2]];
 
@@ -461,7 +459,7 @@ template StarkVerifier() {
     signal input s<%- s %>_siblings[<%- starkStruct.nQueries %>][<%- starkStruct.steps[s].nBits %>][4];
 <% }                                                  -%>
 
-    // Values at the given point of the final polynomial that one obtain after doing all the folds
+    // Evaluations of the final FRI polynomial over a set of points of size bounded its degree
     signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
 
 <% if (options.enableInput) { -%>
@@ -493,7 +491,7 @@ template StarkVerifier() {
 
 
     ///////////
-    // challenge calculation
+    // Calculate challenges, s_i special and queries
     ///////////
 
 <%
@@ -531,7 +529,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 <%- transcript.getCode() %>
 
     ///////////
-    // Constrain polynomial check in evaluations
+    // Check constraints polynomial in the evaluation point
     ///////////
 
     VerifyEvaluations()(challenges, evals, publics, enable);
@@ -558,6 +556,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 <% } -%>
 
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
+        // Preprocess vals for the initial FRI polynomial
         for (var i = 0; i < <%- starkInfo.mapSectionsN.cm1_2ns %>; i++) {
             s0_vals1_p[q][i][0] = s0_vals1[q][i];
         }
@@ -577,22 +576,29 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
         for (var i = 0; i < <%- starkInfo.nConstants %>; i++) {
             s0_valsC_p[q][i][0] = s0_valsC[q][i];
         }
+
+        // Preprocess vals for each folded polynomial
+        for(var e=0; e < 3; e++) {
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
-        for(var c=0; c < <%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits))%>; c++) {
-            for(var e=0; e < 3; e++) {
+            for(var c=0; c < <%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits))%>; c++) {
                 s<%- s %>_vals_p[q][c][e] = s<%- s %>_vals[q][c*3+e];
             }
-        }
 <% } -%>
+        }
     }
     
     ///////////
-    // Check FRI
+    // FRI
     ///////////
 
-    //Check that all that the root obtained using the values and the sibling path is the same as the one being sent as input 
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         
+        ///////////
+        // Verify Merkle Roots
+        ///////////
+
+        //Check that all that the root obtained using the values and the sibling path is the same as the one being sent as input 
+
         //Calculate merkle root for s0 vals
         VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm1_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals1_p[q], s0_siblings1[q], ys[q], root1, enable);
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
@@ -617,7 +623,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 <% } -%>
         
         ///////////
-        // Evaluate FRI
+        // Verify FRI query
         ///////////
 
         // After checking that all merkle roots are properly built, the query and the intermediate 
@@ -635,6 +641,10 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 <% } else { -%>
         VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges, evals, s0_vals1[q],s0_vals4[q],s0_valsC[q], <%- nextValsPol %>, enable);
 <% } -%>
+
+        ///////////
+        // Verify FRI construction
+        ///////////
 
         // For each folding level we need to check that the polynomial is properly constructed
         // Remember that if the step between polynomials is b = 2^l, the next polynomial p_(i+1) will have degree deg(p_i) / b
@@ -661,7 +671,7 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
     var lastIFFT[<%- 1 << nLastBits %>][3] = FFT(<%- nLastBits %>, 3, 1)(finalPol);
 
     // Check that the degree of the final polynomial is bounded by the degree defined in the last step of the folding
-    // This means ??? in terms of IFFT
+    // This means ?????? in terms of IFFT
     for (var k= <%- 1 << maxDegBits %>; k< <%- 1 << nLastBits %>; k++) {
         for (var e=0; e<3; e++) {
             enable * lastIFFT[k][e] === 0;
