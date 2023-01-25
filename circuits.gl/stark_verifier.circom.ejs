@@ -217,7 +217,7 @@ class Transcript {
 /*
     Verify that FRI polynomials are built properly
 */
-template VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits) {
+template parallel VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits) {
     var nextStep = currStepBits - nextStepBits; 
     var step = prevStepBits - currStepBits;
 
@@ -590,23 +590,32 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
     // Check FRI
     ///////////
 
+    var s0_merkle1[q][4];
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    var s0_merkle2[q][4]; 
+<% }                                        -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+    var s0_merkle3[q][4];
+<% }     -%>
+    var s0_merkle4[q][4];
+    var s0_merkleC[q][4];
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    var s<%- s %>_merkle[q][4];
+<% } -%>
+
     //Check that all that the root obtained using the values and the sibling path is the same as the one being sent as input 
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         
-        ///////////
-        // Check Merkle Proofs
-        ///////////
-
         //Calculate merkle root for s0 vals
-        var s0_merkle1[4] = MerkleHash(1, <%- starkInfo.mapSectionsN.cm1_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals1_p[q], s0_siblings1[q], ys[q]);
+        s0_merkle1[q] = MerkleHash(1, <%- starkInfo.mapSectionsN.cm1_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals1_p[q], s0_siblings1[q], ys[q]);
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
-        var s0_merkle2[4] = MerkleHash(1, <%- starkInfo.mapSectionsN.cm2_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals2_p[q], s0_siblings2[q], ys[q]);
+        s0_merkle2[q] = MerkleHash(1, <%- starkInfo.mapSectionsN.cm2_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals2_p[q], s0_siblings2[q], ys[q]);
 <% }                                        -%>
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
-        var s0_merkle3[4] = MerkleHash(1, <%- starkInfo.mapSectionsN.cm3_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals3_p[q], s0_siblings3[q], ys[q]);
+        s0_merkle3[q] = MerkleHash(1, <%- starkInfo.mapSectionsN.cm3_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals3_p[q], s0_siblings3[q], ys[q]);
 <% }     -%>
-        var s0_merkle4[4] = MerkleHash(1, <%- starkInfo.mapSectionsN.cm4_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals4_p[q], s0_siblings4[q], ys[q]);
-        var s0_merkleC[4] = MerkleHash(1, <%- starkInfo.nConstants %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_valsC_p[q], s0_siblingsC[q], ys[q]);                                    
+        s0_merkle4[q] = MerkleHash(1, <%- starkInfo.mapSectionsN.cm4_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals4_p[q], s0_siblings4[q], ys[q]);
+        s0_merkleC[q] = MerkleHash(1, <%- starkInfo.nConstants %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_valsC_p[q], s0_siblingsC[q], ys[q]);                                    
 
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
 <%  let keys_merkle = [];
@@ -616,25 +625,10 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 -%>
         // Calculate merkle root for s<%- s %> vals
         var s<%- s %>_keys_merkle[<%- starkStruct.steps[s].nBits %>] = [<%- keys_merkle %>];
-        var s<%- s %>_merkle[4] = MerkleHash(3, <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>, <%- 1 << starkStruct.steps[s].nBits %>)(s<%- s %>_vals_p[q], s<%- s %>_siblings[q], s<%- s %>_keys_merkle);
+        s<%- s %>_merkle[q] = MerkleHash(3, <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>, <%- 1 << starkStruct.steps[s].nBits %>)(s<%- s %>_vals_p[q], s<%- s %>_siblings[q], s<%- s %>_keys_merkle);
 
 <% } -%>
-        // Check that roots matches
-        for (var j=0; j<4; j++) {
-            enable * (s0_merkle1[j] - root1[j]) === 0;
-            enable * (s0_merkle4[j] - root4[j]) === 0;
-            enable * (s0_merkleC[j] - rootC[j]) === 0;
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
-            enable * (s0_merkle2[j] - root2[j]) === 0;
-<% }                                         -%>
-<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
-            enable * (s0_merkle3[j] - root3[j]) === 0;
-<% }                                         -%>
-<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
-            enable * (s<%- s %>_merkle[j] - s<%- s %>_root[j]) === 0;
-<% }                                         -%>
-        }
-
+        
         ///////////
         // Evaluate FRI
         ///////////
@@ -666,6 +660,27 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
         VerifyFRI(<%- starkStruct.nBitsExt %>, <%- starkStruct.steps[s-1].nBits %>, <%- starkStruct.steps[s].nBits %>, 0)(ys[q], s<%- s %>_specialX, s<%- s %>_vals_p[q], finalPol, enable);
 <% } -%>
 <% } -%>
+    }
+
+    ///////////
+    // Check Merkle Proofs
+    ///////////
+
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
+        for (var j=0; j<4; j++) {
+            enable * (s0_merkle1[q][j] - root1[j]) === 0;
+            enable * (s0_merkle4[q][j] - root4[j]) === 0;
+            enable * (s0_merkleC[q][j] - rootC[j]) === 0;
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+            enable * (s0_merkle2[q][j] - root2[j]) === 0;
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+            enable * (s0_merkle3[q][j] - root3[j]) === 0;
+<% }                                         -%>
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+            enable * (s<%- s %>_merkle[q][j] - s<%- s %>_root[j]) === 0;
+<% }                                         -%>
+        }
     }
 
     ///////
