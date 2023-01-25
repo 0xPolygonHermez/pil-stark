@@ -3,4 +3,4 @@ pragma custom_templates;
 
 include "../../circuits.gl/merklehash.circom";
 
-component main = MerkleHash(3, 9, 32);
+component main = VerifyMerkleHash(3, 9, 32);

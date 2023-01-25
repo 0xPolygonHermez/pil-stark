@@ -5,15 +5,24 @@ include "linearhash.circom";
 include "merkle.circom";
 include "utils.circom";
 
-template parallel MerkleHash(eSize, elementsInLinear, nLinears) {
+template parallel VerifyMerkleHash(eSize, elementsInLinear, nLinears) {
     var nBits = log2(nLinears);
     assert(1 << nBits == nLinears);
     signal input values[elementsInLinear][eSize];
     signal input siblings[nBits][4];
     signal input key[nBits];
-    signal output root[4];
+    signal input root[4];
+    signal input enable;
+    //signal output root[4];
 
     var linearHash[4] = LinearHash(elementsInLinear, eSize)(values);
 
-    root <== Merkle(nBits)(linearHash, siblings ,key);
+    var merkleRoot[4] = Merkle(nBits)(linearHash, siblings ,key);
+
+    enable * (merkleRoot[0] - root[0]) === 0;
+    enable * (merkleRoot[1] - root[1]) === 0;
+    enable * (merkleRoot[2] - root[2]) === 0;
+    enable * (merkleRoot[3] - root[3]) === 0;
+
+    //root <== Merkle(nBits)(linearHash, siblings ,key);
 }
