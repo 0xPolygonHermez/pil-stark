@@ -16,19 +16,16 @@ template Merkle(nLevels) {
         hash[i] = Poseidon(4);
         for (var k=0; k<4; k++) {
             if (i>0) {
-                hash[i].in[k  ] <== key[i]*(siblings[i][k]   - hash[i-1].out[k]) + hash[i-1].out[k];
-                hash[i].in[k+4] <== key[i]*(hash[i-1].out[k] - siblings[i][k]  ) + siblings[i][k];
+                hash[i].in[k] <== key[i]*(siblings[i][k] - hash[i-1].out[k]) + hash[i-1].out[k];
+                hash[i].in[k+4] <== key[i]*(hash[i-1].out[k] - siblings[i][k]) + siblings[i][k];
             } else {
-                hash[i].in[k] <== key[i]*(siblings[i][k]   - value[k]        ) + value[k];
-                hash[i].in[k+4] <== key[i]*(value[k]         - siblings[i][k]  ) + siblings[i][k];
+                hash[i].in[k] <== key[i]*(siblings[i][k] - value[k]) + value[k];
+                hash[i].in[k+4] <== key[i]*(value[k] - siblings[i][k]) + siblings[i][k];
             }
             hash[i].capacity[k] <== 0;
         }
     }
 
-    for (var k=0; k<4; k++) {
-        root[k] <== hash[nLevels-1].out[k];
-    }
-
+    root <== hash[nLevels-1].out;
 }
 

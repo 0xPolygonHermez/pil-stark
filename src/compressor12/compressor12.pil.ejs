@@ -24,7 +24,7 @@ namespace Compressor(%N);
     Global.L<%- Math.floor(i/12)+1 %> * (a[<%- i%12 %>] - :pub<%- i %>) = 0;
 <% } -%>
 
-// Normal plonk gates
+    // Normal plonk gates
 
     // C[0] -> Ql_01
     // C[1] -> Qr_01
@@ -54,7 +54,7 @@ namespace Compressor(%N);
     g91011*GATE = 0;
 
 
-// POSEIDON12 GATE
+    // POSEIDON12 GATE
 
 <% for (let i=0; i<12; i++) { -%>
     pol a<%- i %>_1 = a[<%- i %>] +  C[<%- i %>];
@@ -82,38 +82,42 @@ namespace Compressor(%N);
     POSEIDON12 * (a[10]' - (41*a0_R + 16*a1_R +  2*a2_R + 28*a3_R + 13*a4_R + 13*a5_R + 39*a6_R + 18*a7_R + 34*a8_R + 20*a9_R + 17*a10_R + 15*a11_R)) = 0;
     POSEIDON12 * (a[11]' - (15*a0_R + 41*a1_R + 16*a2_R +  2*a3_R + 28*a4_R + 13*a5_R + 13*a6_R + 39*a7_R + 18*a8_R + 34*a9_R + 20*a10_R + 17*a11_R)) = 0;
 
-// CMULADD GATE
+    // CMULADD GATE (a * b + c in Fp³ using (X³ - X - 1) as a generator)
+    // In this particular case, 
+    // a = C[9] * [ a[0] + C[0] , a[1] + C[1], a[2] + C[2] ]
+    // b = [ a[3] + C[3], a[4] + C[4], a[5] + C[5] ]
+    // c = C[10] * [ a[6] + C[6], a[7] + C[7], a[8] + C[8] ]
+    // and this must be equal to [ a[9], a[10], a[11] ]
 
-//  C[9]  * ( [a[0],a[1],a[2]] + [C[0],C[1],C[2]] ) *
-//          ( [a[3],a[4],a[5]] + [C[3],C[4],C[5]] ) +
-//  C[10] * ( [a[6],a[7],a[8]] + [C[6],C[7],C[8]] ) =
-//  [ a[9], a[10], a[11]]
+    // Define a, b, c and r
+    pol a0 = (a[0] + C[0])*C[9];
+    pol a1 = (a[1] + C[1])*C[9];
+    pol a2 = (a[2] + C[2])*C[9];
+    pol b0 = a[3] + C[3];
+    pol b1 = a[4] + C[4];
+    pol b2 = a[5] + C[5];
+    pol c0 = (a[6] + C[6])*C[10];
+    pol c1 = (a[7] + C[7])*C[10];
+    pol c2 = (a[8] + C[8])*C[10];
 
-    pol ca0 = (a[0] + C[0])*C[9];
-    pol ca1 = (a[1] + C[1])*C[9];
-    pol ca2 = (a[2] + C[2])*C[9];
-    pol ca3 = a[3] + C[3];
-    pol ca4 = a[4] + C[4];
-    pol ca5 = a[5] + C[5];
-    pol ca6 = (a[6] + C[6])*C[10];
-    pol ca7 = (a[7] + C[7])*C[10];
-    pol ca8 = (a[8] + C[8])*C[10];
-    pol ca9 = a[9];
-    pol ca10 = a[10];
-    pol ca11 = a[11];
 
-    pol cA = (ca0 + ca1)  * (ca3 + ca4);
-    pol cB = (ca0 + ca2)  * (ca3 + ca5);
-    pol cC = (ca1 + ca2)  * (ca4 + ca5);
-    pol cD = ca0*ca3;
-    pol cE = ca1*ca4;
-    pol cF = ca2*ca5;
+    // Since the modulo is known (X³ - X - 1) we can calculate the coefficients in general form by calculating 
+    // (a0 + a1*x + a2*x²)*(b0 + b1*x + b2*x²) and then using long division to get the residue when dividing by the modulo
+    // We get the following result: (a0*b0 + a1*b2 + a2*b1) + (a0*b1 + a1*b0 + a1*b2 + a2*b1 + a2*b2)x + (a0*b2 + a2*b2 + a2*b0 + a1*b1)x²
+    // This result can be expressed using this intermediate polyonials A,B,C,D,E,F that have less than degree 2
+    pol cA = (a0 + a1)  * (b0 + b1);
+    pol cB = (a0 + a2)  * (b0 + b2);
+    pol cC = (a1 + a2)  * (b1 + b2);
+    pol cD = a0*b0;
+    pol cE = a1*b1;
+    pol cF = a2*b2;
 
-    CMULADD * (ca9 - (cC + cD - cE - cF) - ca6) = 0;
-    CMULADD * (ca10 - (cA + cC - 2*cE - cD) - ca7) = 0;
-    CMULADD * (ca11 - (cB - cD + cE) - ca8) = 0;
+    // Whenever CMULADD = 1, check that the CMulAdd result matches with the values stored in a[9], a[10] and a[11] respectively
+    CMULADD * (a[9] - (cC + cD - cE - cF) - c0) = 0;
+    CMULADD * (a[10] - (cA + cC - 2*cE - cD) - c1) = 0;
+    CMULADD * (a[11] - (cB - cD + cE) - c2) = 0;
 
-// FFT4
+    // FFT4
 
     pol g0 = C[0]*a[0] + C[1]*a[3] + C[2]*a[6] + C[3]*a[9]  + C[6]*a[0] + C[7]*a[3];
     pol g1 = C[0]*a[1] + C[1]*a[4] + C[2]*a[7] + C[3]*a[10] + C[6]*a[1] + C[7]*a[4];
@@ -144,32 +148,48 @@ namespace Compressor(%N);
     FFT4 * (a[10]' - g10) = 0;
     FFT4 * (a[11]' - g11) = 0;
 
-// EVPOL4
+    // EVPOL4 
+    // Evaluate p(x) = d0*x⁴ + d1*x³ + d2*x²+ d3*x + d4 at point z = a[3]' + a[4]'x + a[5]'x² where
+    // d0 = a[0]' + a[1]' * x + a[2]' * x²
+    // d1 = a[9] + a[10] * x + a[11] * x²
+    // d2 = a[6] + a[7] * x + a[8] * x²
+    // d3 = a[3] + a[4] * x + a[5] * x²
+    // d4 = a[0] + a[1] * x + a[2] * x²
+    // The result must be equal to a[6]' + a[7]' * x + a[8]' * x²
+    // The evaluation is performed using the Horner's rule, which means that p(x) is rewritten as
+    // p(x) = (d0 * x + d1)*x + d2)*x + d3)*x + d4
+    // Note: All operations are performed in Fp³ and so multiplications are performed using CMulAdd
 
-<% function CMulAdd(r0, r1, r2, a0, a1, a2, b0, b1, b2, c0, c1, c2) {
+<% function CMulAdd(s, a0, a1, a2, b0, b1, b2, c0, c1, c2) {
     const code = [];
-    code.push(`   pol ${r0}_A = (${a0} + ${a1})  * (${b0} + ${b1});`);
-    code.push(`   pol ${r0}_B = (${a0} + ${a2})  * (${b0} + ${b2});`);
-    code.push(`   pol ${r0}_C = (${a1} + ${a2})  * (${b1} + ${b2});`);
-    code.push(`   pol ${r0}_D = ${a0} * ${b0};`);
-    code.push(`   pol ${r0}_E = ${a1} * ${b1};`);
-    code.push(`   pol ${r0}_F = ${a2} * ${b2};`);
-    code.push(`   pol ${r0} = ${r0}_C + ${r0}_D - ${r0}_E - ${r0}_F + ${c0};`);
-    code.push(`   pol ${r1} = ${r0}_A + ${r0}_C - 2*${r0}_E - ${r0}_D + ${c1};`);
-    code.push(`   pol ${r2} = ${r0}_B - ${r0}_D + ${r0}_E + ${c2};`);
+    code.push(`    pol A${s} = (${a0} + ${a1})  * (${b0} + ${b1});`);
+    code.push(`    pol B${s} = (${a0} + ${a2})  * (${b0} + ${b2});`);
+    code.push(`    pol C${s} = (${a1} + ${a2})  * (${b1} + ${b2});`);
+    code.push(`    pol D${s} = ${a0} * ${b0};`);
+    code.push(`    pol E${s} = ${a1} * ${b1};`);
+    code.push(`    pol F${s} = ${a2} * ${b2};`);
+    code.push(`    pol acc${s}_0 = C${s}+ D${s} - E${s} - F${s} + ${c0};`);
+    code.push(`    pol acc${s}_1 = A${s}+ C${s}- 2*E${s} - D${s} + ${c1};`);
+    code.push(`    pol acc${s}_2 = B${s}- D${s} + E${s} + ${c2};`);
+    code.push(`\n`);
     return code.join("\n");
 } -%>
 
-<%- CMulAdd("acc1_0", "acc1_1", "acc1_2", "a[0]'", "a[1]'", "a[2]'", "a[3]'", "a[4]'", "a[5]'", "a[9]", "a[10]", "a[11]") -%>
-<%- CMulAdd("acc2_0", "acc2_1", "acc2_2", "acc1_0", "acc1_1", "acc1_2", "a[3]'", "a[4]'", "a[5]'", "a[6]", "a[7]", "a[8]") -%>
-<%- CMulAdd("acc3_0", "acc3_1", "acc3_2", "acc2_0", "acc2_1", "acc2_2", "a[3]'", "a[4]'", "a[5]'", "a[3]", "a[4]", "a[5]") -%>
-<%- CMulAdd("acc4_0", "acc4_1", "acc4_2", "acc3_0", "acc3_1", "acc3_2", "a[3]'", "a[4]'", "a[5]'", "a[0]", "a[1]", "a[2]") -%>
+    // Calculate acc = d0 * x + d1 
+<%- CMulAdd("1", "a[0]'", "a[1]'", "a[2]'", "a[3]'", "a[4]'", "a[5]'", "a[9]", "a[10]", "a[11]") -%>
+    // Calculate acc2 = acc * x + d2 
+<%- CMulAdd("2", "acc1_0", "acc1_1", "acc1_2", "a[3]'", "a[4]'", "a[5]'", "a[6]", "a[7]", "a[8]") -%>
+    // Calculate acc3 = acc2 * x + d3 
+<%- CMulAdd("3", "acc2_0", "acc2_1", "acc2_2", "a[3]'", "a[4]'", "a[5]'", "a[3]", "a[4]", "a[5]") -%>
+    // Calculate p = acc4 * x + d4 
+<%- CMulAdd("4", "acc3_0", "acc3_1", "acc3_2", "a[3]'", "a[4]'", "a[5]'", "a[0]", "a[1]", "a[2]") -%>
 
-EVPOL4 * (a[6]' - acc4_0 ) = 0;
-EVPOL4 * (a[7]' - acc4_1 ) = 0;
-EVPOL4 * (a[8]' - acc4_2 ) = 0;
+    // Whenever EVPOL4 = 1, check that the evaluation result matches with the values stored in a[6]', a[7]' and a[8]' respectively
+    EVPOL4 * (a[6]' - acc4_0 ) = 0;
+    EVPOL4 * (a[7]' - acc4_1 ) = 0;
+    EVPOL4 * (a[8]' - acc4_2 ) = 0;
 
 
-// Connection equations
+    // Check connection equations of Plonk
     {a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11]} connect
         {S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7], S[8], S[9], S[10], S[11]};

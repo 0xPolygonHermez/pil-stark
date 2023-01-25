@@ -1,4 +1,4 @@
-pragma circom 2.0.6;
+pragma circom 2.1.0;
 
 include "gl.circom";
 include "poseidon.circom";
@@ -28,9 +28,7 @@ class Transcript {
 
 
     getField(v) {
-        this.code.push(`${v}[0] <== ${this.getFields1()};`);
-        this.code.push(`${v}[1] <== ${this.getFields1()};`);
-        this.code.push(`${v}[2] <== ${this.getFields1()};`);
+        this.code.push(`${v} <== [${this.getFields1()}, ${this.getFields1()}, ${this.getFields1()}];`);    
     }
 
     getFields1() {
@@ -39,11 +37,10 @@ class Transcript {
         }
         if (this.out.length > 0) {
             const cName = `bn1togl3_${this.bn1togl3Cnt++}`;
-            this.code.push(`component ${cName} = BN1toGL3();`);
-            this.code.push(`${cName}.in <== ${this.out.shift()};`);
-            this.out3.push(`${cName}.out[0]`);
-            this.out3.push(`${cName}.out[1]`);
-            this.out3.push(`${cName}.out[2]`);
+            this.code.push(`var ${cName}[3] = BN1toGL3()(${this.out.shift()});`);
+            this.out3.push(`${cName}[0]`);
+            this.out3.push(`${cName}[1]`);
+            this.out3.push(`${cName}[2]`);
             return this.getFields1();
         }
         this.updateState();
@@ -63,16 +60,12 @@ class Transcript {
         while (this.pending.length<16) {
             this.pending.push("0");
         }
-        this.code.push(`component tcHahs_${this.hCnt++} = PoseidonEx(16,17);`);
-        for (let i=0; i<16; i++) {
-            this.code.push(`tcHahs_${this.hCnt-1}.inputs[${i}] <== ${this.pending[i]};`);
-        }
+        this.code.push(`var transcriptHash_${this.hCnt++}[17] = PoseidonEx(16,17)([${this.pending.join(',')}], ${this.state});`);
         for (let i=0; i<17; i++) {
-            this.out[i] = `tcHahs_${this.hCnt-1}.out[${i}]`;
+            this.out[i] = `transcriptHash_${this.hCnt-1}[${i}]`;
         }
         this.out3 = [];
-        this.code.push(`tcHahs_${this.hCnt-1}.initialState <== ${this.state};`);
-        this.state = `tcHahs_${this.hCnt-1}.out[0]`;
+        this.state = `transcriptHash_${this.hCnt-1}[0]`;
         this.pending = [];
     }
 
@@ -102,22 +95,22 @@ class Transcript {
         const n2b = [];
         for (let i=0; i<NFields; i++) {
             const f = this.getFields253();
-            n2b[i] = `tcN2b_${this.n2bCnt++}`;
-            this.code.push(`component ${n2b[i]} = Num2Bits_strict();`);
-            this.code.push(`${n2b[i]}.in <== ${f};`);
+            n2b[i] = `transcriptN2b_${this.n2bCnt++}`;
+            this.code.push(`var ${n2b[i]}[254] = Num2Bits_strict()(${f});`);
         }
-        let curField =0;
-        let curBit =0n;
-        for (let i=0; i<n; i++) {
-            let a = 0;
-            for (let j=0; j<nBits; j++) {
-                this.code.push(`${v}[${i}][${j}] <== ${n2b[curField]}.out[${curBit}];`);
-                curBit ++;
-                if (curBit == 253) {
-                    curBit = 0n;
-                    curField ++;
-                }
-            }
+        this.code.push(`// From each transcript hash converted to bits, we assign those bits to ys[q] to define the query positions`)
+        this.code.push(`var q = 0; // Query number `)
+        this.code.push(`var b = 0; // Bit number `)
+        for(let i = 0; i<NFields; i++) {
+            const nBits = i + 1 == NFields ? totalBits - 253*i : 253;
+            this.code.push(`for(var j = 0; j < ${nBits}; j++) {
+        ${v}[q][b] <== ${n2b[i]}[j];
+        b++;
+        if(b == ${starkStruct.steps[0].nBits}) {
+            b = 0; 
+            q++;
+        }
+    }`);
         }
     }
 
@@ -126,11 +119,7 @@ class Transcript {
         return this.code.join("\n");
     }
 
-}
-
--%>
-
-
+} -%>
 <% function unrollCode(code) {                                                          -%>
 <%
     function ref(r) {
@@ -145,9 +134,9 @@ class Transcript {
         } else if (r.type == "Z") {
             return "Z";
         } else if (r.type == "xDivXSubXi") {
-            return "xDivXSubXi.out";
+            return "xDivXSubXi";
         } else if (r.type == "xDivXSubWXi") {
-            return "xDivXSubWXi.out";
+            return "xDivXSubWXi";
         } else if (r.type == "tmp") {
             return "tmp_"+r.id;
         } else if (r.type == "tree1") {
@@ -170,152 +159,118 @@ class Transcript {
 <% var tmpNameId = 0;                                                                   -%>
 <% for(let i=0; i<code.length; i++) {                                 -%>
 <%      let inst = code[i];                                           -%>
+<%      let signalName;                                           -%>
 <%      if (inst.dest.type == "tmp") {                                                  -%>
 <%          if (inst.dest.dim == 1) {                                                   -%>
-    signal tmp_<%- inst.dest.id %>;
+<%              signalName = `signal ${ref(inst.dest)}`                                                -%>
 <%          } else if (inst.dest.dim == 3)  {                                           -%>
-    signal tmp_<%- inst.dest.id %>[3];
+<%              signalName = `signal ${ref(inst.dest)}[3]`                                                -%>
 <%          } else throw new Error("Invalid dimension");                                -%>
 <%      }                                                                               -%>
-
 <%      if (inst.op == "add") {                                                         -%>
 <%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
-    <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>;
+    <%- signalName %> <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>;
 <%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
-    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>[0];
-    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[1]) %>[1];
-    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[1]) %>[2];
+    <%- signalName %> <== [<%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>[0], <%- ref(inst.src[1]) %>[1],<%- ref(inst.src[1]) %>[2]] ;
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
-    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %>[0] + <%- ref(inst.src[1]) %>;
-    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1];
-    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2];
+    <%- signalName %> <== [<%- ref(inst.src[0]) %>[0] + <%- ref(inst.src[1]) %>, <%- ref(inst.src[0]) %>[1], <%- ref(inst.src[0]) %>[2]];
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
-    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %>[0] + <%- ref(inst.src[1]) %>[0];
-    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1] + <%- ref(inst.src[1]) %>[1];
-    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2] + <%- ref(inst.src[1]) %>[2];
-<%          } else throw new Error("Invalid src dimmensions");                          -%>
+    <%- signalName %> <== [<%- ref(inst.src[0]) %>[0] + <%- ref(inst.src[1]) %>[0], <%- ref(inst.src[0]) %>[1] + <%- ref(inst.src[1]) %>[1], <%- ref(inst.src[0]) %>[2] + <%- ref(inst.src[1]) %>[2]];
+<%          } else throw new Error("Invalid src dimensions");                          -%>
 <%      } else if (inst.op == "sub") {                                                  -%>
 <%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
-    <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>;
+    <%- signalName %> <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>;
 <%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
-    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>[0] + p;
-    <%- ref(inst.dest) %>[1] <== -<%- ref(inst.src[1]) %>[1] + p;
-    <%- ref(inst.dest) %>[2] <== -<%- ref(inst.src[1]) %>[2] + p;
+    <%- signalName %> <== [<%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>[0], -<%- ref(inst.src[1]) %>[1], -<%- ref(inst.src[1]) %>[2]];
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
-    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %>[0] - <%- ref(inst.src[1]) %> + p;
-    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1];
-    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2];
+    <%- signalName %> <== [<%- ref(inst.src[0]) %>[0] - <%- ref(inst.src[1]) %>,  <%- ref(inst.src[0]) %>[1], <%- ref(inst.src[0]) %>[2]];
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
-    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %>[0] - <%- ref(inst.src[1]) %>[0] + p;
-    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1] - <%- ref(inst.src[1]) %>[1] + p;
-    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2] - <%- ref(inst.src[1]) %>[2] + p;
-<%          } else throw new Error("Invalid src dimmensions");                          -%>
+    <%- signalName %> <== [<%- ref(inst.src[0]) %>[0] - <%- ref(inst.src[1]) %>[0],  <%- ref(inst.src[0]) %>[1] - <%- ref(inst.src[1]) %>[1],<%- ref(inst.src[0]) %>[2] - <%- ref(inst.src[1]) %>[2]];
+<%          } else throw new Error("Invalid src dimensions");                          -%>
 <%      } else if (inst.op == "mul") {                                                  -%>
 <%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
-    component <%- cmpName%> = GLMul1();
-    <%- cmpName %>.ina <== <%- ref(inst.src[0]) %>;
-    <%- cmpName %>.inb <== <%- ref(inst.src[1]) %>;
-    <%- ref(inst.dest) %> <== <%- cmpName %>.out;
+    <%- signalName %> <== GLMul1()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>);
 <%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
-    <%              const cmpName = "cmul_" + tmpNameId++;                                  -%>
-    component <%- cmpName%> = GLCMul();
-    <%- cmpName %>.ina[0] <== <%- ref(inst.src[0]) %>;
-    <%- cmpName %>.ina[1] <== 0;
-    <%- cmpName %>.ina[2] <== 0;
-    <%- cmpName %>.inb[0] <== <%- ref(inst.src[1]) %>[0];
-    <%- cmpName %>.inb[1] <== <%- ref(inst.src[1]) %>[1];
-    <%- cmpName %>.inb[2] <== <%- ref(inst.src[1]) %>[2];
-    <%- ref(inst.dest) %>[0] <== <%- cmpName %>.out[0];
-    <%- ref(inst.dest) %>[1] <== <%- cmpName %>.out[1];
-    <%- ref(inst.dest) %>[2] <== <%- cmpName %>.out[2];
+    <%- signalName %> <== GLCMul()([<%- ref(inst.src[0]) %>, 0, 0], <%- ref(inst.src[1]) %>);
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
-    <%              const cmpName = "cmul_" + tmpNameId++;                                  -%>
-    component <%- cmpName%> = GLCMul();
-    <%- cmpName %>.ina[0] <== <%- ref(inst.src[0]) %>[0];
-    <%- cmpName %>.ina[1] <== <%- ref(inst.src[0]) %>[1];
-    <%- cmpName %>.ina[2] <== <%- ref(inst.src[0]) %>[2];
-    <%- cmpName %>.inb[0] <== <%- ref(inst.src[1]) %>;
-    <%- cmpName %>.inb[1] <== 0;
-    <%- cmpName %>.inb[2] <== 0;
-    <%- ref(inst.dest) %>[0] <== <%- cmpName %>.out[0];
-    <%- ref(inst.dest) %>[1] <== <%- cmpName %>.out[1];
-    <%- ref(inst.dest) %>[2] <== <%- cmpName %>.out[2];
+    <%- signalName %> <== GLCMul()(<%- ref(inst.src[0]) %>,[<%- ref(inst.src[1]) %>, 0, 0]);
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
-<%              const cmpName = "cmul_" + tmpNameId++;                                  -%>
-    component <%- cmpName%> = GLCMul();
-    <%- cmpName %>.ina[0] <== <%- ref(inst.src[0]) %>[0];
-    <%- cmpName %>.ina[1] <== <%- ref(inst.src[0]) %>[1];
-    <%- cmpName %>.ina[2] <== <%- ref(inst.src[0]) %>[2];
-    <%- cmpName %>.inb[0] <== <%- ref(inst.src[1]) %>[0];
-    <%- cmpName %>.inb[1] <== <%- ref(inst.src[1]) %>[1];
-    <%- cmpName %>.inb[2] <== <%- ref(inst.src[1]) %>[2];
-    <%- ref(inst.dest) %>[0] <== <%- cmpName %>.out[0];
-    <%- ref(inst.dest) %>[1] <== <%- cmpName %>.out[1];
-    <%- ref(inst.dest) %>[2] <== <%- cmpName %>.out[2];
-<%          } else throw new Error("Invalid src dimmensions");                          -%>
+    <%- signalName %> <== GLCMul()(<%- ref(inst.src[0]) %>,<%- ref(inst.src[1]) %>);
+<%          } else throw new Error("Invalid src dimensions");                          -%>
 <%      } else if (inst.op == "copy") {                                                 -%>
-<%          if (inst.src[0].dim==1) {                                                   -%>
-    <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %>;
-<%          } else if (inst.src[0].dim==3) {                                            -%>
-    <%- ref(inst.dest) %>[0] <== <%- ref(inst.src[0]) %>[0];
-    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[0]) %>[1];
-    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[0]) %>[2];
-<%          } else throw new Error("Invalid src dimmensions");                          -%>
+<%          if (inst.src[0].dim==1 || inst.src[0].dim==3) {                                                   -%>
+    <%- signalName %> <== <%- ref(inst.src[0]) %>;
+<%          } else throw new Error("Invalid src dimensions");                          -%>
 <%      } else if (inst.op == "muladd") {                                                   -%>
 <%              if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
-<%                  const cmpName = "muladd_" + tmpNameId++;                               -%>
-    component <%- cmpName%> = GLMulAdd();
-    <%- cmpName %>.ina <== <%- ref(inst.src[0]) %>;
-    <%- cmpName %>.inb <== <%- ref(inst.src[1]) %>;
 <%                  if (inst.src[2].dim==1) {                                                -%>
-    <%- cmpName %>.inc <== <%- ref(inst.src[2]) %>;
-    <%- ref(inst.dest) %> <== <%- cmpName %>.out;
+    <%- signalName %> <== GLMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>);
 <%                  } else {                                                                 -%>
-    <%- cmpName %>.inc <== <%- ref(inst.src[2]) %>[0];
-    <%- ref(inst.dest) %>[0] <== <%- cmpName %>.out;
-    <%- ref(inst.dest) %>[1] <== <%- ref(inst.src[2]) %>[1];
-    <%- ref(inst.dest) %>[2] <== <%- ref(inst.src[2]) %>[2];
-<%                  }                                                                       -%>
-<%              } else {                                                                    -%>
-<%                  const cmpName = "cmuladd_" + tmpNameId++;                               -%>
-    component <%- cmpName%> = GLCMulAdd();
-<%                  if (inst.src[0].dim==1) {                                               -%>
-    <%- cmpName %>.ina[0] <== <%- ref(inst.src[0]) %>;
-    <%- cmpName %>.ina[1] <== 0;
-    <%- cmpName %>.ina[2] <== 0;
-<%                  } else {                                                                -%>
-    <%- cmpName %>.ina[0] <== <%- ref(inst.src[0]) %>[0];
-    <%- cmpName %>.ina[1] <== <%- ref(inst.src[0]) %>[1];
-    <%- cmpName %>.ina[2] <== <%- ref(inst.src[0]) %>[2];
-<%                  }                                                                       -%>
-<%                  if (inst.src[1].dim==1) {                                               -%>
-    <%- cmpName %>.inb[0] <== <%- ref(inst.src[1]) %>;
-    <%- cmpName %>.inb[1] <== 0;
-    <%- cmpName %>.inb[2] <== 0;
-<%                  } else {                                                                -%>
-    <%- cmpName %>.inb[0] <== <%- ref(inst.src[1]) %>[0];
-    <%- cmpName %>.inb[1] <== <%- ref(inst.src[1]) %>[1];
-    <%- cmpName %>.inb[2] <== <%- ref(inst.src[1]) %>[2];
-<%                  }                                                                       -%>
-<%                  if (inst.src[2].dim==1) {                                               -%>
-    <%- cmpName %>.inc[0] <== <%- ref(inst.src[2]) %>;
-    <%- cmpName %>.inc[1] <== 0;
-    <%- cmpName %>.inc[2] <== 0;
-<%                  } else {                                                                -%>
-    <%- cmpName %>.inc[0] <== <%- ref(inst.src[2]) %>[0];
-    <%- cmpName %>.inc[1] <== <%- ref(inst.src[2]) %>[1];
-    <%- cmpName %>.inc[2] <== <%- ref(inst.src[2]) %>[2];
-<%                  }                                                                       -%>
-    <%- ref(inst.dest) %>[0] <== <%- cmpName %>.out[0];
-    <%- ref(inst.dest) %>[1] <== <%- cmpName %>.out[1];
-    <%- ref(inst.dest) %>[2] <== <%- cmpName %>.out[2];
-<%              }                                                                           -%>
+    <%- signalName %> <== [GLMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>[0], <%- ref(inst.src[2]) %>[1], <%- ref(inst.src[2]) %>[2]);
+<%                  }                                                                        -%>
+<%              } else if(inst.src[0].dim==1 && inst.src[1].dim== 3) {   -%>
+<%                  if (inst.src[2].dim==1) {                                                -%>
+    <%- signalName %> <== GLCMulAdd()([<%- ref(inst.src[0]) %>, 0, 0], <%- ref(inst.src[1]) %>, [<%- ref(inst.src[2]) %>, 0, 0]);
+<%                  } else {                                                                 -%>
+    <%- signalName %> <== GLCMulAdd()([<%- ref(inst.src[0]) %>, 0, 0], <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>);
+<%                  }                                                                        -%>
+<%              } else if(inst.src[0].dim==3 && inst.src[1].dim== 1) {   -%>
+<%                  if (inst.src[2].dim==1) {                                                -%>
+    <%- signalName %> <== GLCMulAdd()(<%- ref(inst.src[0]) %>, [<%- ref(inst.src[1]) %>, 0, 0], [<%- ref(inst.src[2]) %>, 0, 0]);
+<%                  } else {                                                                 -%>
+    <%- signalName %> <== GLCMulAdd()(<%- ref(inst.src[0]) %>, [<%- ref(inst.src[1]) %>, 0, 0], <%- ref(inst.src[2]) %>);
+<%                  }                                                                        -%>
+<%              } else if(inst.src[0].dim==3 && inst.src[1].dim== 3) {   -%>
+<%                  if (inst.src[2].dim==1) {                                                -%>
+    <%- signalName %> <== GLCMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, [<%- ref(inst.src[2]) %>, 0, 0]);     
+<%                  } else {                                                                 -%>
+    <%- signalName %> <== GLCMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>);
+<%                  }                                                                        -%>
+<%              } else throw new Error("Invalid src dimensions");                           -%>
 <%      } else throw new Error("Invalid op");                                           -%>
-//    log(<%- i %>);
 <% }                                                                                    -%>
 <% return ref(code[code.length-1].dest);                                                -%>
 <% }                                                                                    -%>
 
+template VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits, e0, e1) {
+    var nextStep = currStepBits - nextStepBits;
+    var step = prevStepBits - currStepBits;
+
+    var p = 0xFFFFFFFF00000001;
+
+    signal input ys[<%- starkStruct.steps[0].nBits %>];
+    signal input s_specialX[3];
+    signal input s_vals_p1[2**step][3];
+    signal input s_vals_p2[2**nextStep][3];
+    signal input enable;
+
+    signal s_sx[currStepBits];
+    s_sx[0] <== GLMul()(ys[0] * (e1 - e0) + e0, ys[1] * (_inv1(roots(prevStepBits - 1)) -1) + 1);
+    for (var i=1; i< currStepBits; i++ ) {
+        s_sx[i] <== GLMul()(s_sx[i-1], ys[i + 1] * (_inv1(roots(prevStepBits - (i + 1))) -1) + 1);
+    }
+
+    signal s_X; 
+    if(currStepBits > 1) {
+        s_X <== s_sx[currStepBits - 2];
+    } else {
+        s_X <== e0 * (ys[0] * (_inv1(roots(prevStepBits)) -1) + 1);
+    }
+
+    signal evalPol[3] <== EvalPol(2**step)(FFT(step, 1)(s_vals_p1), GLCMul()(s_specialX, [s_X, 0, 0]));
+    
+    var s_keys_lowValues[nextStep];
+    for(var i = 0; i < nextStep; i++) {
+        s_keys_lowValues[i] = ys[i + nextStepBits];
+    } 
+   
+    signal lowValues[3] <== TreeSelector(nextStep, 3)(s_vals_p2, s_keys_lowValues);
+    signal cNorm[3] <== GLCNorm()([evalPol[0] - lowValues[0] + p, evalPol[1] - lowValues[1] + p, evalPol[2] - lowValues[2] + p]);
+    
+    enable * cNorm[0] === 0;
+    enable * cNorm[1] === 0;
+    enable * cNorm[2] === 0;
+}
 
 template VerifyEvaluations() {
     signal input challenges[8][3];
@@ -325,36 +280,21 @@ template VerifyEvaluations() {
 
     var p = 0xFFFFFFFF00000001;
 
-    component zMul[<%- starkStruct.nBits %>];
+    var zMul[<%- starkStruct.nBits %>][3];
     for (var i=0; i< <%- starkStruct.nBits %> ; i++) {
-        zMul[i] = GLCMul();
         if (i==0) {
-            zMul[i].ina[0] <== challenges[7][0];
-            zMul[i].ina[1] <== challenges[7][1];
-            zMul[i].ina[2] <== challenges[7][2];
-            zMul[i].inb[0] <== challenges[7][0];
-            zMul[i].inb[1] <== challenges[7][1];
-            zMul[i].inb[2] <== challenges[7][2];
+            zMul[i] = GLCMul()(challenges[7], challenges[7]);
         } else {
-            zMul[i].ina[0] <== zMul[i-1].out[0];
-            zMul[i].ina[1] <== zMul[i-1].out[1];
-            zMul[i].ina[2] <== zMul[i-1].out[2];
-            zMul[i].inb[0] <== zMul[i-1].out[0];
-            zMul[i].inb[1] <== zMul[i-1].out[1];
-            zMul[i].inb[2] <== zMul[i-1].out[2];
+            zMul[i] = GLCMul()(zMul[i-1], zMul[i-1]);
         }
     }
 
-    signal Z[3];
-
-    Z[0] <== zMul[<%- starkStruct.nBits -1%>].out[0] -1 + p;
-    Z[1] <== zMul[<%- starkStruct.nBits -1%>].out[1];
-    Z[2] <== zMul[<%- starkStruct.nBits -1%>].out[2];
+    signal Z[3] <== [zMul[<%- starkStruct.nBits -1%>][0] -1 + p, zMul[<%- starkStruct.nBits -1%>][1], zMul[<%- starkStruct.nBits -1%>][2]];
 
 <% const evalP = unrollCode(starkInfo.verifierCode.first) -%>
 
 
-    signal xN[3] <== zMul[<%- starkStruct.nBits -1%>].out;
+    signal xN[3] <== zMul[<%- starkStruct.nBits -1%>];
 
     signal xAcc[<%- starkInfo.qDeg %>][3];
     signal qStep[<%- starkInfo.qDeg-1 %>][3];
@@ -377,54 +317,43 @@ template VerifyEvaluations() {
 
 
 // Final Verification
-    component normC = GLCNorm();
-    normC.in[0] <== <%- evalP %>[0] - qZ[0];
-    normC.in[1] <== <%- evalP %>[1] - qZ[1];
-    normC.in[2] <== <%- evalP %>[2] - qZ[2];
+    var normC[3] = GLCNorm()([<%- evalP %>[0] - qZ[0], <%- evalP %>[1] - qZ[1],<%- evalP %>[2] - qZ[2]]);
 
-    enable * normC.out[0] === 0;
-    enable * normC.out[1] === 0;
-    enable * normC.out[2] === 0;
+    enable * normC[0] === 0;
+    enable * normC[1] === 0;
+    enable * normC[2] === 0;
 
 }
 
-template parallel VerifyQuery() {
+template parallel VerifyQuery(currStepBits, nextStepBits) {
+    var nextStep = currStepBits - nextStepBits;
     signal input ys[<%- starkStruct.steps[0].nBits %>];
     signal input challenges[8][3];
     signal input evals[<%- starkInfo.evMap.length %>][3];
     signal input tree1[<%- starkInfo.mapSectionsN.cm1_2ns %>];
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
     signal input tree2[<%- starkInfo.mapSectionsN.cm2_2ns %>];
-<% }                                         %>
+<% }                                         -%>
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
     signal input tree3[<%- starkInfo.mapSectionsN.cm3_2ns %>];
-<% }                                         %>
+<% }                                         -%>
     signal input tree4[<%- starkInfo.mapSectionsN.cm4_2ns %>];
     signal input consts[<%- starkInfo.nConstants %>];
-    signal output out[3];
+    signal input s0_vals[2**nextStep][3];
+    signal input enable;
 
-///////////
-// Mapping
-///////////
+    ///////////
+    // Mapping
+    ///////////
     component mapValues = MapValues();
-
-    for (var i=0; i< <%- starkInfo.mapSectionsN.cm1_2ns %>; i++ ) {
-        mapValues.vals1[i] <== tree1[i];
-    }
+    mapValues.vals1 <== tree1;
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
-    for (var i=0; i< <%- starkInfo.mapSectionsN.cm2_2ns %>; i++ ) {
-        mapValues.vals2[i] <== tree2[i];
-    }
+    mapValues.vals2 <== tree2;
 <% }                                         -%>
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
-    for (var i=0; i< <%- starkInfo.mapSectionsN.cm3_2ns %>; i++ ) {
-        mapValues.vals3[i] <== tree3[i];
-    }
+    mapValues.vals3 <== tree3;
 <% }                                         -%>
-    for (var i=0; i< <%- starkInfo.mapSectionsN.cm4_2ns %>; i++ ) {
-        mapValues.vals4[i] <== tree4[i];
-    }
-
+    mapValues.vals4 <== tree4;
 
     var p = 0xFFFFFFFF00000001;
 
@@ -446,54 +375,29 @@ template parallel VerifyQuery() {
 <% }                                    -%>
 
 
-    component den1inv = GLCInv();
-    den1inv.in[0] <== X - challenges[7][0] + p;
-    den1inv.in[1] <== -challenges[7][1] + p;
-    den1inv.in[2] <== -challenges[7][2] + p;
-
-
-    component xDivXSubXi = GLCMul();
-    xDivXSubXi.ina[0] <== X;
-    xDivXSubXi.ina[1] <== 0;
-    xDivXSubXi.ina[2] <== 0;
-    xDivXSubXi.inb[0] <== den1inv.out[0];
-    xDivXSubXi.inb[1] <== den1inv.out[1];
-    xDivXSubXi.inb[2] <== den1inv.out[2];
-
-    component wXi = GLCMul();
-    wXi.ina[0] <== roots(<%- starkStruct.nBits %>);
-    wXi.ina[1] <== 0;
-    wXi.ina[2] <== 0;
-    wXi.inb[0] <== challenges[7][0];
-    wXi.inb[1] <== challenges[7][1];
-    wXi.inb[2] <== challenges[7][2];
-
-
-    component den2inv = GLCInv();
-    den2inv.in[0] <== X - wXi.out[0] + p;
-    den2inv.in[1] <== -wXi.out[1] + p;
-    den2inv.in[2] <== -wXi.out[2] + p;
-
-    component xDivXSubWXi = GLCMul();
-    xDivXSubWXi.ina[0] <== X;
-    xDivXSubWXi.ina[1] <== 0;
-    xDivXSubWXi.ina[2] <== 0;
-    xDivXSubWXi.inb[0] <== den2inv.out[0];
-    xDivXSubWXi.inb[1] <== den2inv.out[1];
-    xDivXSubWXi.inb[2] <== den2inv.out[2];
-
+    var den1inv[3] = GLCInv()([X - challenges[7][0] + p, -challenges[7][1] + p, -challenges[7][2] + p]);
+    var xDivXSubXi[3] = GLCMul()([X, 0, 0], den1inv);
+    
+    var wXi[3] = GLCMul()([roots(<%- starkStruct.nBits %>), 0, 0], challenges[7]);
+    var den2inv[3] = GLCInv()([X - wXi[0] + p, -wXi[1] + p, -wXi[2] + p]);
+    var xDivXSubWXi[3] = GLCMul()([X, 0, 0], den2inv);
+   
     <% const evalQ = unrollCode(starkInfo.verifierQueryCode.first) -%>
 
-
     // Final Normalization
-    component normC = GLCNorm();
-    normC.in[0] <== <%- evalQ %>[0];
-    normC.in[1] <== <%- evalQ %>[1];
-    normC.in[2] <== <%- evalQ %>[2];
+    signal queryVals[3] <== GLCNorm()(<%- evalQ %>);
 
-    out[0] <== normC.out[0];
-    out[1] <== normC.out[1];
-    out[2] <== normC.out[2];
+    var s0_keys_lowValues[nextStep];
+    for(var i = 0; i < nextStep; i++) {
+        s0_keys_lowValues[i] = ys[i + nextStepBits];
+    } 
+   
+    signal lowValues[3] <== TreeSelector(nextStep, 3)(s0_vals, s0_keys_lowValues);
+
+
+    enable * (lowValues[0] - queryVals[0]) === 0;
+    enable * (lowValues[1] - queryVals[1]) === 0;
+    enable * (lowValues[2] - queryVals[2]) === 0;
 }
 
 
@@ -525,9 +429,7 @@ template MapValues() {
 <%          if (p.dim == 1) {                                                    -%>
     tree<%- t %>_<%- i %> <== vals<%- t %>[<%- p.sectionPos %>];
 <%          } else if (p.dim == 3) {                                             -%>
-    tree<%- t %>_<%- i %>[0] <== vals<%- t %>[<%- p.sectionPos %>];
-    tree<%- t %>_<%- i %>[1] <== vals<%- t %>[<%- p.sectionPos + 1 %>];
-    tree<%- t %>_<%- i %>[2] <== vals<%- t %>[<%- p.sectionPos + 2 %>];
+    tree<%- t %>_<%- i %> <== [vals<%- t %>[<%- p.sectionPos %>],vals<%- t %>[<%- p.sectionPos + 1 %>] , vals<%- t %>[<%- p.sectionPos + 2 %>]];
 <%          } else throw new Error("Invalid dim")                                -%>
 <%      }                                                                        -%>
 <% }                                                                             -%>
@@ -541,31 +443,30 @@ template StarkVerifier() {
     signal input root3;
     signal input root4;
 
-    <% if (options.verkeyInput) {  -%>
-        signal input rootC;
-    <% } else { -%>
-        signal rootC;
-        rootC <== <%- constRoot %>;
-    <% } %>
+<% if (options.verkeyInput) {  -%>
+    signal input rootC;
+<% } else { -%>
+    signal rootC <== <%- constRoot %>;
+<% } -%>
 
     signal input evals[<%- starkInfo.evMap.length %>][3];
 
     signal input s0_vals1[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_2ns %>];
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
     signal input s0_vals2[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm2_2ns %>];
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
     signal input s0_vals3[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm3_2ns %>];
-<% }                                         %>
+<% }                                         -%>
     signal input s0_vals4[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm4_2ns %>];
     signal input s0_valsC[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants%>];
     signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
     signal input s0_siblings2[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
     signal input s0_siblings3[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
-<% }                                         %>
+<% }                                         -%>
     signal input s0_siblings4[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
     signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
 
@@ -597,9 +498,9 @@ template StarkVerifier() {
 
     var p = 0xFFFFFFFF00000001;
 
-///////////
-// challenge calculation
-///////////
+    ///////////
+    // challenge calculation
+    ///////////
 
 <%
 const transcript = new Transcript();
@@ -635,286 +536,157 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 
 <%- transcript.getCode() %>
 
-///////////
-// Constrain polynomial check in vauations
-///////////
-    component verifyEvaluations = VerifyEvaluations();
-    verifyEvaluations.enable <== enable;
-    for (var i=0; i<8; i++) {
-        for (var k=0; k<3; k++) {
-            verifyEvaluations.challenges[i][k] <== challenges[i][k];
-        }
-    }
-    for (var i=0; i<<%- pil.publics.length %>; i++) {
-        verifyEvaluations.publics[i] <== publics[i];
-    }
-    for (var i=0; i<<%- starkInfo.evMap.length %>; i++) {
-        for (var k=0; k<3; k++) {
-            verifyEvaluations.evals[i][k] <== evals[i][k];
-        }
-    }
+    ///////////
+    // Constrain polynomial check in evaluations
+    ///////////
 
-///////////
-// Step0 Check and evaluate queries
-///////////
+    VerifyEvaluations()(challenges, evals, publics, enable);
 
-    component verifyQueries[<%- starkStruct.nQueries %>];
-    component s0_merkle1[<%- starkStruct.nQueries %>];
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
-    component s0_merkle2[<%- starkStruct.nQueries %>];
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
-    component s0_merkle3[<%- starkStruct.nQueries %>];
-<% }                                         %>
-    component s0_merkle4[<%- starkStruct.nQueries %>];
-    component s0_merkleC[<%- starkStruct.nQueries %>];
-    component s0_lowValues[<%- starkStruct.nQueries %>];
+    ///////////
+    // Step0 Check and evaluate queries
+    ///////////
+
+    // Preprocess the s_i vals given as inputs so that we can use anonymous components.
+    // Two different processings are done:
+    // For s0_vals, the arrays are transposed so that they fit MerkleHash template
+    // For (s_i)_vals, the values are passed all together in a single array of length nVals*3. We convert them to vals[nVals][3]
+    
+    var s0_vals1_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_2ns %>][1];
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    var s0_vals2_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm2_2ns %>][1];
+<% } -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+    var s0_vals3_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm3_2ns %>][1];
+<% } -%>
+    var s0_vals4_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm4_2ns %>][1];
+    var s0_valsC_p[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants %>][1];
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    var s<%- s %>_vals_p[<%- starkStruct.nQueries %>][<%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits)) %>][3]; 
+<% } -%>
 
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        verifyQueries[q] = VerifyQuery();
-        s0_merkle1[q] = MerkleHash(1, <%- starkInfo.mapSectionsN.cm1_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>);
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
-        s0_merkle2[q] = MerkleHash(1, <%- starkInfo.mapSectionsN.cm2_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>);
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
-        s0_merkle3[q] = MerkleHash(1, <%- starkInfo.mapSectionsN.cm3_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>);
-<% }                                         %>
-        s0_merkle4[q] = MerkleHash(1, <%- starkInfo.mapSectionsN.cm4_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>);
-        s0_merkleC[q] = MerkleHash(1, <%- starkInfo.nConstants %>, <%- 1 << starkStruct.steps[0].nBits %>);
-        s0_lowValues[q] = TreeSelector(<%- starkStruct.steps[0].nBits - ((0< starkStruct.steps.length-1) ? starkStruct.steps[1].nBits : 0)  %>, 3) ;
-
-        for (var i=0; i<<%- starkStruct.steps[0].nBits %>; i++ ) {
-            verifyQueries[q].ys[i] <== ys[q][i];
-            s0_merkle1[q].key[i] <== ys[q][i];
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
-            s0_merkle2[q].key[i] <== ys[q][i];
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
-            s0_merkle3[q].key[i] <== ys[q][i];
-<% }                                         %>
-            s0_merkle4[q].key[i] <== ys[q][i];
-            s0_merkleC[q].key[i] <== ys[q][i];
+        for (var i = 0; i < <%- starkInfo.mapSectionsN.cm1_2ns %>; i++) {
+            s0_vals1_p[q][i][0] = s0_vals1[q][i];
         }
-        for (var i=0; i<<%- starkInfo.mapSectionsN.cm1_2ns %>; i++ ) {
-            verifyQueries[q].tree1[i] <== s0_vals1[q][i];
-            s0_merkle1[q].values[i][0] <== s0_vals1[q][i];
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+        for (var i = 0; i < <%- starkInfo.mapSectionsN.cm2_2ns %>; i++) {
+            s0_vals2_p[q][i][0] = s0_vals2[q][i];
         }
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
-        for (var i=0; i<<%- starkInfo.mapSectionsN.cm2_2ns %>; i++ ) {
-            verifyQueries[q].tree2[i] <== s0_vals2[q][i];
-            s0_merkle2[q].values[i][0] <== s0_vals2[q][i];
+<% } -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+        for (var i = 0; i < <%- starkInfo.mapSectionsN.cm3_2ns %>; i++) {
+            s0_vals3_p[q][i][0] = s0_vals3[q][i];
         }
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
-        for (var i=0; i<<%- starkInfo.mapSectionsN.cm3_2ns %>; i++ ) {
-            verifyQueries[q].tree3[i] <== s0_vals3[q][i];
-            s0_merkle3[q].values[i][0] <== s0_vals3[q][i];
+<% } -%>
+        for (var i = 0; i < <%- starkInfo.mapSectionsN.cm4_2ns %>; i++) {
+            s0_vals4_p[q][i][0] = s0_vals4[q][i];
         }
-<% }                                         %>
-        for (var i=0; i<<%- starkInfo.mapSectionsN.cm4_2ns %>; i++ ) {
-            verifyQueries[q].tree4[i] <== s0_vals4[q][i];
-            s0_merkle4[q].values[i][0] <== s0_vals4[q][i];
+        for (var i = 0; i < <%- starkInfo.nConstants %>; i++) {
+            s0_valsC_p[q][i][0] = s0_valsC[q][i];
         }
-        for (var i=0; i<<%- starkInfo.nConstants %>; i++ ) {
-            verifyQueries[q].consts[i] <== s0_valsC[q][i];
-            s0_merkleC[q].values[i][0] <== s0_valsC[q][i];
-        }
-        for (var i=0; i<8; i++) {
-            for (var e=0; e<3; e++) {
-                verifyQueries[q].challenges[i][e] <== challenges[i][e];
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+        for(var c=0; c < <%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits))%>; c++) {
+            for(var e=0; e < 3; e++) {
+                s<%- s %>_vals_p[q][c][e] = s<%- s %>_vals[q][c*3+e];
             }
         }
-        for (var i=0; i<<%- starkInfo.evMap.length %>; i++) {
-            for (var e=0; e<3; e++) {
-                verifyQueries[q].evals[i][e] <== evals[i][e];
-            }
-        }
-        for (var i=0; i<<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>;i++) {
-            for (var j=0; j<16; j++) {
-                s0_merkle1[q].siblings[i][j] <== s0_siblings1[q][i][j];
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
-                s0_merkle2[q].siblings[i][j] <== s0_siblings2[q][i][j];
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
-                s0_merkle3[q].siblings[i][j] <== s0_siblings3[q][i][j];
-<% }                                         %>
-                s0_merkle4[q].siblings[i][j] <== s0_siblings4[q][i][j];
-                s0_merkleC[q].siblings[i][j] <== s0_siblingsC[q][i][j];
-            }
-        }
-
-<% if (0 < starkStruct.steps.length-1) {            -%>
-        for (var i=0; i<<%- 1 << (starkStruct.steps[0].nBits - starkStruct.steps[1].nBits) %>; i++) {
-            for (var e=0; e<3; e++) {
-                s0_lowValues[q].values[i][e] <== s1_vals[q][i*3+e];
-            }
-        }
-        for (var i=0; i<<%- (starkStruct.steps[0].nBits - starkStruct.steps[1].nBits) %>; i++) {
-            s0_lowValues[q].key[i] <== ys[q][i + <%- starkStruct.steps[1].nBits %>];
-        }
-<% } else { -%>
-        for (var i=0; i<<%- 1 << (starkStruct.steps[0].nBits) %>; i++) {
-            for (var e=0; e<3; e++) {
-                s0_lowValues[q].values[i][e] <== finalPol[i][e];
-            }
-        }
-        for (var i=0; i<<%- (starkStruct.steps[0].nBits) %>; i++) {
-            s0_lowValues[q].key[i] <== ys[q][i];
-        }
-<% }      -%>
-
+<% } -%>
     }
+    
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    signal s<%- s %>_sx[<%- starkStruct.nQueries %>][<%- starkStruct.steps[s].nBits - 1%>]; // Stores ???
+<% } -%>
+
+    //Check that all that the root obtained using the values and the sibling path is the same as the one being sent as input 
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
+        
+        //Calculate merkle root for s0 vals
+        var s0_merkle1 = MerkleHash(1, <%- starkInfo.mapSectionsN.cm1_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals1_p[q], s0_siblings1[q], ys[q]);
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+        var s0_merkle2 = MerkleHash(1, <%- starkInfo.mapSectionsN.cm2_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals2_p[q], s0_siblings2[q], ys[q]);
+<% }                                        -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+        var s0_merkle3 = MerkleHash(1, <%- starkInfo.mapSectionsN.cm3_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals3_p[q], s0_siblings3[q], ys[q]);
+<% }     -%>
+        var s0_merkle4 = MerkleHash(1, <%- starkInfo.mapSectionsN.cm4_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals4_p[q], s0_siblings4[q], ys[q]);
+        var s0_merkleC = MerkleHash(1, <%- starkInfo.nConstants %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_valsC_p[q], s0_siblingsC[q], ys[q]);                                    
 
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
-    component s<%- s %>_merkle[<%- starkStruct.nQueries %>];
-    component s<%- s %>_fft[<%- starkStruct.nQueries %>];
-    component s<%- s %>_evalPol[<%- starkStruct.nQueries %>];
-    component s<%- s %>_lowValues[<%- starkStruct.nQueries %>];
-    component s<%- s %>_cNorm[<%- starkStruct.nQueries %>];
-    component s<%- s %>_sx[<%- starkStruct.nQueries %>][<%- starkStruct.steps[s].nBits - 1%>];
-    component s<%- s %>_evalXprime[<%- starkStruct.nQueries %>];
-    signal s<%- s %>_X[<%- starkStruct.nQueries %>];
-
-    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        s<%- s %>_merkle[q] = MerkleHash(3, <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>, <%- 1 << starkStruct.steps[s].nBits %>);
-        s<%- s %>_fft[q] = FFT(<%- starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits %>, 1);
-        s<%- s %>_evalPol[q] = EvalPol(<%- 1 << starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits %>);
-        s<%- s %>_lowValues[q] = TreeSelector(<%- starkStruct.steps[s].nBits - ((s< starkStruct.steps.length-1) ? starkStruct.steps[s+1].nBits : 0)  %>, 3) ;
-        for (var i=0; i< <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>; i++) {
-            for (var e=0; e<3; e++) {
-                s<%- s %>_merkle[q].values[i][e] <== s<%- s %>_vals[q][i*3+e];
-                s<%- s %>_fft[q].in[i][e] <== s<%- s %>_vals[q][i*3+e];
-            }
-        }
-        for (var i=0; i<<%- Math.floor((starkStruct.steps[s].nBits -1) /4)+1 %>; i++) {
-            for (var j=0; j<16; j++) {
-                s<%- s %>_merkle[q].siblings[i][j] <== s<%- s %>_siblings[q][i][j];
-            }
-        }
-        for (var i=0; i<<%- starkStruct.steps[s].nBits %>; i++) {
-            s<%- s %>_merkle[q].key[i] <== ys[q][i];
-        }
-
-        for (var i=1; i<<%- starkStruct.steps[s].nBits %>; i++ ) {
-            s<%- s %>_sx[q][i-1] = GLMul();
-            if (i==1) {
-<%
-                const e1 = F.inv( F.mul(
-                    F.exp(F.shift, 1 << (starkStruct.nBitsExt -starkStruct.steps[s-1].nBits) ),
-                    F.w[starkStruct.steps[s-1].nBits]
-                ));
-                const e0 = F.inv(F.exp(F.shift, 1 << (starkStruct.nBitsExt -starkStruct.steps[s-1].nBits) ) );
+<%  let keys_merkle = [];
+    for(let i = 0; i < starkStruct.steps[s].nBits; ++i) {
+        keys_merkle.push(`ys[q][${i}]`);
+    }
 -%>
-                s<%- s %>_sx[q][i-1].ina <== ys[q][0] * (<%- e1 %> - <%- e0 %>) + <%- e0 %>;
-            } else {
-                s<%- s %>_sx[q][i-1].ina <== s<%- s %>_sx[q][i-2].out;
-            }
-            s<%- s %>_sx[q][i-1].inb <== ys[q][i] * (_inv1(roots(<%- starkStruct.steps[s-1].nBits %> -i)) -1) +1;
-        }
+        // Calculate merkle root for s<%- s %> vals
+        var s<%- s %>_keys_merkle[<%- starkStruct.steps[s].nBits %>] = [<%- keys_merkle %>];
+        var s<%- s %>_merkle = MerkleHash(3, <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>, <%- 1 << starkStruct.steps[s].nBits %>)(s<%- s %>_vals_p[q], s<%- s %>_siblings[q], s<%- s %>_keys_merkle);
 
-<% if (starkStruct.steps[0].nBits>1) {  -%>
-        s<%- s %>_X[q] <== s<%- s %>_sx[q][<%- starkStruct.steps[s].nBits -2 %>].out;
-<% } else {                             -%>
-        s<%- s %>_X[q] <== <%- F.inv(F.exp(F.shift, 1 << (starkStruct.nBitsExt -starkStruct.steps[s-1].nBits) ) ) %> *  ( ys[q][0] * <%- F.sub(F.inv(F.w[starkStruct.steps[s-1].nBits]), 1n) %> +1);
-<% }                                    -%>
-
-/*
-        s<%- s %>_sx[q][0] <==  <%- F.inv(F.exp(F.shift, 1 << (starkStruct.nBitsExt -starkStruct.steps[s-1].nBits) ) ) %> *  ( ys[q][0] * <%- F.sub(F.inv(F.w[starkStruct.steps[s-1].nBits]), 1n) %> +1);
-        for (var i=1; i<<%- starkStruct.steps[s].nBits %>; i++) {
-            s<%- s %>_sx[q][i] <== s<%- s %>_sx[q][i-1] *  ( ys[q][i] * ((1/roots(<%- starkStruct.steps[s-1].nBits %> -i)) -1) +1);
-        }
-*/
-
-        for (var i=0; i< <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>; i++) {
-            for (var e=0; e<3; e++) {
-                s<%- s %>_evalPol[q].pol[i][e] <== s<%- s %>_fft[q].out[i][e];
-            }
-        }
-
-        s<%- s %>_evalXprime[q] = GLCMul();
-        s<%- s %>_evalXprime[q].ina[0] <== s<%- s %>_specialX[0];
-        s<%- s %>_evalXprime[q].ina[1] <== s<%- s %>_specialX[1];
-        s<%- s %>_evalXprime[q].ina[2] <== s<%- s %>_specialX[2];
-        s<%- s %>_evalXprime[q].inb[0] <== s<%- s %>_X[q];
-        s<%- s %>_evalXprime[q].inb[1] <== 0;
-        s<%- s %>_evalXprime[q].inb[2] <== 0;
-        for (var e=0; e<3; e++) {
-            s<%- s %>_evalPol[q].x[e] <== s<%- s %>_evalXprime[q].out[e];
-        }
-<% if (s < starkStruct.steps.length-1) {            -%>
-        for (var i=0; i<<%- 1 << (starkStruct.steps[s].nBits - starkStruct.steps[s+1].nBits) %>; i++) {
-            for (var e=0; e<3; e++) {
-                s<%- s %>_lowValues[q].values[i][e] <== s<%- s+1 %>_vals[q][i*3+e];
-            }
-        }
-        for (var i=0; i<<%- (starkStruct.steps[s].nBits - starkStruct.steps[s+1].nBits) %>; i++) {
-            s<%- s %>_lowValues[q].key[i] <== ys[q][i + <%- starkStruct.steps[s+1].nBits %>];
-        }
-<% } else { -%>
-        for (var i=0; i<<%- 1 << (starkStruct.steps[s].nBits) %>; i++) {
-            for (var e=0; e<3; e++) {
-                s<%- s %>_lowValues[q].values[i][e] <== finalPol[i][e];
-            }
-        }
-        for (var i=0; i<<%- (starkStruct.steps[s].nBits) %>; i++) {
-            s<%- s %>_lowValues[q].key[i] <== ys[q][i];
-        }
-<% }      -%>
-        s<%- s %>_cNorm[q] = GLCNorm();
-        for (var e=0; e<3; e++) {
-            s<%- s %>_cNorm[q].in[e] <== s<%- s %>_evalPol[q].out[e] - s<%- s %>_lowValues[q].out[e] + p;
-        }
-    }
-<% }                                                  -%>
-
-
-/// Checks
-    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        enable * (s0_merkle1[q].root - root1) === 0;
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
-        enable * (s0_merkle2[q].root - root2) === 0;
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm2_3ns > 0) { %>
-        enable * (s0_merkle3[q].root - root3) === 0;
-<% }                                         %>
-        enable * (s0_merkle4[q].root - root4) === 0;
-
-        enable * (s0_merkleC[q].root - rootC) === 0;
-
-        for (var e=0; e<3; e++) {
-            enable * (s0_lowValues[q].out[e] - verifyQueries[q].out[e]) === 0;
-        }
-
-    }
-
+<% } -%>
+        // Check that roots matches
+        enable * (s0_merkle1 - root1) === 0;
+        enable * (s0_merkle4 - root4) === 0;
+        enable * (s0_merkleC - rootC) === 0;
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+        enable * (s0_merkle2 - root2) === 0;
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+        enable * (s0_merkle3 - root3) === 0;
+<% }                                         -%>
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
-    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        for (var e=0; e<3; e++) {
-            enable * s<%- s %>_cNorm[q].out[e] === 0;
-        }
+        enable * (s<%- s %>_merkle - s<%- s %>_root) === 0;
+<% }                                         -%>
+    
+        // After checking that all merkle roots are properly built, the query and the intermediate 
+        // polynomials need to be verified 
+<% let nextValsPol = 0 < starkStruct.steps.length-1 ? "s1_vals_p[q]" : "finalPol"; -%>
+<% let nextStep = 0 < starkStruct.steps.length-1 ? starkStruct.steps[1].nBits : 0 -%>
+        // Verify that the query is properly constructed. This is done by checking that the linear combination of the set of 
+        // polynomials committed during the different rounds evaluated at z matches with the commitment of the FRI polynomial (unsure)
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0 && starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges, evals, s0_vals1[q], s0_vals2[q],s0_vals3[q],s0_vals4[q],s0_valsC[q], <%- nextValsPol %>, enable);
+<% } else if(starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges, evals, s0_vals1[q], s0_vals2[q],s0_vals4[q],s0_valsC[q], <%- nextValsPol %>, enable);
+<% } else if(starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges, evals, s0_vals1[q], s0_vals3[q],s0_vals4[q],s0_valsC[q], <%- nextValsPol %>, enable);
+<% } else { -%>
+        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges, evals, s0_vals1[q],s0_vals4[q],s0_valsC[q], <%- nextValsPol %>, enable);
+<% } -%>
 
-        enable * (s<%- s %>_merkle[q].root - s<%- s %>_root) === 0;
-
+        // For each folding level we need to check that the polynomial is properly constructed
+        // Remember that if the step between polynomials is b = 2^l, the next polynomial p_(i+1) will have degree deg(p_i) / b
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+<%
+    const e1 = F.inv( F.mul(
+        F.exp(F.shift, 1 << (starkStruct.nBitsExt -starkStruct.steps[s-1].nBits) ),
+        F.w[starkStruct.steps[s-1].nBits]
+    ));
+    const e0 = F.inv(F.exp(F.shift, 1 << (starkStruct.nBitsExt -starkStruct.steps[s-1].nBits) ) );
+-%>
+        ///////////////////////// Check S<%- s %> /////////////////////////
+    <%  if (s < starkStruct.steps.length-1) {            -%>
+            VerifyFRI(<%- starkStruct.nBitsExt %>, <%- starkStruct.steps[s-1].nBits %>, <%- starkStruct.steps[s].nBits %>, <%- starkStruct.steps[s+1].nBits %>, <%- e0 %>, <%- e1 %>)(ys[q], s<%- s %>_specialX, s<%- s %>_vals_p[q], s<%- s+1 %>_vals_p[q], enable);
+    <%  } else { -%>
+            VerifyFRI(<%- starkStruct.nBitsExt %>, <%- starkStruct.steps[s-1].nBits %>, <%- starkStruct.steps[s].nBits %>, 0, <%- e0 %>, <%- e1 %>)(ys[q], s<%- s %>_specialX, s<%- s %>_vals_p[q], finalPol, enable);
+    <% } -%>
+<% } -%>
     }
-<% }                                                  -%>
 
-///////
-// Check Degree last pol
-///////
-// Last FFT
-<% const nLastBits = starkStruct.steps[ starkStruct.steps.length-1].nBits;  -%>
-<% const maxDegBits =  nLastBits -  (starkStruct.nBitsExt - starkStruct.nBits); -%>
-    component lastIFFT = FFT(<%- nLastBits %>, 1 );
+    ///////
+    // Check Degree last pol
+    ///////
 
-    for (var k=0; k< <%- 1 << nLastBits %>; k++ ){
-        for (var e=0; e<3; e++) {
-            lastIFFT.in[k][e] <== finalPol[k][e];
-        }
-    }
+    <% const nLastBits = starkStruct.steps[ starkStruct.steps.length-1].nBits;  -%>
+    <% console.log("NLastBits", nLastBits); -%>
+    <% const maxDegBits =  Math.max(nLastBits -  (starkStruct.nBitsExt - starkStruct.nBits), 0); -%>
+    <% console.log("MaxDegBits", maxDegBits); -%>
+    // Calculate the IFFT to get the coefficients of finalPol 
+    var lastIFFT[<%- 1 << nLastBits %>][3] = FFT(<%- nLastBits %>, 1)(finalPol);
 
+    // Check that the degree of the final polynomial is bounded by the degree defined in the last step of the folding
+    // This means ??? in terms of IFFT
     for (var k= <%- 1 << maxDegBits %>; k< <%- 1 << nLastBits %>; k++ ) {
         for (var e=0; e<3; e++) {
-            enable * lastIFFT.out[k][e] === 0;
+            enable * lastIFFT[k][e] === 0;
         }
     }
 
@@ -934,21 +706,21 @@ template Main() {
     signal input evals[<%- starkInfo.evMap.length %>][3];
 
     signal input s0_vals1[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_2ns %>];
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
     signal input s0_vals2[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm2_2ns %>];
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
     signal input s0_vals3[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm3_2ns %>];
-<% }                                         %>
+<% }                                         -%>
     signal input s0_vals4[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm4_2ns %>];
     signal input s0_valsC[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants%>];
     signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
     signal input s0_siblings2[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
     signal input s0_siblings3[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
-<% }                                         %>
+<% }                                         -%>
     signal input s0_siblings4[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
     signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
 
@@ -975,21 +747,21 @@ template Main() {
 
 
     sv.s0_vals1 <== s0_vals1;
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
     sv.s0_vals2 <== s0_vals2;
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
     sv.s0_vals3 <== s0_vals3;
-<% }                                         %>
+<% }                                         -%>
     sv.s0_vals4 <== s0_vals4;
     sv.s0_valsC <== s0_valsC;
     sv.s0_siblings1 <== s0_siblings1;
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
     sv.s0_siblings2 <== s0_siblings2;
-<% }                                         %>
-<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
     sv.s0_siblings3 <== s0_siblings3;
-<% }                                         %>
+<% }                                         -%>
     sv.s0_siblings4 <== s0_siblings4;
     sv.s0_siblingsC <== s0_siblingsC;
 
@@ -1003,31 +775,26 @@ template Main() {
 <% }                                                  -%>
     sv.finalPol <== finalPol;
 
-//////
-// Calculate Publics Hash
-//////
+    //////
+    // Calculate Publics Hash
+    //////
+
+    var n2bProverAddr[160] = Num2Bits(160)(proverAddr);
 
     component publicsHasher = Sha256(<%- 160 + 64*pil.publics.length %>);
-    component n2bProverAddr = Num2Bits(160);
-    component n2bPublics[<%- pil.publics.length %> ];
-    component cmpPublics[<%- pil.publics.length %> ];
-
-    n2bProverAddr.in <== proverAddr;
     for (var i=0; i<160; i++) {
-        publicsHasher.in[160 - 1 -i] <== n2bProverAddr.out[i];
+        publicsHasher.in[160 - i - 1] <== n2bProverAddr[i];
     }
 
     var offset = 160;
 
     for (var i=0; i<<%- pil.publics.length %>; i++) {
-        n2bPublics[i] = Num2Bits(64);
-        cmpPublics[i] = CompConstant64(0xFFFFFFFF00000000);
-        n2bPublics[i].in <== publics[i];
+        var n2bPublics[64] = Num2Bits(64)(publics[i]);
+        var cmpPublics = CompConstant64(0xFFFFFFFF00000000)(n2bPublics);
         for (var j=0; j<64; j++) {
-            publicsHasher.in[offset + 64 - 1 -j] <== n2bPublics[i].out[j];
-            cmpPublics[i].in[j] <== n2bPublics[i].out[j];
+            publicsHasher.in[offset + 64 - j - 1] <== n2bPublics[j];
         }
-        cmpPublics[i].out === 0;
+        cmpPublics === 0;
         offset += 64;
     }
 
@@ -1041,4 +808,3 @@ template Main() {
 
 component main = Main();
 <% } -%>
-

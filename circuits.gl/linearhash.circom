@@ -41,18 +41,14 @@ template BasicLinearHash(nInputs) {
                     hash[i].in[k] <== 0;
                 }
             }
-            for (var k=0; k<4; k++) {
-                if (i>0) {
-                    hash[i].capacity[k] <== hash[i-1].out[k];
-                } else {
-                    hash[i].capacity[k] <== 0;
-                }
+            if(i>0) {
+                hash[i].capacity <== hash[i-1].out;
+            } else {
+                hash[i].capacity <== [0,0,0,0];
             }
         }
 
-        for (var k=0; k<4; k++) {
-            out[k] <== hash[nHashes-1].out[k];
-        }
+        out <== hash[nHashes-1].out;
     }
 }
 
