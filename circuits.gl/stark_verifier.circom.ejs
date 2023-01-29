@@ -291,7 +291,7 @@ template Transcript() {
 /*
     Verify that FRI polynomials are built properly
 */
-template parallel VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits) {
+template parallel VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits, e0) {
     var nextStep = currStepBits - nextStepBits; 
     var step = prevStepBits - currStepBits;
 
@@ -303,9 +303,9 @@ template parallel VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits) 
 
     signal sx[currStepBits];
     
-    sx[0] <==  1/(<%- F.shift %> ** (1<<(nBitsExt - prevStepBits))) *( ys[0] * ((1/roots(prevStepBits)) -1) + 1);
+    sx[0] <==  e0 *( ys[0] * (invroots(prevStepBits) -1) + 1);
     for (var i=1; i< currStepBits; i++) {
-        sx[i] <== sx[i-1] *  ( ys[i] * ((1/roots(prevStepBits -i)) -1) +1);
+        sx[i] <== sx[i-1] *  ( ys[i] * (invroots(prevStepBits -i) -1) +1);
     }
         
     // Perform an IFFT to obtain the coefficients of the polynomial given s_vals and evaluate it at ??????
@@ -313,7 +313,6 @@ template parallel VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits) 
 
     var keys_lowValues[nextStep];
     for(var i = 0; i < nextStep; i++) { keys_lowValues[i] = ys[i + nextStepBits]; } 
-
     var lowValues[3] = TreeSelector(nextStep, 3)(vals_nextStep, keys_lowValues);
 
     // Check that ??????
@@ -707,7 +706,8 @@ template StarkVerifier() {
         for(var i = 0; i < <%- starkStruct.steps[s].nBits %>; i++) { s<%- s %>_ys[i] = ys[q][i]; }  
 <%  const nextPolFRI = s < starkStruct.steps.length-1 ? `s${s+1}_vals_p[q]` : "finalPol"; -%>
 <%  const nextStepFRI = s < starkStruct.steps.length-1 ? starkStruct.steps[s+1].nBits : 0; -%>
-        VerifyFRI(<%- starkStruct.nBitsExt %>, <%- starkStruct.steps[s-1].nBits %>, <%- starkStruct.steps[s].nBits %>, <%- nextStepFRI %>)(s<%- s %>_ys, s<%- s %>_specialX, s<%- s %>_vals_p[q], <%- nextPolFRI %>, enable);
+<%  const e0 = F.inv(F.exp(F.shift, 1 << (starkStruct.nBitsExt -starkStruct.steps[s-1].nBits) ) ) -%>
+        VerifyFRI(<%- starkStruct.nBitsExt %>, <%- starkStruct.steps[s-1].nBits %>, <%- starkStruct.steps[s].nBits %>, <%- nextStepFRI %>, <%- e0 %>)(s<%- s %>_ys, s<%- s %>_specialX, s<%- s %>_vals_p[q], <%- nextPolFRI %>, enable);
 <% } -%>
     }
 

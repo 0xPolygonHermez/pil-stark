@@ -329,25 +329,24 @@ template parallel VerifyFRI(prevStepBits, currStepBits, nextStepBits, e0, e1) {
     signal input s_vals_p2[1 << nextStep][3];
     signal input enable;
 
-    signal s_sx[currStepBits];
-    s_sx[0] <== GLMul()(ys[0] * (e1 - e0) + e0, ys[1] * (_inv1(roots(prevStepBits - 1)) -1) + 1);
-    for (var i=1; i< currStepBits; i++ ) {
-        s_sx[i] <== GLMul()(s_sx[i-1], ys[i + 1] * (_inv1(roots(prevStepBits - (i + 1))) -1) + 1);
-    }
-
-    signal s_X; 
+    var s_X;
     if(currStepBits > 1) {
-        s_X <== s_sx[currStepBits - 2];
+        s_X = GLMul()(ys[0] * (e1 - e0) + e0, ys[1] * (invroots(prevStepBits - 1) -1) + 1);
+        for (var i=1; i< currStepBits - 1; i++ ) {
+            s_X = GLMul()(s_X, ys[i + 1] * (invroots(prevStepBits - (i + 1)) -1) + 1);
+        }
     } else {
-        s_X <== GLMul()(e0, ys[0] * (_inv1(roots(prevStepBits)) -1) + 1);
+        s_X = GLMul()(e0, ys[0] * (invroots(prevStepBits) -1) + 1);
     }
 
-    var evalPol[3] = EvalPol(1 << step)(FFT(step, 1)(s_vals_p1), GLCMul()(s_specialX, [s_X, 0, 0]));
+    var coefs[1 << step][3] = FFT(step, 1)(s_vals_p1);
+    var evalXprime[3] = GLCMul()(s_specialX, [s_X, 0, 0]);
+    var evalPol[3] = EvalPol(1 << step)(coefs, evalXprime);
     
     var s_keys_lowValues[nextStep];
     for(var i = 0; i < nextStep; i++) { s_keys_lowValues[i] = ys[i + nextStepBits]; } 
-   
     var lowValues[3] = TreeSelector(nextStep, 3)(s_vals_p2, s_keys_lowValues);
+
     var cNorm[3] = GLCNorm()([evalPol[0] - lowValues[0] + p, evalPol[1] - lowValues[1] + p, evalPol[2] - lowValues[2] + p]);
     
     enable * cNorm[0] === 0;
