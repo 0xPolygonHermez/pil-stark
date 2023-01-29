@@ -20,6 +20,7 @@ class Transcript {
         this.out3 = [];
         this.stCnt =0;
         this.hCnt =0;
+        this.hiCnt =0;
         this.n2bCnt =0;
         this.bn1togl3Cnt =0;
 
@@ -41,6 +42,7 @@ class Transcript {
             this.out3.push(`${cName}[0]`);
             this.out3.push(`${cName}[1]`);
             this.out3.push(`${cName}[2]`);
+            this.hiCnt++;
             return this.getFields1();
         }
         this.updateState();
@@ -49,6 +51,7 @@ class Transcript {
 
     getFields253() {
         if (this.out.length > 0) {
+            this.hiCnt++;
             return this.out.shift();
         }
         this.updateState();
@@ -57,16 +60,25 @@ class Transcript {
     }
 
     updateState() {
+        if(this.hCnt > 0) {
+            const firstUnused = Math.max(this.hiCnt, 1);
+            if(firstUnused < 17) {
+                this.code.push(`for(var i = ${firstUnused}; i < 17; i++){
+        _ <== transcriptHash_${this.hCnt -1}[i]; // Unused transcript values        
+    }`)
+            }
+        }
         while (this.pending.length<16) {
             this.pending.push("0");
         }
-        this.code.push(`var transcriptHash_${this.hCnt++}[17] = PoseidonEx(16,17)([${this.pending.join(',')}], ${this.state});`);
+        this.code.push(`\n    var transcriptHash_${this.hCnt++}[17] = PoseidonEx(16,17)([${this.pending.join(',')}], ${this.state});`);
         for (let i=0; i<17; i++) {
             this.out[i] = `transcriptHash_${this.hCnt-1}[${i}]`;
         }
         this.out3 = [];
         this.state = `transcriptHash_${this.hCnt-1}[0]`;
         this.pending = [];
+        this.hiCnt = 0;
     }
 
 
@@ -98,6 +110,11 @@ class Transcript {
             n2b[i] = `transcriptN2b_${this.n2bCnt++}`;
             this.code.push(`var ${n2b[i]}[254] = Num2Bits_strict()(${f});`);
         }
+        if(this.hiCnt < 17) {
+            this.code.push(`for(var i = ${this.hiCnt}; i < 17; i++){
+        _ <== transcriptHash_${this.hCnt - 1}[i]; // Unused transcript values           
+    }\n`)
+        }
         this.code.push(`// From each transcript hash converted to bits, we assign those bits to ys[q] to define the query positions`)
         this.code.push(`var q = 0; // Query number `)
         this.code.push(`var b = 0; // Bit number `)
@@ -111,6 +128,13 @@ class Transcript {
             q++;
         }
     }`);
+            if(nBits === 253) {
+                this.code.push(`_ <== ${n2b[i]}[253]; // Unused last bit\n`);
+            } else {
+                this.code.push(`for(var j = ${nBits}; j < 254; j++) {
+        _ <== ${n2b[i]}[j]; // Unused bits
+    }`);
+            }
         }
     }
 
@@ -126,11 +150,11 @@ class Transcript {
         if (r.type == "eval") {
             return "evals[" + r.id + "]";
         } else if (r.type == "challenge") {
-            return "challenges[" + r.id + "]";
+            return "challenges" + r.id;
         } else if (r.type == "public") {
             return "publics[" + r.id + "]";
         } else if (r.type == "x") {
-            return "challenges[7]";
+            return "challenges7";
         } else if (r.type == "Z") {
             return "Z";
         } else if (r.type == "xDivXSubXi") {
@@ -159,72 +183,72 @@ class Transcript {
 <% var tmpNameId = 0;                                                                   -%>
 <% for(let i=0; i<code.length; i++) {                                 -%>
 <%      let inst = code[i];                                           -%>
-<%      let signalName;                                           -%>
+<%      let outputName;                                           -%>
 <%      if (inst.dest.type == "tmp") {                                                  -%>
 <%          if (inst.dest.dim == 1) {                                                   -%>
-<%              signalName = `signal ${ref(inst.dest)}`                                                -%>
+<%              outputName = `var ${ref(inst.dest)}`                                                -%>
 <%          } else if (inst.dest.dim == 3)  {                                           -%>
-<%              signalName = `signal ${ref(inst.dest)}[3]`                                                -%>
+<%              outputName = `var ${ref(inst.dest)}[3]`                                                -%>
 <%          } else throw new Error("Invalid dimension");                                -%>
 <%      }                                                                               -%>
 <%      if (inst.op == "add") {                                                         -%>
 <%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
-    <%- signalName %> <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>;
+    <%- outputName %> = <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>;
 <%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
-    <%- signalName %> <== [<%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>[0], <%- ref(inst.src[1]) %>[1],<%- ref(inst.src[1]) %>[2]] ;
+    <%- outputName %> = [<%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>[0], <%- ref(inst.src[1]) %>[1],<%- ref(inst.src[1]) %>[2]] ;
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
-    <%- signalName %> <== [<%- ref(inst.src[0]) %>[0] + <%- ref(inst.src[1]) %>, <%- ref(inst.src[0]) %>[1], <%- ref(inst.src[0]) %>[2]];
+    <%- outputName %> = [<%- ref(inst.src[0]) %>[0] + <%- ref(inst.src[1]) %>, <%- ref(inst.src[0]) %>[1], <%- ref(inst.src[0]) %>[2]];
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
-    <%- signalName %> <== [<%- ref(inst.src[0]) %>[0] + <%- ref(inst.src[1]) %>[0], <%- ref(inst.src[0]) %>[1] + <%- ref(inst.src[1]) %>[1], <%- ref(inst.src[0]) %>[2] + <%- ref(inst.src[1]) %>[2]];
+    <%- outputName %> = [<%- ref(inst.src[0]) %>[0] + <%- ref(inst.src[1]) %>[0], <%- ref(inst.src[0]) %>[1] + <%- ref(inst.src[1]) %>[1], <%- ref(inst.src[0]) %>[2] + <%- ref(inst.src[1]) %>[2]];
 <%          } else throw new Error("Invalid src dimensions");                          -%>
 <%      } else if (inst.op == "sub") {                                                  -%>
 <%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
-    <%- signalName %> <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>;
+    <%- outputName %> = <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>;
 <%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
-    <%- signalName %> <== [<%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>[0], -<%- ref(inst.src[1]) %>[1], -<%- ref(inst.src[1]) %>[2]];
+    <%- outputName %> = [<%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>[0], -<%- ref(inst.src[1]) %>[1], -<%- ref(inst.src[1]) %>[2]];
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
-    <%- signalName %> <== [<%- ref(inst.src[0]) %>[0] - <%- ref(inst.src[1]) %>,  <%- ref(inst.src[0]) %>[1], <%- ref(inst.src[0]) %>[2]];
+    <%- outputName %> = [<%- ref(inst.src[0]) %>[0] - <%- ref(inst.src[1]) %>,  <%- ref(inst.src[0]) %>[1], <%- ref(inst.src[0]) %>[2]];
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
-    <%- signalName %> <== [<%- ref(inst.src[0]) %>[0] - <%- ref(inst.src[1]) %>[0],  <%- ref(inst.src[0]) %>[1] - <%- ref(inst.src[1]) %>[1],<%- ref(inst.src[0]) %>[2] - <%- ref(inst.src[1]) %>[2]];
+    <%- outputName %> = [<%- ref(inst.src[0]) %>[0] - <%- ref(inst.src[1]) %>[0],  <%- ref(inst.src[0]) %>[1] - <%- ref(inst.src[1]) %>[1],<%- ref(inst.src[0]) %>[2] - <%- ref(inst.src[1]) %>[2]];
 <%          } else throw new Error("Invalid src dimensions");                          -%>
 <%      } else if (inst.op == "mul") {                                                  -%>
 <%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
-    <%- signalName %> <== GLMul1()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>);
+    <%- outputName %> = GLMul1()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>);
 <%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
-    <%- signalName %> <== GLCMul()([<%- ref(inst.src[0]) %>, 0, 0], <%- ref(inst.src[1]) %>);
+    <%- outputName %> = GLCMul()([<%- ref(inst.src[0]) %>, 0, 0], <%- ref(inst.src[1]) %>);
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
-    <%- signalName %> <== GLCMul()(<%- ref(inst.src[0]) %>,[<%- ref(inst.src[1]) %>, 0, 0]);
+    <%- outputName %> = GLCMul()(<%- ref(inst.src[0]) %>,[<%- ref(inst.src[1]) %>, 0, 0]);
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
-    <%- signalName %> <== GLCMul()(<%- ref(inst.src[0]) %>,<%- ref(inst.src[1]) %>);
+    <%- outputName %> = GLCMul()(<%- ref(inst.src[0]) %>,<%- ref(inst.src[1]) %>);
 <%          } else throw new Error("Invalid src dimensions");                          -%>
 <%      } else if (inst.op == "copy") {                                                 -%>
 <%          if (inst.src[0].dim==1 || inst.src[0].dim==3) {                                                   -%>
-    <%- signalName %> <== <%- ref(inst.src[0]) %>;
+    <%- outputName %> = <%- ref(inst.src[0]) %>;
 <%          } else throw new Error("Invalid src dimensions");                          -%>
 <%      } else if (inst.op == "muladd") {                                                   -%>
 <%              if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
 <%                  if (inst.src[2].dim==1) {                                                -%>
-    <%- signalName %> <== GLMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>);
+    <%- outputName %> = GLMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>);
 <%                  } else {                                                                 -%>
-    <%- signalName %> <== [GLMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>[0], <%- ref(inst.src[2]) %>[1], <%- ref(inst.src[2]) %>[2]);
+    <%- outputName %> = [GLMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>[0], <%- ref(inst.src[2]) %>[1], <%- ref(inst.src[2]) %>[2]);
 <%                  }                                                                        -%>
 <%              } else if(inst.src[0].dim==1 && inst.src[1].dim== 3) {   -%>
 <%                  if (inst.src[2].dim==1) {                                                -%>
-    <%- signalName %> <== GLCMulAdd()([<%- ref(inst.src[0]) %>, 0, 0], <%- ref(inst.src[1]) %>, [<%- ref(inst.src[2]) %>, 0, 0]);
+    <%- outputName %> = GLCMulAdd()([<%- ref(inst.src[0]) %>, 0, 0], <%- ref(inst.src[1]) %>, [<%- ref(inst.src[2]) %>, 0, 0]);
 <%                  } else {                                                                 -%>
-    <%- signalName %> <== GLCMulAdd()([<%- ref(inst.src[0]) %>, 0, 0], <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>);
+    <%- outputName %> = GLCMulAdd()([<%- ref(inst.src[0]) %>, 0, 0], <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>);
 <%                  }                                                                        -%>
 <%              } else if(inst.src[0].dim==3 && inst.src[1].dim== 1) {   -%>
 <%                  if (inst.src[2].dim==1) {                                                -%>
-    <%- signalName %> <== GLCMulAdd()(<%- ref(inst.src[0]) %>, [<%- ref(inst.src[1]) %>, 0, 0], [<%- ref(inst.src[2]) %>, 0, 0]);
+    <%- outputName %> = GLCMulAdd()(<%- ref(inst.src[0]) %>, [<%- ref(inst.src[1]) %>, 0, 0], [<%- ref(inst.src[2]) %>, 0, 0]);
 <%                  } else {                                                                 -%>
-    <%- signalName %> <== GLCMulAdd()(<%- ref(inst.src[0]) %>, [<%- ref(inst.src[1]) %>, 0, 0], <%- ref(inst.src[2]) %>);
+    <%- outputName %> = GLCMulAdd()(<%- ref(inst.src[0]) %>, [<%- ref(inst.src[1]) %>, 0, 0], <%- ref(inst.src[2]) %>);
 <%                  }                                                                        -%>
 <%              } else if(inst.src[0].dim==3 && inst.src[1].dim== 3) {   -%>
 <%                  if (inst.src[2].dim==1) {                                                -%>
-    <%- signalName %> <== GLCMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, [<%- ref(inst.src[2]) %>, 0, 0]);     
+    <%- outputName %> = GLCMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, [<%- ref(inst.src[2]) %>, 0, 0]);     
 <%                  } else {                                                                 -%>
-    <%- signalName %> <== GLCMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>);
+    <%- outputName %> = GLCMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>);
 <%                  }                                                                        -%>
 <%              } else throw new Error("Invalid src dimensions");                           -%>
 <%      } else throw new Error("Invalid op");                                           -%>
@@ -232,19 +256,77 @@ class Transcript {
 <% return ref(code[code.length-1].dest);                                                -%>
 <% }                                                                                    -%>
 
+/* 
+    Calculate the transcript
+*/ 
+template Transcript() {
+
+    signal input publics[<%- pil.publics.length %>];
+    signal input root1; 
+    signal input root2; 
+    signal input root3; 
+    signal input root4;
+    signal input evals[<%- starkInfo.evMap.length %>][3]; 
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    signal input s<%- s %>_root;
+<% }                                                     -%>
+    signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
+
+    signal output challenges[8][3];  
+    signal output ys[<%- starkStruct.nQueries %>][<%- starkStruct.steps[0].nBits %>];
+<% for (let s=0; s<starkStruct.steps.length; s++) {   -%>
+    signal output s<%- s %>_specialX[3];
+<% }                                                    -%>  
+
+<%
+const transcript = new Transcript();
+transcript.put("publics", pil.publics.length);
+transcript.put("root1");
+transcript.getField("challenges[0]", 3);
+transcript.getField("challenges[1]", 3);
+transcript.put("root2");
+transcript.getField("challenges[2]", 3);
+transcript.getField("challenges[3]", 3);
+transcript.put("root3");
+transcript.getField("challenges[4]", 3);
+transcript.put("root4");
+transcript.getField("challenges[7]", 3);
+for (let i=0; i<starkInfo.evMap.length; i++) {
+    transcript.put(`evals[${i}]`, 3);
+}
+transcript.getField("challenges[5]", 3);
+transcript.getField("challenges[6]", 3);
+for (let si=0; si<starkStruct.steps.length; si++) {
+    transcript.getField(`s${si}_specialX`, 3);
+    if (si < starkStruct.steps.length-1) {
+        transcript.put(`s${si+1}_root`);
+    } else {
+        for (let j=0; j< 1<<starkStruct.steps[starkStruct.steps.length-1].nBits; j++ ) {
+            transcript.put(`finalPol[${j}]`, 3);
+        }
+    }
+}
+transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBits);
+
+-%>
+
+<%- transcript.getCode() %>
+
+}
+
 /*
     Verify that FRI polynomials are built properly
 */
-template parallel VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits, e0, e1) {
+template parallel VerifyFRI(prevStepBits, currStepBits, nextStepBits, e0, e1) {
     var nextStep = currStepBits - nextStepBits;
     var step = prevStepBits - currStepBits;
 
     var p = 0xFFFFFFFF00000001;
 
-    signal input ys[<%- starkStruct.steps[0].nBits %>];
+    signal input ys[currStepBits + 1];
     signal input s_specialX[3];
-    signal input s_vals_p1[2**step][3];
-    signal input s_vals_p2[2**nextStep][3];
+    signal input s_vals_p1[1 << step][3];
+    signal input s_vals_p2[1 << nextStep][3];
     signal input enable;
 
     signal s_sx[currStepBits];
@@ -260,15 +342,13 @@ template parallel VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits, 
         s_X <== GLMul()(e0, ys[0] * (_inv1(roots(prevStepBits)) -1) + 1);
     }
 
-    signal evalPol[3] <== EvalPol(2**step)(FFT(step, 1)(s_vals_p1), GLCMul()(s_specialX, [s_X, 0, 0]));
+    var evalPol[3] = EvalPol(1 << step)(FFT(step, 1)(s_vals_p1), GLCMul()(s_specialX, [s_X, 0, 0]));
     
     var s_keys_lowValues[nextStep];
-    for(var i = 0; i < nextStep; i++) {
-        s_keys_lowValues[i] = ys[i + nextStepBits];
-    } 
+    for(var i = 0; i < nextStep; i++) { s_keys_lowValues[i] = ys[i + nextStepBits]; } 
    
-    signal lowValues[3] <== TreeSelector(nextStep, 3)(s_vals_p2, s_keys_lowValues);
-    signal cNorm[3] <== GLCNorm()([evalPol[0] - lowValues[0] + p, evalPol[1] - lowValues[1] + p, evalPol[2] - lowValues[2] + p]);
+    var lowValues[3] = TreeSelector(nextStep, 3)(s_vals_p2, s_keys_lowValues);
+    var cNorm[3] = GLCNorm()([evalPol[0] - lowValues[0] + p, evalPol[1] - lowValues[1] + p, evalPol[2] - lowValues[2] + p]);
     
     enable * cNorm[0] === 0;
     enable * cNorm[1] === 0;
@@ -279,7 +359,14 @@ template parallel VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits, 
     Verify that all committed polynomials are calculated correctly
 */
 template VerifyEvaluations() {
-    signal input challenges[8][3];
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    signal input challenges0[3];
+    signal input challenges1[3];
+<% } -%>   
+    signal input challenges2[3];
+    signal input challenges3[3];
+    signal input challenges4[3];
+    signal input challenges7[3];
     signal input evals[<%- starkInfo.evMap.length %>][3];
     signal input publics[<%- pil.publics.length %>];
     signal input enable;
@@ -287,48 +374,42 @@ template VerifyEvaluations() {
     var p = 0xFFFFFFFF00000001;
 
     // zMul stores all the powers of z (which is stored in challenge7) up to nBits, i.e, [z, z^2, ..., z^nBits]
-    var zMul[<%- starkStruct.nBits %>][3];
+    var zMul[3] = challenges7;
     for (var i=0; i< <%- starkStruct.nBits %> ; i++) {
-        if (i==0) {
-            zMul[i] = GLCMul()(challenges[7], challenges[7]);
-        } else {
-            zMul[i] = GLCMul()(zMul[i-1], zMul[i-1]);
-        }
+        zMul = GLCMul()(zMul, zMul);
     }
 
     // Store the vanishing polynomial Zg = x^nBits - 1 evaluated at z
-    signal Z[3] <== [zMul[<%- starkStruct.nBits -1%>][0] -1 + p, zMul[<%- starkStruct.nBits -1%>][1], zMul[<%- starkStruct.nBits -1%>][2]];
+    var Z[3] = [zMul[0] -1 + p, zMul[1], zMul[2]];
 
     // Using the evaluations committed and the challenges,
     // calculate the sum of q_i, i.e, q_0(X) + challenge * q_1(X) + challenge^2 * q_2(X) +  ... + challenge^(l-1) * q_l-1(X) evaluated at z 
 <% const evalP = unrollCode(starkInfo.verifierCode.first) -%>
 
-    signal xN[3] <== zMul[<%- starkStruct.nBits -1%>]; //Stores x^nBits evaluated at z
-
-    signal xAcc[<%- starkInfo.qDeg %>][3]; //Stores, at each step, x^i evaluated at z
-    signal qStep[<%- starkInfo.qDeg-1 %>][3]; // Stores the evaluations of Q_i
-    signal qAcc[<%- starkInfo.qDeg %>][3]; // Stores the accumulate sum of Q_i
+    var xAcc[<%- starkInfo.qDeg %>][3]; //Stores, at each step, x^i evaluated at z
+    var qStep[<%- starkInfo.qDeg-1 %>][3]; // Stores the evaluations of Q_i
+    var qAcc[<%- starkInfo.qDeg %>][3]; // Stores the accumulate sum of Q_i
     
     // Note: Each Qi has degree < n. qDeg determines the number of polynomials of degree < n needed to define Q
     // Calculate Q(X) = Q1(X) + X^n*Q2(X) + X^(2n)*Q3(X) + ..... X^((qDeg-1)n)*Q(X) evaluated at z 
     for (var i=0; i< <%- starkInfo.qDeg %>; i++) {
         if (i==0) {
-            xAcc[0] <== [1, 0, 0];
-            qAcc[0] <== evals[<%- starkInfo.evIdx.cm[0][starkInfo.qs[0]] %>+i];
+            xAcc[0] = [1, 0, 0];
+            qAcc[0] = evals[<%- starkInfo.evIdx.cm[0][starkInfo.qs[0]] %>+i];
         } else {
-            xAcc[i] <== GLCMul()(xAcc[i-1], xN);
-            qStep[i-1] <== GLCMul()(xAcc[i], evals[<%- starkInfo.evIdx.cm[0][starkInfo.qs[0]] %>+i]);
+            xAcc[i] = GLCMul()(xAcc[i-1], zMul);
+            qStep[i-1] = GLCMul()(xAcc[i], evals[<%- starkInfo.evIdx.cm[0][starkInfo.qs[0]] %>+i]);
 
-            qAcc[i][0] <== qAcc[i-1][0] + qStep[i-1][0];
-            qAcc[i][1] <== qAcc[i-1][1] + qStep[i-1][1];
-            qAcc[i][2] <== qAcc[i-1][2] + qStep[i-1][2];
+            qAcc[i][0] = qAcc[i-1][0] + qStep[i-1][0];
+            qAcc[i][1] = qAcc[i-1][1] + qStep[i-1][1];
+            qAcc[i][2] = qAcc[i-1][2] + qStep[i-1][2];
         }
     }
 
-    signal qZ[3] <== GLCMul()(qAcc[<%- starkInfo.qDeg-1 %>], Z); // Stores the result of multiplying Q(X) per Zg(X)
+    signal QZ[3] <== GLCMul()(qAcc[<%- starkInfo.qDeg-1 %>], Z); // Stores the result of multiplying Q(X) per Zg(X)
 
     // Final normalization
-    var normC[3] = GLCNorm()([<%- evalP %>[0] - qZ[0], <%- evalP %>[1] - qZ[1],<%- evalP %>[2] - qZ[2]]);
+    var normC[3] = GLCNorm()([<%- evalP %>[0] - QZ[0], <%- evalP %>[1] - QZ[1],<%- evalP %>[2] - QZ[2]]);
 
     // Final Verification. Check that Q(X)*Zg(X) = sum of linear combination of q_i, which is stored at <%- evalP %> 
     enable * normC[0] === 0;
@@ -344,7 +425,9 @@ template VerifyEvaluations() {
 template parallel VerifyQuery(currStepBits, nextStepBits) {
     var nextStep = currStepBits - nextStepBits;
     signal input ys[<%- starkStruct.steps[0].nBits %>];
-    signal input challenges[8][3];
+    signal input challenges5[3];
+    signal input challenges6[3];
+    signal input challenges7[3];
     signal input evals[<%- starkInfo.evMap.length %>][3];
     signal input tree1[<%- starkInfo.mapSectionsN.cm1_2ns %>];
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
@@ -355,7 +438,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
 <% }                                         -%>
     signal input tree4[<%- starkInfo.mapSectionsN.cm4_2ns %>];
     signal input consts[<%- starkInfo.nConstants %>];
-    signal input s0_vals[2**nextStep][3];
+    signal input s0_vals[1 << nextStep][3];
     signal input enable;
 
     // Map the s0_vals so that they are converted either into single vars (if they belong to base field) or arrays of 3 elements (if 
@@ -372,42 +455,36 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
 
     var p = 0xFFFFFFFF00000001;
 
-    component xacc[<%- starkStruct.steps[0].nBits %>-1];
-    for (var i=1; i<<%- starkStruct.steps[0].nBits %>; i++ ) {
-        xacc[i-1] = GLMul();
-        if (i==1) {
-            xacc[i-1].ina <== ys[0]*(<%- F.shift %> * roots(<%- starkStruct.steps[0].nBits %>)-<%- F.shift %>) + <%- F.shift %>;
-        } else {
-            xacc[i-1].ina <== xacc[i-2].out;
-        }
-        xacc[i-1].inb <== ys[i]*(roots(<%- starkStruct.steps[0].nBits %> - i) - 1) +1;
+    var xacc = GLMul()(ys[0]*<%- F.shift * F.w[starkStruct.steps[0].nBits] - F.shift %> + <%- F.shift %>, ys[1]*(<%- F.w[starkStruct.steps[0].nBits - 1] %> - 1) +1);
+    for (var i=2; i<<%- starkStruct.steps[0].nBits %>; i++ ) {
+        xacc = GLMul()(xacc,  ys[i]*(roots(<%- starkStruct.steps[0].nBits %> - i) - 1) +1);
     }
 
 <% if (starkStruct.steps[0].nBits>1) {  -%>
-    signal X <== xacc[<%- starkStruct.steps[0].nBits -2 %>].out;
+    signal X <== xacc;
 <% } else {                             -%>
     signal X <== ys[0]*(<%- F.shift %> * roots(<%- starkStruct.steps[0].nBits %>)-<%- F.shift %>) + <%- F.shift %>;
 <% }                                    -%>
 
 
-    var den1inv[3] = GLCInv()([X - challenges[7][0] + p, -challenges[7][1] + p, -challenges[7][2] + p]);
+    var den1inv[3] = GLCInv()([X - challenges7[0] + p, -challenges7[1] + p, -challenges7[2] + p]);
     var xDivXSubXi[3] = GLCMul()([X, 0, 0], den1inv);
     
-    var wXi[3] = GLCMul()([roots(<%- starkStruct.nBits %>), 0, 0], challenges[7]);
+    var wXi[3] = GLCMul()([roots(<%- starkStruct.nBits %>), 0, 0], challenges7);
     var den2inv[3] = GLCInv()([X - wXi[0] + p, -wXi[1] + p, -wXi[2] + p]);
     var xDivXSubWXi[3] = GLCMul()([X, 0, 0], den2inv);
    
 <% const evalQ = unrollCode(starkInfo.verifierQueryCode.first) -%>
 
     // Final Normalization
-    signal queryVals[3] <== GLCNorm()(<%- evalQ %>);
+    var queryVals[3] = GLCNorm()(<%- evalQ %>);
 
     var s0_keys_lowValues[nextStep];
     for(var i = 0; i < nextStep; i++) {
         s0_keys_lowValues[i] = ys[i + nextStepBits];
     } 
    
-    signal lowValues[3] <== TreeSelector(nextStep, 3)(s0_vals, s0_keys_lowValues);
+    var lowValues[3] = TreeSelector(nextStep, 3)(s0_vals, s0_keys_lowValues);
 
     enable * (lowValues[0] - queryVals[0]) === 0;
     enable * (lowValues[1] - queryVals[1]) === 0;
@@ -495,8 +572,10 @@ template StarkVerifier() {
     signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
 
     // Contains the root of the original polynomial and all the intermediate FRI polynomials except for the last step
-<% for (let s=0; s<starkStruct.steps.length-1; s++) {   -%>
-    signal input s<%- s+1 %>_root;
+<% let si_roots = []; -%>
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+<% si_roots.push(`s${s}_root`); -%>
+    signal input s<%- s %>_root;
 <% }                                                     -%>
 
     // For each intermediate FRI polynomial and the last one, we store at vals the values needed to check the queries.
@@ -531,8 +610,10 @@ template StarkVerifier() {
     // the prover can commit the polynomial.
     // Remember that, when folding, the prover does as follows: f0 = g_0 + X*g_1 + ... + (X^b)*g_b and then the 
     // verifier provides a random X so that the prover can commit it. This value is stored here.
+<% let si_specials = []; -%>
 <% for (let s=0; s<starkStruct.steps.length; s++) {   -%>
     signal s<%- s %>_specialX[3];
+<% si_specials.push(`s${s}_specialX`); -%>
 <% }                                                    -%>
     
     // Each of the queries values represented in binary
@@ -544,45 +625,18 @@ template StarkVerifier() {
     // Calculate challenges, s_i special and queries
     ///////////
 
-<%
-const transcript = new Transcript();
-transcript.put("publics", pil.publics.length);
-transcript.put("root1");
-transcript.getField("challenges[0]", 3);
-transcript.getField("challenges[1]", 3);
-transcript.put("root2");
-transcript.getField("challenges[2]", 3);
-transcript.getField("challenges[3]", 3);
-transcript.put("root3");
-transcript.getField("challenges[4]", 3);
-transcript.put("root4");
-transcript.getField("challenges[7]", 3);
-for (let i=0; i<starkInfo.evMap.length; i++) {
-    transcript.put(`evals[${i}]`, 3);
-}
-transcript.getField("challenges[5]", 3);
-transcript.getField("challenges[6]", 3);
-for (let si=0; si<starkStruct.steps.length; si++) {
-    transcript.getField(`s${si}_specialX`, 3);
-    if (si < starkStruct.steps.length-1) {
-        transcript.put(`s${si+1}_root`);
-    } else {
-        for (let j=0; j< 1<<starkStruct.steps[starkStruct.steps.length-1].nBits; j++ ) {
-            transcript.put(`finalPol[${j}]`, 3);
-        }
-    }
-}
-transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBits);
-
--%>
-
-<%- transcript.getCode() %>
+    (challenges,ys,<%- si_specials.join(",") %>) <== Transcript()(publics,root1,root2,root3,root4,evals, <%- si_roots.join(",") %>,finalPol);
 
     ///////////
     // Check constraints polynomial in the evaluation point
     ///////////
 
-    VerifyEvaluations()(challenges, evals, publics, enable);
+<%  const challengesEvaluations = ["challenges[2]", "challenges[3]", "challenges[4]", "challenges[7]"];
+    if (starkInfo.mapSectionsN.cm2_2ns > 0) { 
+        challengesEvaluations.unshift(...["challenges[0]", "challenges[1]"]);
+    }
+-%> 
+    VerifyEvaluations()(<%- challengesEvaluations.join(", ") %>, evals, publics, enable);
 
     ///////////
     // Preprocess s_i vals
@@ -658,13 +712,10 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
         VerifyMerkleHash(1, <%- starkInfo.nConstants %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_valsC_p[q], s0_siblingsC[q], ys[q], rootC, enable);                                    
 
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
-<%  let keys_merkle = [];
-    for(let i = 0; i < starkStruct.steps[s].nBits; ++i) {
-        keys_merkle.push(`ys[q][${i}]`);
-    }
--%>
+
         // Calculate merkle root for s<%- s %> vals
-        var s<%- s %>_keys_merkle[<%- starkStruct.steps[s].nBits %>] = [<%- keys_merkle %>];
+        var s<%- s %>_keys_merkle[<%- starkStruct.steps[s].nBits %>];
+        for(var i = 0; i < <%-starkStruct.steps[s].nBits %>; i++) { s<%- s %>_keys_merkle[i] = ys[q][i]; }
         VerifyMerkleHash(3, <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>, <%- 1 << starkStruct.steps[s].nBits %>)(s<%- s %>_vals_p[q], s<%- s %>_siblings[q], s<%- s %>_keys_merkle, s<%- s %>_root, enable);
 
 <% } -%>
@@ -675,19 +726,21 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 
         // After checking that all merkle roots are properly built, the query and the intermediate 
         // polynomials need to be verified 
-<% let nextValsPol = 0 < starkStruct.steps.length-1 ? "s1_vals_p[q]" : "finalPol"; -%>
-<% let nextStep = 0 < starkStruct.steps.length-1 ? starkStruct.steps[1].nBits : 0 -%>
+<%  let nextValsPol = 0 < starkStruct.steps.length-1 ? "s1_vals_p[q]" : "finalPol"; 
+    let nextStep = 0 < starkStruct.steps.length-1 ? starkStruct.steps[1].nBits : 0; 
+    let queryVals = ["s0_vals1[q]"];
+    if(starkInfo.mapSectionsN.cm2_2ns > 0) {
+        queryVals.push("s0_vals2[q]");
+    }
+    if(starkInfo.mapSectionsN.cm3_2ns > 0) {
+        queryVals.push("s0_vals3[q]");
+    }
+    queryVals.push("s0_vals4[q]");
+    queryVals.push("s0_valsC[q]");
+-%>
         // Verify that the query is properly constructed. This is done by checking that the linear combination of the set of 
         // polynomials committed during the different rounds evaluated at z matches with the commitment of the FRI polynomial (unsure)
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0 && starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
-        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges, evals, s0_vals1[q], s0_vals2[q],s0_vals3[q],s0_vals4[q],s0_valsC[q], <%- nextValsPol %>, enable);
-<% } else if(starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
-        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges, evals, s0_vals1[q], s0_vals2[q],s0_vals4[q],s0_valsC[q], <%- nextValsPol %>, enable);
-<% } else if(starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
-        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges, evals, s0_vals1[q], s0_vals3[q],s0_vals4[q],s0_valsC[q], <%- nextValsPol %>, enable);
-<% } else { -%>
-        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges, evals, s0_vals1[q],s0_vals4[q],s0_valsC[q], <%- nextValsPol %>, enable);
-<% } -%>
+        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges[5], challenges[6], challenges[7], evals, <%- queryVals.join(", ") %>, <%- nextValsPol %>, enable);
 
         ///////////
         // Verify FRI construction
@@ -705,11 +758,11 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 -%>
 
         // Check S<%- s %> 
-<%  if (s < starkStruct.steps.length-1) {            -%>
-        VerifyFRI(<%- starkStruct.nBitsExt %>, <%- starkStruct.steps[s-1].nBits %>, <%- starkStruct.steps[s].nBits %>, <%- starkStruct.steps[s+1].nBits %>, <%- e0 %>, <%- e1 %>)(ys[q], s<%- s %>_specialX, s<%- s %>_vals_p[q], s<%- s+1 %>_vals_p[q], enable);
-<%  } else { -%>
-        VerifyFRI(<%- starkStruct.nBitsExt %>, <%- starkStruct.steps[s-1].nBits %>, <%- starkStruct.steps[s].nBits %>, 0, <%- e0 %>, <%- e1 %>)(ys[q], s<%- s %>_specialX, s<%- s %>_vals_p[q], finalPol, enable);
-<% } -%>
+        var s<%- s %>_ys[<%- starkStruct.steps[s].nBits + 1%>];
+        for(var i = 0; i < <%- starkStruct.steps[s].nBits + 1 %>; i++) { s<%- s %>_ys[i] = ys[q][i]; } 
+<%  const nextPolFRI = s < starkStruct.steps.length-1 ? `s${s+1}_vals_p[q]` : "finalPol"; -%>
+<%  const nextStepFRI = s < starkStruct.steps.length-1 ? starkStruct.steps[s+1].nBits : 0; -%>
+        VerifyFRI(<%- starkStruct.steps[s-1].nBits %>, <%- starkStruct.steps[s].nBits %>, <%- nextStepFRI %>, <%- e0 %>, <%- e1 %>)(s<%- s %>_ys, s<%- s %>_specialX, s<%- s %>_vals_p[q], <%- nextPolFRI %>, enable);
 <% } -%>
     }
 
@@ -726,12 +779,16 @@ transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBit
 
     // Check that the degree of the final polynomial is bounded by the degree defined in the last step of the folding
     // This means ?????? in terms of IFFT
-    for (var k= <%- 1 << maxDegBits %>; k< <%- 1 << nLastBits %>; k++ ) {
+    for (var k= <%- 1 << maxDegBits %>; k< <%- 1 << nLastBits %>; k++) {
         for (var e=0; e<3; e++) {
             enable * lastIFFT[k][e] === 0;
         }
     }
 
+    // The coefficients of lower degree can have any value
+    for (var k= 0; k < <%- 1 << maxDegBits %>; k++) {
+        _ <== lastIFFT[k];
+    }
 }
 
 <% if (!options.skipMain) {  -%>

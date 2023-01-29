@@ -10,11 +10,8 @@ template GLNorm() {
     signal k <-- (in + 16*p)\p;
     out <-- (in+16*p) - k*p;
 
-    component n2bK = Num2Bits(10);
-    component n2bO = Num2Bits(64);
-
-    n2bK.in <== k;
-    n2bO.in <== out;
+    _ <== Num2Bits(10)(k);
+    _ <== Num2Bits(64)(out);
 
     (in+16*p) === k*p + out;
 }
@@ -35,7 +32,9 @@ template GLCNorm() {
         n2bK[i] = Num2Bits(10);
         n2bO[i] = Num2Bits(64);
         n2bK[i].in <== k[i];
-        n2bO[i].in <== out[i];
+        _ <== n2bK[i].out;
+            n2bO[i].in <== out[i];
+        _ <== n2bO[i].out;
         in[i]+16*p === k[i]*p + out[i];
     }
 }
@@ -54,11 +53,8 @@ template GLMul() {
     k <-- m\p;
     out <-- m-k*p;
 
-    component n2bK = Num2Bits(80);
-    component n2bO = Num2Bits(64);
-
-    n2bK.in <== k;
-    n2bO.in <== out;
+    _ <== Num2Bits(80)(k);
+    _ <== Num2Bits(64)(out);
 
     m === k*p + out;
 }
@@ -119,21 +115,10 @@ template GLCMul() {
     out[1] <-- m[1] -k[1]*p;
     out[2] <-- m[2] -k[2]*p;
 
-    component n2bK0 = Num2Bits(80);
-    component n2bK1 = Num2Bits(80);
-    component n2bK2 = Num2Bits(80);
-
-    component n2bO0 = Num2Bits(64);
-    component n2bO1 = Num2Bits(64);
-    component n2bO2 = Num2Bits(64);
-
-    n2bK0.in <== k[0];
-    n2bK1.in <== k[1];
-    n2bK2.in <== k[2];
-
-    n2bO0.in <== out[0];
-    n2bO1.in <== out[1];
-    n2bO2.in <== out[2];
+    for (var i = 0; i<3; i++) {
+        _ <== Num2Bits(80)(k[i]);
+        _ <== Num2Bits(64)(out[i]);
+    }
 
     m[0]  === k[0]*p + out[0];
     m[1]  === k[1]*p + out[1];
@@ -174,21 +159,10 @@ template GLCMulAdd() {
     out[1] <-- m[1] -k[1]*p;
     out[2] <-- m[2] -k[2]*p;
 
-    component n2bK0 = Num2Bits(80);
-    component n2bK1 = Num2Bits(80);
-    component n2bK2 = Num2Bits(80);
-
-    component n2bO0 = Num2Bits(64);
-    component n2bO1 = Num2Bits(64);
-    component n2bO2 = Num2Bits(64);
-
-    n2bK0.in <== k[0];
-    n2bK1.in <== k[1];
-    n2bK2.in <== k[2];
-
-    n2bO0.in <== out[0];
-    n2bO1.in <== out[1];
-    n2bO2.in <== out[2];
+    for (var i = 0; i<3; i++) {
+        _ <== Num2Bits(80)(k[i]);
+        _ <== Num2Bits(64)(out[i]);
+    }
 
     m[0]  === k[0]*p + out[0];
     m[1]  === k[1]*p + out[1];
@@ -232,11 +206,7 @@ template GLInv() {
 
     check.out === 1;
 
-    // Check that the output is 64 bits TODO: May bi it's not required
-
-    component n2bO = Num2Bits(64);
-
-    n2bO.in <== out;
+    _ <== Num2Bits(64)(out);
 
 }
 
@@ -295,13 +265,8 @@ template GLCInv() {
     check.out[1] === 0;
     check.out[2] === 0;
 
-    // Check that the output is 64 bits TODO: May bi it's not required
+    for (var i = 0; i<3; i++) {
+        _ <== Num2Bits(64)(out[i]);
+    }
 
-    component n2bO0 = Num2Bits(64);
-    component n2bO1 = Num2Bits(64);
-    component n2bO2 = Num2Bits(64);
-
-    n2bO0.in <== out[0];
-    n2bO1.in <== out[1];
-    n2bO2.in <== out[2];
 }

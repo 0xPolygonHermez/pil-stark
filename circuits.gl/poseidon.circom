@@ -157,4 +157,9 @@ template Poseidon(nOuts) {
     for (var j=0; j<nOuts; j++) {
         out[j] <== p.out[j];
     }
+
+    _ <== p.im;
+    for (var j=nOuts; j<12; j++) {
+        _ <== p.out[j];
+    }
 }

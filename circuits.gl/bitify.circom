@@ -81,11 +81,12 @@ template CompConstant(ct) {
         e = e*2;
     }
 
-    component num2bits = Num2Bits(33);
+    var num2bits[33] = Num2Bits(33)(sum[31]);
 
-    num2bits.in <== sum[31];
-
-    out <== num2bits.out[32];
+    for (var i = 0; i < 32; i++) {
+        _ <== num2bits[i];
+    }
+    out <== num2bits[32];
 }
 
 
