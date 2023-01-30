@@ -1,4 +1,4 @@
-pragma circom 2.0.6;
+pragma circom 2.1.0;
 pragma custom_templates;
 
 include "../../circuits.bn128/evalpol.circom";

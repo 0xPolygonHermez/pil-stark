@@ -5,34 +5,31 @@ include "linearhash.circom";
 include "merkle.circom";
 include "utils.circom";
 
-template parallel MerkleHash(eSize, elementsInLinear, nLinears) {
-    var nBits = log2(nLinears);
+/*
+    Given a leaf value and its sibling path, calculate the merkle tree root and check that it matches with the one provided
+    - eSize: Size of the extended field (usually it will be either 3 if we are in Fp³ or 1)
+    - elementsInLinear: Each leave of the merkle tree is made by this number of values. 
+    - nLinears: Number of leaves of the merkle tree
+*/
+template parallel VerifyMerkleHash(eSize, elementsInLinear, nLinears) {
+    var nBits = log2(nLinears); //Given the number of leaves, calculate the number of levels
     assert(1 << nBits == nLinears);
-    signal input values[elementsInLinear][eSize];
-    signal input siblings[nBits][4];
-    signal input key[nBits];
-    signal output root[4];
+    signal input values[elementsInLinear][eSize]; // Values that are contained in a leaf
+    signal input siblings[nBits][4]; // Sibling path to calculate the merkle root given a set of values
+    signal input key[nBits]; // Defines either each element of the sibling path is the left or right one
+    signal input root[4]; // Root of the merkle tree
+    signal input enable; // Boolean that determines either we want to check that roots matches or not
 
-    component linearHash = LinearHash(elementsInLinear, eSize);
+    // Each leaf in the merkle tree might be composed by multiple values. Therefore, the first step is to 
+    // reduce all those values into a single one by hashing all of them
+    signal linearHash[4] <== LinearHash(elementsInLinear, eSize)(values);
 
-    for (var i=0; i<elementsInLinear; i++) {
-        for (var e=0; e<eSize; e++) {
-            linearHash.in[i][e] <== values[i][e];
-        }
-    }
+    // Calculate the merkle root 
+    signal merkleRoot[4] <== Merkle(nBits)(linearHash, siblings ,key);
 
-    component merkle = Merkle(nBits);
-
-    for (var i=0; i<4; i++) {
-        merkle.value[i] <== linearHash.out[i];
-    }
-    for (var i=0; i<nBits; i++) {
-        merkle.key[i] <== key[i];
-        for (var j=0; j<4; j++) {
-            merkle.siblings[i][j] <== siblings[i][j];
-        }
-    }
-    for (var i=0; i<4; i++) {
-        root[i] <== merkle.root[i];
-    }
+    // If enable is set to 1, check that the merkleRoot being calculated matches with the one sent as input
+    enable * (merkleRoot[0] - root[0]) === 0;
+    enable * (merkleRoot[1] - root[1]) === 0;
+    enable * (merkleRoot[2] - root[2]) === 0;
+    enable * (merkleRoot[3] - root[3]) === 0;
 }

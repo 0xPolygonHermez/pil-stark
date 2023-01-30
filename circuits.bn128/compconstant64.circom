@@ -1,4 +1,4 @@
-pragma circom 2.0.6;
+pragma circom 2.1.0;
 
 include "bitify.circom";
 
@@ -7,7 +7,6 @@ template CompConstant64(ct) {
     signal output out;
 
     signal parts[32];
-    signal sout;
 
     var clsb;
     var cmsb;
@@ -44,9 +43,11 @@ template CompConstant64(ct) {
         e = e*2;
     }
 
-    component num2bits = Num2Bits(33);
+    signal num2bits[33] <== Num2Bits(33)(sum[31]);
+    
+    for (var i = 0; i < 32; i++) {
+        _ <== num2bits[i];
+    }
 
-    num2bits.in <== sum[31];
-
-    out <== num2bits.out[32];
+    out <== num2bits[32];
 }

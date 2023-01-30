@@ -1,6 +1,11 @@
 pragma circom 2.1.0;
 pragma custom_templates;
 
+// Perform a multiplication and addition in Fp³ (a * b + c) using (X³ - X - 1) as a irreductible polynomial
+// To multiply two elements in Fp³, we first multiply the two elements (a0 + a1*X + a2*X²) * (b0 + b1*X + b2*X²)
+// and then perform a long division by the irreductible polynomial. The residue will be the result of the operation.
+// The coefficients of the multiplication are calculated beforehand and the resulting expression is explicitly written
+// a * b = (a0*b0 + a2*b1 + a1*b2) + (a1*b0 + a0*b1 + a2*b1 + a1*b2 + a2*b2)X + (a2*b0 + a1*b1 + a0*b2 + a2*b2)X²
 template custom CMulAdd() {
     signal input ina[3];
     signal input inb[3];
@@ -25,11 +30,5 @@ template CMul() {
     signal input inb[3];
     signal output out[3];
 
-    component mulAdd = CMulAdd();
-
-    mulAdd.ina <== ina;
-    mulAdd.inb <== inb;
-    mulAdd.inc <== [0,0,0];
-
-    out <== mulAdd.out;
+    out <== CMulAdd()(ina, inb, [0,0,0]);
 }
