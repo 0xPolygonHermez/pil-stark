@@ -1,4 +1,4 @@
-pragma circom 2.0.2;
+pragma circom 2.1.0;
 
 include "poseidon.circom";
 
