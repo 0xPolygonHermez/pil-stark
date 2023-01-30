@@ -22,10 +22,10 @@ template parallel VerifyMerkleHash(eSize, elementsInLinear, nLinears) {
 
     // Each leaf in the merkle tree might be composed by multiple values. Therefore, the first step is to 
     // reduce all those values into a single one by hashing all of them
-    var linearHash[4] = LinearHash(elementsInLinear, eSize)(values);
+    signal linearHash[4] <== LinearHash(elementsInLinear, eSize)(values);
 
     // Calculate the merkle root 
-    var merkleRoot[4] = Merkle(nBits)(linearHash, siblings ,key);
+    signal merkleRoot[4] <== Merkle(nBits)(linearHash, siblings ,key);
 
     // If enable is set to 1, check that the merkleRoot being calculated matches with the one sent as input
     enable * (merkleRoot[0] - root[0]) === 0;

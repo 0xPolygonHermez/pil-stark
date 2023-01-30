@@ -81,7 +81,7 @@ template CompConstant(ct) {
         e = e*2;
     }
 
-    var num2bits[33] = Num2Bits(33)(sum[31]);
+    signal num2bits[33] <== Num2Bits(33)(sum[31]);
 
     for (var i = 0; i < 32; i++) {
         _ <== num2bits[i];
@@ -94,7 +94,7 @@ template AliasCheck() {
 
     signal input in[64];
 
-    var compConstant = CompConstant(-1)(in);
+    signal compConstant <== CompConstant(-1)(in);
     compConstant === 0;
 }
 
@@ -102,7 +102,7 @@ template Num2Bits_strict() {
     signal input in;
     signal output out[64];
 
-    var n2b[64] = Num2Bits(64)(in);
+    signal n2b[64] <== Num2Bits(64)(in);
     
     AliasCheck()(n2b);
     out <== n2b;

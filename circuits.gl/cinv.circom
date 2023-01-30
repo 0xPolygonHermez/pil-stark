@@ -34,6 +34,6 @@ template CInv() {
     out[1] <--  (ba -cc)*tinv;
     out[2] <--  (-bb +ac + cc)*tinv;
 
-    var check[3] = CMul()(in, out);
+    signal check[3] <== CMul()(in, out);
     check === [1,0,0];
 }

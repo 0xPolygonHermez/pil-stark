@@ -62,7 +62,7 @@ template parallel EvalPol(n) {
         evs4[i] = EvPol4();
         for (var j=0; j<4; j++) {
             // Add the coefficients for the EvPol. If there are not enough inputs to fulfill the 4 slots, add zeros
-            if (4*i+j < n) {
+            if (i*4+j < n) {
                 evs4[i].coefs[j] <== pol[i*4+j];
             } else {
                 evs4[i].coefs[j] <== [0,0,0];

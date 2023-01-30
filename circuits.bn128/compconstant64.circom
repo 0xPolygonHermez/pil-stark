@@ -43,7 +43,7 @@ template CompConstant64(ct) {
         e = e*2;
     }
 
-    var num2bits[33] = Num2Bits(33)(sum[31]);
+    signal num2bits[33] <== Num2Bits(33)(sum[31]);
     
     for (var i = 0; i < 32; i++) {
         _ <== num2bits[i];

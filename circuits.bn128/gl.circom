@@ -109,7 +109,6 @@ template GLCMul() {
 }
 
 
-
 function _inv1(a) {
     assert(a!=0);
     var p = 0xFFFFFFFF00000001;
@@ -138,7 +137,7 @@ template GLInv() {
 
     out <-- _inv1(in);
 
-    var check = GLMul()(in, out);
+    signal check <== GLMul()(in, out);
     check === 1;
 
     _ <== Num2Bits(64)(out);
@@ -188,7 +187,7 @@ template GLCInv() {
     out[1] <--  i2;
     out[2] <--  i3;
 
-    var check[3] = GLCMul()(in, out);
+    signal check[3] <== GLCMul()(in, out);
     check === [1,0,0];
 
     _ <== Num2Bits(64)(out[0]);
