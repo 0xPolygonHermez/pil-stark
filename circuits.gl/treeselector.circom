@@ -11,26 +11,31 @@ template parallel TreeSelector(nLevels, eSize) {
     signal input key[nLevels]; // Array that determines at each level if we keep even or odd positions
     signal output out[eSize];
 
+    //Stores all the tree values (except for the leaves)
+    //Note that if a tree has n leaves, the tree will have 2*n - 1 elements and so we only need to store n - 1
     signal im[n-1][eSize];
 
-    var levelN = n\2;
-    var o = 0;
-    var lo = 0;
+    var levelN = n\2; //Length of the current level of the tree
+    var o = 0; // Points to the beginning of the current tree level values
+    var lo = 0; // Points to the beginning of the previous tree level values
     for (var i=0; i<nLevels; i++) {
         for (var j=0; j<levelN; j++) {
             for (var k=0; k<eSize; k++) {
-                if (i==0) {
+                //If key[i] === 0, select the even positions, otherwise pick the even ones
+                if (i==0) { //If i == 0, we get the values from the values array
                     im[o+j][k] <== key[i]*(values[2*j+1][k]  - values[2*j][k])  + values[2*j][k];
                 } else {
                     im[o+j][k] <== key[i]*(im[lo + 2*j+1][k] - im[lo + 2*j][k]) + im[lo + 2*j][k];
                 }
             }
         }
+        // Update the pointers
         lo = o;
         o = o + levelN;
         levelN = levelN\2;
     }
 
+    // Return the root
     out <== im[n-2];
 }
 

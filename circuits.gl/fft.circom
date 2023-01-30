@@ -127,8 +127,8 @@ template custom FFT4(type, scale, firstW, incW) {
         C1  = scale*firstW2;
         C2  = scale*firstW;
         C3  = scale*firstW*firstW2;
-        C4  = scale*firstW    * incW;
-        C5  = scale*firstW*firstW2 * incW;
+        C4  = scale*firstW*incW;
+        C5  = scale*firstW*firstW2*incW;
         C6  = 0;
         C7  = 0;
         C8  = 0;

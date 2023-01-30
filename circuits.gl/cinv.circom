@@ -3,6 +3,10 @@ pragma custom_templates;
 
 include "cmuladd.circom";
 
+// Calculate the inverse of an element in Fp³ using (X³ - X - 1) as a irreductible polynomial
+// The coefficients of the inverse are calculated beforehand and the resulting expression is explicitly written
+// The inverse of a = a + bX + cX² is the following:
+// ( (-a² - 2ac + bc + b² + c²) + (ab - c²)X + (-b² + ca + c²)X² ) * 1/(-a³ + ab² - b³ - 2a²c - 3abc - ac² + bc² - c³) 
 template CInv() {
     signal input in[3];
     signal output out[3];
@@ -30,14 +34,6 @@ template CInv() {
     out[1] <--  (ba -cc)*tinv;
     out[2] <--  (-bb +ac + cc)*tinv;
 
-    component check = CMul();
-    check.ina[0] <== in[0];
-    check.ina[1] <== in[1];
-    check.ina[2] <== in[2];
-    check.inb[0] <== out[0];
-    check.inb[1] <== out[1];
-    check.inb[2] <== out[2];
-    check.out[0] === 1;
-    check.out[1] === 0;
-    check.out[2] === 0;
+    var check[3] = CMul()(in, out);
+    check === [1,0,0];
 }

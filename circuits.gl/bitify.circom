@@ -94,25 +94,18 @@ template AliasCheck() {
 
     signal input in[64];
 
-    component  compConstant = CompConstant(-1);
-
-    for (var i=0; i<64; i++) in[i] ==> compConstant.in[i];
-
-    compConstant.out === 0;
+    var compConstant = CompConstant(-1)(in);
+    compConstant === 0;
 }
 
 template Num2Bits_strict() {
     signal input in;
     signal output out[64];
 
-    component aliasCheck = AliasCheck();
-    component n2b = Num2Bits(64);
-    in ==> n2b.in;
-
-    for (var i=0; i<64; i++) {
-        n2b.out[i] ==> out[i];
-        n2b.out[i] ==> aliasCheck.in[i];
-    }
+    var n2b[64] = Num2Bits(64)(in);
+    
+    AliasCheck()(n2b);
+    out <== n2b;
 }
 
 template Bits2Num(n) {
@@ -133,13 +126,6 @@ template Bits2Num_strict() {
     signal input in[64];
     signal output out;
 
-    component aliasCheck = AliasCheck();
-    component b2n = Bits2Num(64);
-
-    for (var i=0; i<64; i++) {
-        in[i] ==> b2n.in[i];
-        in[i] ==> aliasCheck.in[i];
-    }
-
-    b2n.out ==> out;
+    AliasCheck()(in);
+    out <== Bits2Num(64)(in);
 }

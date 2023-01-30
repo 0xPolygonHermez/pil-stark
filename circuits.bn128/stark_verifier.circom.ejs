@@ -323,7 +323,7 @@ template parallel VerifyFRI(prevStepBits, currStepBits, nextStepBits, e0, e1) {
 
     var p = 0xFFFFFFFF00000001;
 
-    signal input ys[currStepBits + 1];
+    signal input ys[currStepBits];
     signal input s_specialX[3];
     signal input s_vals_p1[1 << step][3];
     signal input s_vals_p2[1 << nextStep][3];
@@ -757,8 +757,8 @@ template StarkVerifier() {
 -%>
 
         // Check S<%- s %> 
-        var s<%- s %>_ys[<%- starkStruct.steps[s].nBits + 1%>];
-        for(var i = 0; i < <%- starkStruct.steps[s].nBits + 1 %>; i++) { s<%- s %>_ys[i] = ys[q][i]; } 
+        var s<%- s %>_ys[<%- starkStruct.steps[s].nBits%>];
+        for(var i = 0; i < <%- starkStruct.steps[s].nBits%>; i++) { s<%- s %>_ys[i] = ys[q][i]; } 
 <%  const nextPolFRI = s < starkStruct.steps.length-1 ? `s${s+1}_vals_p[q]` : "finalPol"; -%>
 <%  const nextStepFRI = s < starkStruct.steps.length-1 ? starkStruct.steps[s+1].nBits : 0; -%>
         VerifyFRI(<%- starkStruct.steps[s-1].nBits %>, <%- starkStruct.steps[s].nBits %>, <%- nextStepFRI %>, <%- e0 %>, <%- e1 %>)(s<%- s %>_ys, s<%- s %>_specialX, s<%- s %>_vals_p[q], <%- nextPolFRI %>, enable);
