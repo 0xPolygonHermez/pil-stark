@@ -65,6 +65,8 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
     ctx.challenges[5] = transcript.getField(); // v1
     ctx.challenges[6] = transcript.getField(); // v2
 
+    console.log("Verify Evaluation");
+
     const xN = F.exp(ctx.challenges[7], N)
     ctx.Z = F.sub(xN, 1n);
     ctx.Zp = F.sub(F.exp(F.mul(ctx.challenges[7], F.w[nBits]), N), 1n);
@@ -85,7 +87,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
     const fri = new FRI( starkStruct, MH );
 
     const checkQuery = (query, idx) => {
-        console.log("Query:"+  idx)
+        console.log("Verify Query:"+  idx)
         let res;
         res = MH.verifyGroupProof(proof.root1, query[0][1], idx, query[0][0]);
         if (!res) return false;

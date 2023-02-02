@@ -2,7 +2,6 @@ pragma circom 2.1.0;
 pragma custom_templates;
 
 // An MDS matrix (maximum distance separable) is a matrix representing a function with certain diffusion properties that have useful applications in cryptography 
-// Deeper explanation here.
 // In this case, we use the following MDS:
 // (25 15 41 16  2 28 13 13 39 18 34 20)
 // (20 17 15 41 16  2 28 13 13 39 18 34)
@@ -17,7 +16,7 @@ pragma custom_templates;
 // (41 16  2 28 13 13 39 18 34 20 17 15)
 // (15 41 16  2 28 13 13 39 18 34 20 17)
 // This matrix is made by the shifts of the vector (20, 34, 18, 39, 13, 13, 28, 2, 16, 41, 15, 17) in each column.
-// Notice that in the first column the 17 is changed by a 25 due to ?????
+// Notice that in the first column the 17 is changed by a 25 in order to be a MDS
 function MDS(in) {
 
     var out[12];

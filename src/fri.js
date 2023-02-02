@@ -206,7 +206,7 @@ class FRI {
         const lastPol_c = F.ifft(lastPol_e);
         // We don't need to divide by shift as we just need to check for zeros
 
-        for (let i=maxDeg+1; i< lastPol_c.length; i++) {
+        for (let i=maxDeg; i< lastPol_c.length; i++) {
             if (!F.isZero(lastPol_c[i])) return false;
         }
 
