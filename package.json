@@ -10,8 +10,10 @@
     "fibonacci_buildconsttree": "node src/stark/main_buildconsttree.js -c tmp/fibonacci.const.bin -p test/sm_fibonacci/fibonacci_main.pil -s ./test/sm_fibonacci/fibonacci.starkstruct.json -t tmp/fibonacci.consttree.bin -v tmp/fibonacci.verkey.json",
     "fibonacci_compileverifier": "circom -l circuits.gl --O1 --prime goldilocks --r1cs --sym --wasm --verbose tmp/fibonacci.verifier.circom -o tmp",
     "fibonacci_compileC12verifier": "circom -l circuits.bn128 -l node_modules/circomlib/circuits --O1 --r1cs --sym --wasm --verbose tmp/fibonacci.c12.verifier.circom -o tmp",
+    "fibonacci_compileC12verifier_custom": "circom -l circuits.bn128.custom -l node_modules/circomlib/circuits --O1 --r1cs --sym --wasm --verbose tmp/fibonacci.c12.verifier.circom -o tmp",
     "all_compileverifier": "circom -l circuits.gl  --O1 --prime goldilocks --r1cs --sym --wasm --c --verbose tmp/all.verifier.circom -o tmp",
     "all_compileC12verifier": "circom -l circuits.bn128 -l node_modules/circomlib/circuits --O1 --r1cs --sym --wasm --verbose tmp/all.c12.verifier.circom -o tmp",
+    "all_compileC12verifier_custom": "circom -l circuits.bn128.custom -l node_modules/circomlib/circuits --O1 --r1cs --sym --wasm --verbose tmp/all.c12.verifier.circom -o tmp",
     "plonktest_compile": "circom --O1 --prime goldilocks --r1cs --sym --wasm --c --verbose test/circuits/plonktest.circom -o tmp",
     "plonktest_wc": "snarkjs wc tmp/plonktest_js/plonktest.wasm test/circuits/plonkinput.json tmp/plonktest.wtns"
   },

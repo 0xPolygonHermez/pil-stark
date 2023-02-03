@@ -10,6 +10,8 @@ const argv = require("yargs")
     .alias("v", "verkey")
     .alias("o", "proof")
     .alias("b", "public")
+    .string("arity")
+    .string("custom")
     .argv;
 
 async function run() {
@@ -27,7 +29,15 @@ async function run() {
 
     proof = str2bigInt(proof);
 
-    const resV = await starkVerify(proof, public, constRoot, starkInfo);
+    let options = {};
+    if (starkInfo.starkStruct.verificationHashType === "BN128") {
+        options.arity = argv.arity || 16;
+        options.custom = argv.custom || false;
+        console.log(`Arity: ${options.arity}, Custom: ${options.custom}`);
+
+    } 
+    
+    const resV = await starkVerify(proof, public, constRoot, starkInfo, options);
 
     if (resV === true) {
         console.log("Verification Ok!!")

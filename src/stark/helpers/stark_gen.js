@@ -21,7 +21,7 @@ const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
 
 
-module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo) {
+module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo, options) {
     const starkStruct = starkInfo.starkStruct;
     const N = 1 << starkStruct.nBits;
     const extendBits = starkStruct.nBitsExt - starkStruct.nBits;
@@ -31,8 +31,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     const F = new F3g();
 
-    let MH;
-    let MHS;
+    let MH;    
     let transcript;
     if (starkStruct.verificationHashType == "GL") {
         const poseidon = await buildPoseidonGL();
@@ -40,8 +39,11 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         transcript = new Transcript(poseidon);
     } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
-        MH = await buildMerklehashBN128();
-        transcript = new TranscriptBN128(poseidonBN128);
+        let arity = options.arity || 16;
+        let custom = options.custom || false;
+        console.log(`Arity: ${arity}, Custom: ${custom}`);
+        MH = await buildMerkleHashBN128(arity, custom);
+        transcript = new TranscriptBN128(poseidonBN128, arity);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
@@ -235,7 +237,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     console.log("Merkelizing 4....");
     if (global.gc) {global.gc();}
-    tree4 = await merkelize(MH, ctx.cm4_2ns , starkInfo.mapSectionsN.cm4_2ns, ctx.nBitsExt);
+    const tree4 = await merkelize(MH, ctx.cm4_2ns , starkInfo.mapSectionsN.cm4_2ns, ctx.nBitsExt);
     transcript.put(MH.root(tree4));
 
 

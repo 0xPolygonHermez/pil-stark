@@ -7,7 +7,7 @@ const { assert } = require("chai");
 const buildPoseidonGL = require("../../helpers/hash/poseidon/poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 
-module.exports = async function starkVerify(proof, publics, constRoot, starkInfo) {
+module.exports = async function starkVerify(proof, publics, constRoot, starkInfo, options) {
 
     const starkStruct = starkInfo.starkStruct;
 
@@ -21,8 +21,10 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         transcript = new Transcript(poseidonGL);
     } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
-        MH = await buildMerkleHashBN128();
-        transcript = new TranscriptBN128(poseidonBN128);
+        let arity = options.arity || 16;
+        let custom = options.custom || false;    
+        MH = await buildMerkleHashBN128(arity, custom);
+        transcript = new TranscriptBN128(poseidonBN128, arity);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
@@ -65,6 +67,8 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
     ctx.challenges[5] = transcript.getField(); // v1
     ctx.challenges[6] = transcript.getField(); // v2
 
+    console.log("Verify Evaluation");
+
     const xN = F.exp(ctx.challenges[7], N)
     ctx.Z = F.sub(xN, 1n);
     ctx.Zp = F.sub(F.exp(F.mul(ctx.challenges[7], F.w[nBits]), N), 1n);
@@ -85,7 +89,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
     const fri = new FRI( starkStruct, MH );
 
     const checkQuery = (query, idx) => {
-        console.log("Query:"+  idx)
+        console.log("Verify Query:"+  idx)
         let res;
         res = MH.verifyGroupProof(proof.root1, query[0][1], idx, query[0][0]);
         if (!res) return false;

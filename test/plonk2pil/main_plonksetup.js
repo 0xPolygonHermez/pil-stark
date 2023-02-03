@@ -1,5 +1,6 @@
 const fs = require("fs");
 const version = require("../../package").version;
+
 const {readR1cs} = require("r1csfile");
 const F3g = require("../../src/helpers/f3g");
 const plonkSetup = require("./plonksetup.js");

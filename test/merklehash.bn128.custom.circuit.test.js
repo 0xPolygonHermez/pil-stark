@@ -1,0 +1,127 @@
+const chai = require("chai");
+const path = require("path");
+const { buildPoseidon } = require("circomlibjs");
+const MerkleHash = require("../src/merklehash.bn128.js");
+const { log2 } = require("pilcom/src/utils.js");
+
+const assert = chai.assert;
+
+const wasm_tester = require("circom_tester").wasm;
+
+function getBits(idx, nBits) {
+    res = [];
+    for (let i=0; i<nBits; i++) {
+        res[i] = (idx >> i)&1 ? 1n : 0n;
+    }
+    return res;
+}
+
+describe("Merkle Hash BN128 Circuit Test", function () {
+    let circuit16;
+    let circuit4;
+    let MH16;
+    let MH4;
+    let poseidon;
+    const arity = 16;
+
+
+    this.timeout(10000000);
+
+    before( async() => {
+        poseidon = await buildPoseidon();
+        MH16 = new MerkleHash(poseidon, 16, true);
+        MH4 = new MerkleHash(poseidon, 4, true);
+
+        //circuit16 = await wasm_tester(path.join(__dirname, "circuits", "merklehash16.bn128.custom.test.circom"), {O:1, include: ["circuits.bn128.custom", "node_modules/circomlib/circuits"]});
+        circuit4 = await wasm_tester(path.join(__dirname, "circuits", "merklehash4.bn128.custom.test.circom"), {O:1, include: ["circuits.bn128.custom", "node_modules/circomlib/circuits"]});
+    });
+
+    it.skip("Should calculate merkle hash of 9 complex elements with arity 16", async () => {
+        const arity = 16;
+        const nBitsArity = log2(arity);
+        const NPols = 9;
+        const nBits = Math.ceil(NPols*3/arity)*nBitsArity;
+        console.log("NBITS", nBits);
+        const idx = 9;
+
+        const N = 1<<nBits;
+
+        const pols = [];
+        for (let i=0; i<NPols;i++) {
+            pols[i] = [];
+            for (let j=0; j<N; j++) {
+                pols[i][j] = [];
+                for (let k=0; k<3; k++) {
+                    pols[i][j][k] = BigInt(i*1000+j*10+k+1);
+                }
+            }
+        }
+
+        const tree = await MH16.merkelize(pols, 3, NPols, N);
+
+        proof = MH16.getGroupProof(tree, idx);
+
+        const calcRoot = MH16.calculateRootFromGroupProof(proof[1], idx, proof[0]);
+        const root = MH16.root(tree);
+        assert(root == calcRoot);
+
+        const input={
+            values: proof[0],
+            siblings: proof[1],
+            key: getBits(idx, nBits),
+            root: root,
+            enable: 1,
+        };
+
+        const w1 = await circuit16.calculateWitness(input, true);
+
+        await circuit16.assertOut(w1, {});
+
+        const [groupElements, mp] = MH16.getGroupProof(tree, idx);
+        assert(MH16.verifyGroupProof(root, mp, idx, groupElements));
+    });
+
+    it("Should calculate merkle hash of 9 complex elements with arity 4", async () => {
+        const arity = 4;
+        const nBitsArity = log2(arity);
+        const NPols = 9;
+        const nBits = Math.ceil(NPols*3/arity)*nBitsArity;
+        const idx = 9;
+
+        const N = 1<<nBits;
+
+        const pols = [];
+        for (let i=0; i<NPols;i++) {
+            pols[i] = [];
+            for (let j=0; j<N; j++) {
+                pols[i][j] = [];
+                for (let k=0; k<3; k++) {
+                    pols[i][j][k] = BigInt(i*1000+j*10+k+1);
+                }
+            }
+        }
+
+        const tree = await MH4.merkelize(pols, 3, NPols, N);
+
+        proof = MH4.getGroupProof(tree, idx);
+
+        const calcRoot = MH4.calculateRootFromGroupProof(proof[1], idx, proof[0]);
+        const root = MH4.root(tree);
+        assert(root == calcRoot);
+
+        const input={
+            values: proof[0],
+            siblings: proof[1],
+            key: getBits(idx, nBits),
+            root: root,
+            enable: 1,
+        };
+
+        const w1 = await circuit4.calculateWitness(input, true);
+
+        await circuit4.assertOut(w1, {});
+
+        const [groupElements, mp] = MH4.getGroupProof(tree, idx);
+        assert(MH4.verifyGroupProof(root, mp, idx, groupElements));
+    });
+});
