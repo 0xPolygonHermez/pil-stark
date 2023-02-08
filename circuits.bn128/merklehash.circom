@@ -10,7 +10,7 @@ include "utils.circom";
     - elementsInLinear: Each leave of the merkle tree is made by this number of values. 
     - nLinears: Number of leaves of the merkle tree
 */
-template parallel MerkleHash(eSize, elementsInLinear, nLinears) {
+template MerkleHash(eSize, elementsInLinear, nLinears) {
     var nBits = log2(nLinears);
     assert(1 << nBits == nLinears);
     var nLevels = (nBits - 1)\4 +1;
