@@ -296,7 +296,7 @@ template FFTBig(nBits, eSize, inv) {
 
 
 
-template parallel FFT(nBits, eSize, inv) {
+template FFT(nBits, eSize, inv) {
     var n = 1<<nBits;
 
     assert((eSize <= 3)&&(eSize>=1));

@@ -82,7 +82,7 @@ function invroots(i) {
     return invroots[i];
 }
 
-template parallel FFT(nBits, inv) {
+template FFT(nBits, inv) {
 
     var p = 0xFFFFFFFF00000001;
     var N = 1<<nBits;
