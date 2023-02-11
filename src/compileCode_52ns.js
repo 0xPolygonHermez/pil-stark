@@ -323,11 +323,11 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
     console.log(counters_ops)
     console.log(ops.length, cont_args);
     console.log("NOPS: ", cont_ops);
-    process.stdout.write(JSON.stringify(ops));
+    //process.stdout.write(JSON.stringify(ops));
     console.log("\n\n");
     console.log(cont_args, args.length);
     console.log("\n\n");
-    //process.stdout.write(JSON.stringify(args));
+    process.stdout.write(JSON.stringify(args));
     console.log("\n\n");
     return res;
 
@@ -347,10 +347,10 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                     if (r.id > range_tem[3] || range_tem[3] === -1) range_tem[3] = r.id;
                     switch (op) {
                         case 'add': {
-                            if (r.id == 18280 || r.id == 21653) {
+                            if (r.id == 18318 || r.id == 21700) {
                                 return "tmp1";
                             }
-                            if (r.id == 21651 || r.id == 23611) {
+                            if (r.id == 21698 || r.id == 23667) {
                                 return "tmp";
                             }
                             if (karg == 0) {
@@ -367,7 +367,7 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                             break;
                         }
                         case 'mul': {
-                            if (r.id == 21654) {
+                            if (r.id == 21701) {
                                 return "tmp2";
                             }
                             return "tmp";
@@ -488,14 +488,14 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                         }
                         case 'sub': {
                             eDst = 'tmp2';
-                            if (r.dest.id == 18281) {
+                            if (r.dest.id == 18319) {
                                 eDst = 'tmp';
                             }
                             break;
                         }
                         case 'mul': {
                             eDst = 'tmp';
-                            if (r.dest.id == 18280 || r.dest.id == 21653) {
+                            if (r.dest.id == 18318 || r.dest.id == 21700) {
                                 eDst = 'tmp1';
                             }
                             break;

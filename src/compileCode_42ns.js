@@ -505,6 +505,13 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
                         pushSrcArg(r.src[0]);
                         pushSrcArg(r.src[1]);
                         body.push(`     Goldilocks::mul(${lexp}, ${src[0]}, ${src[1]});`)
+                    } else if ((r.src[1].type == 'cm' && !r.src[1].prime) && (r.src[0].type == 'cm' && r.src[0].prime)) {
+                        counters_ops[51] += 1;
+                        ops.push(51);
+                        cont_ops += 1;
+                        pushSrcArg(r.src[1]);
+                        pushSrcArg(r.src[0]);
+                        body.push(`     Goldilocks::mul(${lexp}, ${src[1]}, ${src[0]});`)
                     } else if ((r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'cm' && r.src[1].prime)) {
                         counters_ops[52] += 1;
                         ops.push(52);
@@ -881,11 +888,11 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
 
     console.log(ops.length, cont_args);
     console.log("NOPS: ", cont_ops);
-    process.stdout.write(JSON.stringify(ops));
+    //process.stdout.write(JSON.stringify(ops));
     console.log("\n\n");
     console.log(cont_args, args.length);
     console.log("\n\n");
-    //process.stdout.write(JSON.stringify(args));
+    process.stdout.write(JSON.stringify(args));
     console.log("\n\n");
     return res;
 
