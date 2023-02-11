@@ -64,18 +64,17 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
         for (k = 0; k < r.src.length; k++) {
             src.push(getRef(r.src[k], r.op, k));
         }
-        if (src[0].type == 'tmp' && src[1].type == 'tmp') {
-            if (abs(Number(src[0].id) - Number(src[1].id)) > 2) {
-                console.log("holaaaaaa: ", src[0], src[1], "n");
+        if (r.src[0].type == 'tmp' && r.src.length > 1 && r.src[1].type == 'tmp') {
+            if (r.src[0].id - r.src[1].id > 2 || r.src[0].id - r.src[1].id < -2) {
+                console.log("hola1: ", r.dest.id, r.src[0].id, r.src[1].id);
             }
-
         }
         let lexp = getLRef(r, r.op);
         ++cont_ops;
         switch (r.op) {
             case 'add': {
                 if (r.src[0].id != r.src[1].id - 1 && r.src[0].type === "tmp" && r.src[1].type === "tmp") {
-                    console.log("holaaaa: ", r.src[0].id, r.src[1].id - 1);
+                    console.log("hola2: ", r.dest.id, r.src[0].id, r.src[1].id);
                 }
                 if (r.dest.dim == 1) {
                     if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
@@ -104,7 +103,7 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                         args.push(size);
                         cont_args += 2;
                     } else if (r.src[1].type == "tmp") {
-                        if (`${src[0]}` == ' ') {
+                        if (`${src[0]}` == 'tmp1') {
                             ops.push(8);
                             ++counters_ops[8];
                         } else {
@@ -320,7 +319,7 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
             `}`
         ].join("\n");
     }
-    /*console.log("\n\n");
+    console.log("\n\n");
     console.log(counters_ops)
     console.log(ops.length, cont_args);
     console.log("NOPS: ", cont_ops);
@@ -328,8 +327,8 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
     console.log("\n\n");
     console.log(cont_args, args.length);
     console.log("\n\n");
-    process.stdout.write(JSON.stringify(args));
-    console.log("\n\n");*/
+    //process.stdout.write(JSON.stringify(args));
+    console.log("\n\n");
     return res;
 
     function getRef(r, op, karg) {
@@ -348,10 +347,10 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                     if (r.id > range_tem[3] || range_tem[3] === -1) range_tem[3] = r.id;
                     switch (op) {
                         case 'add': {
-                            if (r.id == 18257 || r.id == 21630) {
+                            if (r.id == 18280 || r.id == 21653) {
                                 return "tmp1";
                             }
-                            if (r.id == 21628 || r.id == 23570) {
+                            if (r.id == 21651 || r.id == 23611) {
                                 return "tmp";
                             }
                             if (karg == 0) {
@@ -368,7 +367,7 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                             break;
                         }
                         case 'mul': {
-                            if (r.id == 21631) {
+                            if (r.id == 21654) {
                                 return "tmp2";
                             }
                             return "tmp";
@@ -489,14 +488,14 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                         }
                         case 'sub': {
                             eDst = 'tmp2';
-                            if (r.dest.id == 18258) {
+                            if (r.dest.id == 18281) {
                                 eDst = 'tmp';
                             }
                             break;
                         }
                         case 'mul': {
                             eDst = 'tmp';
-                            if (r.dest.id == 18257 || r.dest.id == 21630) {
+                            if (r.dest.id == 18280 || r.dest.id == 21653) {
                                 eDst = 'tmp1';
                             }
                             break;
