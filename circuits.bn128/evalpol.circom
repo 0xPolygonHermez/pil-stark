@@ -1,4 +1,4 @@
-pragma circom 2.0.6;
+pragma circom 2.1.0;
 
 include "gl.circom";
 
@@ -34,8 +34,7 @@ template EvalPol(n) {
         out[1] <== cmul[n-2].out[1];
         out[2] <== cmul[n-2].out[2];
     } else {
-        out[0] <== pol[n-1][0];
-        out[1] <== pol[n-1][1];
-        out[2] <== pol[n-1][2];
+        out <== pol[n-1];
+
     }
 }

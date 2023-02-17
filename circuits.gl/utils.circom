@@ -1,5 +1,8 @@
 pragma circom 2.1.0;
 
+/*
+    Calculate the logarithm in base 2 of a given value a
+*/
 function log2(a) {
     if (a==0) {
         return 0;

@@ -1,4 +1,4 @@
-pragma circom 2.0.2;
+pragma circom 2.1.0;
 
 include "poseidon.circom";
 
@@ -25,6 +25,8 @@ template Merkle(keyBits) {
 
     if (nLevels == 0) {
         root <== value;
+        s <== [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+	    (a, b, c, d, ab, ac, ad, bc, bd, cd, abc, abd, acd, bcd, abcd) <== (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
     } else {
         if (keyBits>=1) {
             d <== key[0];

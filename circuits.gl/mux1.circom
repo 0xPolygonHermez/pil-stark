@@ -1,6 +1,9 @@
 pragma circom 2.1.0;
 
-template MultiMux1(n) {
+/*
+    Multiplexor used in recursive2
+*/
+template MultiMux1(n) { 
     signal input c[2][n];  // Constants
     signal input s;   // Selector
     signal output out[n];

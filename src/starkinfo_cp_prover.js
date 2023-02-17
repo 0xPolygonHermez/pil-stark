@@ -16,7 +16,19 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns) {
         }
     }
 
-    [res.imExps, res.qDeg] = calculateImPols(pil, cExp, (1 << (res.starkStruct.nBitsExt- res.starkStruct.nBits)) + 1);
+
+    res.qDeg = 0;
+    const maxDeg = (1 << (res.starkStruct.nBitsExt- res.starkStruct.nBits)) + 1;
+    for (let d=2; d<= maxDeg; d++) {
+        const [imExps, qDeg] = calculateImPols(pil, cExp, d);
+
+        if (imExps) {
+            if ((!res.qDeg)||( Object.keys(imExps).length + qDeg < Object.keys(res.imExps).length + res.qDeg)) {
+                [res.imExps, res.qDeg] = [imExps, qDeg];
+            }
+        }
+    }
+
     const m = Object.keys(res.imExps);
     res.imExpsList = Object.keys(res.imExps).map(Number);
     res.imExp2cm = {}

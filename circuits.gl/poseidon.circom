@@ -1,20 +1,37 @@
 pragma circom 2.1.0;
 pragma custom_templates;
 
+// An MDS matrix (maximum distance separable) is a matrix representing a function with certain diffusion properties that have useful applications in cryptography 
+// Deeper explanation here.
+// In this case, we use the following MDS:
+// (25 15 41 16  2 28 13 13 39 18 34 20)
+// (20 17 15 41 16  2 28 13 13 39 18 34)
+// (34 20 17 15 41 16  2 28 13 13 39 18)
+// (18 34 20 17 15 41 16  2 28 13 13 39)
+// (39 18 34 20 17 15 41 16  2 28 13 13)
+// (13 39 18 34 20 17 15 41 16  2 28 13)
+// (13 13 39 18 34 20 17 15 41 16  2 28)
+// (28 13 13 39 18 34 20 17 15 41 16  2)
+// ( 2 28 13 13 39 18 34 20 17 15 41 16)
+// (16  2 28 13 13 39 18 34 20 17 15 41)
+// (41 16  2 28 13 13 39 18 34 20 17 15)
+// (15 41 16  2 28 13 13 39 18 34 20 17)
+// This matrix is made by the shifts of the vector (20, 34, 18, 39, 13, 13, 28, 2, 16, 41, 15, 17) in each column.
+// Notice that in the first column the 17 is changed by a 25 due to ?????
 function MDS(in) {
 
     var out[12];
 
-    out[ 0] = 25*in[0] + 15*in[1] + 41*in[2] + 16*in[3] +  2*in[4] + 28*in[5] + 13*in[6] + 13*in[7] + 39*in[8] + 18*in[9] + 34*in[10] + 20*in[11];
-    out[ 1] = 20*in[0] + 17*in[1] + 15*in[2] + 41*in[3] + 16*in[4] +  2*in[5] + 28*in[6] + 13*in[7] + 13*in[8] + 39*in[9] + 18*in[10] + 34*in[11];
-    out[ 2] = 34*in[0] + 20*in[1] + 17*in[2] + 15*in[3] + 41*in[4] + 16*in[5] +  2*in[6] + 28*in[7] + 13*in[8] + 13*in[9] + 39*in[10] + 18*in[11];
-    out[ 3] = 18*in[0] + 34*in[1] + 20*in[2] + 17*in[3] + 15*in[4] + 41*in[5] + 16*in[6] +  2*in[7] + 28*in[8] + 13*in[9] + 13*in[10] + 39*in[11];
-    out[ 4] = 39*in[0] + 18*in[1] + 34*in[2] + 20*in[3] + 17*in[4] + 15*in[5] + 41*in[6] + 16*in[7] +  2*in[8] + 28*in[9] + 13*in[10] + 13*in[11];
-    out[ 5] = 13*in[0] + 39*in[1] + 18*in[2] + 34*in[3] + 20*in[4] + 17*in[5] + 15*in[6] + 41*in[7] + 16*in[8] +  2*in[9] + 28*in[10] + 13*in[11];
-    out[ 6] = 13*in[0] + 13*in[1] + 39*in[2] + 18*in[3] + 34*in[4] + 20*in[5] + 17*in[6] + 15*in[7] + 41*in[8] + 16*in[9] +  2*in[10] + 28*in[11];
-    out[ 7] = 28*in[0] + 13*in[1] + 13*in[2] + 39*in[3] + 18*in[4] + 34*in[5] + 20*in[6] + 17*in[7] + 15*in[8] + 41*in[9] + 16*in[10] +  2*in[11];
-    out[ 8] =  2*in[0] + 28*in[1] + 13*in[2] + 13*in[3] + 39*in[4] + 18*in[5] + 34*in[6] + 20*in[7] + 17*in[8] + 15*in[9] + 41*in[10] + 16*in[11];
-    out[ 9] = 16*in[0] +  2*in[1] + 28*in[2] + 13*in[3] + 13*in[4] + 39*in[5] + 18*in[6] + 34*in[7] + 20*in[8] + 17*in[9] + 15*in[10] + 41*in[11];
+    out[0] = 25*in[0] + 15*in[1] + 41*in[2] + 16*in[3] +  2*in[4] + 28*in[5] + 13*in[6] + 13*in[7] + 39*in[8] + 18*in[9] + 34*in[10] + 20*in[11];
+    out[1] = 20*in[0] + 17*in[1] + 15*in[2] + 41*in[3] + 16*in[4] +  2*in[5] + 28*in[6] + 13*in[7] + 13*in[8] + 39*in[9] + 18*in[10] + 34*in[11];
+    out[2] = 34*in[0] + 20*in[1] + 17*in[2] + 15*in[3] + 41*in[4] + 16*in[5] +  2*in[6] + 28*in[7] + 13*in[8] + 13*in[9] + 39*in[10] + 18*in[11];
+    out[3] = 18*in[0] + 34*in[1] + 20*in[2] + 17*in[3] + 15*in[4] + 41*in[5] + 16*in[6] +  2*in[7] + 28*in[8] + 13*in[9] + 13*in[10] + 39*in[11];
+    out[4] = 39*in[0] + 18*in[1] + 34*in[2] + 20*in[3] + 17*in[4] + 15*in[5] + 41*in[6] + 16*in[7] +  2*in[8] + 28*in[9] + 13*in[10] + 13*in[11];
+    out[5] = 13*in[0] + 39*in[1] + 18*in[2] + 34*in[3] + 20*in[4] + 17*in[5] + 15*in[6] + 41*in[7] + 16*in[8] +  2*in[9] + 28*in[10] + 13*in[11];
+    out[6] = 13*in[0] + 13*in[1] + 39*in[2] + 18*in[3] + 34*in[4] + 20*in[5] + 17*in[6] + 15*in[7] + 41*in[8] + 16*in[9] +  2*in[10] + 28*in[11];
+    out[7] = 28*in[0] + 13*in[1] + 13*in[2] + 39*in[3] + 18*in[4] + 34*in[5] + 20*in[6] + 17*in[7] + 15*in[8] + 41*in[9] + 16*in[10] +  2*in[11];
+    out[8] =  2*in[0] + 28*in[1] + 13*in[2] + 13*in[3] + 39*in[4] + 18*in[5] + 34*in[6] + 20*in[7] + 17*in[8] + 15*in[9] + 41*in[10] + 16*in[11];
+    out[9] = 16*in[0] +  2*in[1] + 28*in[2] + 13*in[3] + 13*in[4] + 39*in[5] + 18*in[6] + 34*in[7] + 20*in[8] + 17*in[9] + 15*in[10] + 41*in[11];
     out[10] = 41*in[0] + 16*in[1] +  2*in[2] + 28*in[3] + 13*in[4] + 13*in[5] + 39*in[6] + 18*in[7] + 34*in[8] + 20*in[9] + 17*in[10] + 15*in[11];
     out[11] = 15*in[0] + 41*in[1] + 16*in[2] +  2*in[3] + 28*in[4] + 13*in[5] + 13*in[6] + 39*in[7] + 18*in[8] + 34*in[9] + 20*in[10] + 17*in[11];
 
@@ -27,6 +44,8 @@ template custom Poseidon12() {
     signal output im[29][12];
     signal output out[12];
 
+    // Goldilocks Poseidon runs 30 rounds and has 12 inputs, so we need one constant 
+    // value for each input for each round
     var const[30*12] = [
         0xb585f766f2144405, 0x7746a55f43921ad7, 0xb2fb0d31cee799b4, 0x0f6760a4803427d7,
         0xe10d666650f4e012, 0x8cae14cb07d09bf1, 0xd438539c95f63e9f, 0xef781c7ce35b4c3d,
@@ -123,14 +142,26 @@ template custom Poseidon12() {
     var st[12];
     st = in;
 
+    // The Goldilocks Poseidon does 30 rounds
     for (var i=0; i<30; i++) {
         for (var t=0; t<12; t++) {
+
+            // 1- A constant is added to each state element. For example, for the 5th element of the 13th round, 
+            // the const[12*13 + 4] = const[160] element is added
             st[t] = st[t] + const[i*12+t];
+            
+            // 2- In the first 4 and last 4 rounds, each element of the state is raised to the 7th power. 
+            // Additionally this is done for the first element of the state in each round
             if ((i<4) || (i>=26) || (t==0)) {
                 st[t] = st[t] ** 7;
             }
         }
+
+        //3- At the end of each round, the state vector is multiplied by the MDS matrix
         st = MDS(st);
+
+        // At the end of each round, store the value obtained in im[i]. 
+        // In the last round, store the resulting value in the out signal
         if (i<29) {
             im[i] <-- st;
         } else {
@@ -140,7 +171,8 @@ template custom Poseidon12() {
 
 }
 
-
+// Calculate Poseidon Hash of 3 inputs (2 in + capacity) in GL field (each element has at most 63 bits)
+// -nOuts: Number of GL field elements that are being returned as output
 template Poseidon(nOuts) {
     signal input in[8];
     signal input capacity[4];
@@ -148,13 +180,21 @@ template Poseidon(nOuts) {
 
     component p = Poseidon12();
 
+    // Pass the two inputs and the capacity as inputs for performing the poseidon Hash
     for (var j=0; j<8; j++) {
         p.in[j] <== in[j];
     }
     for (var j=0; j<4; j++) {
         p.in[8+j] <== capacity[j];
     }
+
+    // Poseidon12 returns 12 outputs but we are only interested in returning nOuts
     for (var j=0; j<nOuts; j++) {
         out[j] <== p.out[j];
+    }
+
+    _ <== p.im;
+    for (var j=nOuts; j<12; j++) {
+        _ <== p.out[j];
     }
 }

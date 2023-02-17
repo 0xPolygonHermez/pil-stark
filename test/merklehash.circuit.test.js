@@ -64,10 +64,12 @@ describe("Linear Hash Circuit Test", function () {
         const input={
             values: proof[0],
             siblings: proof[1],
-            key: getBits(idx, nBits)
+            key: getBits(idx, nBits),
+            enable: 1,
+            root: MH.root(tree),
         };
         const w1 = await circuit.calculateWitness(input, true);
 
-        await circuit.assertOut(w1, {root: MH.root(tree)});
+        await circuit.assertOut(w1, {});
     });
 });
