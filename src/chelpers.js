@@ -1,5 +1,5 @@
-
-
+const compileCode_42ns = require("./compileCode_42ns.js")
+const compileCode_52ns = require("./compileCode_52ns.js")
 
 module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
@@ -62,8 +62,8 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         code.length = 0;
     }
 
-    code.push(compileCode_42ns(starkInfo, config, "step42ns_first", starkInfo.step42ns.first, "2ns"));
-    //code.push(compileCode("step42ns_first", starkInfo.step42ns.first, "2ns"));
+    //code.push(compileCode_42ns(starkInfo, config, "step42ns_first", starkInfo.step42ns.first, "2ns"));
+    code.push(compileCode("step42ns_first", starkInfo.step42ns.first, "2ns"));
     code.push(compileCode("step42ns_i", starkInfo.step42ns.first, "2ns"));
     code.push(compileCode("step42ns_last", starkInfo.step42ns.first, "2ns"));
 

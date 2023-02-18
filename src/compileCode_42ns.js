@@ -888,11 +888,11 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
 
     console.log(ops.length, cont_args);
     console.log("NOPS: ", cont_ops);
-    //process.stdout.write(JSON.stringify(ops));
+    process.stdout.write(JSON.stringify(ops));
     console.log("\n\n");
     console.log(cont_args, args.length);
     console.log("\n\n");
-    process.stdout.write(JSON.stringify(args));
+    //process.stdout.write(JSON.stringify(args));
     console.log("\n\n");
     return res;
 
