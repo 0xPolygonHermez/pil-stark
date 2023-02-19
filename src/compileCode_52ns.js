@@ -1,5 +1,6 @@
 const { assert } = require("chai");
 
+var dbg = 0;
 var refcount = 0;
 var refpols = 0;
 var reftem = 0;
@@ -24,12 +25,17 @@ const range_polsseq_4 = new Set();
 module.exports = function compileCode_52ns(starkInfo, config, functionName, code, dom, ret) {
 
     const body = [];
-    var ops = [];
-    var args = [];
-    var cont_ops = 0;
-    var cont_args = 0;
-    var counters_ops = new Array(15).fill(0);
 
+    var ops = [];
+    var cont_ops = 0;
+    var opsString = "{ "
+
+    var args = [];
+    var cont_args = 0;
+    var argsString = "{ "
+
+
+    var counters_ops = new Array(16).fill(0);
     const nBits = starkInfo.starkStruct.nBits;
     const nBitsExt = starkInfo.starkStruct.nBitsExt;
     var counters_add = new Array(4).fill(0);
@@ -94,6 +100,7 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                     if (r.src[1].dim == 1) {
                         body.push(`     Goldilocks3::add2(${lexp}, ${src[0]}, ${src[1]});`)
                         ops.push(10);
+                        opsString += "10, ";
                         ++counters_ops[10];
                         str = src[1];
                         size = parseInt(str.substring(str.lastIndexOf(" ")));
@@ -101,19 +108,24 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                         offset = parseInt(auxstr.substring(0, auxstr.indexOf(" ")));
                         args.push(offset);
                         args.push(size);
+                        argsString += `${offset}, `;
+                        argsString += `${size}, `;
                         cont_args += 2;
                     } else if (r.src[1].type == "tmp") {
                         if (`${src[0]}` == 'tmp1') {
                             ops.push(8);
+                            opsString += "8, ";
                             ++counters_ops[8];
                         } else {
                             ops.push(7);
+                            opsString += "7, ";
                             ++counters_ops[7];
                         }
                         body.push(`     Goldilocks3::add0(${lexp}, ${src[0]}, ${src[1]});`)
                     } else {
                         body.push(`     Goldilocks3::add1(${lexp}, ${src[0]}, ${src[1]});`)
                         ops.push(9);
+                        opsString += "9, ";
                         ++counters_ops[9];
                         str = src[1];
                         size = parseInt(str.substring(str.lastIndexOf(" ")));
@@ -121,6 +133,8 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                         offset = parseInt(auxstr.substring(0, auxstr.indexOf(" ")));
                         args.push(offset);
                         args.push(size);
+                        argsString += `${offset}, `;
+                        argsString += `${size}, `;
                         cont_args += 2;
                     }
                 } else {
@@ -147,6 +161,7 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                     if (r.src[0].dim == 3) {
                         body.push(`     Goldilocks3::sub2(${lexp}, ${src[0]}, ${src[1]});`)
                         ops.push(12);
+                        opsString += "12, ";
                         ++counters_ops[12];
                         str = src[0];
                         size = parseInt(str.substring(str.lastIndexOf(" ")));
@@ -158,11 +173,15 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                         args.push(offset);
                         args.push(size);
                         args.push(evid);
+                        argsString += `${offset}, `;
+                        argsString += `${size}, `;
+                        argsString += `${evid}, `;
                         cont_args += 3;
                     } else if (r.src[0].type == 'const') {
                         body.push(`     Goldilocks3::sub1(${lexp}, ${src[0]}, ${src[1]});`)
                         if (`${lexp}` == 'tmp2') {
                             ops.push(13);
+                            opsString += "13, ";
                             ++counters_ops[13];
                             str = src[0];
                             auxstr = str.substring(str.indexOf("(") + 1);
@@ -172,15 +191,19 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                             evid = parseInt(auxstr.substring(0, auxstr.indexOf("]")));
                             args.push(elm);
                             args.push(evid);
+                            argsString += `${elm}, `;
+                            argsString += `${evid}, `;
                             cont_args += 2;
                         } else {
                             ops.push(14);
+                            opsString += "14, ";
                             ++counters_ops[14];
                         }
                     } else {
                         body.push(`     Goldilocks3::sub0(${lexp}, ${src[0]}, ${src[1]});`)
                         ops.push(11);
                         ++counters_ops[11];
+                        opsString += "11, ";
                         str = src[0];
                         size = parseInt(str.substring(str.lastIndexOf(" ")));
                         auxstr = str.substring(str.indexOf("[") + 1);
@@ -191,6 +214,9 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                         args.push(offset);
                         args.push(size);
                         args.push(evid);
+                        argsString += `${offset}, `;
+                        argsString += `${size}, `;
+                        argsString += `${evid}, `;
                         cont_args += 3;
                     }
                 } else {
@@ -214,13 +240,16 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                             if (r.src[1].type === 'xDivXSubXi') {
                                 ops.push(5);
                                 ++counters_ops[5];
+                                opsString += "5, ";
                             } else {
                                 ops.push(6);
                                 ++counters_ops[6];
+                                opsString += "6, ";
                             }
                         } else {
                             ops.push(0);
                             ++counters_ops[0];
+                            opsString += "0, ";
                             body.push(`     Goldilocks3::mul0(${lexp}, ${src[1]}, ${src[0]});`)
                         }
                     } else {
@@ -231,18 +260,22 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                             if (`${lexp}` == 'tmp1') {
                                 ops.push(3);
                                 ++counters_ops[3];
+                                opsString += "3, ";
                             } else {
                                 ops.push(1);
                                 ++counters_ops[1];
+                                opsString += "1, ";
                             }
                         } else {
                             body.push(`     Goldilocks3::mul1(${lexp}, ${src[0]}, ${src[1]});`)
                             if (`${src[0]}` == 'tmp2') {
                                 ops.push(4);
                                 ++counters_ops[4];
+                                opsString += "4, ";
                             } else {
                                 ops.push(2);
                                 ++counters_ops[2];
+                                opsString += "2, ";
                             }
                         }
                     }
@@ -252,6 +285,9 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                 break;
             }
             case 'copy': {
+                ops.push(15);
+                ++counters_ops[15];
+                opsString += "15, ";
                 if (r.dest.dim == 1) {
                     if (r.src[0].dim != 1) {
                         throw new Error("Invalid dimension")
@@ -275,60 +311,49 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
 
 
     }
-    console.log(functionName);
-    console.log(counters_add);
-    console.log(counters_sub);
-    console.log(counters_mul);
-    console.log("Refs:", refcount);
-    console.log("Refs pols:", refpols);
-    console.log("           ", range_pols_1, range_polsseq_1);
-    console.log("           ", range_pols_2, range_polsseq_2);
-    console.log("           ", range_pols_3, range_polsseq_3);
-    console.log("           ", range_pols_4, range_polsseq_4);
-    console.log("Refs temp:", reftem, ":");
-    console.log("           ", range_tem[0], range_tem[1]);
-    console.log("           ", range_tem[2], range_tem[3]);
-    console.log("Refs const:", refconst, ":");
-    console.log("           ", range_const[0], range_const[1]);
-    console.log("           ", range_const[2], range_const[3]);
-    console.log("           ", range_const[4], range_const[5]);
-    console.log("           ", range_const[6], range_const[7]);
-    console.log("Refs chall:", refchall, ":", range_chall[0], range_chall[1]);
-    console.log("Refs num", refnum);
-    console.log("Refs evals", refevals, ":", range_evals);
-    console.log("rest =", refcount - refpols - reftem - refconst - refchall - refnum - refevals);
-
-
-    console.log("\n");
-
-    if (ret) {
-        body.push(`     return ${getRef(code[code.length - 1].dest)};`);
+    if (dbg) {
+        console.log(functionName);
+        console.log(counters_add);
+        console.log(counters_sub);
+        console.log(counters_mul);
+        console.log("Refs:", refcount);
+        console.log("Refs pols:", refpols);
+        console.log("           ", range_pols_1, range_polsseq_1);
+        console.log("           ", range_pols_2, range_polsseq_2);
+        console.log("           ", range_pols_3, range_polsseq_3);
+        console.log("           ", range_pols_4, range_polsseq_4);
+        console.log("Refs temp:", reftem, ":");
+        console.log("           ", range_tem[0], range_tem[1]);
+        console.log("           ", range_tem[2], range_tem[3]);
+        console.log("Refs const:", refconst, ":");
+        console.log("           ", range_const[0], range_const[1]);
+        console.log("           ", range_const[2], range_const[3]);
+        console.log("           ", range_const[4], range_const[5]);
+        console.log("           ", range_const[6], range_const[7]);
+        console.log("Refs chall:", refchall, ":", range_chall[0], range_chall[1]);
+        console.log("Refs num", refnum);
+        console.log("Refs evals", refevals, ":", range_evals);
+        console.log("rest =", refcount - refpols - reftem - refconst - refchall - refnum - refevals);
+        console.log("\n");
+        console.log("NOPS: ", cont_ops, ops.length);
+        console.log("NARGS: ", cont_args, args.length);
     }
 
     let res;
-    if (ret) {
-        res = [
-            `Goldilocks::Element ${config.className}::${functionName}(StepsParams &params, uint64_t i) {`,
-            ...body,
-            `}`
-        ].join("\n");
-    } else {
-        res = [
-            `void ${config.className}::${functionName}(StepsParams &params, uint64_t i) {`,
-            ...body,
-            `}`
-        ].join("\n");
-    }
-    console.log("\n\n");
-    console.log(counters_ops)
-    console.log(ops.length, cont_args);
-    console.log("NOPS: ", cont_ops);
-    //process.stdout.write(JSON.stringify(ops));
-    console.log("\n\n");
-    console.log(cont_args, args.length);
-    console.log("\n\n");
-    process.stdout.write(JSON.stringify(args));
-    console.log("\n\n");
+    opsString = opsString.slice(0, -2);
+    opsString += "};"
+    argsString = argsString.slice(0, -2);
+    argsString += "};"
+
+    res = [
+        `#define NOPS_ ${cont_ops}`,
+        `#define NARGS_ ${cont_args}`,
+        "\n",
+        `uint64_t op52[NOPS_] = ${opsString}`,
+        "\n",
+        `uint64_t args52[NARGS_] = ${argsString}`
+    ].join("\n");
+
     return res;
 
     function getRef(r, op, karg) {

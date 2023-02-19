@@ -5,6 +5,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
     const code = [];
     const multipleCodeFiles = config && config.multipleCodeFiles;
+    const optcodes = config && config.optcodes;
 
     for (let i = 0; i < starkInfo.nPublics; i++) {
         if (starkInfo.publicsCode[i]) {
@@ -62,7 +63,12 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         code.length = 0;
     }
 
-    //code.push(compileCode_42ns(starkInfo, config, "step42ns_first", starkInfo.step42ns.first, "2ns"));
+    if (optcodes && multipleCodeFiles) {
+        code.push(compileCode_42ns(starkInfo, config, "step42ns_first", starkInfo.step42ns.first, "2ns"));
+        result.step42ns_parser = code.join("\n\n") + "\n";
+        code.length = 0;
+    }
+
     code.push(compileCode("step42ns_first", starkInfo.step42ns.first, "2ns"));
     code.push(compileCode("step42ns_i", starkInfo.step42ns.first, "2ns"));
     code.push(compileCode("step42ns_last", starkInfo.step42ns.first, "2ns"));
@@ -72,8 +78,12 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         code.length = 0;
     }
 
+    if (optcodes && multipleCodeFiles) {
+        code.push(compileCode_52ns(starkInfo, config, "step52ns_first", starkInfo.step52ns.first, "2ns"));
+        result.step52ns_parser = code.join("\n\n") + "\n";
+        code.length = 0;
+    }
 
-    //code.push(compileCode_52ns(starkInfo, config, "step52ns_first", starkInfo.step52ns.first, "2ns"));
     code.push(compileCode("step52ns_first", starkInfo.step52ns.first, "2ns"));
     code.push(compileCode("step52ns_i", starkInfo.step52ns.first, "2ns"));
     code.push(compileCode("step52ns_last", starkInfo.step52ns.first, "2ns"));
