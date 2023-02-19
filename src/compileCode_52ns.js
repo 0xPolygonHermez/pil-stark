@@ -22,6 +22,7 @@ const range_polsseq_2 = new Set();
 const range_polsseq_3 = new Set();
 const range_polsseq_4 = new Set();
 
+
 module.exports = function compileCode_52ns(starkInfo, config, functionName, code, dom, ret) {
 
     const body = [];
@@ -63,6 +64,22 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
 
     const next = (dom == "n" ? 1 : 1 << (nBitsExt - nBits)).toString();
     const N = (dom == "n" ? (1 << nBits) : (1 << nBitsExt)).toString();
+    let pivots = [];
+
+    //Define pivots
+    for (let j = 0; j < code.length; j++) {
+        const r = code[j];
+        if (r.src[0].type == 'tmp' && r.src.length > 1 && r.src[1].type == 'tmp') {
+            if (r.src[0].id - r.src[1].id > 2 || r.src[0].id - r.src[1].id < -2) {
+
+                //console.log("pivot: ", r.dest.id, r.src[0].id, r.src[1].id);
+                let a1 = r.dest.id;
+                let a2 = r.src[0].id;
+                let a3 = r.src[1].id;
+                pivots.push([a1, a2, a3]);
+            }
+        }
+    }
 
     for (let j = 0; j < code.length; j++) {
         const src = [];
@@ -70,18 +87,10 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
         for (k = 0; k < r.src.length; k++) {
             src.push(getRef(r.src[k], r.op, k));
         }
-        if (r.src[0].type == 'tmp' && r.src.length > 1 && r.src[1].type == 'tmp') {
-            if (r.src[0].id - r.src[1].id > 2 || r.src[0].id - r.src[1].id < -2) {
-                console.log("hola1: ", r.dest.id, r.src[0].id, r.src[1].id);
-            }
-        }
         let lexp = getLRef(r, r.op);
         ++cont_ops;
         switch (r.op) {
             case 'add': {
-                if (r.src[0].id != r.src[1].id - 1 && r.src[0].type === "tmp" && r.src[1].type === "tmp") {
-                    console.log("hola2: ", r.dest.id, r.src[0].id, r.src[1].id);
-                }
                 if (r.dest.dim == 1) {
                     if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
                         throw new Error("Invalid dimension")
@@ -337,6 +346,7 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
         console.log("\n");
         console.log("NOPS: ", cont_ops, ops.length);
         console.log("NARGS: ", cont_args, args.length);
+        console.log(pivots);
     }
 
     let res;
@@ -344,6 +354,32 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
     opsString += "};"
     argsString = argsString.slice(0, -2);
     argsString += "};"
+
+    // join operations
+    groupOps = " 1, 10,";
+    let countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 16,");
+
+    groupOps = " 1, 9,";
+    countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 17,");
+
+    groupOps = " 2, 11, 7,";
+    countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= 2 * countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 18,");
+
+    groupOps = " 2, 13, 7,";
+    countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= 2 * countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 19,");
+
+    groupOps = " 2, 12, 7,";
+    countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= 2 * countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 20,");
 
     res = [
         `#define NOPS_ ${cont_ops}`,
@@ -372,10 +408,10 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                     if (r.id > range_tem[3] || range_tem[3] === -1) range_tem[3] = r.id;
                     switch (op) {
                         case 'add': {
-                            if (r.id == 18318 || r.id == 21700) {
+                            if (r.id == pivots[0][1] || r.id == pivots[1][1]) {
                                 return "tmp1";
                             }
-                            if (r.id == 21698 || r.id == 23667) {
+                            if (r.id == pivots[0][2] || r.id == pivots[1][2]) {
                                 return "tmp";
                             }
                             if (karg == 0) {
@@ -392,7 +428,7 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                             break;
                         }
                         case 'mul': {
-                            if (r.id == 21701) {
+                            if (r.id == pivots[1][1] + 1) {
                                 return "tmp2";
                             }
                             return "tmp";
@@ -513,14 +549,14 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                         }
                         case 'sub': {
                             eDst = 'tmp2';
-                            if (r.dest.id == 18319) {
+                            if (r.dest.id == pivots[0][1] + 1) {
                                 eDst = 'tmp';
                             }
                             break;
                         }
                         case 'mul': {
                             eDst = 'tmp';
-                            if (r.dest.id == 18318 || r.dest.id == 21700) {
+                            if (r.dest.id == pivots[0][1] || r.dest.id == pivots[1][1]) {
                                 eDst = 'tmp1';
                             }
                             break;

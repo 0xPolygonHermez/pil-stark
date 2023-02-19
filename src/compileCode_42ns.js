@@ -979,6 +979,22 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
     argsString = argsString.slice(0, -2);
     argsString += "};"
 
+    // join operations
+    groupOps = " 12, 70,";
+    let countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 100,");
+
+    groupOps = " 0, 50,";
+    countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 101,");
+
+    groupOps = " 32, 47, 21, 32, 48,";
+    countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= 4 * countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 102,");
+
     res = [
         `#define NOPS_ ${cont_ops}`,
         `#define NARGS_ ${cont_args}`,
