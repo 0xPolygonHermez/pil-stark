@@ -95,6 +95,8 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                     if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
                         throw new Error("Invalid dimension")
                     }
+                    //This options is not present
+                    assert(0);
                     body.push(`     Goldilocks::add_(${lexp}, ${src[0]}, ${src[1]});`)
                     counters_add[0] += 1;
                 } else if (r.dest.dim == 3) {
