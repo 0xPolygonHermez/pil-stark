@@ -983,17 +983,17 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
     groupOps = " 12, 70,";
     let countGroup = opsString.split(groupOps).length - 1;
     cont_ops -= countGroup;
-    opsString = opsString.replace(new RegExp(groupOps, "g"), " 100,");
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 110,");
 
     groupOps = " 0, 50,";
     countGroup = opsString.split(groupOps).length - 1;
     cont_ops -= countGroup;
-    opsString = opsString.replace(new RegExp(groupOps, "g"), " 101,");
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 111,");
 
     groupOps = " 32, 47, 21, 32, 48,";
     countGroup = opsString.split(groupOps).length - 1;
     cont_ops -= 4 * countGroup;
-    opsString = opsString.replace(new RegExp(groupOps, "g"), " 102,");
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 112,");
 
     res = [
         `#define NOPS_ ${cont_ops}`,
