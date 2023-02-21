@@ -1,10 +1,11 @@
-
-
+const compileCode_42ns = require("./compileCode_42ns.js")
+const compileCode_52ns = require("./compileCode_52ns.js")
 
 module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
     const code = [];
     const multipleCodeFiles = config && config.multipleCodeFiles;
+    const optcodes = config && config.optcodes;
 
     for (let i = 0; i < starkInfo.nPublics; i++) {
         if (starkInfo.publicsCode[i]) {
@@ -29,7 +30,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     let result = {};
 
     if (multipleCodeFiles) {
-        result.public = pubTable.join("\n")+"\n";
+        result.public = pubTable.join("\n") + "\n";
     }
     else {
         code.push(pubTable.join("\n"));
@@ -40,7 +41,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     code.push(compileCode("step2prev_last", starkInfo.step2prev.first, "n"));
 
     if (multipleCodeFiles) {
-        result.step2 = code.join("\n\n")+"\n";
+        result.step2 = code.join("\n\n") + "\n";
         code.length = 0;
     }
 
@@ -49,7 +50,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     code.push(compileCode("step3prev_last", starkInfo.step3prev.first, "n"));
 
     if (multipleCodeFiles) {
-        result.step3prev = code.join("\n\n")+"\n";
+        result.step3prev = code.join("\n\n") + "\n";
         code.length = 0;
     }
 
@@ -58,7 +59,13 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     code.push(compileCode("step3_last", starkInfo.step3.first, "n"));
 
     if (multipleCodeFiles) {
-        result.step3 = code.join("\n\n")+"\n";
+        result.step3 = code.join("\n\n") + "\n";
+        code.length = 0;
+    }
+
+    if (optcodes && multipleCodeFiles) {
+        code.push(compileCode_42ns(starkInfo, config, "step42ns_first", starkInfo.step42ns.first, "2ns"));
+        result.step42ns_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
 
@@ -67,7 +74,13 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     code.push(compileCode("step42ns_last", starkInfo.step42ns.first, "2ns"));
 
     if (multipleCodeFiles) {
-        result.step42ns = code.join("\n\n")+"\n";
+        result.step42ns = code.join("\n\n") + "\n";
+        code.length = 0;
+    }
+
+    if (optcodes && multipleCodeFiles) {
+        code.push(compileCode_52ns(starkInfo, config, "step52ns_first", starkInfo.step52ns.first, "2ns"));
+        result.step52ns_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
 
@@ -76,7 +89,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     code.push(compileCode("step52ns_last", starkInfo.step52ns.first, "2ns"));
 
     if (multipleCodeFiles) {
-        result.step52ns = code.join("\n\n")+"\n";
+        result.step52ns = code.join("\n\n") + "\n";
         return result;
     }
 
