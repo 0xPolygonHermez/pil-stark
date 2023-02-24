@@ -33,7 +33,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     var cont_args = 0;
     var argsString = "{ "
 
-    var counters_ops = new Array(89).fill(0);
+    var counters_ops = new Array(114).fill(0);
 
     const nBits = starkInfo.starkStruct.nBits;
     const nBitsExt = starkInfo.starkStruct.nBitsExt;
@@ -172,7 +172,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                     break;
                                 }
                                 case "cm": {
-                                    if (!r.src[1].prime) {
+                                    if (!r.src[0].prime) {
                                         pushResArg(r);
                                         pushSrcArg(r.src[1]);
                                         pushSrcArg(r.src[0]);
@@ -403,27 +403,27 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 pushSrcArg(r.src[1]);
                             } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmpExp')) {
                                 assert(!r.src[1].prime);
-                                counters_ops[15] += 1;
-                                ops.push(15);
-                                opsString += "15, ";
+                                counters_ops[19] += 1;
+                                ops.push(19);
+                                opsString += "19, ";
                                 pushResArg(r);
                                 pushSrcArg(r.src[1]);
                                 pushSrcArg(r.src[0]);
 
                             } else if ((r.src[1].type === 'tmp') && (r.src[0].type === 'tmpExp')) {
                                 assert(!r.src[0].prime);
-                                counters_ops[15] += 1;
-                                ops.push(15);
-                                opsString += "15, ";
+                                counters_ops[19] += 1;
+                                ops.push(19);
+                                opsString += "19, ";
                                 pushResArg(r);
                                 pushSrcArg(r.src[0]);
                                 pushSrcArg(r.src[1]);
 
                             } else if ((r.src[0].type === 'tmpExp') && (r.src[1].type === 'challenge')) {
                                 assert(!r.src[0].prime);
-                                counters_ops[16] += 1;
-                                ops.push(16);
-                                opsString += "16, ";
+                                counters_ops[20] += 1;
+                                ops.push(20);
+                                opsString += "20, ";
                                 pushResArg(r);
                                 pushSrcArg(r.src[0]);
                                 pushSrcArg(r.src[1]);
@@ -1034,6 +1034,9 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 }
                                 case "cm": {
                                     if (!r.src[1].prime) {
+                                        pushResArg(r);
+                                        pushSrcArg(r.src[0]);
+                                        pushSrcArg(r.src[1]);
                                         counters_ops[87] += 1;
                                         ops.push(87);
                                         opsString += "87, ";
@@ -1044,6 +1047,9 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 }
                                 case "tmpExp": {
                                     assert(!r.src[1].prime);
+                                    pushResArg(r);
+                                    pushSrcArg(r.src[0]);
+                                    pushSrcArg(r.src[1]);
                                     counters_ops[87] += 1;
                                     ops.push(87);
                                     opsString += "87, ";
@@ -1060,15 +1066,18 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                             switch (r.src[0].type) {
                                 case "tmp": {
                                     pushResArg(r);
-                                    pushSrcArg(r.src[0]);
                                     pushSrcArg(r.src[1]);
+                                    pushSrcArg(r.src[0]);
                                     counters_ops[86] += 1;
                                     ops.push(86);
                                     opsString += "86, ";
                                     break;
                                 }
                                 case "cm": {
-                                    if (!r.src[1].prime) {
+                                    if (!r.src[0].prime) {
+                                        pushResArg(r);
+                                        pushSrcArg(r.src[1]);
+                                        pushSrcArg(r.src[0]);
                                         counters_ops[87] += 1;
                                         ops.push(87);
                                         opsString += "87, ";
@@ -1077,7 +1086,10 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                     }
                                     break;
                                 } case "tmpExp": {
-                                    assert(!r.src[1].prime);
+                                    assert(!r.src[0].prime);
+                                    pushResArg(r);
+                                    pushSrcArg(r.src[1]);
+                                    pushSrcArg(r.src[0]);
                                     counters_ops[87] += 1;
                                     ops.push(87);
                                     opsString += "87, ";
@@ -1105,15 +1117,17 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 counters_ops[88] += 1;
                                 ops.push(88);
                                 opsString += "88, ";
-                                //pushSrcArg(r.src[0]);
-                                //pushSrcArg(r.src[1]);
+                                pushResArg(r);
+                                pushSrcArg(r.src[0]);
+                                pushSrcArg(r.src[1]);
                             } else if ((r.src[1].dim == 1) && (r.src[1].type === 'tmp') &&
                                 (r.src[0].dim == 3) && (r.src[0].type === 'tmp')) {
                                 counters_ops[88] += 1;
                                 ops.push(88);
                                 opsString += "88, ";
-                                //pushSrcArg(r.src[1]);
-                                //pushSrcArg(r.src[0]);
+                                pushResArg(r);
+                                pushSrcArg(r.src[0]);
+                                pushSrcArg(r.src[1]);
                             } else {
                                 console.log(src[0], src[1]);
                                 console.log(r.src[0].type, r.src[1].type);
@@ -1126,6 +1140,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 counters_ops[90] += 1;
                                 ops.push(90);
                                 opsString += "90, ";
+                                pushResArg(r);
                                 pushSrcArg(r.src[0]);
                                 pushSrcArg(r.src[1]);
                             } else if ((r.src[0].type === 'cm') && (r.src[1].type === 'tmp')) {
@@ -1133,23 +1148,26 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 counters_ops[89] += 1;
                                 ops.push(89);
                                 opsString += "89, ";
-                                //pushSrcArg(r.src[0]);
-                                //pushSrcArg(r.src[1]);
+                                pushResArg(r);
+                                pushSrcArg(r.src[0]);
+                                pushSrcArg(r.src[1]);
                             } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmpExp')) {
                                 assert(!r.src[1].prime);
                                 counters_ops[89] += 1;
                                 ops.push(89);
                                 opsString += "89, ";
-                                //pushSrcArg(r.src[1]);
-                                //pushSrcArg(r.src[0]);
+                                pushResArg(r);
+                                pushSrcArg(r.src[1]);
+                                pushSrcArg(r.src[0]);
 
                             } else if ((r.src[1].type === 'tmp') && (r.src[0].type === 'tmpExp')) {
                                 assert(!r.src[0].prime);
                                 counters_ops[89] += 1;
                                 ops.push(89);
                                 opsString += "89, ";
-                                //pushSrcArg(r.src[0]);
-                                //pushSrcArg(r.src[1]);
+                                pushResArg(r);
+                                pushSrcArg(r.src[0]);
+                                pushSrcArg(r.src[1]);
 
                             } else {
                                 console.log(src[0], src[1]);
@@ -1164,9 +1182,9 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                     break;
                 }
                 case 'sub': {
-
-                    //pushSrcArg(r.src[0]);
-                    //pushSrcArg(r.src[1]);
+                    pushResArg(r);
+                    pushSrcArg(r.src[0]);
+                    pushSrcArg(r.src[1]);
                     if (r.dest.dim == 1) {
                         if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
                             throw new Error("Invalid dimension")
@@ -1187,18 +1205,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                         }
 
                     } else if (r.dest.dim == 3) {
-
-                        if (r.src[0].dim == 1 || r.src[1].dim == 1) {
-                            assert(0);
-                        } else {
-                            assert(r.src[0].dim == 3 && r.src[1].dim == 3);
-                            counters_sub[2] += 1;
-
-                            console.log(src[0], src[1]);
-                            console.log(r.src[0].type, r.src[1].type);
-                            throw new Error("Option not considered!");
-
-                        }
+                        assert(0);
                     } else {
                         throw new Error("Invalid dim");
                     }
@@ -1214,49 +1221,56 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                             counters_ops[94] += 1;
                             ops.push(94);
                             opsString += "94, ";
-                            //pushSrcArg(r.src[0]);
-                            //pushSrcArg(r.src[1]);
+                            pushResArg(r);
+                            pushSrcArg(r.src[0]);
+                            pushSrcArg(r.src[1]);
 
                         } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'tmp')) {
                             counters_ops[95] += 1;
                             ops.push(95);
                             opsString += "95, ";
-                            //pushSrcArg(r.src[0]);
-                            //pushSrcArg(r.src[1]);
+                            pushResArg(r);
+                            pushSrcArg(r.src[0]);
+                            pushSrcArg(r.src[1]);
+
+                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'cm' && !r.src[1].prime)) {
+                            counters_ops[95] += 1;
+                            ops.push(95);
+                            opsString += "95, ";
+                            pushResArg(r);
+                            pushSrcArg(r.src[1]);
+                            pushSrcArg(r.src[0]);
 
                         } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'const' && !r.src[1].prime)) {
                             counters_ops[96] += 1;
                             ops.push(96);
                             opsString += "96, ";
-                            //pushSrcArg(r.src[0]);
-                            //pushSrcArg(r.src[1]);
-
-                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'cm' && !r.src[1].prime)) {
-                            counters_ops[97] += 1;
-                            ops.push(97);
-                            opsString += "97, ";
-                            //pushSrcArg(r.src[0]);
-                            //pushSrcArg(r.src[1]);
+                            pushResArg(r);
+                            pushSrcArg(r.src[0]);
+                            pushSrcArg(r.src[1]);
 
                         } else if ((r.src[0].type == 'const' && !r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                            counters_ops[98] += 1;
-                            ops.push(98);
-                            opsString += "98, ";
-                            //pushSrcArg(r.src[0]);
-                            //pushSrcArg(r.src[1]);
+                            counters_ops[96] += 1;
+                            ops.push(96);
+                            opsString += "96, ";
+                            pushResArg(r);
+                            pushSrcArg(r.src[0]);
+                            pushSrcArg(r.src[1]);
 
                         } else if ((r.src[0].type == 'const' && r.src[0].prime) && (r.src[1].type == 'tmp')) {
                             counters_ops[99] += 1;
                             ops.push(99);
                             opsString += "99, ";
-                            //pushSrcArg(r.src[0]);
-                            //pushSrcArg(r.src[1]);
+                            pushResArg(r);
+                            pushSrcArg(r.src[0]);
+                            pushSrcArg(r.src[1]);
                         } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'const' && r.src[1].prime)) {
                             counters_ops[99] += 1;
                             ops.push(99);
                             opsString += "99, ";
-                            //pushSrcArg(r.src[1]);
-                            //pushSrcArg(r.src[0]);
+                            pushResArg(r);
+                            pushSrcArg(r.src[1]);
+                            pushSrcArg(r.src[0]);
                         } else {
                             console.log(src[0], src[1]);
                             console.log(r.src[0].type, r.src[1].type);
@@ -1273,11 +1287,12 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                             assert(r.src[0].dim == 3 && r.src[1].dim == 3);
                             counters_mul[2] += 1;
                             if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmp')) {
-                                counters_ops[99] += 1;
-                                ops.push(99);
-                                opsString += "99, ";
-                                //pushSrcArg(r.src[0]);
-                                //pushSrcArg(r.src[1]);
+                                counters_ops[98] += 1;
+                                ops.push(98);
+                                opsString += "98, ";
+                                pushResArg(r);
+                                pushSrcArg(r.src[0]);
+                                pushSrcArg(r.src[1]);
 
                             } else {
                                 console.log(src[0], src[1]);
@@ -1295,24 +1310,17 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                         if (r.src[0].dim != 1) {
                             throw new Error("Invalid dimension")
                         }
-                        //pushSrcArg(r.src[0]);
-
+                        pushResArg(r);
+                        pushSrcArg(r.src[0]);
                         if (r.dest.type == 'cm' && !r.dest.prime && r.src[0].type == 'tmp') {
                             counters_ops[100] += 1;
                             ops.push(100);
                             opsString += "100, ";
-                            console.log(r.dest.id, r.src[0].id);
-                            console.log(r.dest.type, r.src[0].type);
                         } else if (r.dest.type == 'tmpExp' && !r.dest.prime && r.src[0].type == 'tmp') {
                             counters_ops[100] += 1;
                             ops.push(100);
                             opsString += "100, ";
-                        } else if (r.dest.type == 'tmpExp' && r.dest.prime && r.src[0].type == 'tmp') {
-                            counters_ops[101] += 1;
-                            ops.push(101);
-                            opsString += "101, ";
-                        }
-                        else {
+                        } else {
                             console.log(r.dest.type, r.src[0].type);
                             throw new Error("Option not considered!");
                         }
@@ -1326,18 +1334,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                 }
                 default: throw new Error("Invalid op:" + c[j].op);
             }
-            //rick
-            /*assert(ops[cont_ops - 1] == 86 || ops[cont_ops - 1] == 87 || ops[cont_ops - 1] == 88 ||
-                ops[cont_ops - 1] == 89 || ops[cont_ops - 1] == 90 || ops[cont_ops - 1] == 91 ||
-                ops[cont_ops - 1] == 92 || ops[cont_ops - 1] == 93 || ops[cont_ops - 1] == 94 ||
-                ops[cont_ops - 1] == 95 || ops[cont_ops - 1] == 96 || ops[cont_ops - 1] == 97 ||
-                ops[cont_ops - 1] == 98 || ops[cont_ops - 1] == 99 || ops[cont_ops - 1] == 100 ||
-                ops[cont_ops - 1] == 101);*/
-            // 86 -> 84
-            // 88 -> 85
-
-
-            //throw new Error("Option not considered!");
         } else if ((r.dest.type == 'cm' || r.dest.type == 'tmpExp') && r.dest.prime) {
             /**
             * 
@@ -1354,30 +1350,43 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                         }
                         counters_add[0] += 1;
                         if (r.src[0].type === "tmp") {
-                            //pushSrcArg(r.src[0]);
-                            //pushSrcArg(r.src[1]);
+
                             switch (r.src[1].type) {
                                 case "tmp": {
-                                    counters_ops[102] += 1;
-                                    ops.push(102);
-                                    opsString += "102, ";
+                                    //pushResArg(r);
+                                    //pushSrcArg(r.src[0]);
+                                    //pushSrcArg(r.src[1]);
+                                    counters_ops[101] += 1;
+                                    ops.push(101);
+                                    opsString += "101, ";
                                     break;
                                 }
                                 case "cm": {
                                     if (!r.src[1].prime) {
-                                        counters_ops[103] += 1;
-                                        ops.push(103);
-                                        opsString += "103, ";
+                                        //pushResArg(r);
+                                        //pushSrcArg(r.src[0]);
+                                        //pushSrcArg(r.src[1]);
+                                        counters_ops[102] += 1;
+                                        ops.push(102);
+                                        opsString += "102, ";
                                     } else {
-                                        assert(0);
+                                        //pushResArg(r);
+                                        //pushSrcArg(r.src[0]);
+                                        //pushSrcArg(r.src[1]);
+                                        counters_ops[114] += 1;
+                                        ops.push(114);
+                                        opsString += "114, ";
                                     }
                                     break;
                                 }
                                 case "tmpExp": {
                                     assert(!r.src[1].prime);
-                                    counters_ops[103] += 1;
-                                    ops.push(103);
-                                    opsString += "103, ";
+                                    //pushResArg(r);
+                                    //pushSrcArg(r.src[0]);
+                                    //pushSrcArg(r.src[1]);
+                                    counters_ops[102] += 1;
+                                    ops.push(102);
+                                    opsString += "102, ";
                                     break;
                                 }
                                 default: {
@@ -1388,29 +1397,41 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 }
                             }
                         } else if (r.src[1].type === "tmp") {
-                            //pushSrcArg(r.src[1]);
-                            //pushSrcArg(r.src[0]);
                             switch (r.src[0].type) {
                                 case "tmp": {
-                                    counters_ops[102] += 1;
-                                    ops.push(102);
-                                    opsString += "102, ";
+                                    //pushResArg(r);
+                                    //pushSrcArg(r.src[1]);
+                                    //pushSrcArg(r.src[0]);
+                                    counters_ops[101] += 1;
+                                    ops.push(101);
+                                    opsString += "101, ";
                                     break;
                                 }
                                 case "cm": {
-                                    if (!r.src[1].prime) {
-                                        counters_ops[103] += 1;
-                                        ops.push(103);
-                                        opsString += "103, ";
+                                    if (!r.src[0].prime) {
+                                        //pushResArg(r);
+                                        //pushSrcArg(r.src[1]);
+                                        //pushSrcArg(r.src[0]);
+                                        counters_ops[102] += 1;
+                                        ops.push(102);
+                                        opsString += "102, ";
                                     } else {
-                                        assert(0);
+                                        //pushResArg(r);
+                                        //pushSrcArg(r.src[1]);
+                                        //pushSrcArg(r.src[0]);
+                                        counters_ops[114] += 1;
+                                        ops.push(114);
+                                        opsString += "114, ";
                                     }
                                     break;
                                 } case "tmpExp": {
-                                    assert(!r.src[1].prime);
-                                    counters_ops[103] += 1;
-                                    ops.push(103);
-                                    opsString += "103, ";
+                                    assert(!r.src[0].prime);
+                                    //pushResArg(r);
+                                    //pushSrcArg(r.src[1]);
+                                    //pushSrcArg(r.src[0]);
+                                    counters_ops[102] += 1;
+                                    ops.push(102);
+                                    opsString += "102, ";
                                     break;
                                 }
                                 default: {
@@ -1432,18 +1453,20 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
 
                             if ((r.src[0].dim == 1) && (r.src[0].type === 'tmp') &&
                                 (r.src[1].dim == 3) && (r.src[1].type === 'tmp')) {
-                                counters_ops[104] += 1;
-                                ops.push(104);
-                                opsString += "104, ";
+                                counters_ops[103] += 1;
+                                ops.push(103);
+                                opsString += "103, ";
+                                //pushResArg(r);
                                 //pushSrcArg(r.src[0]);
                                 //pushSrcArg(r.src[1]);
                             } else if ((r.src[1].dim == 1) && (r.src[1].type === 'tmp') &&
                                 (r.src[0].dim == 3) && (r.src[0].type === 'tmp')) {
-                                counters_ops[104] += 1;
-                                ops.push(104);
-                                opsString += "104, ";
-                                //pushSrcArg(r.src[1]);
+                                counters_ops[103] += 1;
+                                ops.push(103);
+                                opsString += "103, ";
+                                //pushResArg(r);
                                 //pushSrcArg(r.src[0]);
+                                //pushSrcArg(r.src[1]);
                             } else {
                                 console.log(src[0], src[1]);
                                 console.log(r.src[0].type, r.src[1].type);
@@ -1453,31 +1476,35 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                             assert(r.src[0].dim == 3 && r.src[1].dim == 3);
                             counters_add[2] += 1;
                             if ((r.src[0].type === 'tmp') && (r.src[1].type === 'challenge')) {
-                                counters_ops[106] += 1;
-                                ops.push(106);
-                                opsString += "106, ";
+                                counters_ops[105] += 1;
+                                ops.push(105);
+                                opsString += "105, ";
+                                //pushResArg(r);
                                 //pushSrcArg(r.src[0]);
                                 //pushSrcArg(r.src[1]);
                             } else if ((r.src[0].type === 'cm') && (r.src[1].type === 'tmp')) {
                                 assert(!r.src[0].prime);
-                                counters_ops[107] += 1;
-                                ops.push(107);
-                                opsString += "107, ";
+                                counters_ops[104] += 1;
+                                ops.push(104);
+                                opsString += "104, ";
+                                //pushResArg(r);
                                 //pushSrcArg(r.src[0]);
                                 //pushSrcArg(r.src[1]);
                             } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmpExp')) {
                                 assert(!r.src[1].prime);
-                                counters_ops[105] += 1;
-                                ops.push(105);
-                                opsString += "105, ";
+                                counters_ops[104] += 1;
+                                ops.push(104);
+                                opsString += "104, ";
+                                //pushResArg(r);
                                 //pushSrcArg(r.src[1]);
                                 //pushSrcArg(r.src[0]);
 
                             } else if ((r.src[1].type === 'tmp') && (r.src[0].type === 'tmpExp')) {
                                 assert(!r.src[0].prime);
-                                counters_ops[105] += 1;
-                                ops.push(105);
-                                opsString += "105, ";
+                                counters_ops[104] += 1;
+                                ops.push(104);
+                                opsString += "104, ";
+                                //pushResArg(r);
                                 //pushSrcArg(r.src[0]);
                                 //pushSrcArg(r.src[1]);
 
@@ -1494,7 +1521,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                     break;
                 }
                 case 'sub': {
-
+                    //pushResArg(r);
                     //pushSrcArg(r.src[0]);
                     //pushSrcArg(r.src[1]);
                     if (r.dest.dim == 1) {
@@ -1503,13 +1530,13 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                         }
                         counters_sub[0] += 1;
                         if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmp')) {
-                            counters_ops[108] += 1;
-                            ops.push(108);
-                            opsString += "108, ";
+                            counters_ops[106] += 1;
+                            ops.push(106);
+                            opsString += "106, ";
                         } else if ((r.src[0].type === 'number') && (r.src[1].type === 'tmp')) {
-                            counters_ops[109] += 1;
-                            ops.push(109);
-                            opsString += "109, ";
+                            counters_ops[107] += 1;
+                            ops.push(107);
+                            opsString += "107, ";
                         } else {
                             console.log(src[0], src[1]);
                             console.log(r.src[0].type, r.src[1].type);
@@ -1517,18 +1544,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                         }
 
                     } else if (r.dest.dim == 3) {
-
-                        if (r.src[0].dim == 1 || r.src[1].dim == 1) {
-                            assert(0);
-                        } else {
-                            assert(r.src[0].dim == 3 && r.src[1].dim == 3);
-                            counters_sub[2] += 1;
-
-                            console.log(src[0], src[1]);
-                            console.log(r.src[0].type, r.src[1].type);
-                            throw new Error("Option not considered!");
-
-                        }
+                        assert(0);
                     } else {
                         throw new Error("Invalid dim");
                     }
@@ -1541,50 +1557,57 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                         }
                         counters_mul[0] += 1;
                         if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmp')) {
-                            counters_ops[110] += 1;
-                            ops.push(110);
-                            opsString += "110, ";
+                            counters_ops[108] += 1;
+                            ops.push(108);
+                            opsString += "108, ";
+                            //pushResArg(r);
                             //pushSrcArg(r.src[0]);
                             //pushSrcArg(r.src[1]);
 
                         } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                            counters_ops[111] += 1;
-                            ops.push(111);
-                            opsString += "111, ";
-                            //pushSrcArg(r.src[0]);
-                            //pushSrcArg(r.src[1]);
-
-                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'const' && !r.src[1].prime)) {
-                            counters_ops[112] += 1;
-                            ops.push(112);
-                            opsString += "112, ";
+                            counters_ops[109] += 1;
+                            ops.push(109);
+                            opsString += "109, ";
+                            //pushResArg(r);
                             //pushSrcArg(r.src[0]);
                             //pushSrcArg(r.src[1]);
 
                         } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'cm' && !r.src[1].prime)) {
-                            counters_ops[113] += 1;
-                            ops.push(113);
-                            opsString += "113, ";
+                            counters_ops[109] += 1;
+                            ops.push(109);
+                            opsString += "109, ";
+                            //pushResArg(r);
+                            //pushSrcArg(r.src[1]);
+                            //pushSrcArg(r.src[0]);
+
+                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'const' && !r.src[1].prime)) {
+                            counters_ops[110] += 1;
+                            ops.push(110);
+                            opsString += "110, ";
+                            //pushResArg(r);
                             //pushSrcArg(r.src[0]);
                             //pushSrcArg(r.src[1]);
 
                         } else if ((r.src[0].type == 'const' && !r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                            counters_ops[114] += 1;
-                            ops.push(114);
-                            opsString += "114, ";
+                            counters_ops[110] += 1;
+                            ops.push(110);
+                            opsString += "110, ";
+                            //pushResArg(r);
                             //pushSrcArg(r.src[0]);
                             //pushSrcArg(r.src[1]);
 
                         } else if ((r.src[0].type == 'const' && r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                            counters_ops[115] += 1;
-                            ops.push(115);
-                            opsString += "115, ";
+                            counters_ops[111] += 1;
+                            ops.push(111);
+                            opsString += "111, ";
+                            //pushResArg(r);
                             //pushSrcArg(r.src[0]);
                             //pushSrcArg(r.src[1]);
                         } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'const' && r.src[1].prime)) {
-                            counters_ops[115] += 1;
-                            ops.push(115);
-                            opsString += "115, ";
+                            counters_ops[111] += 1;
+                            ops.push(111);
+                            opsString += "111, ";
+                            //pushResArg(r);
                             //pushSrcArg(r.src[1]);
                             //pushSrcArg(r.src[0]);
                         } else {
@@ -1603,9 +1626,10 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                             assert(r.src[0].dim == 3 && r.src[1].dim == 3);
                             counters_mul[2] += 1;
                             if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmp')) {
-                                counters_ops[115] += 1;
-                                ops.push(115);
-                                opsString += "115, ";
+                                counters_ops[112] += 1;
+                                ops.push(112);
+                                opsString += "112, ";
+                                //pushResArg(r);
                                 //pushSrcArg(r.src[0]);
                                 //pushSrcArg(r.src[1]);
 
@@ -1625,24 +1649,17 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                         if (r.src[0].dim != 1) {
                             throw new Error("Invalid dimension")
                         }
+                        //pushResArg(r);
                         //pushSrcArg(r.src[0]);
-
-                        if (r.dest.type == 'cm' && !r.dest.prime && r.src[0].type == 'tmp') {
-                            counters_ops[116] += 1;
-                            ops.push(116);
-                            opsString += "116, ";
-                            console.log(r.dest.id, r.src[0].id);
-                            console.log(r.dest.type, r.src[0].type);
-                        } else if (r.dest.type == 'tmpExp' && !r.dest.prime && r.src[0].type == 'tmp') {
-                            counters_ops[116] += 1;
-                            ops.push(116);
-                            opsString += "116, ";
-                        } else if (r.dest.type == 'tmpExp' && r.dest.prime && r.src[0].type == 'tmp') {
-                            counters_ops[117] += 1;
-                            ops.push(117);
-                            opsString += "117, ";
-                        }
-                        else {
+                        if (r.dest.type == 'cm' && r.src[0].type == 'tmp') {
+                            //counters_ops[113] += 1;
+                            //ops.push(113);
+                            //opsString += "113, ";
+                        } else if (r.dest.type == 'tmpExp' && r.src[0].type == 'tmp') {
+                            //counters_ops[113] += 1;
+                            //ops.push(113);
+                            //opsString += "113, ";
+                        } else {
                             console.log(r.dest.type, r.src[0].type);
                             throw new Error("Option not considered!");
                         }
