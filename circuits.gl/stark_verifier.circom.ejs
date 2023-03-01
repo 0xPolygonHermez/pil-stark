@@ -334,7 +334,7 @@ template parallel VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits, 
 /* 
     Verify that all committed polynomials are calculated correctly
 */
-template VerifyEvaluations() {
+template parallel VerifyEvaluations() {
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
     signal input challenges0[3];
     signal input challenges1[3];
