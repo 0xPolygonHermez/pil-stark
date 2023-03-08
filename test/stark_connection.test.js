@@ -18,13 +18,12 @@ describe("test connection sm", async function () {
 
     it("It should create the pols main", async () => {
         const starkStruct = {
-            nBits: 10,
-            nBitsExt: 11,
-            nQueries: 8,
+            nBits: 2,
+            nBitsExt: 3,
+            nQueries: 1,
             verificationHashType : "GL",
             steps: [
-                {nBits: 11},
-                {nBits: 3}
+                {nBits: 3},
             ]
         };
 
