@@ -263,12 +263,9 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                             opsString += "0, ";
                             body.push(`     Goldilocks3::mul0(${lexp}, ${src[1]}, ${src[0]});`);
                             str = src[1];
-                            console.log(str);
                             size = parseInt(str.substring(str.lastIndexOf(" ")));
-                            console.log(size);
                             auxstr = str.substring(str.indexOf("[") + 1);
                             offset = parseInt(auxstr.substring(0, auxstr.indexOf(" ")));
-                            console.log(offset);
                             args.push(offset);
                             args.push(size);
                             argsString += `${offset}, `;
@@ -335,6 +332,8 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
 
 
     }
+
+    console.log("\n", functionName);
     if (dbg) {
         console.log(functionName);
         console.log(counters_add);
