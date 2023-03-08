@@ -94,12 +94,13 @@ function calculateImPols(pil, _exp, maxDeg) {
 
     const imExpressions = {};
     const absoluteMax = maxDeg;
+    let absMaxD = 0;
 
     [re, rd] = _calculateImPols(pil, _exp, imExpressions, maxDeg);
 
     console.log(`maxDeg: ${maxDeg}, nIm: ${Object.keys(re).length}, d: ${rd}`);
 
-    return [re, rd - 1];  // We divide the exp polynomial by 1.
+    return [re, Math.max(rd, absMaxD) - 1];  // We divide the exp polynomial by 1.
 
     function _calculateImPols(pil, exp, imExpressions, maxDeg) {
         if (imExpressions === false) {
@@ -164,6 +165,7 @@ function calculateImPols(pil, _exp, maxDeg) {
             if (d > maxDeg) {
                 const ce = Object.assign({}, e);
                 ce[exp.id] = true;
+                if (d>absMaxD) absMaxD = d;
                 return [ce, 1];
             } else {
                 return [e, d];
