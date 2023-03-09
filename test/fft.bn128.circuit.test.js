@@ -16,8 +16,8 @@ describe("FFT Circuit Test", function () {
     this.timeout(10000000);
 
     before( async() => {
-        circuitFFT = await wasm_tester(path.join(__dirname, "circuits", "fft.bn128.test.circom"), {O:1});
-        circuitIFFT = await wasm_tester(path.join(__dirname, "circuits", "ifft.bn128.test.circom"), {O:1});
+        circuitFFT = await wasm_tester(path.join(__dirname, "circuits", "fft.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
+        circuitIFFT = await wasm_tester(path.join(__dirname, "circuits", "ifft.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
     });
 
     it("Should calculate shifted fft and shifted ifft size 8", async () => {

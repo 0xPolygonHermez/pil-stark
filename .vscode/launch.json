@@ -5,21 +5,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "test poseidon bn128",
-            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
-            "request": "launch",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "args": [
-                "${workspaceFolder}/test/poseidon_bn128.test.js"
-            ],
-            "type": "pwa-node",
-            "runtimeArgs": [
-                "--max-old-space-size=32000"
-            ]
-        },
-        {
             "name": "test workers",
             "program": "${workspaceFolder}/src/workersgl.test.js",
             "request": "launch",

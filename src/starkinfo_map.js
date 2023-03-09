@@ -168,7 +168,7 @@ module.exports = function map(res, pil) {
         res.cm_2ns.push(ppz_2ns);
         res.mapSections.cm3_n.push(ppz_n);
         res.mapSections.cm3_2ns.push(ppz_2ns);
-        pil.cmDims[res.nCm1 + res.nCm2 + i] = dim;
+        pil.cmDims[res.nCm1 + res.nCm2 + res.puCtx.length + res.peCtx.length + res.ciCtx.length + i] = dim;
         res.exp2pol[res.imExpsList[i]] = ppz_n;
     }
 
@@ -400,9 +400,6 @@ function setCodeDimensions(code, starkInfo, dimX) {
     function _setCodeDimensions(code) {
 
         for (let i=0; i<code.length; i++) {
-            if (i==27) {
-                console.log(i);
-            }
             let newDim;
             switch (code[i].op) {
                 case 'add': newDim = Math.max(getDim(code[i].src[0]), getDim(code[i].src[1])); break;

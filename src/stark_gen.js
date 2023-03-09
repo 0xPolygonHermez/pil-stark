@@ -136,7 +136,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     ctx.challenges[0] = transcript.getField(); // u
     ctx.challenges[1] = transcript.getField(); // defVal
 
-
     if (parallelExec) {
         await calculateExpsParallel(pool, ctx, "step2prev", starkInfo);
     } else {
@@ -344,7 +343,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         calculateExps(ctx, starkInfo.step52ns, "2ns");
     }
 
-    const friPol = new Array( 3 * ctx.nBitsExt);
+    const friPol = new Array(N<<extendBits);
 
     for (let i=0; i<N<<extendBits; i++) {
         friPol[i] = [
