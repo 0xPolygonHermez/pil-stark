@@ -2,8 +2,8 @@ const compileCode_52ns = require("./compileCode_52ns.js")
 const compileCode_parser = require("./compileCode_parser.js")
 const compileCode_42ns = require("./compileCode_42ns.js")
 
-
-
+const compileCode_42ns = require("./compileCode_42ns.js")
+const compileCode_52ns = require("./compileCode_52ns.js")
 
 module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
@@ -102,6 +102,13 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     if (optcodes && multipleCodeFiles) {
         code.push(compileCode_52ns(starkInfo, config, "step52ns_first", starkInfo.step52ns.first, "2ns"));
         result.step52ns_parser = code.join("\n\n") + "\n";
+        result.step42ns = code.join("\n\n") + "\n";
+        code.length = 0;
+    }
+
+    if (optcodes && multipleCodeFiles) {
+        code.push(compileCode_52ns(starkInfo, config, "step52ns_first", starkInfo.step52ns.first, "2ns"));
+        result.step52ns_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
 
@@ -110,6 +117,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     code.push(compileCode("step52ns_last", starkInfo.step52ns.first, "2ns"));
 
     if (multipleCodeFiles) {
+        result.step52ns = code.join("\n\n") + "\n";
         result.step52ns = code.join("\n\n") + "\n";
         return result;
     }

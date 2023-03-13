@@ -43,7 +43,7 @@ template custom EvPol4() {
     of the subsequent polynomial the evaluation result of the previous one.
     The idea is to use the custom template EvPol4 to evaluate a potentially much bigger polynomial
 */
-template parallel EvalPol(n) {
+template EvalPol(n) {
     signal input pol[n][3];
     signal input x[3];
     signal output out[3];

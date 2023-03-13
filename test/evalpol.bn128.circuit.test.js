@@ -17,7 +17,7 @@ describe("EvalPol Circuit Test", function () {
     this.timeout(10000000);
 
     before( async() => {
-        circuit = await wasm_tester(path.join(__dirname, "circuits", "evalpol.bn128.test.circom"), {O:1});
+        circuit = await wasm_tester(path.join(__dirname, "circuits", "evalpol.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
     });
 
     it("Should calculate polynomial evaluation selector", async () => {

@@ -20,12 +20,12 @@ describe("GL in BN128 circuit", function () {
     this.timeout(10000000);
 
     before( async() => {
-        circuitMul = await wasm_tester(path.join(__dirname, "circuits", "glmul.bn128.test.circom"), {O:1});
-        circuitCMul = await wasm_tester(path.join(__dirname, "circuits", "glcmul.bn128.test.circom"), {O:1});
-        circuitMulAdd = await wasm_tester(path.join(__dirname, "circuits", "glmuladd.bn128.test.circom"), {O:1});
-        circuitCMulAdd = await wasm_tester(path.join(__dirname, "circuits", "glcmuladd.bn128.test.circom"), {O:1});
-        circuitInv = await wasm_tester(path.join(__dirname, "circuits", "glinv.bn128.test.circom"), {O:1});
-        circuitCInv = await wasm_tester(path.join(__dirname, "circuits", "glcinv.bn128.test.circom"), {O:1});
+        circuitMul = await wasm_tester(path.join(__dirname, "circuits", "glmul.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
+        circuitCMul = await wasm_tester(path.join(__dirname, "circuits", "glcmul.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
+        circuitMulAdd = await wasm_tester(path.join(__dirname, "circuits", "glmuladd.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
+        circuitCMulAdd = await wasm_tester(path.join(__dirname, "circuits", "glcmuladd.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
+        circuitInv = await wasm_tester(path.join(__dirname, "circuits", "glinv.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
+        circuitCInv = await wasm_tester(path.join(__dirname, "circuits", "glcinv.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
     });
 
     it("Should check a basefield multiplication", async () => {
