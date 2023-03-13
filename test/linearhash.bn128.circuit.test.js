@@ -1,10 +1,7 @@
-const chai = require("chai");
 const path = require("path");
 const { buildPoseidon } = require("circomlibjs");
-const LinearHash = require("../src/linearhash.bn128");
+const LinearHash = require("../src/helpers/hash/linearhash/linearhash.bn128");
 
-
-const assert = chai.assert;
 
 const wasm_tester = require("circom_tester").wasm;
 

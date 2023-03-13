@@ -1,7 +1,7 @@
 const chai = require("chai");
 const path = require("path");
-const {evalPol} = require("../src/polutils");
-const F3g = require("../src/f3g");
+const {evalPol} = require("../src/helpers/polutils");
+const F3g = require("../src/helpers/f3g");
 
 
 const assert = chai.assert;

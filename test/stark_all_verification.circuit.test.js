@@ -2,16 +2,13 @@ const chai = require("chai");
 const path = require("path");
 const fs = require("fs");
 const pil2circom = require("../src/pil2circom");
-const F1Field = require("../src/f3g");
+const F3g = require("../src/helpers/f3g");
 const { compile } = require("pilcom");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 const proof2zkin = require("../src/proof2zkin").proof2zkin;
-const starkInfoGen = require("../src/starkinfo.js");
-
-const assert = chai.assert;
+const starkInfoGen = require("../src/stark_info/starkinfo.js");
 
 const wasm_tester = require("circom_tester").wasm;
-const c_tester = require("circom_tester").wasm;
 
 describe("Stark Verification Circuit Test", function () {
     let eddsa;
@@ -34,7 +31,7 @@ describe("Stark Verification Circuit Test", function () {
         const zkInputFile = path.join(__dirname, "..", "tmp", "all.zkinput.json")
 
 
-        const Fr = new F1Field("0xFFFFFFFF00000001");
+        const Fr = new F3g("0xFFFFFFFF00000001");
         const pil = await compile(Fr, pilFile);
         const verKey = JSONbig.parse(await fs.promises.readFile(verKeyFile, "utf8"));
         const constRoot = [];

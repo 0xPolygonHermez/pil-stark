@@ -1,7 +1,7 @@
 /* eslint-disable prefer-arrow-callback */
 /* eslint-disable no-console */
 const { assert } = require('chai');
-const getPoseidon = require('../src/poseidon.js');
+const getPoseidon = require('../src/helpers/hash/poseidon/poseidon.js');
 
 describe('poseidon', async function () {
     this.timeout(300000000);

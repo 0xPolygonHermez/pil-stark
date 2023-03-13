@@ -1,6 +1,5 @@
-const starkInfoGen = require("./starkinfo.js");
 const ejs = require("ejs");
-const F1Field = require("./f3g");
+const F3g = require("./helpers/f3g.js");
 const fs = require("fs");
 const path = require("path");
 
@@ -10,7 +9,7 @@ module.exports = async function pil2circom(pil, constRoot, starkInfo, options) {
     options = options || {};
     starkStruct = starkInfo.starkStruct;
 
-    const F = new F1Field();
+    const F = new F3g();
 
     setDimensions(starkInfo.verifierCode.first);
     setDimensions(starkInfo.verifierQueryCode.first);

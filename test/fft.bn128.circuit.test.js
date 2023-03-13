@@ -1,15 +1,9 @@
-const chai = require("chai");
 const path = require("path");
-const F3g = require("../src/f3g");
-const {polMulAxi} = require("../src/polutils");
-
-const assert = chai.assert;
+const F3g = require("../src/helpers/f3g");
 
 const wasm_tester = require("circom_tester").wasm;
 
 describe("FFT Circuit Test", function () {
-    let eddsa;
-    let F;
     let circuitFFT;
     let circuitIFFT;
 

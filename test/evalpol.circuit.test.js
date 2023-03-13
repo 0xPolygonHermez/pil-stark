@@ -1,12 +1,9 @@
-const chai = require("chai");
 const path = require("path");
-const {evalPol} = require("../src/polutils");
-const F3g = require("../src/f3g");
+const {evalPol} = require("../src/helpers/polutils");
+const F3g = require("../src/helpers/f3g");
 const tmp = require('temporary');
 const fs = require("fs");
 const ejs = require("ejs");
-
-const assert = chai.assert;
 
 const wasm_tester = require("circom_tester").wasm;
 

@@ -1,9 +1,9 @@
 const chai = require("chai");
 const { BigBuffer } = require("pilcom");
 const assert = chai.assert;
-const F3g = require("../src/f3g");
-const {fft, ifft, interpolate} = require("../src/fft_p");
-const {extendPol} = require("../src/polutils");
+const {fft, ifft, interpolate} = require("../src/helpers/fft/fft_p");
+const {extendPol} = require("../src/helpers/polutils");
+const F3g = require("../src/helpers/f3g");
 
 
 function print(F, a) {

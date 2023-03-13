@@ -1,6 +1,6 @@
 const chai = require("chai");
 const path = require("path");
-const F3g = require("../src/f3g");
+const F3g = require("../src/helpers/f3g");
 const tmp = require('temporary');
 const fs = require("fs");
 const ejs = require("ejs");

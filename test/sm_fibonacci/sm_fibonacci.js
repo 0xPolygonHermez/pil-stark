@@ -1,4 +1,4 @@
-const F1Field = require("../../src/f3g");
+const F3g = require("../../src/helpers/f3g.js");
 
 module.exports.buildConstants = async function (pols) {
 
@@ -16,7 +16,7 @@ module.exports.execute = async function (pols, input) {
 
     const N = pols.l1.length;
 
-    const Fr = new F1Field("0xFFFFFFFF00000001");
+    const Fr = new F3g("0xFFFFFFFF00000001");
 
     pols.l2[0] = BigInt(input[0]);
     pols.l1[0] = BigInt(input[1]);

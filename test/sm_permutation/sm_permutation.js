@@ -1,5 +1,3 @@
-const F1Field = require("../../src/f3g");
-
 module.exports.buildConstants = async function (pols) {
 
 }

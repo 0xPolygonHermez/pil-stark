@@ -1,5 +1,5 @@
-const MerkleHash = require("../src/merklehash.js");
-const buildPoseidon = require("../src/poseidon");
+const MerkleHash = require("../src/helpers/hash/merklehash/merklehash.js");
+const buildPoseidon = require("../src/helpers/hash/poseidon/poseidon");
 const chai = require("chai");
 const assert = chai.assert;
 

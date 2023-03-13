@@ -1,4 +1,4 @@
-const buildMH = require("../src/merklehash_p.js");
+const buildMH = require("../src/helpers/hash/merklehash/merklehash_p.js");
 const chai = require("chai");
 const fs = require("fs");
 const assert = chai.assert;

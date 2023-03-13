@@ -4,7 +4,7 @@ const version = require("../../package").version;
 
 const smFibonacci = require("./sm_fibonacci.js");
 
-const F1Field = require("../../src/f3g");
+const F3g = require("../../src/helpers/f3g");
 const { newCommitPolsArray, compile } = require("pilcom");
 
 
@@ -20,7 +20,7 @@ async function run() {
     const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "fibonacci.commit";
     const inputFile = typeof(argv.input) === "string" ?  argv.input.trim() : "input.json";
 
-    const F = new F1Field();
+    const F = new F3g();
     const pil = await compile(F, path.join(__dirname, "fibonacci_main.pil"));
 
     const input = JSON.parse(await fs.promises.readFile(inputFile, "utf8"));

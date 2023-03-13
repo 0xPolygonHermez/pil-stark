@@ -1,6 +1,6 @@
 const chai = require("chai");
 const assert = chai.assert;
-const F3g = require("../src/f3g");
+const F3g = require("../src/helpers/f3g");
 
 
 

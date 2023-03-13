@@ -1,9 +1,8 @@
-const F1Field = require("../../src/f3g.js");
-const {log2} = require("../../src/utils.js");
-const getKs = require("pilcom").getKs;
+const F3g = require("../../src/helpers/f3g.js");
+const { log2, getKs } = require("pilcom/src/utils.js");
 
 module.exports.buildConstants = async function (pols) {
-    const F = new F1Field("0xFFFFFFFF00000001");
+    const F = new F3g("0xFFFFFFFF00000001");
 
     const N = pols.S1.length;
 

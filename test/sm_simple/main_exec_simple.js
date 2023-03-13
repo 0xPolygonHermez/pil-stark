@@ -4,7 +4,7 @@ const version = require("../../package").version;
 
 const smSimple = require("./sm_simple.js");
 
-const F1Field = require("../../src/f3g");
+const F3g = require("../../src/helpers/f3g");
 const { newCommitPolsArray, compile } = require("pilcom");
 
 
@@ -18,7 +18,7 @@ async function run() {
 
     const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "simple.commit";
 
-    const F = new F1Field();
+    const F = new F3g();
     const pil = await compile(F, path.join(__dirname, "simple1.pil"));
 
     const cmPols =  newCommitPolsArray(pil);

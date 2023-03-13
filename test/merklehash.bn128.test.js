@@ -1,4 +1,4 @@
-const MerkleHash = require("../src/merklehash.bn128.js");
+const MerkleHash = require("../src/helpers/hash/merklehash/merklehash_bn128.js");
 const chai = require("chai");
 const assert = chai.assert;
 const { buildPoseidon } = require("circomlibjs");

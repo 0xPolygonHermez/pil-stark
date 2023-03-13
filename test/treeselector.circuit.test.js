@@ -1,8 +1,6 @@
 const chai = require("chai");
 const path = require("path");
 
-const assert = chai.assert;
-
 const wasm_tester = require("circom_tester").wasm;
 
 function getBits(idx, nBits) {

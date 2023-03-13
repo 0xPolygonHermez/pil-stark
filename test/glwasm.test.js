@@ -1,10 +1,9 @@
 const chai = require("chai");
 const assert = chai.assert;
-const buildGLWasm = require("../src/glwasm.js").buildProtoboard;
-const F3g = require("../src/f3g.js");
-const { P } = require("../src/poseidon_constants_opt.js");
-const LinearHash = require("../src/linearhash");
-const buildPoseidon = require("../src/poseidon");
+const buildGLWasm = require("../src/helpers/glwasm.js").buildProtoboard;
+const F3g = require("../src/helpers/f3g.js");
+const LinearHash = require("../src/helpers/hash/linearhash/linearhash");
+const buildPoseidon = require("../src/helpers/hash/poseidon/poseidon");
 
 describe("Goldilocks Wasm test", function () {
     let glwasm;

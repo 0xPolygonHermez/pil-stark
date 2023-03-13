@@ -1,8 +1,8 @@
 const { assert } = require("chai");
 const fs = require("fs");
 const path = require("path");
-const F3G = require("../f3g.js");
-const {log2} = require("../utils");
+const F3g = require("../helpers/f3g.js");
+const { log2 } = require("pilcom/src/utils.js");
 const {tmpName} = require("tmp-promise");
 const { newConstantPolsArray, compile, getKs } = require("pilcom");
 const ejs = require("ejs");
@@ -107,7 +107,8 @@ const CPOSEIDON = [
 
 
 module.exports = async function plonkSetup(r1cs, options) {
-    const F = new F3G();
+    const F = new F3g();
+    // Calculate the number plonk Additions and plonk constraints from the R1CS
     const [plonkConstraints, plonkAdditions] = r1cs2plonk(F, r1cs);
 
     const plonkInfo = getNormalPlonkInfo();

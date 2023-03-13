@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "test workers",
-            "program": "${workspaceFolder}/src/workersgl.test.js",
+            "program": "${workspaceFolder}/test/workers/workersgl.test.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -515,7 +515,7 @@
         },
         {
             "name": "simple gen StarkInfo",
-            "program": "${workspaceFolder}/src/main_genstarkinfo.js",
+            "program": "${workspaceFolder}/src/stark/main_genstarkinfo.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -532,7 +532,7 @@
         },
         {
             "name": "simple build consttree",
-            "program": "src/main_buildconsttree.js",
+            "program": "src/stark/main_buildconsttree.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -551,7 +551,7 @@
         },
         {
             "name": "simple prove",
-            "program": "src/main_prover.js",
+            "program": "src/stark/main_prover.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -573,14 +573,13 @@
         },
         {
             "name": "simple verify proof",
-            "program": "src/main_verifier.js",
+            "program": "src/stark/main_verifier.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
             "args": [
-                "-p ${workspaceFolder}/test/sm_simple/simple1.pil",
                 "-s ${workspaceFolder}/tmp/simple.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/simple.proof.json",
                 "-b ${workspaceFolder}/tmp/simple.public.json",
@@ -642,7 +641,7 @@
         },
         {
             "name": "fibonacci gen StarkInfo",
-            "program": "${workspaceFolder}/src/main_genstarkinfo.js",
+            "program": "${workspaceFolder}/src/stark/main_genstarkinfo.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -659,14 +658,13 @@
         },
         {
             "name": "fibonacci build CHelpers",
-            "program": "${workspaceFolder}/src/main_buildchelpers.js",
+            "program": "${workspaceFolder}/src/stark/main_buildchelpers.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
             "args": [
-                "-p test/sm_fibonacci/fibonacci_main.pil",
                 "-s tmp/fibonacci.starkinfo.json",
                 "-c tmp/fibonacci.chelpers.cpp",
                 "-C AllSteps",
@@ -678,7 +676,7 @@
         },
         {
             "name": "fibonacci build consttree",
-            "program": "src/main_buildconsttree.js",
+            "program": "src/stark/main_buildconsttree.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -697,7 +695,7 @@
         },
         {
             "name": "fibonacci prove",
-            "program": "src/main_prover.js",
+            "program": "src/stark/main_prover.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -719,14 +717,13 @@
         },
         {
             "name": "fibonacci verify proof",
-            "program": "src/main_verifier.js",
+            "program": "src/stark/main_verifier.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
             "args": [
-                "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci_main.pil",
                 "-s ${workspaceFolder}/tmp/fibonacci.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.proof.json",
                 "-b ${workspaceFolder}/tmp/fibonacci.public.json",
@@ -789,7 +786,7 @@
         },
         {
             "name": "fibonacci C12 genStarkInfo",
-            "program": "${workspaceFolder}/src/main_genstarkinfo.js",
+            "program": "${workspaceFolder}/src/stark/main_genstarkinfo.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -842,7 +839,7 @@
         },
         {
             "name": "fibonacci C12 build consttree",
-            "program": "src/main_buildconsttree.js",
+            "program": "src/stark/main_buildconsttree.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -861,7 +858,7 @@
         },
         {
             "name": "fibonacci C12 prove",
-            "program": "src/main_prover.js",
+            "program": "src/stark/main_prover.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -884,14 +881,13 @@
         },
         {
             "name": "fibonacci C12 verify proof",
-            "program": "src/main_verifier.js",
+            "program": "src/stark/main_verifier.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
             "args": [
-                "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
                 "-s ${workspaceFolder}/tmp/fibonacci.c12.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.c12.proof.json",
                 "-b ${workspaceFolder}/tmp/fibonacci.c12.public.json",
@@ -984,7 +980,7 @@
         },
         {
             "name": "all gen StarkInfo",
-            "program": "${workspaceFolder}/src/main_genstarkinfo.js",
+            "program": "${workspaceFolder}/src/stark/main_genstarkinfo.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -1001,14 +997,13 @@
         },
         {
             "name": "all build CHelpers",
-            "program": "${workspaceFolder}/src/main_buildchelpers.js",
+            "program": "${workspaceFolder}/src/stark/main_buildchelpers.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
             "args": [
-                "-p test/sm_all/all_main.pil",
                 "-s ${workspaceFolder}/tmp/all.starkinfo.json",
                 "-c tmp/all.chelpers.cpp",
                 "-C AllSteps",
@@ -1020,7 +1015,7 @@
         },
         {
             "name": "all build consttree",
-            "program": "src/main_buildconsttree.js",
+            "program": "src/stark/main_buildconsttree.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -1039,7 +1034,7 @@
         },
         {
             "name": "all prove",
-            "program": "src/main_prover.js",
+            "program": "src/stark/main_prover.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -1061,14 +1056,13 @@
         },
         {
             "name": "all verify proof",
-            "program": "src/main_verifier.js",
+            "program": "src/stark/main_verifier.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
             "args": [
-                "-p ${workspaceFolder}/test/sm_all/all_main.pil",
                 "-s ${workspaceFolder}/tmp/all.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/all.proof.json",
                 "-b ${workspaceFolder}/tmp/all.public.json",
@@ -1131,7 +1125,7 @@
         },
         {
             "name": "all C12 genStarkInfo",
-            "program": "${workspaceFolder}/src/main_genstarkinfo.js",
+            "program": "${workspaceFolder}/src/stark/main_genstarkinfo.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -1184,7 +1178,7 @@
         },
         {
             "name": "all C12 build consttree",
-            "program": "src/main_buildconsttree.js",
+            "program": "src/stark/main_buildconsttree.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -1203,7 +1197,7 @@
         },
         {
             "name": "all C12 prove",
-            "program": "src/main_prover.js",
+            "program": "src/stark/main_prover.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -1226,14 +1220,13 @@
         },
         {
             "name": "all C12 verify proof",
-            "program": "src/main_verifier.js",
+            "program": "src/stark/main_verifier.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
             "args": [
-                "-p ${workspaceFolder}/tmp/all.c12.pil",
                 "-s ${workspaceFolder}/tmp/all.c12.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/all.c12.proof.json",
                 "-b ${workspaceFolder}/tmp/all.c12.public.json",
@@ -1278,7 +1271,7 @@
         },
         {
             "name": "zkevm build const tree",
-            "program": "src/main_buildconsttree.js",
+            "program": "src/stark/main_buildconsttree.js",
             "request": "launch",
             "args": [
                 "-c ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.const",
@@ -1297,7 +1290,7 @@
         },
         {
             "name": "zkevm build starkinfo",
-            "program": "src/main_genstarkinfo.js",
+            "program": "src/stark/main_genstarkinfo.js",
             "request": "launch",
             "args": [
                 "-p ${workspaceFolder}/../zkevm-proverjs/pil/main.pil",
@@ -1314,10 +1307,9 @@
         },
         {
             "name": "zkevm cHelpers",
-            "program": "src/main_buildchelpers.js",
+            "program": "src/stark/main_buildchelpers.js",
             "request": "launch",
             "args": [
-                "-p ${workspaceFolder}/../zkevm-proverjs/pil/main.pil",
                 "-s ${workspaceFolder}/../zkevm-proverjs/src/zkevm.starkstruct.json",
                 "-c ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.chelpers.cpp"
             ],
@@ -1334,7 +1326,7 @@
         },
         {
             "name": "zkevm proof",
-            "program": "src/main_prover.js",
+            "program": "src/stark/main_prover.js",
             "request": "launch",
             "args": [
                 "-m ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.commit",
@@ -1356,10 +1348,9 @@
         },
         {
             "name": "zkevm verify",
-            "program": "src/main_verifier.js",
+            "program": "src/stark/main_verifier.js",
             "request": "launch",
             "args": [
-                "-p ${workspaceFolder}/../zkevm-proverjs/pilred/main.pil",
                 "-s ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.starkinfo.json",
                 "-v ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.verkey.json",
                 "-o ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.proof.json.good",
@@ -1375,10 +1366,9 @@
         },
         {
             "name": "zkevm c12 verify",
-            "program": "src/main_verifier.js",
+            "program": "src/stark/main_verifier.js",
             "request": "launch",
             "args": [
-                "-p ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursivef.pil",
                 "-s ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursivef.starkstruct.json",
                 "-v ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursivef.verkey.json",
                 "-o ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/zkevm.recursiveF.proof.json",
@@ -1394,7 +1384,7 @@
         },
         {
             "name": "plonktest setup",
-            "program": "src/main_plonksetup.js",
+            "program": "test/plonk/main_plonksetup.js",
             "request": "launch",
             "args": [
                 "-r ${workspaceFolder}/tmp/plonktest.r1cs",
@@ -1411,7 +1401,7 @@
         },
         {
             "name": "plonktest exec",
-            "program": "src/main_plonkexec.js",
+            "program": "test/plonk/main_plonkexec.js",
             "request": "launch",
             "args": [
                 "-e ${workspaceFolder}/tmp/plonktest.exec",

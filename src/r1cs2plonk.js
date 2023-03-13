@@ -5,22 +5,6 @@ module.exports = function r1cs2plonk(F, r1cs, logger ) {
     const plonkAdditions = new BigArray();
     let plonkNVars = r1cs.nVars;
 
-
-    /*
-    for (let s = 1; s <= nPublic ; s++) {
-        const sl = s;
-        const sr = 0;
-        const so = 0;
-        const qm = F.zero;
-        const ql = F.one;
-        const qr = F.zero;
-        const qo = F.zero;
-        const qc = F.zero;
-
-        plonkConstraints.push([sl, sr, so, qm, ql, qr, qo, qc]);
-    }
-*/
-
     function join(lc1, k, lc2) {
         const res = {};
         for (let s in lc1) {

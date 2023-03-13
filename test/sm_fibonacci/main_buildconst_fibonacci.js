@@ -4,7 +4,7 @@ const { newConstantPolsArray, compile } = require("pilcom");
 
 const smFibonacci = require("./sm_fibonacci.js");
 
-const F1Field = require("../../src/f3g");
+const F3g = require("../../src/helpers/f3g");
 
 
 const argv = require("yargs")
@@ -17,7 +17,7 @@ async function run() {
 
     const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "fibonacci.const";
 
-    const F = new F1Field();
+    const F = new F3g();
     const pil = await compile(F, path.join(__dirname, "fibonacci_main.pil"));
 
     const constPols = newConstantPolsArray(pil);
