@@ -37,7 +37,7 @@ module.exports = class F3G {
 
         buildSqrt(this);
 
-        buildFFT(this);
+        buildFFT(this, 7277203076849721926n);
     }
 
     add(a, b) {
