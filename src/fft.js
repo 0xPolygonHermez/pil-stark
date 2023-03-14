@@ -25,7 +25,7 @@
  */
 
 class FFT {
-    constructor (G, F, opMulGF) {
+    constructor (G, F, opMulGF, w0) {
         this.F = F;
         this.G = G;
         this.opMulGF = opMulGF;
@@ -39,6 +39,7 @@ class FFT {
         this.w = new Array(s+1);
         this.wi = new Array(s+1);
         this.w[s] = this.F.pow(nqr, rem);
+        if (w0) this.w[s] = w0;
         this.wi[s] = this.F.inv(this.w[s]);
 
         let n=s-1;
@@ -207,8 +208,8 @@ function __fft(PF, pall, bits, offset, step) {
     return out;
 }
 
-module.exports = function buildFFT(F) {
-    const fft = new FFT(F, F, F.mul.bind(F));
+module.exports = function buildFFT(F, w0) {
+    const fft = new FFT(F, F, F.mul.bind(F), w0);
     F.fft = fft.fft.bind(fft);
     F.ifft = fft.ifft.bind(fft);
     F.w = fft.w;
