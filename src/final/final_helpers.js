@@ -35,12 +35,10 @@ module.exports ={
         // Store the different types of custom gates that are being used and how many times each
         const res = {
             PoseidonT: 0,
-            RangeCheckParameters: {},
+            RangeCheck: 0,
             nPoseidonT: 0,
-            nRangeCheck:{},
+            nRangeCheck:0,
             nPoseidonInputs: -1,
-            nRangeCheckBits: 0,
-            nRangeChecks: 0,
         }
     
         // Each custom gate in the r1cs has the following structure: {templateName: "Poseidon12", parameters: []}
@@ -51,13 +49,12 @@ module.exports ={
         for (let i=0; i<r1cs.customGates.length; i++) {
             switch (r1cs.customGates[i].templateName) {
                 case "PoseidonT":
-                    console.log("PARAMS", r1cs.customGates[i].parameters);
                     assert(res.nPoseidonInputs === -1);
                     res.PoseidonT = i; 
                     res.nPoseidonInputs = r1cs.customGates[i].parameters;
                     break;
                 case "RangeCheck":
-                    res.RangeCheckParameters[i] = Math.round(Math.log2(r1cs.customGates[i].parameters)); 
+                    res.RangeCheck = i; 
                     break;
                 default:
                     throw new Error("Invalid custom gate: " + r1cs.customGates[i].templateName);
@@ -68,11 +65,8 @@ module.exports ={
         for (let i=0; i< r1cs.customGatesUses.length; i++) {
             if (r1cs.customGatesUses[i].id == res.PoseidonT) {
                 ++res.nPoseidonT;
-            }else if (typeof res.RangeCheckParameters[r1cs.customGatesUses[i].id] !== "undefined") {
-                res.nRangeCheck[res.RangeCheckParameters[r1cs.customGatesUses[i].id]] |= 0;
-                ++res.nRangeCheck[res.RangeCheckParameters[r1cs.customGatesUses[i].id]];
-                res.nRangeCheckBits += res.RangeCheckParameters[r1cs.customGatesUses[i].id];
-                ++res.nRangeChecks;
+            }else if (r1cs.customGatesUses[i].id == res.RangeCheck) {
+                ++res.nRangeCheck; 
             } else {
                 throw new Error("Custom gate not defined" + r1cs.customGatesUses[i].id);
             }

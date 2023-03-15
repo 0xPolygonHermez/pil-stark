@@ -1,7 +1,7 @@
 
 const {iterateCode} = require("./codegen.js");
 
-module.exports = function map(res, pil) {
+module.exports = function map(res, pil, N, Next) {
     res.varPolMap = [];
     function addPol(polType) {
         res.varPolMap.push(polType);
@@ -106,7 +106,6 @@ module.exports = function map(res, pil) {
     }
 
     for (let i=0; i<res.puCtx.length + res.peCtx.length + res.ciCtx.length; i++) {
-        let e;
         if (i<res.puCtx.length) {
             o = res.puCtx[i];
         } else if (i<res.puCtx.length + res.peCtx.length) {
@@ -205,8 +204,6 @@ module.exports = function map(res, pil) {
 
 
     mapSections(res);
-    let N = 1 << res.starkStruct.nBits;
-    let Next = 1 << res.starkStruct.nBitsExt;
     res.mapOffsets = {};
     res.mapOffsets.cm1_n = 0;
     res.mapOffsets.cm2_n = res.mapOffsets.cm1_n +  N * res.mapSectionsN.cm1_n;
@@ -237,27 +234,45 @@ module.exports = function map(res, pil) {
     for (let i=0; i< res.publicsCode.length; i++) {
         fixProverCode(res.publicsCode[i], "n");
     }
-    fixProverCode(res.step2prev, "n");
-    fixProverCode(res.step3prev, "n");
-    fixProverCode(res.step3, "n");
-    fixProverCode(res.step42ns, "2ns");
-    fixProverCode(res.step52ns, "2ns");
-    fixProverCode(res.verifierQueryCode, "2ns");
 
-    iterateCode(res.verifierQueryCode, function fixRef(r, ctx) {
-        if (r.type == "cm") {
-            const p1 = res.varPolMap[res.cm_2ns[r.id]];
-            switch(p1.section) {
-                case "cm1_2ns": r.type = "tree1"; break;
-                case "cm2_2ns": r.type = "tree2"; break;
-                case "cm3_2ns": r.type = "tree3"; break;
-                case "cm4_2ns": r.type = "tree4"; break;
-                default: throw new Error("Invalid cm section");
+    if(res.step2prev) {
+        fixProverCode(res.step2prev, "n");
+    }
+
+    if(res.step3prev) {
+        fixProverCode(res.step3prev, "n");
+    }
+
+    if(res.step3) {
+        fixProverCode(res.step3, "n");
+    }
+
+    if(res.step42ns) {
+        fixProverCode(res.step42ns, "2ns");
+    }
+
+    if(res.step52ns) {
+        fixProverCode(res.step52ns, "2ns");
+    }
+
+    if(res.verifierQueryCode) {
+        fixProverCode(res.verifierQueryCode, "2ns");
+
+        iterateCode(res.verifierQueryCode, function fixRef(r, ctx) {
+            if (r.type == "cm") {
+                const p1 = res.varPolMap[res.cm_2ns[r.id]];
+                switch(p1.section) {
+                    case "cm1_2ns": r.type = "tree1"; break;
+                    case "cm2_2ns": r.type = "tree2"; break;
+                    case "cm3_2ns": r.type = "tree3"; break;
+                    case "cm4_2ns": r.type = "tree4"; break;
+                    default: throw new Error("Invalid cm section");
+                }
+                r.treePos = p1.sectionPos;
+                r.dim = p1.dim;
             }
-            r.treePos = p1.sectionPos;
-            r.dim = p1.dim;
-        }
-    });
+        });
+    }
 
     for (let i=0; i<res.nPublics; i++) {
         if (res.publicsCode[i]) {
@@ -265,14 +280,34 @@ module.exports = function map(res, pil) {
         }
     }
 
-    setCodeDimensions(res.step2prev, res, 1);
-    setCodeDimensions(res.step3prev,res, 1);
-    setCodeDimensions(res.step3, res, 1);
-    setCodeDimensions(res.step42ns, res, 1);
-    setCodeDimensions(res.step52ns, res, 1);
-    setCodeDimensions(res.verifierCode, res, 3);
-    setCodeDimensions(res.verifierQueryCode, res, 1);
+    if(res.step2prev) {
+        setCodeDimensions(res.step2prev, res, 1);
+    }
 
+    if(res.step3prev) {
+        setCodeDimensions(res.step3prev,res, 1);
+    }
+
+    if(res.step3) {
+        setCodeDimensions(res.step3, res, 1);
+    }
+
+    if(res.step42ns) {
+        setCodeDimensions(res.step42ns, res, 1);
+    }
+
+    if(res.step52ns) {
+        setCodeDimensions(res.step52ns, res, 1);
+    }
+
+    if(res.verifierCode) {
+        setCodeDimensions(res.verifierCode, res, 3);
+    }
+
+    if(res.verifierQueryCode) {
+        setCodeDimensions(res.verifierQueryCode, res, 1);
+    }
+    
     function fixProverCode(code, dom) {
         const ctx = {};
         ctx.expMap = [{}, {}];
@@ -422,11 +457,6 @@ function setCodeDimensions(code, starkInfo, dimX) {
                 case "tree3": d=r.dim; break;
                 case "tree4": d=r.dim; break;
                 case "tmpExp": d=r.dim; break;
-/*
-                case "exp": d= starkInfo.varPolMap[starkInfo.exps_2ns[r.id]] ?
-                               starkInfo.varPolMap[starkInfo.exps_2ns[r.id]].dim:
-                               starkInfo.varPolMap[starkInfo.exps_n[r.id]].dim; break;
-*/
                 case "cm": d=starkInfo.varPolMap[starkInfo.cm_2ns[r.id]].dim; break;
                 case "q": d=starkInfo.varPolMap[starkInfo.qs[r.id]].dim; break;
                 case "const": d=1; break;

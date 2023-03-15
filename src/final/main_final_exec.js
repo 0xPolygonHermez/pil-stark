@@ -40,9 +40,9 @@ async function run() {
 
     const cmPols = newCommitPolsArray(pil, F);
 
-    const N = cmPols.Compressor.a[0].length;
+    const N = cmPols.Final.a[0].length;
 
-    const L = cmPols.Compressor.a.length;
+    const L = cmPols.Final.a.length;
     
     const { nAdds, nSMap, adds, sMap } = await readExecFile(F, execFile, L);
 
@@ -56,16 +56,16 @@ async function run() {
     for (let i=0; i<nSMap; i++) {
         for (let j=0; j<L; j++) {
             if (sMap[j][i] != 0) {
-                cmPols.Compressor.a[j][i] = w[sMap[j][i]];
+                cmPols.Final.a[j][i] = w[sMap[j][i]];
             } else {
-                cmPols.Compressor.a[j][i] = 0n;
+                cmPols.Final.a[j][i] = 0n;
             }
         }
     }
 
     for (let i=nSMap; i<N; i++) {
         for (let j=0; j<L; j++) {
-            cmPols.Compressor.a[j][i] = 0n;
+            cmPols.Final.a[j][i] = 0n;
         }
     }
 

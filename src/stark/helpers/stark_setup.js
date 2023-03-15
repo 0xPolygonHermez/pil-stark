@@ -2,7 +2,7 @@
 const {BigBuffer} = require("pilcom");
 const buildMerklehashGL = require("../../helpers/hash/merklehash/merklehash_p.js");
 const buildMerkleHashBN128 = require("../../helpers/hash/merklehash/merklehash_bn128_p.js");
-const starkInfoGen = require("../../stark_info/starkinfo.js")
+const starkInfoGen = require("../../stark/helpers/stark_info.js")
 
 const { interpolate } = require("../../helpers/fft/fft_p");
 

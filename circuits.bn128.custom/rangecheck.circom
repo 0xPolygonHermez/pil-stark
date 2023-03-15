@@ -34,3 +34,22 @@ template CustomNum2Bits_strict() {
     AliasCheck()(out);
     
 }
+
+template CustomNum2Bits(nBits) {
+    signal input in;
+
+    var lc1=0;
+    var e2=1;
+    
+    signal b[nBits];
+    component check[nBits];
+    for(var i =0; i < nBits; i++) {
+        b[i] <-- (in >> i) & 1;
+        check[i] = RangeCheck();
+        check[i].b <-- b[i];
+        lc1 += b[i] * e2;
+        e2 += e2;
+    }
+    
+    assert(lc1 == in);
+}
