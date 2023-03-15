@@ -61,11 +61,14 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
     range_polsseq_3.clear();
     range_polsseq_4.clear();
 
-
-
     const next = (dom == "n" ? 1 : 1 << (nBitsExt - nBits)).toString();
     const N = (dom == "n" ? (1 << nBits) : (1 << nBitsExt)).toString();
 
+    //Evaluate max and min temporal variable for tmp_ and tmp3_
+    let maxid = 100000;
+    let ID1D = new Array(maxid).fill(-1);
+    let ID3D = new Array(maxid).fill(-1);
+    let { count1d, count3d } = getIdMaps(maxid);
 
     for (let j = 0; j < code.length; j++) {
         const src = [];
@@ -941,6 +944,7 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
 
 
     }
+    console.log("\n", functionName);
     if (dbg) {
         console.log(functionName);
         console.log(counters_add);
@@ -983,21 +987,34 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
     groupOps = " 12, 70,";
     let countGroup = opsString.split(groupOps).length - 1;
     cont_ops -= countGroup;
-    opsString = opsString.replace(new RegExp(groupOps, "g"), " 110,");
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 84,");
 
     groupOps = " 0, 50,";
     countGroup = opsString.split(groupOps).length - 1;
     cont_ops -= countGroup;
-    opsString = opsString.replace(new RegExp(groupOps, "g"), " 111,");
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 85,");
 
     groupOps = " 32, 47, 21, 32, 48,";
     countGroup = opsString.split(groupOps).length - 1;
     cont_ops -= 4 * countGroup;
-    opsString = opsString.replace(new RegExp(groupOps, "g"), " 112,");
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 86,");
+
+    groupOps = " 84, 84, 84, 84,";
+    countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= 3 * countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 87,");
+
+    groupOps = " 21, 50, 21, 53, 0, 85, 50, 85, 21, 50,";
+    countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= 9 * countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 88,");
+
 
     res = [
         `#define NOPS_ ${cont_ops}`,
         `#define NARGS_ ${cont_args}`,
+        `#define NTEMP1_ ${count1d}`,
+        `#define NTEMP3_ ${count3d}`,
         "\n",
         `uint64_t op42[NOPS_] = ${opsString}`,
         "\n",
@@ -1118,9 +1135,19 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
         let eDst;
         switch (r.dest.type) {
             case "tmp": {
-                args.push(r.dest.id);
-                argsString += `${r.dest.id}, `;
+
+                if (r.dest.dim == 1) {
+                    args.push(ID1D[r.dest.id]);
+                    argsString += `${ID1D[r.dest.id]}, `;
+                    //argsString += `${r.dest.id}, `;
+                } else {
+                    assert(r.dest.dim == 3);
+                    args.push(ID3D[r.dest.id]);
+                    argsString += `${ID3D[r.dest.id]}, `;
+                    //argsString += `${r.dest.id}, `;
+                }
                 cont_args += 1;
+
                 if (r.dest.dim == 1) {
                     //body.push(`     Goldilocks::Element tmp1[${r.dest.id}];`);
                     eDst = `tmp1[${r.dest.id}]`;
@@ -1131,6 +1158,8 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
                     throw new Error("Invalid dim");
                 }
                 break;
+
+
             }
             case "q": {
                 if (dom == "n") {
@@ -1215,8 +1244,18 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
     function pushSrcArg(r) {
         switch (r.type) {
             case "tmp": {
-                args.push(r.id);
-                argsString += `${r.id}, `;
+                if (r.dim == 1) {
+                    args.push(ID1D[r.id]);
+                    argsString += `${ID1D[r.id]}, `;
+                    //argsString += `${r.id}, `;
+
+                } else {
+                    assert(r.dim == 3);
+                    args.push(ID3D[r.id]);
+                    argsString += `${ID3D[r.id]}, `;
+                    //argsString += `${r.id}, `;
+
+                }
                 cont_args += 1;
                 break;
             }
@@ -1355,6 +1394,133 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
         } else {
             throw new Error("invalid dim");
         }
+    }
+
+    function getIdMaps(maxid) {
+
+        let Ini1D = new Array(maxid).fill(-1);
+        let End1D = new Array(maxid).fill(-1);
+
+        let Ini3D = new Array(maxid).fill(-1);
+        let End3D = new Array(maxid).fill(-1);
+
+
+        for (let j = 0; j < code.length; j++) {
+            const r = code[j];
+            if (r.dest.type == 'tmp') {
+
+                let id_ = r.dest.id;
+                let dim_ = r.dest.dim;
+                assert(id_ >= 0 && id_ < maxid);
+
+                if (dim_ == 1) {
+                    if (Ini1D[id_] == -1) {
+                        Ini1D[id_] = j;
+                        End1D[id_] = j;
+                    } else {
+                        End1D[id_] = j;
+                    }
+                } else {
+                    assert(dim_ == 3);
+                    if (Ini3D[id_] == -1) {
+                        Ini3D[id_] = j;
+                        End3D[id_] = j;
+                    } else {
+                        End3D[id_] = j;
+                    }
+                }
+            }
+            for (k = 0; k < r.src.length; k++) {
+                if (r.src[k].type == 'tmp') {
+
+                    let id_ = r.src[k].id;
+                    let dim_ = r.src[k].dim;
+                    assert(id_ >= 0 && id_ < maxid);
+
+                    if (dim_ == 1) {
+                        if (Ini1D[id_] == -1) {
+                            Ini1D[id_] = j;
+                            End1D[id_] = j;
+                        } else {
+                            End1D[id_] = j;
+                        }
+                    } else {
+                        assert(dim_ == 3);
+                        if (Ini3D[id_] == -1) {
+                            Ini3D[id_] = j;
+                            End3D[id_] = j;
+                        } else {
+                            End3D[id_] = j;
+                        }
+                    }
+                }
+            }
+        }
+        const segments1D = [];
+        const segments3D = [];
+        for (let j = 0; j < maxid; j++) {
+            if (Ini1D[j] >= 0) {
+                segments1D.push([Ini1D[j], End1D[j], j])
+            }
+            if (Ini3D[j] >= 0) {
+                segments3D.push([Ini3D[j], End3D[j], j])
+            }
+        }
+        subsets1D = temporalsSubsets(segments1D);
+        subsets3D = temporalsSubsets(segments3D);
+        /*let count1d = 0;
+        let count3d = 0;
+        for (let j = 0; j < maxid; j++) {
+            if (Ini1D[j] >= 0) {
+                ID1D[j] = count1d;
+                ++count1d;
+            }
+            if (Ini3D[j] >= 0) {
+                ID3D[j] = count3d;
+                ++count3d;
+            }
+        }*/
+        let count1d = 0;
+        for (s of subsets1D) {
+            for (a of s) {
+                ID1D[a[2]] = count1d;
+            }
+            ++count1d;
+        }
+        let count3d = 0;
+        for (s of subsets3D) {
+            for (a of s) {
+                ID3D[a[2]] = count3d;
+            }
+            ++count3d;
+        }
+        console.log(count1d, count3d, subsets1D.length, subsets3D.length);
+        return { count1d, count3d };
+    }
+
+    function temporalsSubsets(segments) {
+        segments.sort((a, b, key) => a[1] - b[1]);
+        const result = [];
+        for (const s of segments) {
+            let inserted = false;
+            for (a of result) {
+                if (!isIntersecting(s, a[a.length - 1])) {
+                    a.push(s);
+                    inserted = true;
+                    break;
+                }
+            }
+            if (!inserted) {
+                result.push([s]);
+            }
+        }
+        return result;
+    }
+
+    function isIntersecting(segment1, segment2) {
+        const [start1, end1, key1] = segment1;
+        const [start2, end2, key2] = segment2;
+        return start2 <= end1 && start1 <= end2;
     }
 }
 

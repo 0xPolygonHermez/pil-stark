@@ -261,7 +261,17 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
                             ops.push(0);
                             ++counters_ops[0];
                             opsString += "0, ";
-                            body.push(`     Goldilocks3::mul0(${lexp}, ${src[1]}, ${src[0]});`)
+                            body.push(`     Goldilocks3::mul0(${lexp}, ${src[1]}, ${src[0]});`);
+                            str = src[1];
+                            size = parseInt(str.substring(str.lastIndexOf(" ")));
+                            auxstr = str.substring(str.indexOf("[") + 1);
+                            offset = parseInt(auxstr.substring(0, auxstr.indexOf(" ")));
+                            args.push(offset);
+                            args.push(size);
+                            argsString += `${offset}, `;
+                            argsString += `${size}, `;
+                            cont_args += 2;
+
                         }
                     } else {
                         assert(r.src[0].dim == 3 && r.src[1].dim == 3);
@@ -322,6 +332,8 @@ module.exports = function compileCode_52ns(starkInfo, config, functionName, code
 
 
     }
+
+    console.log("\n", functionName);
     if (dbg) {
         console.log(functionName);
         console.log(counters_add);
