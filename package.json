@@ -30,7 +30,7 @@
     "circomlibjs": "^0.1.6",
     "ejs": "^3.1.8",
     "json-bigint": "^1.0.0",
-    "pilcom": "^0.0.20",
+    "pilcom": "^0.0.22",
     "r1csfile": "^0.0.44",
     "wasmbuilder": "^0.0.12",
     "wasmcurves": "^0.1.5",
