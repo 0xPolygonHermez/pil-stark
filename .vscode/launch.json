@@ -175,7 +175,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/stark_fibonacci.test.js"
+                "${workspaceFolder}/test/stark/stark_fibonacci.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -190,7 +190,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/stark_plookup.test.js"
+                "${workspaceFolder}/test/stark/stark_plookup.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -205,7 +205,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/stark_simple_plookup.test.js"
+                "${workspaceFolder}/test/stark/stark_simple_plookup.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -220,7 +220,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/stark_permutation.test.js"
+                "${workspaceFolder}/test/stark/stark_permutation.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -235,7 +235,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/stark_connection.test.js"
+                "${workspaceFolder}/test/stark/stark_connection.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -250,14 +250,14 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/stark_all.test.js"
+                "${workspaceFolder}/test/stark/stark_all.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
             ]
         },
         {
-            "name": "test bn128 verifier circuit",
+            "name": "test goldilocks in bn128 circuit",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -265,7 +265,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/gl.bn128.circuit.test.js"
+                "${workspaceFolder}/test/circuits/bn128/gl.bn128.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=64000"
@@ -280,7 +280,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/poseidon.circuit.test.js"
+                "${workspaceFolder}/test/circuits/gl/poseidon.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -295,7 +295,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/cmuladd.test.circuit.js"
+                "${workspaceFolder}/test/circuits/gl/cmuladd.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -310,7 +310,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/fft.circuit.test.js"
+                "${workspaceFolder}/test/circuits/gl/fft.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -325,7 +325,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/fft.bn128.circuit.test.js"
+                "${workspaceFolder}/test/circuits/bn128/fft.bn128.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -340,7 +340,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/linearhash.gl.circuit.test.js"
+                "${workspaceFolder}/test/circuits/gl/linearhash.gl.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -355,7 +355,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/linearhash.bn128.circuit.test.js"
+                "${workspaceFolder}/test/circuits/bn128/linearhash.bn128.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -370,7 +370,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/merklehash.circuit.test.js"
+                "${workspaceFolder}/test/circuits/gl/merklehash.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -385,7 +385,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/merklehash.bn128.circuit.test.js"
+                "${workspaceFolder}/test/circuits/bn128/merklehash.bn128.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -400,7 +400,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/treeselector.circuit.test.js"
+                "${workspaceFolder}/test/circuits/gl/treeselector.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -415,7 +415,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/evalpol.circuit.test.js"
+                "${workspaceFolder}/test/circuits/gl/evalpol.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -430,7 +430,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/evalpol.bn128.circuit.test.js"
+                "${workspaceFolder}/test/circuits/bn128/evalpol.bn128.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -445,7 +445,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/aliascheck.circuit.test.js"
+                "${workspaceFolder}/test/circuits/gl/aliascheck.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -460,7 +460,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/stark_simple.test"
+                "${workspaceFolder}/test/stark/stark_simple.test"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -760,7 +760,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/stark_fibonacci_verification.circuit.test"
+                "${workspaceFolder}/test/stark/fibonacci_gl_verifier.circuit.test"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -924,7 +924,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/fibonacci_bn128_verifier.circuit.test.js"
+                "${workspaceFolder}/test/stark/fibonacci_bn128_verifier.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1099,7 +1099,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/stark_all_verification.circuit.test"
+                "${workspaceFolder}/test/stark/all_gl_verifier.circuit.test"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1263,7 +1263,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/all_bn128_verifier.circuit.test.js"
+                "${workspaceFolder}/test/stark/all_bn128_verifier.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1384,7 +1384,7 @@
         },
         {
             "name": "plonktest setup",
-            "program": "test/plonk/main_plonksetup.js",
+            "program": "test/plonk2pil/main_plonksetup.js",
             "request": "launch",
             "args": [
                 "-r ${workspaceFolder}/tmp/plonktest.r1cs",
@@ -1401,7 +1401,7 @@
         },
         {
             "name": "plonktest exec",
-            "program": "test/plonk/main_plonkexec.js",
+            "program": "test/plonk2pil/main_plonkexec.js",
             "request": "launch",
             "args": [
                 "-e ${workspaceFolder}/tmp/plonktest.exec",
