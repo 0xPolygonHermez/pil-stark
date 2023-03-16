@@ -23,10 +23,10 @@ async function run() {
 
     const F = new F3g();
     const pil = await compile(F, path.join(__dirname, "all_main.pil"));
-    const cmPols =  newCommitPolsArray(pil);
+    const cmPols =  newCommitPolsArray(pil, F);
 
     await smPlookup.execute(cmPols.Plookup);
-    await smFibonacci.execute(cmPols.Fibonacci, [1,2]);
+    await smFibonacci.execute(F, cmPols.Fibonacci, [1,2]);
     await smPermutation.execute(cmPols.Permutation);
     await smConnection.execute(cmPols.Connection);
 

@@ -7,7 +7,7 @@ const generateConstraintPolynomialVerifier = require("../../pil_info/cp_ver");
 const map = require("../../pil_info/map");
 const { log2 } = require("pilcom/src/utils.js");
 
-module.exports = function fflonkInfoGen(_pil) {
+module.exports.fflonkInfoGen = function fflonkInfoGen(_pil) {
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
 
     let maxPilPolDeg = 0;

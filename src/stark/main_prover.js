@@ -45,10 +45,10 @@ async function run() {
     const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
 
-    const constPols =  newConstantPolsArray(pil);
+    const constPols =  newConstantPolsArray(pil, F);
     await constPols.loadFromFile(constFile);
 
-    const cmPols =  newCommitPolsArray(pil);
+    const cmPols =  newCommitPolsArray(pil, F);
     await cmPols.loadFromFile(commitFile);
 
     let options = {};

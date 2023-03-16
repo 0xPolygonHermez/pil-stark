@@ -66,7 +66,7 @@ module.exports = async function plonkSetup(r1cs, options) {
     const pilFile = await tmpName();
     await fs.promises.writeFile(pilFile, pilStr, "utf8");
     const pil = await compile(F, pilFile);
-    const constPols =  newConstantPolsArray(pil);
+    const constPols =  newConstantPolsArray(pil, F);
 
     fs.promises.unlink(pilFile);
 

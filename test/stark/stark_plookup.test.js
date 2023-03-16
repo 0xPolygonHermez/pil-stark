@@ -27,13 +27,13 @@ describe("test plookup sm", async function () {
         };
 
         const F = new F3g("0xFFFFFFFF00000001");
-        const pil = await compile(F, path.join(__dirname, "sm_plookup", "plookup_main.pil"));
-        const constPols =  newConstantPolsArray(pil);
+        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_plookup", "plookup_main.pil"));
+        const constPols =  newConstantPolsArray(pil, F);
 
         await smGlobal.buildConstants(constPols.Global);
         await smPlookup.buildConstants(constPols.Plookup);
 
-        const cmPols = newCommitPolsArray(pil);
+        const cmPols = newCommitPolsArray(pil, F);
 
         await smPlookup.execute(cmPols.Plookup);
 

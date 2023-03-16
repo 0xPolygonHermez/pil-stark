@@ -40,7 +40,7 @@ async function run() {
     const nBitsExt = starkStruct.nBitsExt;
     const nExt = 1 << nBitsExt;
 
-    const constPols = newConstantPolsArray(pil);
+    const constPols = newConstantPolsArray(pil, F);
     await constPols.loadFromFile(constFile);
 
     const constBuff  = constPols.writeToBuff();

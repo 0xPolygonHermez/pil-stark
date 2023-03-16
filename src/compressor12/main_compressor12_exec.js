@@ -40,7 +40,7 @@ async function run() {
 
     const pil = await compile(F, pilFile, null, pilConfig);
 
-    const cmPols = newCommitPolsArray(pil);
+    const cmPols = newCommitPolsArray(pil, F);
 
     const wc = await WitnessCalculatorBuilder(wasm);
     const w = await wc.calculateWitness(input);

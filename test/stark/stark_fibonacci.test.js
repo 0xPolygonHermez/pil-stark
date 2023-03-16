@@ -26,14 +26,14 @@ describe("test fibonacci sm", async function () {
         };
 
         const F = new F3g("0xFFFFFFFF00000001");
-        const pil = await compile(F, path.join(__dirname, "sm_fibonacci", "fibonacci_main.pil"));
-        const constPols =  newConstantPolsArray(pil);
+        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_fibonacci", "fibonacci_main.pil"));
+        const constPols =  newConstantPolsArray(pil, F);
 
         await smFibonacci.buildConstants(constPols.Fibonacci);
 
-        const cmPols = newCommitPolsArray(pil);
+        const cmPols = newCommitPolsArray(pil, F);
 
-        const result = await smFibonacci.execute(cmPols.Fibonacci, [1,2]);
+        const result = await smFibonacci.execute(F, cmPols.Fibonacci, [1,2]);
         console.log("Result: " + result);
 
         const res = await verifyPil(F, pil, cmPols , constPols);

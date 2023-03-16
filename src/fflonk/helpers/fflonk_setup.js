@@ -1,26 +1,21 @@
 const {BigBuffer, getCurveFromR} = require("ffjavascript");
-const {compile, newConstantPolsArray} = require("pilcom");
 const {log2} = require("pilcom/src/utils");
 const {setup, Polynomial, commit} = require("shplonkjs");
 
 
-module.exports.fflonkSetup = async function (pilFile, pilConfig, cnstPolsFile, ptauFile, options) {
+module.exports.fflonkSetup = async function (pil, cnstPols, ptauFile, options) {
     const logger = options.logger;
 
-    const F = options.F;
+    const curve = options.curve;
 
     if(logger) logger.info("Starting fflonk setup");
-
-    // PIL compile
-    const pil = await compile(F, pilFile, null, pilConfig);
-
     //Find the max PIL polynomial degree
     const cnstPolsDefs = [];
     const cmPolsDefs = [];
     let maxPilPolDeg = 0;
     for (const polRef in pil.references) {
         const polInfo = pil.references[polRef];
-        const name = polRef.split(".")[1];
+        const name = polRef;
         if(polInfo.type === 'constP') {
             if(polInfo.isArray) {
                 for(let i = 0; i < polInfo.len; ++i) {
@@ -56,33 +51,44 @@ module.exports.fflonkSetup = async function (pilFile, pilConfig, cnstPolsFile, p
 
     for (let i = 0; i < primePols.length; i++) {
         const reference = findPolynomialByTypeId(primePols[i].op + "P", primePols[i].id);
-        const name = reference.split(".")[1] + (primePols[i].id - pil.references[reference].id);
-        // TODO: WHICH STAGE ????
-        polsWXi.push({name: name, stage: 1, degree: pil.references[reference].polDeg});
+        const name = reference + (primePols[i].id - pil.references[reference].id);
+        const stage = pil.references[reference].type === "cmP" ? 1 : 0;
+        polsWXi.push({name, stage, degree: pil.references[reference].polDeg});
     }
 
-    // TODO: ADD PROTOCOL ROUNDS POLYNOMIALS !!! 
+    for(let i = 0; i < pil.plookupIdentities.length; ++i) {
+        polsXi.push({name: `Plookup.H1_${i}`, stage: 2, degree: domainSize})
+        polsXi.push({name: `Plookup.H2_${i}`, stage: 2, degree: domainSize})
+        polsXi.push({name: `Plookup.Z${i}`, stage: 3, degree: domainSize})
+    }
 
+
+    for(let i = 0; i < pil.permutationIdentities.length; ++i) {
+        polsXi.push({name: `Permutation.Z${i}`, stage:3, degree: domainSize})
+    }
+
+    for(let i = 0; i < pil.connectionIdentities.length; ++i) {
+        polsXi.push({name: `Connection.Z${i}`, stage: 3, degree: domainSize})
+    }
+
+    // TODO: ADD CONSTRAINT POLYNOMIALS
+
+    const polDefs = [polsXi];
+
+    if(polsWXi.length > 0) polDefs.push(polsWXi);
+    
     const config = {
         power: pilPower, 
-        polDefs: [
-            polsXi,
-            polsWXi,
-        ],
-        extraMuls: [2,1],
+        polDefs,
+        extraMuls: options.extraMuls || 0,
         openBy: "openingPoints"
     }
-    const curve = await getCurveFromR(F.p);
 
     const {zkey, PTau} = await setup(config, curve, ptauFile, logger);
 
-    // Load preprocessed polynomials
-    const cnstPols = newConstantPolsArray(pil, F);
-    await cnstPols.loadFromFile(cnstPolsFile);
-
     const ctx = {};
     for (let i = 0; i < cnstPols.$$nPols; i++) {
-        let name = cnstPols.$$defArray[i].name.split(".")[1];
+        let name = cnstPols.$$defArray[i].name;
         if(cnstPols.$$defArray[i].idx >= 0) name += cnstPols.$$defArray[i].idx;
         const cnstPolBuffer = cnstPols.$$array[i];
 
@@ -97,17 +103,15 @@ module.exports.fflonkSetup = async function (pilFile, pilConfig, cnstPolsFile, p
         ctx[name] = await Polynomial.fromEvaluations(polEvalBuff, curve, logger);
     }
 
-    /*
     const commits = await commit(0, zkey, ctx, PTau, curve, logger);
     for(let j = 0; j < commits.length; ++j) {
         zkey[`f${commits[j].index}`] = commits[j].commit;
         ctx[`f${commits[j].index}`] = commits[j].pol;
     }
-    */
- 
-    logger.info("Fflonk setup finished");
+     
+    if(logger) logger.info("Fflonk setup finished");
 
-    return {ctx, zkey, PTau};
+    return zkey;
 
     function findPolynomialByTypeId(type, id) {
         for (const polName in pil.references) {
@@ -127,7 +131,9 @@ module.exports.fflonkSetup = async function (pilFile, pilConfig, cnstPolsFile, p
         if (Array.isArray(exp)) {
             let primePolynomials = [];
             for (let i = 0; i < exp.length; i++) {
-                primePolynomials = primePolynomials.concat(getPrimePolynomials(exp[i]));
+                const primePols = getPrimePolynomials(exp[i]);
+                const newPrimePols = primePols.filter(p => !primePolynomials.map(pi => pi.id).includes(p.id));
+                primePolynomials = primePolynomials.concat(newPrimePols);
             }
             return primePolynomials;
         } else if (exp.hasOwnProperty("values")) {
@@ -138,5 +144,5 @@ module.exports.fflonkSetup = async function (pilFile, pilConfig, cnstPolsFile, p
             }
             return [];
         }
-    }
+    }    
 }

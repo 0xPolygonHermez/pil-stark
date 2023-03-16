@@ -31,7 +31,7 @@ async function run() {
 
     const pil = await compile(F, pilFile, null, pilConfig);
 
-    const cmPols = newCommitPolsArray(pil);
+    const cmPols = newCommitPolsArray(pil, F);
 
     const Nbits = log2(nSMap -1) +1;
     const N = 1 << Nbits;

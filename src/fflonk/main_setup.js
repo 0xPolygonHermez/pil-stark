@@ -2,17 +2,18 @@ const fs = require("fs");
 const version = require("../../package").version;
 
 const { F1Field } = require("ffjavascript");
-const { fflonkSetup } = require("./fflonk_setup");
+const { fflonkSetup } = require("./helpers/fflonk_setup");
+const { newConstantPolsArray } = require("pilcom");
 
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_fflonksetup.js -p <pil> -P [-P <pilconfig.json] -c <circuit.const> -t <ptau> -v <preprocessed.json>")
+    .usage("node main_setup.js -p <pil> -P [-P <pilconfig.json] -c <circuit.const> -t <ptau> -z <zkey.json>")
     .alias("t", "tau")   // Input -> r1cs fil
     .alias("p", "pil")    // Input -> Proposed PIL
     .alias("P", "pilconfig")
     .alias("c", "const")  // Output -> file required to build the constants
-    .alias("v", "vk")   // Output -> File required to execute
+    .alias("z", "zkey")   // Output -> File required to execute
     .argv;
 
 async function run() {
@@ -22,12 +23,20 @@ async function run() {
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
     const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
     const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "mycircuit.const";
-    const preprocessedFilename = typeof(argv.vk) === "string" ?  argv.vk.trim() : "mycircuit_vk.json";
+    const zkeyFile = typeof(argv.zkey) === "string" ?  argv.zkey.trim() : "mycircuit_zkey.json";
+
+    // PIL compile
+    const pil = await compile(F, pilFile, null, pilConfig);
+
+    // Load preprocessed polynomials
+    const cnstPols = newConstantPolsArray(pil, F);
+    await cnstPols.loadFromFile(constFile);
 
     const options = {F, logger: console};
-    const setup = await fflonkSetup(pilFile, pilConfig, constFile, ptauFile, options);
+    const zkey = await fflonkSetup(pil, cnstPols, ptauFile, options);
 
-    await fs.promises.writeFile(preprocessedFilename, JSON.stringify(setup, null, 1), "utf8");
+    await fs.promises.writeFile(zkeyFile, JSON.stringify(zkey, null, 1), "utf8");
+
 
     console.log("Setup done correctly");
 }

@@ -24,15 +24,15 @@ async function runTest(pilFile) {
     };
 
     const F = new F3g("0xFFFFFFFF00000001");
-    const pil = await compile(F, path.join(__dirname, "sm_simple", pilFile));
+    const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple", pilFile));
 
-    const constPols =  newConstantPolsArray(pil);
+    const constPols =  newConstantPolsArray(pil, F);
 
     await smSimple.buildConstants(constPols.Simple);
 
-    const cmPols = newCommitPolsArray(pil);
+    const cmPols = newCommitPolsArray(pil, F);
 
-    const result = await smSimple.execute(cmPols.Simple);
+    const result = await smSimple.execute(F, cmPols.Simple);
     console.log("Result: " + result);
 
     const res = await verifyPil(F, pil, cmPols , constPols);
