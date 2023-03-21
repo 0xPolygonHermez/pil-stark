@@ -1,37 +1,25 @@
 
 const workerpool = require('workerpool');
-const F3g = require("../../helpers/f3g.js");
 const { buildZhInv } = require("../../helpers/polutils.js");
+const {BigBuffer} = require("ffjavascript");
 
 
-
-module.exports.fflonkgen_execute = async function fflonkgen_execute(ctx, cFirstSrc, cISrc, cLastSrc, n, execInfo, st_name, st_i, st_n) {
+module.exports.fflonkgen_execute = async function fflonkgen_execute(ctx, cFirstSrc, n, execInfo, st_name, st_i, st_n) {
 
     cFirst = new Function("ctx", "i", cFirstSrc);
-    cI = new Function("ctx", "i", cISrc);
-    cLast = new Function("ctx", "i", cLastSrc);
 
     console.log(`start exec ${st_name}... ${st_i}/${st_n} `);
-    ctx.F = new F3g();
     ctx.tmp = [];
-    ctx.Zi = buildZhInv(ctx.F, ctx.nBits, ctx.extendBits, st_i);
+    ctx.Zi = buildZhInv(ctx.curve.Fr, ctx.nBits, 0, st_i);
 
     for (let s=0; s<execInfo.outputSections.length; s++) {
         const si = execInfo.outputSections[s];
         if (typeof ctx[si.name] == "undefined") {
-            ctx[si.name] = new BigUint64Array(si.width*(n+ctx.next));
+            ctx[si.name] = new BigBuffer(si.width*(n+ctx.next)*ctx.curve.Fr.n8);
         }
     }
 
-    for (let i=0; i<ctx.next; i++) {
-        cFirst(ctx, i);
-    }
-    for (let i=ctx.next; i<n-ctx.next; i++) {
-        // cI(ctx, i);
-        cFirst(ctx, i);
-    }
-    for (let i=n-ctx.next; i<n; i++) {
-        // cLast(ctx, i);
+    for (let i=0; i<n; i++) {
         cFirst(ctx, i);
     }
 
@@ -47,6 +35,6 @@ module.exports.fflonkgen_execute = async function fflonkgen_execute(ctx, cFirstS
 
 if (!workerpool.isMainThread) {
     workerpool.worker({
-        starkgen_execute: starkgen_execute,
+        fflonkgen_execute: fflonkgen_execute,
     });
 }

@@ -22,7 +22,7 @@ async function run() {
     const fflonkInfoFile = typeof(argv.fflonkinfo) === "string" ?  argv.fflonkinfo.trim() : "mycircuit.fflonkinfo.json";
 
     const pil = await compile(F, pilFile, null, pilConfig);
-    const fflonkInfo = fflonkInfoGen(pil);
+    const fflonkInfo = fflonkInfoGen(F, pil);
 
     await fs.promises.writeFile(fflonkInfoFile, JSON.stringify(fflonkInfo, null, 1), "utf8");
 

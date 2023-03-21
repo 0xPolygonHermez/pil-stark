@@ -176,7 +176,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         const pu = starkInfo.puCtx[i];
         const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[pu.numId]);
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[pu.denId]);
-        const z = calculateZ(F,pNum, pDen);
+        const z = await calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
     for (let i=0; i<starkInfo.peCtx.length; i++) {
@@ -184,7 +184,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         const pe = starkInfo.peCtx[i];
         const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[pe.numId]);
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[pe.denId]);
-        const z = calculateZ(F,pNum, pDen);
+        const z = await calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
     for (let i=0; i<starkInfo.ciCtx.length; i++) {
@@ -192,7 +192,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         const ci = starkInfo.ciCtx[i];
         const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[ci.numId]);
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[ci.denId]);
-        const z = calculateZ(F,pNum, pDen);
+        const z = await calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
 

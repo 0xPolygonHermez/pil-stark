@@ -168,6 +168,7 @@
         },
         {
             "name": "test fibonacci stark",
+            "console": "integratedTerminal",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -198,6 +199,7 @@
         },
         {
             "name": "test simple plookup stark",
+            "console": "integratedTerminal",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -212,7 +214,24 @@
             ]
         },
         {
+            "name": "test simple connection stark",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/stark/stark_simple_connection.test.js"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "test permutation stark",
+            "console": "integratedTerminal",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -228,6 +247,7 @@
         },
         {
             "name": "test connection stark",
+            "console": "integratedTerminal",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -258,6 +278,7 @@
         },
         {
             "name": "test fibonacci fflonk",
+            "console": "integratedTerminal",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -273,6 +294,7 @@
         },
         {
             "name": "test plookup fflonk",
+            "console": "integratedTerminal",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -287,7 +309,24 @@
             ]
         },
         {
+            "name": "test simple plookup fflonk",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/fflonk/fflonk_simple_plookup.test.js"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "test permutation fflonk",
+            "console": "integratedTerminal",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -303,6 +342,7 @@
         },
         {
             "name": "test connection fflonk",
+            "console": "integratedTerminal",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -317,7 +357,24 @@
             ]
         },
         {
+            "name": "test simple connection fflonk",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/fflonk/fflonk_simple_connection.test.js"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "test all fflonk",
+            "console": "integratedTerminal",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [

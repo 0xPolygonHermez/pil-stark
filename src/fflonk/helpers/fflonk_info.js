@@ -4,10 +4,10 @@ const generateStep2 = require("../../pil_info/step2");
 const generateStep3 = require("../../pil_info/step3");
 const generateConstraintPolynomial = require("../../pil_info/cp_prover");
 const generateConstraintPolynomialVerifier = require("../../pil_info/cp_ver");
-const map = require("../../pil_info/map");
+const map = require("../../pil_info/map2");
 const { log2 } = require("pilcom/src/utils.js");
 
-module.exports.fflonkInfoGen = function fflonkInfoGen(_pil) {
+module.exports.fflonkInfoGen = function fflonkInfoGen(F, _pil) {
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
 
     let maxPilPolDeg = 0;
@@ -40,23 +40,29 @@ module.exports.fflonkInfoGen = function fflonkInfoGen(_pil) {
         code: []
     };
 
+    const ctx_2ns = {
+        pil: pil,
+        calculated: {
+            exps: {},
+            expsPrime: {}
+        },
+        tmpUsed: 0,
+        code: []
+    };
+
     generateStep2(res, pil, ctx);                        // H1, H2
 
-    generateStep3(res, pil, ctx);                        // Z Polynomials and LC of permutation checks.
+    generateStep3(F, res, pil, ctx);                        // Z Polynomials and LC of permutation checks.
 
-    generateConstraintPolynomial(res, 1, pil, ctx, ctx);            // Step4
+    generateConstraintPolynomial(res, pil, ctx, ctx_2ns);            // Step4
 
-    // generateConstraintPolynomialVerifier(res, pil);
+    generateConstraintPolynomialVerifier(res, pil);
+
 
     let N = 1 << pilPower;
     map(res, pil, N, N);
-
     res.publics = pil.publics;
 
     return res;
 
 }
-
-
-
-

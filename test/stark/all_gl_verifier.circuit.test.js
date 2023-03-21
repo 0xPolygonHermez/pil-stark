@@ -41,7 +41,7 @@ describe("Stark Verification Circuit Test", function () {
         const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
         const publics = JSONbig.parse(await fs.promises.readFile(publicsFile, "utf8"));
 
-        const starkInfo = starkInfoGen(pil, starkStruct);
+        const starkInfo = starkInfoGen(F, pil, starkStruct);
         const circuitSrc = await pil2circom(pil, constRoot, starkInfo)
 
         await fs.promises.writeFile(circomFile, circuitSrc, "utf8");

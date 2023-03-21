@@ -1,6 +1,6 @@
 
-const {pilCodeGen, buildCode} = require("./codegen.js");
-const ExpressionOps = require("../helpers/expressionops");
+const {pilCodeGen, buildCode} = require("../codegen.js");
+const ExpressionOps = require("../expressionops");
 
 
 module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {

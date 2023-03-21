@@ -7,24 +7,26 @@ const { fflonkProve } = require("../../src/fflonk/helpers/fflonk_prover.js");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
-const smFibonacci = require("../state_machines/sm_fibonacci/sm_fibonacci.js");
+const smGlobal = require("../state_machines/sm/sm_global.js");
+const smSimpleConnection = require("../state_machines/sm_simple_connection/sm_simple_connection.js");
 const { fflonkInfoGen } = require("../../src/fflonk/helpers/fflonk_info.js");
 const { fflonkVerify } = require("../../src/fflonk/helpers/fflonk_verify.js");
 
-describe("Fflonk Fibonacci sm", async function () {
+describe("Fflonk connection sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
         const F = new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
 
-        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_fibonacci", "fibonacci_main.pil"));
+        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple_connection", "simple_connection_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
-        await smFibonacci.buildConstants(constPols.Fibonacci);
+        await smGlobal.buildConstants(constPols.Global);
+        await smSimpleConnection.buildConstants(F, constPols.SimpleConnection);
 
         const cmPols = newCommitPolsArray(pil, F);
 
-        await smFibonacci.execute(F, cmPols.Fibonacci, [1,2]);
+        await smSimpleConnection.execute(cmPols.SimpleConnection);
 
         const res = await verifyPil(F, pil, cmPols , constPols);
 

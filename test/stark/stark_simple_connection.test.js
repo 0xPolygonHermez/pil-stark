@@ -8,14 +8,14 @@ const starkVerify = require("../../src/stark/helpers/stark_verify.js");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
-const smSimplePlookup = require("../state_machines/sm_simple_plookup/sm_simple_plookup.js");
+const smSimpleConnection = require("../state_machines/sm_simple_connection/sm_simple_connection.js");
 
-describe("test plookup sm", async function () {
+describe("test simple connection sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
         const starkStruct = {
-            nBits: 3,
+            nBits: 2,
             nBitsExt: 4,
             nQueries: 8,
             verificationHashType : "GL",
@@ -26,15 +26,15 @@ describe("test plookup sm", async function () {
         };
 
         const F = new F3g("0xFFFFFFFF00000001");
-        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple_plookup", "simple_plookup_main.pil"));
+        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple_connection", "simple_connection_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
         await smGlobal.buildConstants(constPols.Global);
-        await smSimplePlookup.buildConstants(constPols.SimplePlookup);
+        await smSimpleConnection.buildConstants(F, constPols.SimpleConnection);
 
         const cmPols = newCommitPolsArray(pil, F);
 
-        await smSimplePlookup.execute(cmPols.SimplePlookup);
+        await smSimpleConnection.execute(cmPols.SimpleConnection);
 
         const res = await verifyPil(F, pil, cmPols , constPols);
 

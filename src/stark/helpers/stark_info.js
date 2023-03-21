@@ -3,13 +3,13 @@ const generatePublicCalculators = require("../../pil_info/publics.js");
 const generateStep2 = require("../../pil_info/step2");
 const generateStep3 = require("../../pil_info/step3");
 const generateConstraintPolynomial = require("../../pil_info/cp_prover");
-const generateFRIPolynomial = require("../../pil_info/fri_prover");
+const generateFRIPolynomial = require("../../pil_info/fri/fri_prover");
 
 const generateConstraintPolynomialVerifier = require("../../pil_info/cp_ver");
-const generateVerifierQuery = require("../../pil_info/fri_verifier");
+const generateVerifierQuery = require("../../pil_info/fri/fri_verifier");
 const map = require("../../pil_info/map");
 
-module.exports = function starkInfoGen(_pil, starkStruct) {
+module.exports = function starkInfoGen(F, _pil, starkStruct) {
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
     const pilDeg = Object.values(pil.references)[0].polDeg;
     const starkDeg = 2 ** starkStruct.nBits;
@@ -59,10 +59,10 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
 
     generateStep2(res, pil, ctx);                        // H1, H2
 
-    generateStep3(res, pil, ctx);                        // Z Polynomials and LC of permutation chcks.
+    generateStep3(F, res, pil, ctx);                        // Z Polynomials and LC of permutation chcks.
 
     const maxDeg = (1 << (res.starkStruct.nBitsExt- res.starkStruct.nBits)) + 1;
-    generateConstraintPolynomial(res, maxDeg, pil, ctx, ctx2ns);            // Step4
+    generateConstraintPolynomial(res, pil, ctx, ctx2ns, maxDeg);            // Step4
 
     generateConstraintPolynomialVerifier(res, pil);
 

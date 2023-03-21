@@ -26,7 +26,7 @@ async function run() {
     const pil = await compile(F, pilFile, null, pilConfig);
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
 
-    const starkInfo = starkInfoGen(pil, starkStruct);
+    const starkInfo = starkInfoGen(F, pil, starkStruct);
 
     await fs.promises.writeFile(starkInfoFile, JSON.stringify(starkInfo, null, 1), "utf8");
 

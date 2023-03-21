@@ -1,7 +1,7 @@
 const {pilCodeGen, buildCode} = require("./codegen.js");
-const ExpressionOps = require("../helpers/expressionops");
+const ExpressionOps = require("./expressionops");
 
-module.exports = function generateConstraintPolynomial(res, maxDeg, pil, ctx, ctx2ns) {
+module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, maxDeg) {
 
     const E = new ExpressionOps();
 
@@ -17,16 +17,14 @@ module.exports = function generateConstraintPolynomial(res, maxDeg, pil, ctx, ct
     }
 
 
-    res.qDeg = 0;
     res.imExps = [];
-    for (let d=2; d<= maxDeg; d++) {
-        const [imExps, qDeg] = calculateImPols(pil, cExp, d);
-
-        if (imExps) {
-            if ((!res.qDeg)||( Object.keys(imExps).length + qDeg < Object.keys(res.imExps).length + res.qDeg)) {
-                [res.imExps, res.qDeg] = [imExps, qDeg];
-            }
+    let d = 2;
+    let [imExps, qDeg] = calculateImPols(pil, cExp, d++);
+    while(Object.keys(imExps).length > 0 && (!maxDeg || d <= maxDeg)) {
+        if ((!res.qDeg)||( Object.keys(imExps).length + qDeg < Object.keys(res.imExps).length + res.qDeg)) {
+            [res.imExps, res.qDeg] = [imExps, qDeg];
         }
+        [imExps, qDeg] = calculateImPols(pil, cExp, d++);
     }
 
     res.imExpsList = Object.keys(res.imExps).map(Number);

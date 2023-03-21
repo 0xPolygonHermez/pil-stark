@@ -45,7 +45,7 @@ async function runTest(pilFile) {
         assert(0);
     }
 
-    const setup = await starkSetup(constPols, pil, starkStruct);
+    const setup = await starkSetup(constPols, pil, starkStruct, {F});
 
     const resP = await starkGen(cmPols, constPols, setup.constTree, setup.starkInfo);
 
