@@ -219,7 +219,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                     pushResArg(r);
                                     pushSrcArg(r.src[1]);
                                     pushSrcArg(r.src[0]);
-                                    assert(!r.src[1].prime);
+                                    assert(!r.src[0].prime);
                                     counters_ops[1] += 1;
                                     ops.push(1);
                                     opsString += "1, ";
@@ -1634,10 +1634,12 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                             counters_ops[113] += 1;
                             ops.push(113);
                             opsString += "113, ";
+                            assert(r.dest.prime);
                         } else if (r.dest.type == 'tmpExp' && r.src[0].type == 'tmp') {
                             counters_ops[113] += 1;
                             ops.push(113);
                             opsString += "113, ";
+                            assert(r.dest.prime);
                         } else {
                             console.log(r.dest.type, r.src[0].type);
                             throw new Error("Option not considered!");

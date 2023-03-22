@@ -120,6 +120,12 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
                                 opsString += "3, ";
                                 break;
                             }
+                            default: {
+                                console.log(src[0], src[1]);
+                                console.log(r.src[0].type, r.src[1].type);
+                                throw new Error("Option not considered!");
+                                break;
+                            }
                         }
                     } else if (r.src[1].type === "tmp") {
                         pushSrcArg(r.src[1]);
@@ -155,6 +161,12 @@ module.exports = function compileCode_42ns(starkInfo, config, functionName, code
                                 ++cont_ops;
                                 ops.push(3);
                                 opsString += "3, ";
+                                break;
+                            }
+                            default: {
+                                console.log(src[0], src[1]);
+                                console.log(r.src[0].type, r.src[1].type);
+                                throw new Error("Option not considered!");
                                 break;
                             }
                         }
