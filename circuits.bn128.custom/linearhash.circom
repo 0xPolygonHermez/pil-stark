@@ -75,6 +75,7 @@ template LinearHash(nInputs, eSize, arity) {
             } else {
                 hash[i].initialState <== hash[i-1].out[0];
             }
+            _ <== hash[i].out;
         }
 
         for(var k = nLastHash; k < arity; k++) {
@@ -87,6 +88,7 @@ template LinearHash(nInputs, eSize, arity) {
             hash[nHashes-1].initialState <== hash[nHashes-2].out[0];
         }
 
+        _ <== hash[nHashes-1].out;
         out <== hash[nHashes-1].out[0];
     }
 }

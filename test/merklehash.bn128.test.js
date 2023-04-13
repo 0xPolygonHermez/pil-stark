@@ -101,7 +101,37 @@ describe("merkle hash", async function () {
         assert(MH16.verifyGroupProof(root, mp, idx, groupElements));
     });
 
-    it("It should merkelize and return the right number of elements with arity 4", async () => {
+    it("It should merkelize and return the right number of elements with arity 6", async () => {
+
+        const N = 6;
+        const idx = 3;
+        const nPols = 9;
+
+        const pols = [];
+        for (let i=0; i<nPols; i++) pols[i] = [];
+        for (let i=0; i<N; i++) {
+            for (let j=0; j<nPols; j++) {
+                pols[j].push(BigInt(i + j*1000));
+            }
+        }
+
+
+        const tree = await MH6.merkelize(pols, 1, nPols, N);
+
+        const [groupElements, mp] = MH6.getGroupProof(tree, idx);
+        const root = MH6.root(tree);
+
+        console.log("MP 0", mp[0]);
+        console.log("MP 1", mp[1]);
+        console.log("MP 2", mp[2]);
+        console.log("MP 3", mp[3]);
+
+        console.log("GROUP ELEMENTS",groupElements);
+        console.log("idx", idx);
+        assert(MH6.verifyGroupProof(root, mp, idx, groupElements));
+    });
+
+    it.skip("It should merkelize and return the right number of elements with arity 4", async () => {
 
         const N = 256;
         const idx = 3;

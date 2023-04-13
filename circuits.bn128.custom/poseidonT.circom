@@ -54,6 +54,7 @@ template CustomPoseidon(nInputs) {
     for (var i=0; i<nInputs; i++) {
         p.in[i + 1] <== in[i];
     }
+    _ <== p.im;
     out <== p.out;
 }
 

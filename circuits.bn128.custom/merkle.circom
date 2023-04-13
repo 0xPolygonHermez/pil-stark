@@ -23,8 +23,6 @@ template Merkle(keyBits, arity) {
     signal input key[keyBits];
     signal output root;
 
-    signal s[arity];
-
 
     component mNext;
     component hash;
@@ -33,9 +31,6 @@ template Merkle(keyBits, arity) {
         
     if (nLevels == 0) {
         root <== value;
-        for(var i = 0; i < arity; i++) {
-            s[i] <== 0;
-        }
     } else {
         keyNum = Bits2Num(nBits);
         for(var i = 0; i < nBits; i++) {
@@ -46,8 +41,9 @@ template Merkle(keyBits, arity) {
             }
         } 
        
+        signal s[arity];
         for(var i = 0; i < arity; i++) {
-            s[i] <== Mux1()([0,1], IsEqual()([keyNum.out, i]));
+            s[i] <== Mux1()(s <== IsEqual()([keyNum.out, i]), c <== [0,1]);
         }
 
         hash = CustomPoseidon(arity);
@@ -63,11 +59,10 @@ template Merkle(keyBits, arity) {
 
         mNext = Merkle(nextNBits, arity);
         mNext.value <== hash.out[0];
+        _ <== hash.out;
 
         for (var i=0; i<nLevels-1; i++) {
-            for (var k=0; k<arity; k++) {
-                mNext.siblings[i][k] <== siblings[i+1][k];
-            }
+            mNext.siblings[i] <== siblings[i+1];
         }
 
         for (var i=0; i<nextNBits; i++) {

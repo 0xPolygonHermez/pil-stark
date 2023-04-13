@@ -1,4 +1,4 @@
-constant %N = 2**3;
+constant %N = 2**1;
 
 namespace Simple(%N);
 

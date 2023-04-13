@@ -84,6 +84,7 @@ template LinearHash(nInputs, eSize) {
             } else {
                 hash[i].initialState <== hash[i-1].out[0];
             }
+            _ <== hash[i].out;
         }
         if (nHashes == 1) {
             lastHash.initialState <== 0;
@@ -91,6 +92,7 @@ template LinearHash(nInputs, eSize) {
             lastHash.initialState <== hash[nHashes-2].out[0];
         }
 
+        _ <== lastHash.out;
         out <== lastHash.out[0];
     }
 }

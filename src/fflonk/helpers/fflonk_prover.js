@@ -1,10 +1,10 @@
 const {BigBuffer} = require("ffjavascript");
-const { getPowersOfTau, Polynomial, commit, Keccak256Transcript } = require("shplonkjs");
+const { getPowersOfTau, Polynomial, commit, Keccak256Transcript, lcm } = require("shplonkjs");
 const workerpool = require("workerpool");
 const { fflonkgen_execute } = require("./fflonk_prover_worker");
 const { calculateH1H2, calculateZ, buildZhInv } = require("../../helpers/polutils");
-const { interpolate, ifft, fft } = require("../../helpers/fft/fft_p.js");
 const { open } = require("shplonkjs/src/shplonk");
+const fft = require("../../helpers/fft/fft");
 
 const parallelExec = true;
 const useThreads = false;
@@ -27,22 +27,36 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     ctx.nBits = zkey.power;
     let nCm = fflonkInfo.nCm1;
     ctx.const_n = new BigBuffer(fflonkInfo.nConstants * ctx.N * curve.Fr.n8);
+    ctx.const_2ns = new BigBuffer(fflonkInfo.nConstants * ctx.N * curve.Fr.n8);
     ctx.cm1_n = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * ctx.N * curve.Fr.n8);
     ctx.cm2_n = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * ctx.N * curve.Fr.n8);
     ctx.cm3_n = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * ctx.N * curve.Fr.n8);
     ctx.cm4_n = new BigBuffer(fflonkInfo.mapSectionsN.cm4_n*ctx.N * curve.Fr.n8);
     ctx.tmpExp_n = new BigBuffer(fflonkInfo.mapSectionsN.tmpExp_n * ctx.N * curve.Fr.n8);
-    ctx.q_n = new BigBuffer(ctx.N * curve.Fr.n8);
+    ctx.cm1_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n*ctx.N*curve.Fr.n8);
+    ctx.cm2_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n*ctx.N*curve.Fr.n8);
+    ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n*ctx.N*curve.Fr.n8);
+    ctx.cm4_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm4_n*ctx.N*curve.Fr.n8);
+    ctx.q_2ns = new BigBuffer(fflonkInfo.qDim*ctx.N*curve.Fr.n8);
     ctx.x_n = new BigBuffer(ctx.N * curve.Fr.n8);
+    ctx.x_2ns = new BigBuffer(ctx.N * curve.Fr.n8);
+
     let xx = curve.Fr.one;
     for (let i=0; i<ctx.N; i++) {
         ctx.x_n.set(xx, i * curve.Fr.n8);
-        xx = curve.Fr.mul(xx, curve.Fr.w[zkey.power])
+        xx = curve.Fr.mul(xx, curve.Fr.w[ctx.nBits])
+    }
+
+    xx = curve.Fr.shift;
+    for (let i=0; i<ctx.N; i++) {
+        ctx.x_2ns.set(xx, i * curve.Fr.n8);
+        xx = curve.Fr.mul(xx, curve.Fr.w[ctx.nBits])
     }
 
     // Build ZHInv
-    ctx.Zi = buildZhInv(ctx.curve.Fr, zkey.power, 0);
-    
+    const zhInv = buildZhInv(ctx.curve.Fr, ctx.nBits, 0);
+    ctx.Zi = zhInv;
+       
     const committedPols = {};
 
     const transcript = new Keccak256Transcript(curve);
@@ -62,14 +76,22 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             logger.info(`Preparing ${name} polynomial`);
         }
 
+
         for (let j = 0; j < cnstPolBuffer.length; j++) {
             ctx.const_n.set(curve.Fr.e(cnstPolBuffer[j]), (j + i * ctx.N) * curve.Fr.n8)
         }
-        ctx[name] = await Polynomial.fromEvaluations(ctx.const_n.slice(i*ctx.N*curve.Fr.n8, (i+1)*ctx.N*curve.Fr.n8), curve, logger);
+
+        let coefs = await curve.Fr.ifft(ctx.const_n.slice(i*ctx.N*curve.Fr.n8, (i+1)*ctx.N*curve.Fr.n8));
+
+        for (let j = 0; j < cnstPolBuffer.length; j++) {
+            ctx.const_2ns.set(coefs.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + i * ctx.N) * curve.Fr.n8);
+        }
+        
+        ctx[name] = new Polynomial(ctx.const_2ns.slice(i*ctx.N*curve.Fr.n8, (i+1)*ctx.N*curve.Fr.n8), curve, logger);
     }
 
    
-    const commitsConstants = await commit(0, zkey, ctx, PTau, true, curve, logger);
+    const commitsConstants = await commit(0, zkey, ctx, PTau, curve, {multiExp: false, logger});
  
     for(let j = 0; j < commitsConstants.length; ++j) {
         committedPols[`${commitsConstants[j].index}`].pol = commitsConstants[j].pol;
@@ -111,18 +133,29 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         }
 
         for (let j = 0; j < cmPolBuffer.length; j++) {
-            ctx.cm1_n.set(curve.Fr.e(cmPolBuffer[j]), (j + i * ctx.N) * curve.Fr.n8)
+            ctx.cm1_n.set(curve.Fr.e(cmPolBuffer[j]), (j + i * ctx.N) * curve.Fr.n8);
         }
-        ctx[name] = await Polynomial.fromEvaluations(ctx.cm1_n.slice(i*ctx.N*curve.Fr.n8, (i+1)*ctx.N*curve.Fr.n8), curve, logger);
-        if(randomBlinding[name] > 0) {
-            const blindingCoefs = [];
-            for(let l = 0; l < randomBlinding[name]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
-                ctx[name].blindCoefficients(blindingCoefs);
-            }
-        }
-        
 
-    const commits1 = await commit(1, zkey, ctx, PTau, true, curve, logger);
+        let buffer = ctx.cm1_n.slice(i*ctx.N*curve.Fr.n8, (i+1)*ctx.N*curve.Fr.n8);
+
+        buffer = await curve.Fr.batchToMontgomery(buffer);
+        
+        let coefs = await curve.Fr.ifft(buffer);
+
+        for (let j = 0; j < cmPolBuffer.length; j++) {
+            ctx.cm1_2ns.set(coefs.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + i * ctx.N) * curve.Fr.n8);
+        }
+
+        ctx[name] = new Polynomial(ctx.cm1_2ns.slice(i*ctx.N*curve.Fr.n8, (i+1)*ctx.N*curve.Fr.n8), curve, logger);
+        
+        // if(randomBlinding[name] > 0) {
+        //     const blindingCoefs = [];
+        //     for(let l = 0; l < randomBlinding[name]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
+        //         ctx[name].blindCoefficients(blindingCoefs);
+        // }
+    }
+
+    const commits1 = await commit(1, zkey, ctx, PTau, curve, {multiExp: true, logger});
     for(let j = 0; j < commits1.length; ++j) {
         committedPols[`${commits1[j].index}`] = {commit: commits1[j].commit, pol: commits1[j].pol}
     }
@@ -142,6 +175,10 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         transcript.addScalar(ctx.publics[i]);
     }
 
+    if(0 === transcript.data.length) {
+        transcript.addScalar(curve.Fr.one);
+    }
+
     ctx.challenges[0] = transcript.getChallenge(); // u
     transcript.reset();
 
@@ -150,7 +187,7 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     transcript.reset();
 
     if (parallelExec) {
-        await calculateExpsParallel(pool, ctx, "step2prev", fflonkInfo);
+        await calculateExpsParallel(pool, ctx, "step2prev", fflonkInfo, zkey);
     } else {
         calculateExps(ctx, fflonkInfo.step2prev, "n");
     } 
@@ -160,27 +197,33 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         const fPol = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[puCtx.fExpId]);
         const tPol = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[puCtx.tExpId]);
         const [h1, h2] = calculateH1H2(curve.Fr, fPol, tPol);
-        for(let i = 0; i < ctx.N; ++i) {
-            ctx[`Plookup.H1_${i}`] 
-        }
         setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], h1);
         setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], h2);
-    
-        ctx[`Plookup.H1_${i}`] = await Polynomial.fromEvaluations(ctx.cm2_n.slice((2*i)*ctx.N*curve.Fr.n8, (2*i + 1)*ctx.N*curve.Fr.n8), curve, logger);
-        ctx[`Plookup.H2_${i}`] = await Polynomial.fromEvaluations(ctx.cm2_n.slice((2*i + 1)*ctx.N*curve.Fr.n8, (2*i + 2)*ctx.N*curve.Fr.n8), curve, logger);
-        if(randomBlinding[`Plookup.H1_${i}`] > 0) {
-            const blindingCoefs = [];
-            for(let l = 0; l < randomBlinding[`Plookup.H1_${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
-            ctx[`Plookup.H1_${i}`].blindCoefficients(blindingCoefs);
-        }
         
-        if(randomBlinding[`Plookup.H2_${i}`] > 0) {
-            const blindingCoefs = [];
-            for(let l = 0; l < randomBlinding[`Plookup.H2_${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
-            ctx[`Plookup.H2_${i}`].blindCoefficients(blindingCoefs);
+        let coefs1 = await curve.Fr.ifft(ctx.cm2_n.slice((2*i)*ctx.N*curve.Fr.n8, (2*i + 1)*ctx.N*curve.Fr.n8));
+        let coefs2 = await curve.Fr.ifft(ctx.cm2_n.slice((2*i + 1)*ctx.N*curve.Fr.n8, (2*i + 2)*ctx.N*curve.Fr.n8));
+
+        for (let j = 0; j < ctx.N; j++) {
+            ctx.cm2_2ns.set(coefs1.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + 2*i * ctx.N) * curve.Fr.n8);
+            ctx.cm2_2ns.set(coefs2.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + (2*i + 1) * ctx.N) * curve.Fr.n8);
         }
+
+        ctx[`Plookup.H1_${i}`] = new Polynomial(ctx.cm2_2ns.slice((2*i)*ctx.N*curve.Fr.n8, (2*i + 1)*ctx.N*curve.Fr.n8), curve, logger);
+        ctx[`Plookup.H2_${i}`] = new Polynomial(ctx.cm2_2ns.slice((2*i + 1)*ctx.N*curve.Fr.n8, (2*i + 2)*ctx.N*curve.Fr.n8), curve, logger);
+
+        // if(randomBlinding[`Plookup.H1_${i}`] > 0) {
+        //     const blindingCoefs = [];
+        //     for(let l = 0; l < randomBlinding[`Plookup.H1_${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
+        //     ctx[`Plookup.H1_${i}`].blindCoefficients(blindingCoefs);
+        // }
+        
+        // if(randomBlinding[`Plookup.H2_${i}`] > 0) {
+        //     const blindingCoefs = [];
+        //     for(let l = 0; l < randomBlinding[`Plookup.H2_${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
+        //     ctx[`Plookup.H2_${i}`].blindCoefficients(blindingCoefs);
+        // }
     }
-    const commits2 = await commit(2, zkey, ctx, PTau, true, curve, logger);
+    const commits2 = await commit(2, zkey, ctx, PTau, curve, {multiExp: true, logger});
     for(let j = 0; j < commits2.length; ++j) {
         committedPols[`${commits2[j].index}`] = {commit: commits2[j].commit, pol: commits2[j].pol}
     }
@@ -194,7 +237,7 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     transcript.reset();
 
     if (parallelExec) {
-        await calculateExpsParallel(pool, ctx, "step3prev", fflonkInfo);
+        await calculateExpsParallel(pool, ctx, "step3prev", fflonkInfo, zkey);
     } else {
         calculateExps(ctx, fflonkInfo.step3prev, "n");
     }
@@ -207,12 +250,21 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         const pDen = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[pu.denId]);
         const z = await calculateZ(curve.Fr,pNum, pDen);
         setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], z);
-        ctx[`Plookup.Z${i}`] = await Polynomial.fromEvaluations(ctx.cm3_n.slice(i*ctx.N*curve.Fr.n8, (i + 1)*ctx.N*curve.Fr.n8), curve, logger);
-        if(randomBlinding[`Plookup.Z${i}`] > 0) {
-            const blindingCoefs = [];
-            for(let l = 0; l < randomBlinding[`Plookup.Z${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
-            ctx[`Plookup.Z${i}`].blindCoefficients(blindingCoefs);
+        
+        let coefs = await curve.Fr.ifft(ctx.cm3_n.slice(i*ctx.N*curve.Fr.n8, (i + 1)*ctx.N*curve.Fr.n8));
+
+        for (let j = 0; j < ctx.N; j++) {
+            ctx.cm3_2ns.set(coefs.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + i * ctx.N) * curve.Fr.n8);
         }
+
+        ctx[`Plookup.Z${i}`] = new Polynomial(ctx.cm3_2ns.slice(i*ctx.N*curve.Fr.n8, (i + 1)*ctx.N*curve.Fr.n8), curve, logger);
+        
+        
+        // if(randomBlinding[`Plookup.Z${i}`] > 0) {
+        //     const blindingCoefs = [];
+        //     for(let l = 0; l < randomBlinding[`Plookup.Z${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
+        //     ctx[`Plookup.Z${i}`].blindCoefficients(blindingCoefs);
+        // }
     }
 
 
@@ -224,12 +276,20 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         const pDen = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[pe.denId]);
         const z = await calculateZ(curve.Fr,pNum, pDen);
         setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], z);
-        ctx[`Permutation.Z${i}`] = await Polynomial.fromEvaluations(ctx.cm3_n.slice((i + nPlookups)*ctx.N*curve.Fr.n8, (i + nPlookups + 1)*ctx.N*curve.Fr.n8), curve, logger);
-        if(randomBlinding[`Permutation.Z${i}`] > 0) {
-            const blindingCoefs = [];
-            for(let l = 0; l < randomBlinding[`Permutation.Z${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
-            ctx[`Permutation.Z${i}`].blindCoefficients(blindingCoefs);
+
+        let coefs = await curve.Fr.ifft(ctx.cm3_n.slice((i + nPlookups)*ctx.N*curve.Fr.n8, (i + nPlookups + 1)*ctx.N*curve.Fr.n8));
+
+        for (let j = 0; j < ctx.N; j++) {
+            ctx.cm3_2ns.set(coefs.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + (i + nPlookups) * ctx.N) * curve.Fr.n8);
         }
+
+        ctx[`Permutation.Z${i}`] = new Polynomial(ctx.cm3_2ns.slice((i + nPlookups)*ctx.N*curve.Fr.n8, (i + nPlookups + 1)*ctx.N*curve.Fr.n8), curve, logger);
+        
+        // if(randomBlinding[`Permutation.Z${i}`] > 0) {
+        //     const blindingCoefs = [];
+        //     for(let l = 0; l < randomBlinding[`Permutation.Z${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
+        //     ctx[`Permutation.Z${i}`].blindCoefficients(blindingCoefs);
+        // }
     }
 
     const nConnections = fflonkInfo.ciCtx.length;
@@ -240,40 +300,72 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         const pDen = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[ci.denId]);
         const z = await calculateZ(curve.Fr,pNum, pDen);
         setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], z);
-        ctx[`Connection.Z${i}`] = await Polynomial.fromEvaluations(ctx.cm3_n.slice((i + nPlookups + nPermutations)*ctx.N*curve.Fr.n8, (i + nPlookups + nPermutations + 1)*ctx.N*curve.Fr.n8), curve, logger);
-        if(randomBlinding[`Connection.Z${i}`] > 0) {
-            const blindingCoefs = [];
-            for(let l = 0; l < randomBlinding[`Connection.Z${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
-            ctx[`Connection.Z${i}`].blindCoefficients(blindingCoefs);
+
+        let coefs = await curve.Fr.ifft(ctx.cm3_n.slice((i + nPlookups + nPermutations)*ctx.N*curve.Fr.n8, (i + nPlookups + nPermutations + 1)*ctx.N*curve.Fr.n8));
+
+        for (let j = 0; j < ctx.N; j++) {
+            ctx.cm3_2ns.set(coefs.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + (i + nPlookups + nPermutations) * ctx.N) * curve.Fr.n8);
         }
+
+        ctx[`Connection.Z${i}`] = new Polynomial(ctx.cm3_2ns.slice((i + nPlookups + nPermutations)*ctx.N*curve.Fr.n8, (i + nPlookups + nPermutations + 1)*ctx.N*curve.Fr.n8), curve, logger);
+        
+        // if(randomBlinding[`Connection.Z${i}`] > 0) {
+        //     const blindingCoefs = [];
+        //     for(let l = 0; l < randomBlinding[`Connection.Z${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
+        //     ctx[`Connection.Z${i}`].blindCoefficients(blindingCoefs);
+        // }
     }
 
-    const commits3 = await commit(3, zkey, ctx, PTau, true, curve, logger);
+    const commits3 = await commit(3, zkey, ctx, PTau, curve, {multiExp: true, logger});
     for(let j = 0; j < commits3.length; ++j) {
         committedPols[`${commits3[j].index}`] = {commit: commits3[j].commit, pol: commits3[j].pol}
 
     }
 
     if (parallelExec) {
-        await calculateExpsParallel(pool, ctx, "step3", fflonkInfo);
+        await calculateExpsParallel(pool, ctx, "step3", fflonkInfo, zkey);
     } else {
         calculateExps(ctx, fflonkInfo.step3, "n");
     }
-
 
     transcript.addScalar(ctx.challenges[3]);
     ctx.challenges[4] = transcript.getChallenge(); // vc
     transcript.reset();
 
+    
     if (parallelExec) {
-        await calculateExpsParallel(pool, ctx, "step42ns", fflonkInfo);
+        await calculateExpsParallel(pool, ctx, "step42ns", fflonkInfo, zkey);
     } else {
-        calculateExps(ctx, fflonkInfo.step42ns, "n");
+        calculateExps(ctx, fflonkInfo.step42ns, "2ns");
+    }
+    
+    ctx[`Q`] = new Polynomial(ctx.q_2ns, curve, logger);
+
+    // const qq1 = await curve.Fr.ifft(ctx.q_2ns);
+    // const qq2 = new BigBuffer(fflonkInfo.qDim*fflonkInfo.qDeg*ctx.N*curve.Fr.n8);
+    
+    // let curS = curve.Fr.one;
+    // const shiftIn = curve.Fr.exp(curve.Fr.inv(curve.Fr.shift), ctx.N);
+    // for (let p =0; p<fflonkInfo.qDeg; p++) {
+    //     for (let k=0; k<fflonkInfo.qDim; k++) {
+    //         for (let i=0; i<ctx.N; i++) {
+    //             qq2.set(curve.Fr.mul(qq1.slice(((fflonkInfo.qDim*p + k)*ctx.N + i)*curve.Fr.n8, ((fflonkInfo.qDim*p + k)*ctx.N + i + 1)*curve.Fr.n8), curS), ((fflonkInfo.qDim*p + k)*ctx.N + i)*curve.Fr.n8);
+    //         }
+    //     }
+    //     curS = curve.Fr.mul(curS, shiftIn);
+    // }
+
+    // ctx[`Q`] = new Polynomial(qq2, curve, logger);
+
+    const commits4 = await commit(4, zkey, ctx, PTau, curve, {multiExp: true, logger});
+    for(let j = 0; j < commits4.length; ++j) {
+        committedPols[`${commits4[j].index}`] = {commit: commits4[j].commit, pol: commits4[j].pol}
     }
 
-    //TODO: CONTINUE
-
-    const [cmts, evaluations] = await open(zkey, PTau, ctx, committedPols, curve, logger);
+    const [cmts, evaluations, xiSeed] = await open(zkey, PTau, ctx, committedPols, curve, {logger});
+    const powerW = lcm(Object.keys(zkey).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
+    let challengeXi = curve.Fr.exp(xiSeed, powerW);
+    console.log("Q", curve.Fr.toString(ctx["Q"].evaluate(challengeXi)));
 
     await pool.terminate();
 
@@ -308,7 +400,7 @@ function calculateExpAtPoint(ctx, code, i) {
 }
 
 //TODO: FIX THIS FUNCTION
-async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo) {
+async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, zkey) {
 
     let dom;
     let code = fflonkInfo[execPart];
@@ -342,26 +434,25 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo) {
         execInfo.outputSections.push({ name: "tmpExp_n" });
         dom = "n";
     } else if (execPart == "step42ns") {
-        execInfo.inputSections.push({ name: "cm1_n" });
-        execInfo.inputSections.push({ name: "cm2_n" });
-        execInfo.inputSections.push({ name: "cm3_n" });
-        execInfo.inputSections.push({ name: "const_n" });
-        execInfo.inputSections.push({ name: "x_n" });
-        execInfo.outputSections.push({ name: "q_n" });
-        execInfo.outputSections.push({ name: "tmpExp_n" });
-        dom = "n";
+        execInfo.inputSections.push({ name: "cm1_2ns" });
+        execInfo.inputSections.push({ name: "cm2_2ns" });
+        execInfo.inputSections.push({ name: "cm3_2ns" });
+        execInfo.inputSections.push({ name: "const_2ns" });
+        execInfo.inputSections.push({ name: "x_2ns" });
+        execInfo.outputSections.push({ name: "q_2ns" });
+        dom = "2ns";
     } else {
         throw new Error("Exec type not defined" + execPart);
     }
 
     function setWidth(section) {
-        if ((section.name == "const_n")) {
+        if ((section.name == "const_n") || (section.name == "const_2ns")) {
             section.width = fflonkInfo.nConstants;
         } else if (typeof fflonkInfo.mapSectionsN[section.name] != "undefined") {
             section.width = fflonkInfo.mapSectionsN[section.name];
-        } else if (["x_n"].indexOf(section.name) >= 0 ) {
+        } else if (["x_n", "x_2ns"].indexOf(section.name) >= 0 ) {
             section.width = 1;
-        }  else if (["q_n"].indexOf(section.name) >= 0 ) {
+        }  else if (["q_2ns"].indexOf(section.name) >= 0 ) {
             section.width = fflonkInfo.qDim;
         } else {
             throw new Error("Invalid section name "+ section.name);
@@ -434,8 +525,8 @@ function compileCode(ctx, code, dom, ret) {
             src.push(getRef(code[j].src[k]));
         }
         let exp;
-        // body.push(`console.log("${src[0]} ->",ctx.curve.Fr.toString(${src[1]}))`)
-        // body.push(`console.log("${src[1]} ->",ctx.curve.Fr.toString(${src[1]}))`)
+        // body.push(`console.log("${src[0]} ->",ctx.curve.Fr.toString(${src[0]}))`)
+        // if(src[1]) body.push(`console.log("${src[1]} ->",ctx.curve.Fr.toString(${src[1]}))`)
 
         switch (code[j].op) {
             case 'add': exp = `ctx.curve.Fr.add(${src[0]}, ${src[1]})`;  break;
@@ -447,8 +538,7 @@ function compileCode(ctx, code, dom, ret) {
         setRef(code[j].dest, exp);
     }
 
-    // console.log(body);
-    // body.push(`console.log("---------------------------")`);
+    console.log(body);
     if (ret) {
         body.push(`  return ${getRef(code[code.length-1].dest)};`);
     }
@@ -460,13 +550,29 @@ function compileCode(ctx, code, dom, ret) {
             case "tmp": return `ctx.tmp[${r.id}]`;
             case "const": {
                 const index = r.prime ? `(i + ${next})%${N}` : "i"
-                return `ctx.const_n.slice((${r.id}*${N} + ${index})*${ctx.curve.Fr.n8},(${r.id}*${N} + ${index} + 1)*${ctx.curve.Fr.n8})`;
+                if(dom === "n") {
+                    return `ctx.const_n.slice((${r.id}*${N} + ${index})*${ctx.curve.Fr.n8},(${r.id}*${N} + ${index} + 1)*${ctx.curve.Fr.n8})`;
+                } else if(dom === "2ns") {
+                    return `ctx.const_2ns.slice((${r.id}*${N} + ${index})*${ctx.curve.Fr.n8},(${r.id}*${N} + ${index} + 1)*${ctx.curve.Fr.n8})`;
+                } else {
+                    throw new Error("Invalid dom");
+                }
             }
             case "cm": {
-                return evalMap(ctx.fflonkInfo.cm_n[r.id], r.prime)
+                if(dom === "n") {
+                    return evalMap(ctx.fflonkInfo.cm_n[r.id], r.prime)
+                } else if(dom === "2ns") {
+                    return evalMap(ctx.fflonkInfo.cm_2ns[r.id], r.prime)
+                } else {
+                    throw new Error("Invalid dom");
+                }
             }
             case "tmpExp": {
-                return evalMap(ctx.fflonkInfo.tmpExp_n[r.id], r.prime)
+                if(dom === "n") {
+                    return evalMap(ctx.fflonkInfo.tmpExp_n[r.id], r.prime)
+                } else {
+                    throw new Error("Invalid dom"); 
+                }
             }
             case "number": {
                 return `ctx.curve.Fr.e(${r.value}n)`;
@@ -474,7 +580,14 @@ function compileCode(ctx, code, dom, ret) {
             case "public": return `ctx.publics[${r.id}]`;
             case "challenge": return `ctx.challenges[${r.id}]`;
             case "eval": return `ctx.evals[${r.id}]`;
-            case "x": return `ctx.x_n.slice(i*ctx.curve.Fr.n8, (i+1)*ctx.curve.Fr.n8)`;
+            case "x": 
+                if (dom=="n") {
+                    return `ctx.x_n.slice(i*ctx.curve.Fr.n8, (i+1)*ctx.curve.Fr.n8)`;
+                } else if (dom=="2ns") {
+                    return `ctx.x_2ns.slice(i*ctx.curve.Fr.n8, (i+1)*ctx.curve.Fr.n8)`;
+                } else {
+                    throw new Error("Invalid dom");
+                }
             case "Zi": return `ctx.Zi(i)`;
             default: throw new Error("Invalid reference type get: " + r.type);
         }
@@ -484,19 +597,30 @@ function compileCode(ctx, code, dom, ret) {
         switch (r.type) {
             case "tmp": {
                 body.push(`  ctx.tmp[${r.id}] = ${val};`);
-                // body.push(`console.log("tmp ${r.id} ->", ctx.curve.Fr.toString(${val}))`);
                 break;
             }
             case "q":
-                body.push(`  ctx.q_n.set(${val}, i*${ctx.curve.Fr.n8})`);
+                if (dom=="n") {
+                    throw new Error("Accessing q in domain n");
+                } else if (dom=="2ns") {
+                    body.push(`  ctx.q_2ns.set(${val}, i*${ctx.curve.Fr.n8})`);
+                }
                 break;
             case "cm":
-                body.push(`  ${evalMap(ctx.fflonkInfo.cm_n[r.id], r.prime, val)};`);
-                // body.push(`console.log("cm ${r.id} ->", ctx.curve.Fr.toString(${val}))`);
+                if (dom=="n") {
+                    body.push(`  ${evalMap(ctx.fflonkInfo.cm_n[r.id], r.prime, val)};`);
+                } else if (dom=="2ns") {
+                    body.push(`  ${evalMap(ctx.fflonkInfo.cm_2ns[r.id], r.prime, val)};`);
+                } else {
+                    throw new Error("Invalid dom");
+                }
                 break;
             case "tmpExp":
-                body.push(`  ${evalMap(ctx.fflonkInfo.tmpExp_n[r.id], r.prime, val)};`);
-                // body.push(`console.log("tmpExp ${r.id} ->", ctx.curve.Fr.toString(${val}))`);
+                if (dom=="n") {
+                    body.push(`  ${evalMap(ctx.fflonkInfo.tmpExp_n[r.id], r.prime, val)};`);
+                } else if (dom=="2ns") {
+                    throw new Error("Invalid dom");
+                }
                 break;
             default: throw new Error("Invalid reference type set: " + r.type);
         }
@@ -538,10 +662,18 @@ function ctxProxy(ctx) {
     createProxy("cm1_n");
     createProxy("cm2_n");
     createProxy("cm3_n");
+    createProxy("cm4_n");
+    createProxy("cm1_2ns");
+    createProxy("cm2_2ns");
+    createProxy("cm3_2ns");
+    createProxy("cm4_2ns");
     createProxy("tmpExp_n");
     createProxy("const_n");
-    createProxy("q_n");
+    createProxy("const_2ns");
+    createProxy("q_2ns");
     createProxy("x_n");
+    createProxy("x_2ns");
+
 
     pCtx.curve = ctx.curve;
     pCtx.Zi = ctx.Zi;

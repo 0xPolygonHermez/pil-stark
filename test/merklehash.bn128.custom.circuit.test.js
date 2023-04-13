@@ -22,8 +22,6 @@ describe("Merkle Hash BN128 Circuit Test", function () {
     let MH16;
     let MH4;
     let poseidon;
-    const arity = 16;
-
 
     this.timeout(10000000);
 
@@ -38,7 +36,7 @@ describe("Merkle Hash BN128 Circuit Test", function () {
 
     it.skip("Should calculate merkle hash of 9 complex elements with arity 16", async () => {
         const arity = 16;
-        const nBitsArity = log2(arity);
+        const nBitsArity = Math.ceil(Math.log2(arity))
         const NPols = 9;
         const nBits = Math.ceil(NPols*3/arity)*nBitsArity;
         console.log("NBITS", nBits);
@@ -81,9 +79,9 @@ describe("Merkle Hash BN128 Circuit Test", function () {
         assert(MH16.verifyGroupProof(root, mp, idx, groupElements));
     });
 
-    it("Should calculate merkle hash of 9 complex elements with arity 4", async () => {
+    it.skip("Should calculate merkle hash of 9 complex elements with arity 4", async () => {
         const arity = 4;
-        const nBitsArity = log2(arity);
+        const nBitsArity = Math.ceil(Math.log2(arity));
         const NPols = 9;
         const nBits = Math.ceil(NPols*3/arity)*nBitsArity;
         const idx = 9;

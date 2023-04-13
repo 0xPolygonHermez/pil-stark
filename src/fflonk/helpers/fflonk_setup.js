@@ -114,7 +114,11 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
         polsOpenings[`Connection.Z${i}`] = 2;
     }
 
-    // TODO: ADD CONSTRAINT POLYNOMIAL AND INTERMEDIATE POLYNOMIALS !!!!
+    // for(let i = 0; i < fflonkInfo.mapSectionsN.cm4_n; ++i) {
+    //     polsXi.push({name: `Q${i}`, stage: 4, degree: domainSize})
+    //     polsOpenings[`Q${i}`] = 2;
+    // }
+    polsXi.push({name: "Q", stage: 4, degree: domainSize * fflonkInfo.qDeg});
 
     const polsWXi = [];
     
@@ -132,12 +136,12 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
         ++polsOpenings[name];
     }
     
-    polsXi.forEach(p => p.degree += polsOpenings[p.name]);
+    // polsXi.forEach(p => p.degree += polsOpenings[p.name]);
 
     const polDefs = [polsXi];
 
     if(polsWXi.length > 0) {
-        polsWXi.forEach(p => p.degree += polsOpenings[p.name]);
+        // polsWXi.forEach(p => p.degree += polsOpenings[p.name]);
         polDefs.push(polsWXi);
     }
 
@@ -147,6 +151,8 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
         extraMuls: options.extraMuls || 0,
         openBy: "openingPoints"
     }
+
+    console.log(config);
 
     const {zkey, PTau, curve} = await setup(config, ptauFile, logger);
 
@@ -167,7 +173,7 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
         ctx[name] = await Polynomial.fromEvaluations(polEvalBuff, curve, logger);
     }
 
-    const commits = await commit(0, zkey, ctx, PTau, true, curve, logger);
+    const commits = await commit(0, zkey, ctx, PTau, curve, {multiExp: true, logger});
 
     for(let j = 0; j < commits.length; ++j) {
         zkey[`${commits[j].index}`] = commits[j].commit;

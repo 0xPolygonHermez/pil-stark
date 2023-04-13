@@ -150,7 +150,7 @@ module.exports = class MerkleHash {
 
         function merkle_genMerkleProof(idx, offset, n) {
             if (n<=1) return [];
-            const nBitsArity = log2(self.arity);
+            const nBitsArity = Math.ceil(Math.log2(self.arity));
             const nextIdx = idx >> nBitsArity;
             
             const si =  idx ^ (idx & (self.arity - 1));
@@ -197,7 +197,7 @@ module.exports = class MerkleHash {
                 return value;
             }
 
-            const nBitsArity = log2(self.arity);
+            const nBitsArity = Math.ceil(Math.log2(self.arity));
 
             const curIdx = idx & (self.arity - 1);
             const nextIdx = idx >> nBitsArity;

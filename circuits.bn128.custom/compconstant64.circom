@@ -46,9 +46,7 @@ template CompConstant64(ct) {
 
     signal num2bits[33] <== CustomNum2Bits(33)(sum[31]);
     
-    for (var i = 0; i < 32; i++) {
-        _ <== num2bits[i];
-    }
+    _ <== num2bits;
 
     out <== num2bits[32];
 }

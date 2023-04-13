@@ -13,7 +13,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     // Calculate the number plonk Additions and plonk constraints from the R1CS
     const [plonkConstraints, plonkAdditions] = r1cs2plonk(F, r1cs, console);
 
-    const addRangeChecks = false;
+    const addRangeChecks = true;
 
     const nPlonk = 2;
 
@@ -185,10 +185,11 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     }
 
     // Generate Custom Gates
-    const poseidonCustomGates = r1cs.customGatesUses.filter(cg => cg.id === customGatesInfo.PoseidonT);
-    for(let i = 0; i < poseidonCustomGates.length; i++) {
-        if ((i%10000) == 0) console.log(`Point check -> Processing Poseidon custom gates... ${i}/${poseidonCustomGates.length}`);
-        const cgu = poseidonCustomGates[i];
+    
+    for(let i = 0; i < r1cs.customGatesUses.length; i++) {
+        if (r1cs.customGatesUses[i].id !== customGatesInfo.PoseidonT) continue;
+        if ((i%10000) == 0) console.log(`Point check -> Processing Poseidon custom gates... ${i}/${r1cs.customGatesUses.length}`);
+        const cgu = r1cs.customGatesUses[i];
         assert(cgu.signals.length == (nRoundsPoseidon+1)*customGatesInfo.nPoseidonInputs);
         // First 30 rows store the each one of the rounds, while the last one only stores the output hash value so
         // that it can be checked.
@@ -213,10 +214,10 @@ module.exports = async function plonkSetup(F, r1cs, options) {
         r+=nRoundsPoseidon + 1;
     }
 
-    const rangeCheckCustomGates = r1cs.customGatesUses.filter(cg => cg.id === customGatesInfo.RangeCheck);
-    for(let i = 0; i < rangeCheckCustomGates.length; i++) {
-        if ((i%10000) == 0) console.log(`Point check -> Processing Range Check custom gates... ${i}/${rangeCheckCustomGates.length}`);
-        const cgu = rangeCheckCustomGates[i];
+    for(let i = 0; i < r1cs.customGatesUses.length; i++) {
+        if (r1cs.customGatesUses[i].id !== customGatesInfo.RangeCheck) continue;
+        if ((i%10000) == 0) console.log(`Point check -> Processing Range Check custom gates... ${i}/${r1cs.customGatesUses.length}`);
+        const cgu = r1cs.customGatesUses[i];
         if(partialRowRC.length > 0) {
             const row = partialRowRC[0].row;
             sMap[partialRowRC[0].index++][row] = cgu.signals[0];

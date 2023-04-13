@@ -46,7 +46,7 @@ template CustomNum2Bits(nBits) {
     for(var i =0; i < nBits; i++) {
         b[i] <-- (in >> i) & 1;
         check[i] = RangeCheck();
-        check[i].b <-- b[i];
+        check[i].b <== b[i];
         lc1 += b[i] * e2;
         e2 += e2;
     }

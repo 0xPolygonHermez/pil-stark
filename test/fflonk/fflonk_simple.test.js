@@ -7,8 +7,7 @@ const { fflonkProve } = require("../../src/fflonk/helpers/fflonk_prover.js");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
-const smGlobal = require("../state_machines/sm/sm_global.js");
-const smPlookup = require("../state_machines/sm_plookup/sm_plookup.js");
+const smSimple = require("../state_machines/sm_simple/sm_simple.js");
 const { fflonkInfoGen } = require("../../src/fflonk/helpers/fflonk_info.js");
 const { fflonkVerify } = require("../../src/fflonk/helpers/fflonk_verify.js");
 
@@ -18,15 +17,14 @@ describe("Fflonk plookup sm", async function () {
     it("It should create the pols main", async () => {
         const F = new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
 
-        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_plookup", "plookup_main.pil"));
+        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple", "simple2.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
-        await smGlobal.buildConstants(constPols.Global);
-        await smPlookup.buildConstants(constPols.Plookup);
+        await smSimple.buildConstants(constPols.Simple);
 
         const cmPols = newCommitPolsArray(pil, F);
 
-        await smPlookup.execute(cmPols.Plookup);
+        await smSimple.execute(F, cmPols.Simple);
 
         const res = await verifyPil(F, pil, cmPols , constPols);
 
@@ -42,7 +40,7 @@ describe("Fflonk plookup sm", async function () {
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        const zkey = await fflonkSetup(pil, constPols, ptauFile, fflonkInfo, {extraMuls: 3});
+        const zkey = await fflonkSetup(pil, constPols, ptauFile, fflonkInfo, {extraMuls: 1});
 
         const {commits, evaluations, publics} = await fflonkProve(cmPols, constPols, fflonkInfo, zkey, ptauFile, {});
 

@@ -3,15 +3,16 @@ const version = require("../../package").version;
 
 const { F1Field } = require("ffjavascript");
 const { fflonkSetup } = require("./helpers/fflonk_setup");
-const { newConstantPolsArray } = require("pilcom");
+const { newConstantPolsArray, compile } = require("pilcom");
 
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_setup.js -p <pil> -P [-P <pilconfig.json] -c <circuit.const> -t <ptau> -z <zkey.json>")
-    .alias("t", "tau")   // Input -> r1cs fil
+    .usage("node main_setup.js -p <pil> -P [-P <pilconfig.json] -f <fflonkInfo.json> -c <circuit.const> -t <ptau> -z <zkey.json>")
+    .alias("t", "tau")   // Input -> ptau
     .alias("p", "pil")    // Input -> Proposed PIL
     .alias("P", "pilconfig")
+    .alias("f", "fflonkInfo")
     .alias("c", "const")  // Output -> file required to build the constants
     .alias("z", "zkey")   // Output -> File required to execute
     .argv;
@@ -24,6 +25,7 @@ async function run() {
     const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
     const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "mycircuit.const";
     const zkeyFile = typeof(argv.zkey) === "string" ?  argv.zkey.trim() : "mycircuit_zkey.json";
+    const fflonkInfoFile = typeof(argv.fflonkInfo) === "string" ?  argv.fflonkInfo.trim() : "fflonkInfo.json";
 
     // PIL compile
     const pil = await compile(F, pilFile, null, pilConfig);
@@ -32,8 +34,10 @@ async function run() {
     const cnstPols = newConstantPolsArray(pil, F);
     await cnstPols.loadFromFile(constFile);
 
-    const options = {F, logger: console};
-    const zkey = await fflonkSetup(pil, cnstPols, ptauFile, options);
+    const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
+
+    const options = {F, logger: console, extraMuls: 2};
+    const zkey = await fflonkSetup(pil, cnstPols, ptauFile, fflonkInfo, options);
 
     await fs.promises.writeFile(zkeyFile, JSON.stringify(zkey, null, 1), "utf8");
 

@@ -4,7 +4,7 @@ const generateStep2 = require("../../pil_info/step2");
 const generateStep3 = require("../../pil_info/step3");
 const generateConstraintPolynomial = require("../../pil_info/cp_prover");
 const generateConstraintPolynomialVerifier = require("../../pil_info/cp_ver");
-const map = require("../../pil_info/map2");
+const map = require("../../pil_info/map.js");
 const { log2 } = require("pilcom/src/utils.js");
 
 module.exports.fflonkInfoGen = function fflonkInfoGen(F, _pil) {
@@ -60,7 +60,7 @@ module.exports.fflonkInfoGen = function fflonkInfoGen(F, _pil) {
 
 
     let N = 1 << pilPower;
-    map(res, pil, N, N);
+    map(res, pil, N, N, false);
     res.publics = pil.publics;
 
     return res;

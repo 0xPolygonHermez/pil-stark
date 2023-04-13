@@ -17,14 +17,15 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, ma
     }
 
 
-    res.imExps = [];
     let d = 2;
     let [imExps, qDeg] = calculateImPols(pil, cExp, d++);
+    [res.imExps, res.qDeg] = [imExps, qDeg];
     while(Object.keys(imExps).length > 0 && (!maxDeg || d <= maxDeg)) {
-        if ((!res.qDeg)||( Object.keys(imExps).length + qDeg < Object.keys(res.imExps).length + res.qDeg)) {
+        [imExps, qDeg] = calculateImPols(pil, cExp, d++);
+        if ((maxDeg && (Object.keys(imExps).length + qDeg < Object.keys(res.imExps).length + res.qDeg)) 
+            || (!maxDeg && Object.keys(imExps).length === 0)) {
             [res.imExps, res.qDeg] = [imExps, qDeg];
         }
-        [imExps, qDeg] = calculateImPols(pil, cExp, d++);
     }
 
     res.imExpsList = Object.keys(res.imExps).map(Number);

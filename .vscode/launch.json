@@ -373,6 +373,22 @@
             ]
         },
         {
+            "name": "test simple fflonk",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/fflonk/fflonk_simple.test.js"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "test all fflonk",
             "console": "integratedTerminal",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
@@ -502,7 +518,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/linearhash.bn128.custom.circuit.test.js"
+                "${workspaceFolder}/test/circuits/bn128/linearhash.bn128.custom.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -547,7 +563,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/merklehash.bn128.custom.circuit.test.js"
+                "${workspaceFolder}/test/circuits/bn128/merklehash.bn128.custom.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -615,6 +631,7 @@
         },
         {
             "name": "simple test",
+            "console": "integratedTerminal",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [
@@ -755,7 +772,7 @@
 
         {
             "name": "fibonacci buildconst",
-            "program": "test/sm_fibonacci/main_buildconst_fibonacci.js",
+            "program": "test/state_machines/sm_fibonacci/main_buildconst_fibonacci.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -770,14 +787,14 @@
         },
         {
             "name": "fibonacci exec",
-            "program": "test/sm_fibonacci/main_exec_fibonacci.js",
+            "program": "test/state_machines/sm_fibonacci/main_exec_fibonacci.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
             "args": [
-                "-i test/sm_fibonacci/fibonacci.input.json",
+                "-i test/state_machines/sm_fibonacci/fibonacci.input.json",
                 "-o tmp/fibonacci.commit"
             ],
             "runtimeArgs": [
@@ -794,7 +811,7 @@
             "type": "pwa-node",
             "args": [
                 "tmp/fibonacci.commit",
-                "-p test/sm_fibonacci/fibonacci_main.pil",
+                "-p test/state_machines/sm_fibonacci/fibonacci_main.pil",
                 "-c tmp/fibonacci.const"
             ],
             "runtimeArgs": [
@@ -810,8 +827,8 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-p test/sm_fibonacci/fibonacci_main.pil",
-                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.starkstruct.json",
+                "-p test/state_machines/sm_fibonacci/fibonacci_main.pil",
+                "-s ${workspaceFolder}/test/state_machines/sm_fibonacci/fibonacci.starkstruct.json",
                 "-i tmp/fibonacci.starkinfo.json"
             ],
             "runtimeArgs": [
@@ -846,8 +863,8 @@
             "type": "pwa-node",
             "args": [
                 "-c ${workspaceFolder}/tmp/fibonacci.const",
-                "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci_main.pil",
-                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.starkstruct.json",
+                "-p ${workspaceFolder}/test/state_machines/sm_fibonacci/fibonacci_main.pil",
+                "-s ${workspaceFolder}/test/state_machines/sm_fibonacci/fibonacci.starkstruct.json",
                 "-t ${workspaceFolder}/tmp/fibonacci.consttree",
                 "-v ${workspaceFolder}/tmp/fibonacci.verkey.json",
             ],
@@ -867,7 +884,7 @@
                 "-m ${workspaceFolder}/tmp/fibonacci.commit",
                 "-c ${workspaceFolder}/tmp/fibonacci.const",
                 "-t ${workspaceFolder}/tmp/fibonacci.consttree",
-                "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci_main.pil",
+                "-p ${workspaceFolder}/test/state_machines/sm_fibonacci/fibonacci_main.pil",
                 "-s ${workspaceFolder}/tmp/fibonacci.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.proof.json",
                 "-z ${workspaceFolder}/tmp/fibonacci.proof.zkin.json",
@@ -904,7 +921,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-p ${workspaceFolder}/test/sm_fibonacci/fibonacci_main.pil",
+                "-p ${workspaceFolder}/test/state_machines/sm_fibonacci/fibonacci_main.pil",
                 "-s ${workspaceFolder}/tmp/fibonacci.starkinfo.json",
                 "-v ${workspaceFolder}/tmp/fibonacci.verkey.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.verifier.circom",
@@ -956,7 +973,7 @@
             "type": "pwa-node",
             "args": [
                 "-p tmp/fibonacci.c12.pil",
-                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.c12.starkstruct.json",
+                "-s ${workspaceFolder}/test/state_machines/sm_fibonacci/fibonacci.c12.starkstruct.json",
                 "-i tmp/fibonacci.c12.starkinfo.json"
             ],
             "runtimeArgs": [
@@ -1010,7 +1027,7 @@
             "args": [
                 "-c ${workspaceFolder}/tmp/fibonacci.c12.const",
                 "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
-                "-s ${workspaceFolder}/test/sm_fibonacci/fibonacci.c12.starkstruct.json",
+                "-s ${workspaceFolder}/test/state_machines/sm_fibonacci/fibonacci.c12.starkstruct.json",
                 "-t ${workspaceFolder}/tmp/fibonacci.c12.consttree",
                 "-v ${workspaceFolder}/tmp/fibonacci.c12.verkey.json",
                 "--custom=true",
@@ -1109,7 +1126,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/fibonacci_bn128_verifier.custom.circuit.test.js"
+                "${workspaceFolder}/test/stark/fibonacci_bn128_verifier.custom.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1188,19 +1205,37 @@
             ]
         },
         {
-            "name": "fibonacci final fflonk setup",
+            "name": "final fibonacci Fflonk info",
             "console": "integratedTerminal",
-            "program": "src/fflonk/main_fflonksetup.js",
+            "program": "src/fflonk/main_fflonkinfo.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
             "args": [
-                "-t tmp/powersOfTau28_hez_final_19.ptau",
                 "-p tmp/fibonacci.final.pil",
-                "-c tmp/fibonacci.final.const",
-                "-v tmp/fibonacci.final.vk.json",
+                "-i tmp/fibonacci.fflonkInfo.json"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "final fibonacci Fflonk setup",
+            "console": "integratedTerminal",
+            "program": "src/fflonk/main_setup.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-t ${workspaceFolder}/tmp/powersOfTau28_hez_final_22.ptau",
+                "-p ${workspaceFolder}/tmp/fibonacci.final.pil",
+                "-c ${workspaceFolder}/tmp/fibonacci.final.const",
+                "-f ${workspaceFolder}/tmp/fibonacci.fflonkInfo.json",
+                "-z ${workspaceFolder}/tmp/fibonacci.zkey.json",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1208,7 +1243,7 @@
         },
         {
             "name": "all buildconst",
-            "program": "test/sm_all/main_buildconst_all.js",
+            "program": "test/state_machines/sm_all/main_buildconst_all.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -1223,14 +1258,14 @@
         },
         {
             "name": "all exec",
-            "program": "test/sm_all/main_exec_all.js",
+            "program": "test/state_machines/sm_all/main_exec_all.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
             "args": [
-                "-i test/sm_all/all.input.json",
+                "-i test/state_machines/sm_all/all.input.json",
                 "-o tmp/all.commit"
             ],
             "runtimeArgs": [
@@ -1247,7 +1282,7 @@
             "type": "pwa-node",
             "args": [
                 "tmp/all.commit",
-                "-p test/sm_all/all_main.pil",
+                "-p test/state_machines/sm_all/all_main.pil",
                 "-c tmp/all.const"
             ],
             "runtimeArgs": [
@@ -1263,8 +1298,8 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-p test/sm_all/all_main.pil",
-                "-s ${workspaceFolder}/test/sm_all/all.starkstruct.json",
+                "-p test/state_machines/sm_all/all_main.pil",
+                "-s ${workspaceFolder}/test/state_machines/sm_all/all.starkstruct.json",
                 "-i tmp/all.starkinfo.json"
             ],
             "runtimeArgs": [
@@ -1299,8 +1334,8 @@
             "type": "pwa-node",
             "args": [
                 "-c ${workspaceFolder}/tmp/all.const",
-                "-p ${workspaceFolder}/test/sm_all/all_main.pil",
-                "-s ${workspaceFolder}/test/sm_all/all.starkstruct.json",
+                "-p ${workspaceFolder}/test/state_machines/sm_all/all_main.pil",
+                "-s ${workspaceFolder}/test/state_machines/sm_all/all.starkstruct.json",
                 "-t ${workspaceFolder}/tmp/all.consttree",
                 "-v ${workspaceFolder}/tmp/all.verkey.json",
             ],
@@ -1320,7 +1355,7 @@
                 "-m ${workspaceFolder}/tmp/all.commit",
                 "-c ${workspaceFolder}/tmp/all.const",
                 "-t ${workspaceFolder}/tmp/all.consttree",
-                "-p ${workspaceFolder}/test/sm_all/all_main.pil",
+                "-p ${workspaceFolder}/test/state_machines/sm_all/all_main.pil",
                 "-s ${workspaceFolder}/tmp/all.starkinfo.json",
                 "-o ${workspaceFolder}/tmp/all.proof.json",
                 "-z ${workspaceFolder}/tmp/all.proof.zkin.json",
@@ -1357,7 +1392,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-p ${workspaceFolder}/test/sm_all/all_main.pil",
+                "-p ${workspaceFolder}/test/state_machines/sm_all/all_main.pil",
                 "-s ${workspaceFolder}/tmp/all.starkinfo.json",
                 "-v ${workspaceFolder}/tmp/all.verkey.json",
                 "-o ${workspaceFolder}/tmp/all.verifier.circom",
@@ -1409,7 +1444,7 @@
             "type": "pwa-node",
             "args": [
                 "-p tmp/all.c12.pil",
-                "-s ${workspaceFolder}/test/sm_all/all.c12.starkstruct.json",
+                "-s ${workspaceFolder}/test/state_machines/sm_all/all.c12.starkstruct.json",
                 "-i tmp/all.c12.starkinfo.json"
             ],
             "runtimeArgs": [
@@ -1463,7 +1498,7 @@
             "args": [
                 "-c ${workspaceFolder}/tmp/all.c12.const",
                 "-p ${workspaceFolder}/tmp/all.c12.pil",
-                "-s ${workspaceFolder}/test/sm_all/all.c12.starkstruct.json",
+                "-s ${workspaceFolder}/test/state_machines/sm_all/all.c12.starkstruct.json",
                 "-t ${workspaceFolder}/tmp/all.c12.consttree",
                 "-v ${workspaceFolder}/tmp/all.c12.verkey.json",
                 "--custom=true",
@@ -1562,7 +1597,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/all_bn128_verifier.custom.circuit.test.js"
+                "${workspaceFolder}/test/stark/all_bn128_verifier.custom.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1704,7 +1739,7 @@
             "program": "test/plonk2pil/main_plonksetup.js",
             "request": "launch",
             "args": [
-                "-r ${workspaceFolder}/tmp/deposit.r1cs",
+                "-r ${workspaceFolder}/tmp/plonktest.r1cs",
                 "-p ${workspaceFolder}/tmp/plonktest.pil",
                 "-c ${workspaceFolder}/tmp/plonktest.const",
                 "-e ${workspaceFolder}/tmp/plonktest.exec"            ],
