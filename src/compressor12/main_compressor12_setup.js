@@ -3,7 +3,8 @@ const version = require("../../package").version;
 
 const F1Field = require("../f3g.js");
 const {readR1cs} = require("r1csfile");
-const plonkSetup = require("./compressor12_setup.js");
+const plonkSetupC24 = require("./compressor24_setup.js");
+const plonkSetupC12 = require("./compressor12_setup.js");
 
 
 const argv = require("yargs")
@@ -13,6 +14,7 @@ const argv = require("yargs")
     .alias("c", "const")  // Output file required to build the constants
     .alias("p", "pil")    // Proposed PIL
     .alias("e", "exec")   // File required to execute
+    .string("cols")
     .argv;
 
 async function run() {
@@ -28,7 +30,17 @@ async function run() {
     const options = {
         forceNBits: argv.forceNBits
     };
-    const res = await plonkSetup(r1cs, options);
+
+    let cols = argv.cols ? Number(argv.cols) : 24;
+    
+    if(![12,24].includes(cols)) throw new Error("Invalid number of cols");
+
+    let res;
+    if(cols === 24) {
+        res = await plonkSetupC24(r1cs, options);
+    } else {
+        res = await plonkSetupC12(r1cs, options);
+    }
 
     await fs.promises.writeFile(pilFile, res.pilStr, "utf8");
 
@@ -65,8 +77,8 @@ async function writeExecFile(execFile, adds, sMap) {
     }
 
     for (let i=0; i<sMap[0].length; i++) {
-        for (let c=0; c<12; c++) {
-            buff[2 + adds.length*4 + 12*i + c] = BigInt(sMap[c][i]);
+        for (let c=0; c<sMap.length; c++) {
+            buff[2 + adds.length*4 + sMap.length*i + c] = BigInt(sMap[c][i]);
         }
     }
 

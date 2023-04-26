@@ -782,6 +782,7 @@
                 "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
                 "-c ${workspaceFolder}/tmp/fibonacci.c12.const",
                 "-e ${workspaceFolder}/tmp/fibonacci.c12.exec",
+                "--cols=24",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"

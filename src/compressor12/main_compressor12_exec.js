@@ -52,10 +52,12 @@ async function run() {
 
     const N = cmPols.Compressor.a[0].length;
 
+    const nCols =cmPols.Compressor.a.length;
+
     for (let i=0; i<nSMap; i++) {
-        for (let j=0; j<12; j++) {
-            if (sMapBuff[12*i+j] != 0) {
-                cmPols.Compressor.a[j][i] = w[sMapBuff[12*i+j]];
+        for (let j=0; j<nCols; j++) {
+            if (sMapBuff[nCols*i+j] != 0) {
+                cmPols.Compressor.a[j][i] = w[sMapBuff[nCols*i+j]];
             } else {
                 cmPols.Compressor.a[j][i] = 0n;
             }
@@ -63,7 +65,7 @@ async function run() {
     }
 
     for (let i=nSMap; i<N; i++) {
-        for (let j=0; j<12; j++) {
+        for (let j=0; j<nCols; j++) {
             cmPols.Compressor.a[j][i] = 0n;
         }
     }
@@ -95,8 +97,8 @@ async function readExecFile(execFile) {
     const addsBuff = new BigUint64Array(nAdds*4);
     await fd.read(addsBuff, 0, nAdds*4*8);
 
-    const sMapBuff = new BigUint64Array(nSMap*12);
-    await fd.read(sMapBuff, 0, nSMap*12*8);
+    const sMapBuff = new BigUint64Array(nSMap*24);
+    await fd.read(sMapBuff, 0, nSMap*24*8);
 
     await fd.close();
 

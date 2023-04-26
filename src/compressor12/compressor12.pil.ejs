@@ -1,5 +1,7 @@
 constant %N = 2**<%- nBits %>;
 
+// Global state machine
+// It is used to store various polynomials representing small lookup tables 
 namespace Global(%N);
     pol constant L1;
 <% for (let i=12; i<nPublics; i+=12) { -%>
@@ -11,10 +13,12 @@ namespace Compressor(%N);
     pol constant C[12];
     pol constant PARTIAL;
     pol constant POSEIDON12;
+    pol constant POSEIDONCUSTFIRST;
     pol constant GATE;
     pol constant CMULADD;
     pol constant EVPOL4;
     pol constant FFT4;
+    pol constant TREESELECTOR4;
     pol commit a[12];
 
 <% for (let i=0; i<nPublics; i++) { -%>
@@ -26,32 +30,35 @@ namespace Compressor(%N);
 
     // Normal plonk gates
 
-    // C[0] -> Ql_01
-    // C[1] -> Qr_01
-    // C[2] -> Qo_01
-    // C[3] -> Qm_01
-    // C[4] -> Qk_01
-    // C[6] -> Ql_23
-    // C[7] -> Qr_23
-    // C[8] -> Qo_23
-    // C[9] -> Qm_23
-    // C[10]-> Qc_23
+    // C[0] -> Qm1
+    // C[1] -> Ql1
+    // C[2] -> Qr1
+    // C[3] -> Qo1
+    // C[4] -> Qc1
+    
+    // C[6] -> Qm2
+    // C[7] -> Ql2
+    // C[8] -> Qr2
+    // C[9] -> Qo2
+    // C[10]-> Qc2
+
 
     pol a01 = a[0]*a[1];
-    pol g012 = C[3]*a01 + C[0]*a[0] + C[1]*a[1] + C[2]*a[2] + C[4];
+    pol g012 = C[0]*a01 + C[1]*a[0] + C[2]*a[1] + C[3]*a[2] + C[4];
     g012*GATE = 0;
 
     pol a34 = a[3]*a[4];
-    pol g345 = C[3]*a34 + C[0]*a[3] + C[1]*a[4] + C[2]*a[5] + C[4];
+    pol g345 = C[0]*a34 + C[1]*a[3] + C[2]*a[4] + C[3]*a[5] + C[4];
     g345*GATE = 0;
 
     pol a67 = a[6]*a[7];
-    pol g678 = C[9]*a67 + C[6]*a[6] + C[7]*a[7] + C[8]*a[8] + C[10];
+    pol g678 = C[6]*a67 + C[7]*a[6] + C[8]*a[7] + C[9]*a[8] + C[10];
     g678*GATE = 0;
 
     pol a910 = a[9]*a[10];
-    pol g91011 = C[9]*a910 + C[6]*a[9] + C[7]*a[10] + C[8]*a[11] + C[10];
+    pol g91011 = C[6]*a910 + C[7]*a[9] + C[8]*a[10] + C[9]*a[11] + C[10];
     g91011*GATE = 0;
+
 
 
     // POSEIDON12 GATE - Check that a GL Poseidon round is valid
@@ -61,10 +68,24 @@ namespace Compressor(%N);
     // 2- In the first 4 and last 4 rounds, each element of the state is raised to the 7th power. 
     // Additionally this is done for the first element of the state in each round
     // 3- At the end of each round, the state vector is multiplied by the MDS matrix
+    
+    pol custPoseidonInput0 = a[8] * (a[0] - a[4]) + a[4];
+    pol custPoseidonInput1 = a[8] * (a[1] - a[5]) + a[5];
+    pol custPoseidonInput2 = a[8] * (a[2] - a[6]) + a[6];
+    pol custPoseidonInput3 = a[8] * (a[3] - a[7]) + a[7];
+    pol custPoseidonInput4 = a[8] * (a[4] - a[0]) + a[0];
+    pol custPoseidonInput5 = a[8] * (a[5] - a[1]) + a[1];
+    pol custPoseidonInput6 = a[8] * (a[6] - a[2]) + a[2];
+    pol custPoseidonInput7 = a[8] * (a[7] - a[3]) + a[3];
 <% for (let i=0; i<12; i++) { -%>
-
+    
     // Calculate the 7th power of the <%- i %>th element
-    pol a<%- i %>_1 = a[<%- i %>] +  C[<%- i %>];
+<%  if(i < 8) { -%>
+    pol inputPoseidon<%- i %> = POSEIDONCUSTFIRST * (custPoseidonInput<%- i %> - a[<%- i %>]) + a[<%- i %>];
+<%  } else { -%>
+    pol inputPoseidon<%- i %> = POSEIDONCUSTFIRST * (0 - a[<%- i %>]) + a[<%- i %>];
+<%  } -%>
+    pol a<%- i %>_1 = inputPoseidon<%- i %> +  C[<%- i %>];
     pol a<%- i %>_2 = a<%- i %>_1 * a<%- i %>_1;
     pol a<%- i %>_4 = a<%- i %>_2 * a<%- i %>_2;
     pol a<%- i %>_6 = a<%- i %>_4 * a<%- i %>_2;
@@ -93,38 +114,26 @@ namespace Compressor(%N);
 
     // CMULADD GATE - Check that a * b + c in Fp³ using (X³ - X - 1) as a generator is performed correctly
     // In this particular case, 
-    // a = C[9] * [ a[0] + C[0] , a[1] + C[1], a[2] + C[2] ]
-    // b = [ a[3] + C[3], a[4] + C[4], a[5] + C[5] ]
-    // c = C[10] * [ a[6] + C[6], a[7] + C[7], a[8] + C[8] ]
+    // a = [a[0], a[1], a[2]]
+    // b = [a[3], a[4], a[5]]
+    // c = [a[6], a[7], a[8]]
     // and this must be equal to [ a[9], a[10], a[11] ]
-
-    // Define a, b and c
-    pol a0 = (a[0] + C[0])*C[9];
-    pol a1 = (a[1] + C[1])*C[9];
-    pol a2 = (a[2] + C[2])*C[9];
-    pol b0 = a[3] + C[3];
-    pol b1 = a[4] + C[4];
-    pol b2 = a[5] + C[5];
-    pol c0 = (a[6] + C[6])*C[10];
-    pol c1 = (a[7] + C[7])*C[10];
-    pol c2 = (a[8] + C[8])*C[10];
-
-
+    
     // Since the modulo is known (X³ - X - 1) we can calculate the coefficients in general form by calculating 
     // (a0 + a1*x + a2*x²)*(b0 + b1*x + b2*x²) and then using long division to get the residue when dividing by the modulo
     // We get the following result: (a0*b0 + a1*b2 + a2*b1) + (a0*b1 + a1*b0 + a1*b2 + a2*b1 + a2*b2)x + (a0*b2 + a2*b2 + a2*b0 + a1*b1)x²
     // This result can be expressed using this intermediate polyonials A,B,C,D,E,F that have less than degree 2
-    pol cA = (a0 + a1)  * (b0 + b1);
-    pol cB = (a0 + a2)  * (b0 + b2);
-    pol cC = (a1 + a2)  * (b1 + b2);
-    pol cD = a0*b0;
-    pol cE = a1*b1;
-    pol cF = a2*b2;
+    pol cA1 = (a[0] + a[1])  * (a[3] + a[4]);
+    pol cB1 = (a[0] + a[2])  * (a[3] + a[5]);
+    pol cC1 = (a[1] + a[2])  * (a[4] + a[5]);
+    pol cD1 = a[0]*a[3];
+    pol cE1 = a[1]*a[4];
+    pol cF1 = a[2]*a[5];
 
     // Whenever CMULADD = 1, check that the CMulAdd result matches with the values stored in a[9], a[10] and a[11] respectively
-    CMULADD * (a[9] - (cC + cD - cE - cF) - c0) = 0;
-    CMULADD * (a[10] - (cA + cC - 2*cE - cD) - c1) = 0;
-    CMULADD * (a[11] - (cB - cD + cE) - c2) = 0;
+    CMULADD * (a[9] - (cC1 + cD1 - cE1 - cF1) - a[6]) = 0;
+    CMULADD * (a[10] - (cA1 + cC1 - 2*cE1 - cD1) - a[7]) = 0;
+    CMULADD * (a[11] - (cB1 - cD1 + cE1) - a[8]) = 0;
 
     // FFT4
 
@@ -193,11 +202,51 @@ namespace Compressor(%N);
 <%- CMulAdd("4", "acc3_0", "acc3_1", "acc3_2", "a[3]'", "a[4]'", "a[5]'", "a[0]", "a[1]", "a[2]") -%>
 
     // Whenever EVPOL4 = 1, check that the evaluation result matches with the values stored in a[6]', a[7]' and a[8]' respectively
-    EVPOL4 * (a[6]' - acc4_0 ) = 0;
-    EVPOL4 * (a[7]' - acc4_1 ) = 0;
-    EVPOL4 * (a[8]' - acc4_2 ) = 0;
+    EVPOL4 * (a[6]' - acc4_0) = 0;
+    EVPOL4 * (a[7]' - acc4_1) = 0;
+    EVPOL4 * (a[8]' - acc4_2) = 0;
+
+    // Add tree selector
+    pol keys1 = (1 - a[0]')*(1 - a[1]');
+    pol treeSelect1_1 = keys1 * (a[0] - a[2]');
+    pol treeSelect1_2 = keys1 * (a[1] - a[3]');
+    pol treeSelect1_3 = keys1 * (a[2] - a[4]');
+    TREESELECTOR4 * treeSelect1_1 = 0;
+    TREESELECTOR4 * treeSelect1_2 = 0;
+    TREESELECTOR4 * treeSelect1_3 = 0;
+
+    pol keys2 = (a[0]')*(1 - a[1]');
+    pol treeSelect2_1 = keys2 * (a[3] - a[2]');
+    pol treeSelect2_2 = keys2 * (a[4] - a[3]');
+    pol treeSelect2_3 = keys2 * (a[5] - a[4]');
+    TREESELECTOR4 * treeSelect2_1 = 0;
+    TREESELECTOR4 * treeSelect2_2 = 0;
+    TREESELECTOR4 * treeSelect2_3 = 0;
+
+    pol keys3 = (1 - a[0]')*(a[1]');
+    pol treeSelect3_1 = keys3 * (a[6] - a[2]');
+    pol treeSelect3_2 = keys3 * (a[7] - a[3]');
+    pol treeSelect3_3 = keys3 * (a[8] - a[4]');
+    TREESELECTOR4 * treeSelect3_1 = 0;
+    TREESELECTOR4 * treeSelect3_2 = 0;
+    TREESELECTOR4 * treeSelect3_3 = 0;
+
+    pol keys4 = (a[0]')*(a[1]');
+    pol treeSelect4_1 = keys4 * (a[9] - a[2]');
+    pol treeSelect4_2 = keys4 * (a[10] - a[3]');
+    pol treeSelect4_3 = keys4 * (a[11] - a[4]');
+    TREESELECTOR4 * treeSelect4_1 = 0;
+    TREESELECTOR4 * treeSelect4_2 = 0;
+    TREESELECTOR4 * treeSelect4_3 = 0;
 
 
     // Check connection equations of Plonk
-    {a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11]} connect
-        {S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7], S[8], S[9], S[10], S[11]};
+<% 
+    let a = [];
+    let S = [];
+    for(let i = 0; i < 12; ++i) {
+        a.push(`a[${i}]`);
+        S.push(`S[${i}]`);
+    }
+-%>
+    { <%- a.join(',') %> } connect { <%- S.join(',')  %> }

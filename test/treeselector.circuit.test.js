@@ -1,6 +1,8 @@
 const chai = require("chai");
 const path = require("path");
-
+const tmp = require('temporary');
+const fs = require("fs");
+const ejs = require("ejs");
 const assert = chai.assert;
 
 const wasm_tester = require("circom_tester").wasm;
@@ -14,35 +16,45 @@ function getBits(idx, nBits) {
 }
 
 describe("TreeSelector Circuit Test", function () {
-    let eddsa;
-    let F;
-    let circuit;
+    let circuit = [];
 
     this.timeout(10000000);
 
     before( async() => {
-        circuit = await wasm_tester(path.join(__dirname, "circuits", "treeselector.test.circom"), {O:1, prime: "goldilocks"});
-    });
-
-    it("Should calculate tree selector", async () => {
-        const nBits = 5;
-        const idx = 9;
-        const N = 1 << nBits;
-
-        const values = [];
-        for (let j=0; j<N; j++) {
-            values[j] = [];
-            for (let k=0; k<3; k++) {
-                values[j][k] = BigInt(k*100+j);
-            }
+        const template = await fs.promises.readFile(path.join(__dirname, "circuits", "treeselector.test.circom.ejs"), "utf8");
+        
+        for(let i = 0; i <= 7; ++i) {
+            const content = ejs.render(template, {nBits: i, dirName:path.join(__dirname, "circuits")});
+            const circuitFile = path.join(new tmp.Dir().path, "circuit.circom");
+            await fs.promises.writeFile(circuitFile, content);
+            circuit[i] = await wasm_tester(circuitFile, {O:1, prime: "goldilocks"});
         }
-
-        const input={
-            values: values,
-            key: getBits(idx, nBits)
-        };
-        const w1 = await circuit.calculateWitness(input, true);
-
-        await circuit.assertOut(w1, {out: values[idx]});
+        
     });
+
+    for (let i=0;i<=7;i++) {
+        it(`Should calculate tree selector with ${i} levels`, async () => {
+            const nBits = i;
+            const N = 1 << nBits;
+    
+            const values = [];
+            for (let j=0; j<N; j++) {
+                values[j] = [];
+                for (let k=0; k<3; k++) {
+                    values[j][k] = BigInt(k*100+j);
+                }
+            }
+    
+            for(let j = 0; j < N; ++j) {
+                const input={
+                    values: values,
+                    key: getBits(j, nBits)
+                };
+                
+                const w1 = await circuit[i].calculateWitness(input, true);
+                
+                await circuit[i].assertOut(w1, {out: values[j]});
+            }
+        });
+    };
 });

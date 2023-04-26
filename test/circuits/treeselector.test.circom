@@ -1,5 +1,6 @@
 pragma circom 2.1.0;
+pragma custom_templates;
 
-include "../../circuits.gl/treeselector.circom";
+include "<%- dirName %>/../../circuits.gl/treeselector.circom";
 
-component main = TreeSelector(5, 3);
+component main = TreeSelector(<%- nBits %>, 3);
