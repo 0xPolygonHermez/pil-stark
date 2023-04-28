@@ -4,6 +4,7 @@ const version = require("../../package").version;
 const F1Field = require("../f3g.js");
 const {readR1cs} = require("r1csfile");
 const plonkSetupC24 = require("./compressor24_setup.js");
+const plonkSetupC18 = require("./compressor18_setup.js");
 const plonkSetupC12 = require("./compressor12_setup.js");
 
 
@@ -33,11 +34,13 @@ async function run() {
 
     let cols = argv.cols ? Number(argv.cols) : 24;
     
-    if(![12,24].includes(cols)) throw new Error("Invalid number of cols");
+    if(![12,18, 24].includes(cols)) throw new Error("Invalid number of cols");
 
     let res;
     if(cols === 24) {
         res = await plonkSetupC24(r1cs, options);
+    } else if(cols === 18) {
+        res = await plonkSetupC18(r1cs, options);
     } else {
         res = await plonkSetupC12(r1cs, options);
     }

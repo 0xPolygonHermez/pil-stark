@@ -17,7 +17,7 @@ module.exports = async function plonkSetup(r1cs, options) {
     const [plonkConstraints, plonkAdditions] = r1cs2plonk(F, r1cs);
 
     // Calculate how many C12 constraints are needed 
-    const C12PlonkConstraints = calculatePlonkConstraints(plonkConstraints, true);
+    const C12PlonkConstraintsHalfs = calculatePlonkConstraints(plonkConstraints);
 
     // Get information about the custom gates from the R1CS
     const customGatesInfo = getCustomGatesInfo(r1cs);
@@ -26,10 +26,8 @@ module.exports = async function plonkSetup(r1cs, options) {
     let nPublics = r1cs.nOutputs + r1cs.nPubInputs;
     const nPublicRows = Math.floor((nPublics + 11)/12); 
 
-    const rowsCMulAdd = Math.floor((customGatesInfo.nCMulAdd + 1) / 2);
-    console.log(`Number of Plonk constraints: ${plonkConstraints.length} -> Number of C12 Plonk constraints: ${C12PlonkConstraints}`);
     console.log(`Number of publics: ${nPublics} -> Constraints: ${nPublicRows}`);
-    console.log(`Number of CMulAdd: ${customGatesInfo.nCMulAdd} -> Constraints: ${rowsCMulAdd}`);
+    console.log(`Number of CMulAdd: ${customGatesInfo.nCMulAdd} -> Constraints: ${customGatesInfo.nCMulAdd}`);
     console.log(`Number of Poseidon12: ${customGatesInfo.nPoseidon12} -> Constraints: ${customGatesInfo.nPoseidon12*31}`);
     console.log(`Number of Poseidon12 custom: ${customGatesInfo.nCustPoseidon12} -> Constraints: ${customGatesInfo.nCustPoseidon12*31}`)
     console.log(`Total Number of Poseidon:  ${customGatesInfo.nPoseidon12 + customGatesInfo.nCustPoseidon12} -> Constraints ${(customGatesInfo.nPoseidon12 + customGatesInfo.nCustPoseidon12)*31}`);
@@ -43,7 +41,15 @@ module.exports = async function plonkSetup(r1cs, options) {
     // - Each Poseidon12 custom gate uses 31 rows (30 rows one for each of the GL Poseidon hash round and the last one to check the Poseidon Hash)
     // - Each FFT4 custom gateuses 2 rows (1 for actually computing the FFT and the other one for checking the output)
     // - Each EvalPol4 custom gate uses 2 rows (1 for actually computing the evaluation and the other one for checking the output)
-    const NUsed = nPublicRows + C12PlonkConstraints + rowsCMulAdd + customGatesInfo.nCustPoseidon12*31 + customGatesInfo.nPoseidon12*31 + customGatesInfo.nFFT4*2 + customGatesInfo.nEvPol4*2 + customGatesInfo.nTreeSelector4*2;
+    const nRowsCustomGates = nPublicRows + customGatesInfo.nCMulAdd + customGatesInfo.nCustPoseidon12*31 + customGatesInfo.nPoseidon12*31 + customGatesInfo.nFFT4*2 + customGatesInfo.nEvPol4*2 + customGatesInfo.nTreeSelector4*2;
+    
+    const nPlonkConstraints = Math.floor((C12PlonkConstraintsHalfs + 1) / 2);
+
+    console.log(`Rows custom gates: ${nRowsCustomGates}`);
+    console.log(`Number of Plonk constraints: ${plonkConstraints.length} -> Number of Plonk rows: ${nPlonkConstraints}`);
+
+    const NUsed = nRowsCustomGates + nPlonkConstraints;
+    
     //Calculate the first power of 2 that's bigger than the number of constraints
     let nBits = log2(NUsed - 1) + 1;
 

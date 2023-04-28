@@ -36,11 +36,7 @@ module.exports ={
         // Store the sumatory in this variable
         const halfs = Object.values(constraints).reduce((acc, curr) => acc + Math.floor((curr + 1) / 2), 0);
         
-        if(C12) {
-            return Math.floor((halfs + 1) / 2);
-        } else {
-            return Math.floor((halfs + 3) / 4);
-        }
+        return halfs;
     },
 
     /*

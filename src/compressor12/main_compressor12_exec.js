@@ -31,7 +31,15 @@ async function run() {
 
     const input = JSONbig.parse(await fs.promises.readFile(inputFile, "utf8"));
 
-    const { nAdds, nSMap, addsBuff, sMapBuff } = await readExecFile(execFile);
+    const pil = await compile(F, pilFile, null, pilConfig);
+
+    const cmPols = newCommitPolsArray(pil);
+
+    const N = cmPols.Compressor.a[0].length;
+
+    const nCols =cmPols.Compressor.a.length;
+    
+    const { nAdds, nSMap, addsBuff, sMapBuff } = await readExecFile(execFile, nCols);
 
     const fd =await fs.promises.open(wasmFile, "r");
     const st =await fd.stat();
@@ -39,9 +47,7 @@ async function run() {
     await fd.read(wasm, 0, st.size);
     await fd.close();
 
-    const pil = await compile(F, pilFile, null, pilConfig);
-
-    const cmPols = newCommitPolsArray(pil);
+    
 
     const wc = await WitnessCalculatorBuilder(wasm);
     const w = await wc.calculateWitness(input);
@@ -49,10 +55,6 @@ async function run() {
     for (let i=0; i<nAdds; i++) {
         w.push( F.add( F.mul( w[addsBuff[i*4]], addsBuff[i*4 + 2]), F.mul( w[addsBuff[i*4+1]],  addsBuff[i*4+3]  )));
     }
-
-    const N = cmPols.Compressor.a[0].length;
-
-    const nCols =cmPols.Compressor.a.length;
 
     for (let i=0; i<nSMap; i++) {
         for (let j=0; j<nCols; j++) {
@@ -85,7 +87,7 @@ run().then(()=> {
 });
 
 
-async function readExecFile(execFile) {
+async function readExecFile(execFile, nCols) {
 
     const fd =await fs.promises.open(execFile, "r");
     const buffH = new BigUint64Array(2);
@@ -97,8 +99,8 @@ async function readExecFile(execFile) {
     const addsBuff = new BigUint64Array(nAdds*4);
     await fd.read(addsBuff, 0, nAdds*4*8);
 
-    const sMapBuff = new BigUint64Array(nSMap*24);
-    await fd.read(sMapBuff, 0, nSMap*24*8);
+    const sMapBuff = new BigUint64Array(nSMap*nCols);
+    await fd.read(sMapBuff, 0, nSMap*nCols*8);
 
     await fd.close();
 
