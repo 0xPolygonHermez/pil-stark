@@ -6,8 +6,7 @@ include "poseidon_constants.circom";
 // Custom gate that calculates Poseidon hash of three inputs using Neptune optimization
 template custom Poseidon12() {
     signal input in[12];
-    signal output imNeptune[8][12];
-    signal output poseidon[29][12];
+    signal output im[9][12];
     signal output out[12];
 
     var st[12];
@@ -36,7 +35,7 @@ template custom Poseidon12() {
             newSt[t] = acc;
         }
         st = newSt;
-        imNeptune[r] <-- st;
+        im[r] <-- st;
     }
 
     st[0] = st[0]**7;
@@ -54,13 +53,14 @@ template custom Poseidon12() {
         }
 
         st[0] = s0;
+        if(r == 10) im[4] <-- st;
         if(r < 21) {
             st[0] = st[0]**7;
             st[0] += CNST(60 + r + 1);
         }
     }
 
-    imNeptune[4] <-- st;
+    im[5] <-- st;
     for(var r = 0; r < 4; r++) {
         for(var t=0; t < 12; t++) {
             st[t] = st[t] ** 7;
@@ -76,35 +76,9 @@ template custom Poseidon12() {
         }
         st = newSt;
         if(r < 3) {
-            imNeptune[r + 5] <-- st;
+            im[r + 6] <-- st;
         } else {
             out <-- st;
-        }
-    }
-
-    st = in;
-    // The Goldilocks Poseidon does 30 rounds
-    for (var i=0; i<30; i++) {
-        for (var t=0; t<12; t++) {
-
-            // 1- A constant is added to each state element. For example, for the 5th element of the 13th round, 
-            // the const[12*13 + 4] = const[160] element is added
-            st[t] = st[t] + C(i*12+t);
-            
-            // 2- In the first 4 and last 4 rounds, each element of the state is raised to the 7th power. 
-            // Additionally this is done for the first element of the state in each round
-            if ((i<4) || (i>=26) || (t==0)) {
-                st[t] = st[t] ** 7;
-            }
-        }
-
-        //3- At the end of each round, the state vector is multiplied by the MDS matrix
-        st = MDS(st);
-
-        // At the end of each round, store the value obtained in im[i]. 
-        // In the last round, store the resulting value in the out signal
-        if (i<29) {
-            poseidon[i] <-- st;
         }
     }
 }
@@ -114,8 +88,7 @@ template custom Poseidon12() {
 template custom CustPoseidon12() {
     signal input in[8];
     signal input key;
-    signal output imNeptune[8][12];
-    signal output poseidon[29][12];
+    signal output im[9][12];
     signal output out[12];
 
     var initialSt[12];
@@ -159,7 +132,7 @@ template custom CustPoseidon12() {
             newSt[t] = acc;
         }
         st = newSt;
-        imNeptune[r] <-- st;
+        im[r] <-- st;
     }
 
     st[0] = st[0]**7;
@@ -176,13 +149,14 @@ template custom CustPoseidon12() {
         }
 
         st[0] = s0;
+        if(r == 10) im[4] <-- st;
         if(r < 21) {
             st[0] = st[0]**7;
             st[0] += CNST(60 + r + 1);
         }
     }
 
-    imNeptune[4] <-- st;
+    im[5] <-- st;
     for(var r = 0; r < 4; r++) {
         for(var t=0; t < 12; t++) {
             st[t] = st[t] ** 7;
@@ -198,39 +172,11 @@ template custom CustPoseidon12() {
         }
         st = newSt;
         if(r < 3) {
-            imNeptune[r + 5] <-- st;
+            im[r + 6] <-- st;
         } else {
             out <-- st;
         }
     }
-
-    st = initialSt;
-    
-    // The Goldilocks Poseidon does 30 rounds
-    for (var i=0; i<30; i++) {
-        for (var t=0; t<12; t++) {
-
-            // 1- A constant is added to each state element. For example, for the 5th element of the 13th round, 
-            // the const[12*13 + 4] = const[160] element is added
-            st[t] = st[t] + C(i*12+t);
-            
-            // 2- In the first 4 and last 4 rounds, each element of the state is raised to the 7th power. 
-            // Additionally this is done for the first element of the state in each round
-            if ((i<4) || (i>=26) || (t==0)) {
-                st[t] = st[t] ** 7;
-            }
-        }
-
-        //3- At the end of each round, the state vector is multiplied by the MDS matrix
-        st = MDS(st);
-
-        // At the end of each round, store the value obtained in im[i]. 
-        // In the last round, store the resulting value in the out signal
-        if (i<29) {
-            poseidon[i] <-- st;
-        }
-    }
-
 }
 
 // Calculate Poseidon Hash of 3 inputs (2 in + capacity) in GL field (each element has at most 63 bits)
@@ -255,8 +201,7 @@ template Poseidon(nOuts) {
         out[j] <== p.out[j];
     }
 
-    _ <== p.imNeptune;
-    _ <== p.poseidon;
+    _ <== p.im;
 
     for (var j=nOuts; j<12; j++) {
         _ <== p.out[j];
@@ -284,8 +229,7 @@ template CustPoseidon(nOuts) {
         out[j] <== p.out[j];
     }
 
-    _ <== p.imNeptune;
-    _ <== p.poseidon;
+    _ <== p.im;
     
     for (var j=nOuts; j<12; j++) {
         _ <== p.out[j];

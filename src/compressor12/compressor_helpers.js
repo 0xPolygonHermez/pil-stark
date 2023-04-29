@@ -15,7 +15,7 @@ module.exports ={
         the first equation (qL1*a + qR1*b + qM1*a*b + qO1*c + qC1) while (a3, b3, c3) and (a4, b4, c4) need to fulfill the 
         second part 
     */
-    calculatePlonkConstraints: function(plonkConstraints, C12) {
+    calculatePlonkConstraints: function(plonkConstraints) {
 
         // Each constraint is defined by the following five polynomial gates [qM, qL, qR, qO, qC].
         // Store all the different combinations (and how many times each) appears in the plonkConstraints

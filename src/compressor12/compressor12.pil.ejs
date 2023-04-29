@@ -11,9 +11,12 @@ namespace Global(%N);
 namespace Compressor(%N);
     pol constant S[12];
     pol constant C[12];
-    pol constant PARTIAL;
-    pol constant POSEIDON12;
+    pol constant POSEIDONM;
     pol constant POSEIDONCUSTFIRST;
+    pol constant POSEIDONP;
+    pol constant POSEIDONFIRST;
+    pol constant PARTIALROUND;
+    pol constant PARTIALROUND2;
     pol constant GATE;
     pol constant CMULADD;
     pol constant EVPOL4;
@@ -59,9 +62,7 @@ namespace Compressor(%N);
     pol g91011 = C[6]*a910 + C[7]*a[9] + C[8]*a[10] + C[9]*a[11] + C[10];
     g91011*GATE = 0;
 
-
-
-    // POSEIDON12 GATE - Check that a GL Poseidon round is valid
+    // POSEIDON GATE - Check that a GL Poseidon round is valid
     // Each GL Poseidon round work as follows, given an initial state of 12 elements:
     // 1- A constant is added to each state element. For example, for the 5th element of the 13th round, 
     // the const[12*13 + 4] = const[160] element is added
@@ -77,40 +78,107 @@ namespace Compressor(%N);
     pol custPoseidonInput5 = a[8] * (a[5] - a[1]) + a[1];
     pol custPoseidonInput6 = a[8] * (a[6] - a[2]) + a[2];
     pol custPoseidonInput7 = a[8] * (a[7] - a[3]) + a[3];
-<% for (let i=0; i<12; i++) { -%>
-    
-    // Calculate the 7th power of the <%- i %>th element
-<%  if(i < 8) { -%>
-    pol inputPoseidon<%- i %> = POSEIDONCUSTFIRST * (custPoseidonInput<%- i %> - a[<%- i %>]) + a[<%- i %>];
+
+<% for(let r = 0; r < 12; ++r) { -%>
+<%  if(r < 8) { -%>
+    pol inputPoseidon<%- r %> = POSEIDONCUSTFIRST * (custPoseidonInput<%- r %> - a[<%- r %>]) + a[<%- r %>];
 <%  } else { -%>
-    pol inputPoseidon<%- i %> = POSEIDONCUSTFIRST * (0 - a[<%- i %>]) + a[<%- i %>];
+    pol inputPoseidon<%- r %> = POSEIDONCUSTFIRST * (0 - a[<%- r %>]) + a[<%- r %>];
 <%  } -%>
-    pol a<%- i %>_1 = inputPoseidon<%- i %> +  C[<%- i %>];
-    pol a<%- i %>_2 = a<%- i %>_1 * a<%- i %>_1;
-    pol a<%- i %>_4 = a<%- i %>_2 * a<%- i %>_2;
-    pol a<%- i %>_6 = a<%- i %>_4 * a<%- i %>_2;
-    pol a<%- i %>_7 = a<%- i %>_6 * a<%- i %>_1;
-<%      if (i==0) { -%>
-    pol a<%- i %>_R = a<%- i %>_7; // The first element is always exponentiated, no matter the round
+    pol inp<%- r %> = inputPoseidon<%- r %> + POSEIDONFIRST * <%- C[r] %>;
+<%  if (r > 0 && r < 11) { -%>
+    // Calculate the 7th power of the <%- r %>th element
+    pol inputP<%- r %> = PARTIALROUND * (s0_R<%- r - 1 %> - inp<%- r %>) + inp<%- r %>;
+    pol inpP<%- r %> = PARTIALROUND2 * (s0_R<%- r + 11 - 1 %> - inputP<%- r %>) + inputP<%- r %>;
+    pol a<%- r %>_2 = inpP<%- r %> * inpP<%- r %>;
+    pol a<%- r %>_4 = a<%- r %>_2 * a<%- r %>_2;
+    pol a<%- r %>_6 = a<%- r %>_4 * a<%- r %>_2;
+    pol a<%- r %>_R = a<%- r %>_6 * inpP<%- r %> + C[<%- r %>];
+<%  } else { -%>
+    // Calculate the 7th power of the <%- r %>th element
+    pol a<%- r %>_2 = inp<%- r %> * inp<%- r %>;
+    pol a<%- r %>_4 = a<%- r %>_2 * a<%- r %>_2;
+    pol a<%- r %>_6 = a<%- r %>_4 * a<%- r %>_2;
+    pol a<%- r %>_R = a<%- r %>_6 * inp<%- r %> + C[<%- r %>];
+<%  } -%>
+
+<% if(r < 11) { -%>
+<% let sumArray = []; -%>
+<%  for(let j = 0; j < 12; ++j) { -%>
+<%      if(r == 0) { -%>
+<%          if(j == 0) { -%>
+<%              sumArray.push(`${SS[23*r + j]} * a${r}_R`); -%>
+<%          } else { -%>
+<%              sumArray.push(`${SS[23*r + j]} * a[${j}]`); -%>
+<%          } -%>
 <%      } else { -%>
-    pol a<%- i %>_R = PARTIAL * (a<%- i %>_1 - a<%- i %>_7) + a<%- i %>_7; // Determine if the <%- i %>th element needs to be raised to the 7th power or not using PARTIAL
-<%      } -%>
+<%          if(j == 0) { -%>
+<%              sumArray.push(`${SS[23*r + j]} * a${r}_R`); -%>
+<%          } else { -%>
+<%              sumArray.push(`${SS[23*r + j]} * s${j}_R${r - 1}`); -%>
+<%          } -%>
+<%      }  -%>
+<%  } -%>
+
+    pol s0_R<%- r  %> = <%- sumArray.join(" + ") %>;
+<%  for(let j = 1; j < 12; ++j) { -%>
+    pol s<%- j %>_R<%- r %> = <%- r === 0 ? `a[${j}]` : `s${j}_R${r - 1}` %> + a<%- r %>_R * <%- SS[23 * r + 11 + j] %>;
+<%  } -%>
+
+
+<% let sumArray2 = []; -%>
+<%  for(let j = 0; j < 12; ++j) { -%>
+<%      if(r == 0) { -%>
+<%          if(j == 0) { -%>
+<%              sumArray2.push(`${SS[23*(r+11) + j]} * a${r}_R`); -%>
+<%          } else { -%>
+<%              sumArray2.push(`${SS[23*(r+11) + j]} * a[${j}]`); -%>
+<%          } -%>
+<%      } else { -%>
+<%          if(j == 0) { -%>
+<%              sumArray2.push(`${SS[23*(r+11) + j]} * a${r}_R`); -%>
+<%          } else { -%>
+<%              sumArray2.push(`${SS[23*(r+11) + j]} * s${j}_R${r + 11 - 1}`); -%>
+<%          } -%>
+<%      }  -%>
+<%  } -%>
+    pol s0_R<%- r + 11  %> = <%- sumArray2.join(" + ") %>;
+<%  for(let j = 1; j < 12; ++j) { -%>
+    pol s<%- j %>_R<%- r + 11 %> = <%- r === 0 ? `a[${j}]` : `s${j}_R${r + 11 - 1}` %> + a<%- r %>_R * <%- SS[23 * (r+11) + 11 + j] %>;
+<%  } -%>
+
+<%  } -%>
+<%  } -%>
+        
+
+<% for(let i = 0; i < 12; ++i) { -%>
+<% let sumArray = []; -%>
+<% for(let j = 0; j < 12; ++j) { sumArray.push(`${P[j][i]} * a${j}_R`); } -%>
+    pol poseidonP<%- i + 1 %> = (a[<%- i %>]' - (<%- sumArray.join(" + ") -%>));
+<% } -%>
+     
+<% for(let i = 0; i < 12; ++i) { -%>
+<% let sumArray = []; -%>
+<% for(let j = 0; j < 12; ++j) { sumArray.push(`${M[j][i]} * a${j}_R`); } -%>
+    pol poseidonM<%- i %> = (a[<%- i %>]' - (<%- sumArray.join(" + ") -%>));
 <% } -%>
 
-    //Whenever POSEIDON12 = 1, check that a' stores the next round of GL Poseidon of a. 
-    // This is done by multiplying the vector (a0_R a1_R ... a11_R a12_R) by the MDS matrix
-    POSEIDON12 * (a[0]'  - (25*a0_R + 15*a1_R + 41*a2_R + 16*a3_R +  2*a4_R + 28*a5_R + 13*a6_R + 13*a7_R + 39*a8_R + 18*a9_R + 34*a10_R + 20*a11_R)) = 0;
-    POSEIDON12 * (a[1]'  - (20*a0_R + 17*a1_R + 15*a2_R + 41*a3_R + 16*a4_R +  2*a5_R + 28*a6_R + 13*a7_R + 13*a8_R + 39*a9_R + 18*a10_R + 34*a11_R)) = 0;
-    POSEIDON12 * (a[2]'  - (34*a0_R + 20*a1_R + 17*a2_R + 15*a3_R + 41*a4_R + 16*a5_R +  2*a6_R + 28*a7_R + 13*a8_R + 13*a9_R + 39*a10_R + 18*a11_R)) = 0;
-    POSEIDON12 * (a[3]'  - (18*a0_R + 34*a1_R + 20*a2_R + 17*a3_R + 15*a4_R + 41*a5_R + 16*a6_R +  2*a7_R + 28*a8_R + 13*a9_R + 13*a10_R + 39*a11_R)) = 0;
-    POSEIDON12 * (a[4]'  - (39*a0_R + 18*a1_R + 34*a2_R + 20*a3_R + 17*a4_R + 15*a5_R + 41*a6_R + 16*a7_R +  2*a8_R + 28*a9_R + 13*a10_R + 13*a11_R)) = 0;
-    POSEIDON12 * (a[5]'  - (13*a0_R + 39*a1_R + 18*a2_R + 34*a3_R + 20*a4_R + 17*a5_R + 15*a6_R + 41*a7_R + 16*a8_R +  2*a9_R + 28*a10_R + 13*a11_R)) = 0;
-    POSEIDON12 * (a[6]'  - (13*a0_R + 13*a1_R + 39*a2_R + 18*a3_R + 34*a4_R + 20*a5_R + 17*a6_R + 15*a7_R + 41*a8_R + 16*a9_R +  2*a10_R + 28*a11_R)) = 0;
-    POSEIDON12 * (a[7]'  - (28*a0_R + 13*a1_R + 13*a2_R + 39*a3_R + 18*a4_R + 34*a5_R + 20*a6_R + 17*a7_R + 15*a8_R + 41*a9_R + 16*a10_R +  2*a11_R)) = 0;
-    POSEIDON12 * (a[8]'  - ( 2*a0_R + 28*a1_R + 13*a2_R + 13*a3_R + 39*a4_R + 18*a5_R + 34*a6_R + 20*a7_R + 17*a8_R + 15*a9_R + 41*a10_R + 16*a11_R)) = 0;
-    POSEIDON12 * (a[9]'  - (16*a0_R +  2*a1_R + 28*a2_R + 13*a3_R + 13*a4_R + 39*a5_R + 18*a6_R + 34*a7_R + 20*a8_R + 17*a9_R + 15*a10_R + 41*a11_R)) = 0;
-    POSEIDON12 * (a[10]' - (41*a0_R + 16*a1_R +  2*a2_R + 28*a3_R + 13*a4_R + 13*a5_R + 39*a6_R + 18*a7_R + 34*a8_R + 20*a9_R + 17*a10_R + 15*a11_R)) = 0;
-    POSEIDON12 * (a[11]' - (15*a0_R + 41*a1_R + 16*a2_R +  2*a3_R + 28*a4_R + 13*a5_R + 13*a6_R + 39*a7_R + 18*a8_R + 34*a9_R + 20*a10_R + 17*a11_R)) = 0;
+<% for(let i = 0; i < 12; ++i) { -%>
+    pol poseidon<%- i %> = POSEIDONP * (poseidonP<%- i + 1 %> - poseidonM<%- i %>) + poseidonM<%- i %>;
+<% } -%>
+
+<% for(let i = 0; i < 12; ++i) { -%>
+    POSEIDONM * poseidon<%- i %> = 0;
+<% } -%>
+
+<% for(let i = 0; i < 12; i++)  { -%>
+    PARTIALROUND * (a[<%- i %>]' - s<%- i %>_R10) = 0;
+<% } -%>
+
+
+<% for(let i = 0; i < 12; i++)  { -%>
+    PARTIALROUND2 * (a[<%- i %>]' - s<%- i %>_R21) = 0;
+<% } -%>
 
     // CMULADD GATE - Check that a * b + c in Fp³ using (X³ - X - 1) as a generator is performed correctly
     // In this particular case, 

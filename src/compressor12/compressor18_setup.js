@@ -136,13 +136,12 @@ module.exports = async function plonkSetup(r1cs, options) {
         if ((i%10000) == 0) console.log(`Point check -> Processing custom gates... ${i}/${r1cs.customGatesUses.length}`);
         const cgu = r1cs.customGatesUses[i];
         if (cgu.id == customGatesInfo.Poseidon12Id) {
-            assert(cgu.signals.length == 10*12 + 29*12);
+            assert(cgu.signals.length == 11*12);
                 
             let counterC = 12;
             let counterS = 0;
 
             for (let i = 0; i < 6; ++i) {
-                if(i === 5) counterS += 29*12;
                 for (let j = 0; j<12; j++) {
                     sMap[j][r+i] = cgu.signals[counterS++];
                     constPols.Compressor.C[j][r+i] = (i === 2 || i === 5) ? 0n : C[counterC++];
@@ -153,6 +152,7 @@ module.exports = async function plonkSetup(r1cs, options) {
                     counterC += 12;
                 } else if (i === 2) {
                     counterC += 22;
+                    counterS += 12;
                 }
 
                 constPols.Compressor.GATE[r+i] = 0n;
@@ -178,12 +178,11 @@ module.exports = async function plonkSetup(r1cs, options) {
 
             r+=6;
         } else if(cgu.id == customGatesInfo.CustPoseidon12Id) {
-            assert(cgu.signals.length == 30*12 + 9 + 8*12);
+            assert(cgu.signals.length == 9 + 10*12);
             let counterC = 12;
             let counterS = 0;
 
             for (let i = 0; i < 6; ++i) {
-                if(i === 5) counterS += 29*12;
                 for (let j = 0; j<12; j++) {
                     sMap[j][r+i] = (i === 0 && (j === 9 || j === 10 || j === 11)) ? 0 : cgu.signals[counterS++];
                     constPols.Compressor.C[j][r+i] = (i === 2 || i === 5) ? 0n : C[counterC++];
@@ -194,6 +193,7 @@ module.exports = async function plonkSetup(r1cs, options) {
                     counterC += 12;
                 } else if (i === 2) {
                     counterC += 22;
+                    counterS += 12;
                 }
 
                 constPols.Compressor.GATE[r+i] = 0n;
