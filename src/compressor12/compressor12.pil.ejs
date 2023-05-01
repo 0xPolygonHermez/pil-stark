@@ -80,16 +80,15 @@ namespace Compressor(%N);
     pol custPoseidonInput7 = a[8] * (a[7] - a[3]) + a[3];
 
 <% for(let r = 0; r < 12; ++r) { -%>
+    // Calculate the 7th power of the <%- r %>th element
 <%  if(r < 8) { -%>
-    pol inputPoseidon<%- r %> = POSEIDONCUSTFIRST * (custPoseidonInput<%- r %> - a[<%- r %>]) + a[<%- r %>];
+    pol inp<%- r %> = POSEIDONCUSTFIRST * (custPoseidonInput<%- r %> - a[<%- r %>]) + a[<%- r %>] + POSEIDONFIRST * <%- C[r] %>;
 <%  } else { -%>
-    pol inputPoseidon<%- r %> = POSEIDONCUSTFIRST * (0 - a[<%- r %>]) + a[<%- r %>];
+    pol inp<%- r %> = POSEIDONCUSTFIRST * (-a[<%- r %>]) + a[<%- r %>] + POSEIDONFIRST * <%- C[r] %>;
 <%  } -%>
-    pol inp<%- r %> = inputPoseidon<%- r %> + POSEIDONFIRST * <%- C[r] %>;
 <%  if (r > 0 && r < 11) { -%>
     // Calculate the 7th power of the <%- r %>th element
-    pol inputP<%- r %> = PARTIALROUND * (s0_R<%- r - 1 %> - inp<%- r %>) + inp<%- r %>;
-    pol inpP<%- r %> = PARTIALROUND2 * (s0_R<%- r + 11 - 1 %> - inputP<%- r %>) + inputP<%- r %>;
+    pol inpP<%- r %> = PARTIALROUND * s0_R<%- r - 1 %> + PARTIALROUND2 * s0_R<%- r + 11 - 1 %> + POSEIDONM * inp<%- r %>;
     pol a<%- r %>_2 = inpP<%- r %> * inpP<%- r %>;
     pol a<%- r %>_4 = a<%- r %>_2 * a<%- r %>_2;
     pol a<%- r %>_6 = a<%- r %>_4 * a<%- r %>_2;

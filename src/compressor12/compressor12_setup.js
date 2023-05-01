@@ -8,7 +8,6 @@ const { newConstantPolsArray, compile, getKs } = require("pilcom");
 const ejs = require("ejs");
 const r1cs2plonk = require("../r1cs2plonk");
 const {M, P, S, C} = require("../poseidon_constants_opt.js");
-const {CPOSEIDON} = require("./poseidon_constants.js");
 const { getCustomGatesInfo, calculatePlonkConstraints } = require("./compressor_helpers.js");
 
 module.exports = async function plonkSetup(r1cs, options) {
@@ -44,6 +43,7 @@ module.exports = async function plonkSetup(r1cs, options) {
     const nRowsCustomGates = nPublicRows + customGatesInfo.nCMulAdd + customGatesInfo.nCustPoseidon12*11 + customGatesInfo.nPoseidon12*11 + customGatesInfo.nFFT4*2 + customGatesInfo.nEvPol4*2 + customGatesInfo.nTreeSelector4*2;
     
     const nPlonkConstraints = Math.floor((C12PlonkConstraintsHalfs + 1) / 2);
+    console.log(`Number of plonk constraints: ${plonkConstraints.length} -> Constraints rows: ${nPlonkConstraints}`);
 
     const NUsed = nRowsCustomGates + nPlonkConstraints;
     
@@ -134,15 +134,7 @@ module.exports = async function plonkSetup(r1cs, options) {
             sMap[pr.nUsed*3][pr.row] = c[0];
             sMap[pr.nUsed*3+1][pr.row] = c[1];
             sMap[pr.nUsed*3+2][pr.row] = c[2];
-            pr.nUsed++;
-            // If nUsed is equal to 2, it means the first set of constraints values is being fulfilled and the second half needs still to be added.
-            // Otherwise the C12 row is full
-            if (pr.nUsed == 2) {
-                halfRows.push(pr);
-                delete partialRows[k];
-            } else if (pr.nUsed == 4) {
-                delete partialRows[k];
-            }
+            delete partialRows[k];
         // If the constraint is not stored in partialRows (which means that there is no other row that is using this very same set of constraints and is not full)
         // check if there's any half row. If that's the case, attach the new set of constraints values to that row 
         } else if (halfRows.length > 0) {
@@ -185,7 +177,17 @@ module.exports = async function plonkSetup(r1cs, options) {
                 row: r,
                 nUsed: 1
             };
-            r ++;
+
+            halfRows.push({
+                row: r,
+                nUsed: 2
+            });
+
+            for(let i = 6; i < 12; ++i) {
+                sMap[i][r] = 0;
+                constPols.Compressor.C[i][r] = 0n;
+            }
+            r++;
         }
     }
 
@@ -201,8 +203,6 @@ module.exports = async function plonkSetup(r1cs, options) {
             sMap[3][pr.row] = sMap[0][pr.row];
             sMap[4][pr.row] = sMap[1][pr.row];
             sMap[5][pr.row] = sMap[2][pr.row];
-            pr.nUsed ++;
-            halfRows.push(pr);
         } else if (pr.nUsed == 3) {
             sMap[9][pr.row] = sMap[6][pr.row];
             sMap[10][pr.row] = sMap[7][pr.row];;
@@ -210,22 +210,6 @@ module.exports = async function plonkSetup(r1cs, options) {
         } else {
             assert(false);
         }
-    }
-
-    for (let i=0; i<halfRows.length; i++) {
-        const pr = halfRows[i];
-        sMap[6][pr.row] = 0;
-        sMap[7][pr.row] = 0;
-        sMap[8][pr.row] = 0;
-        sMap[9][pr.row] = 0;
-        sMap[10][pr.row] = 0;
-        sMap[11][pr.row] = 0;
-        constPols.Compressor.C[6][pr.row] = 0n;
-        constPols.Compressor.C[7][pr.row] = 0n;
-        constPols.Compressor.C[8][pr.row] = 0n;
-        constPols.Compressor.C[9][pr.row] = 0n;
-        constPols.Compressor.C[10][pr.row] = 0n;
-        constPols.Compressor.C[11][pr.row] = 0n;
     }
 
     // Generate Custom Gates

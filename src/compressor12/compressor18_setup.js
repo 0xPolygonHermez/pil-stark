@@ -8,16 +8,18 @@ const { newConstantPolsArray, compile, getKs } = require("pilcom");
 const ejs = require("ejs");
 const r1cs2plonk = require("../r1cs2plonk");
 const {M, P, S, C} = require("../poseidon_constants_opt.js");
-const {CPOSEIDON} = require("./poseidon_constants.js");
 const { getCustomGatesInfo, calculatePlonkConstraints } = require("./compressor_helpers.js");
 
 module.exports = async function plonkSetup(r1cs, options) {
     const F = new F3G();
+
+    const committedPols = 18;
+    
     // Calculate the number plonk Additions and plonk constraints from the R1CS
     const [plonkConstraints, plonkAdditions] = r1cs2plonk(F, r1cs);
 
-    // Calculate how many C12 constraints are needed 
-    const C12PlonkConstraintsHalfs = calculatePlonkConstraints(plonkConstraints);
+    // Calculate how many groups of two plonk constraints can be made 
+    const plonkConstraintsHalfs = calculatePlonkConstraints(plonkConstraints);
 
     // Get information about the custom gates from the R1CS
     const customGatesInfo = getCustomGatesInfo(r1cs);
@@ -35,7 +37,7 @@ module.exports = async function plonkSetup(r1cs, options) {
     console.log(`Number of EvPol4: ${customGatesInfo.nEvPol4} -> Constraints: ${customGatesInfo.nEvPol4*2}`);
     console.log(`Number of TreeSelector4: ${customGatesInfo.nTreeSelector4} -> Constraints: ${customGatesInfo.nTreeSelector4*2}`);
     
-    // Calculate the total number of rows that the C12 Plonkish will have. 
+    // Calculate the total number of rows that the Plonkish systyem will have. 
     // - Each public uses one single row
     // - NPlonk stores the number of rows needed to fulfill all the constraints 
     // - Each Poseidon12 custom gate uses 31 rows (30 rows one for each of the GL Poseidon hash round and the last one to check the Poseidon Hash)
@@ -43,7 +45,7 @@ module.exports = async function plonkSetup(r1cs, options) {
     // - Each EvalPol4 custom gate uses 2 rows (1 for actually computing the evaluation and the other one for checking the output)
     const nRowsCustomGates = nPublicRows + customGatesInfo.nCMulAdd + customGatesInfo.nCustPoseidon12*6 + customGatesInfo.nPoseidon12*6 + customGatesInfo.nFFT4*2 + customGatesInfo.nEvPol4*2 + customGatesInfo.nTreeSelector4*2;
     
-    const nRowsPlonk = nRowsCustomGates >= C12PlonkConstraintsHalfs ? 0 : Math.floor((C12PlonkConstraintsHalfs - nRowsCustomGates + 2) / 3);
+    const nRowsPlonk = nRowsCustomGates >= plonkConstraintsHalfs ? 0 : Math.floor((plonkConstraintsHalfs - nRowsCustomGates + 2) / 3);
     console.log(`Number of plonk constraints: ${plonkConstraints.length} -> Constraints rows: ${nRowsPlonk}`);
 
     
@@ -86,7 +88,7 @@ module.exports = async function plonkSetup(r1cs, options) {
     // Stores the positions of all the values that each of the committed polynomials takes in each row 
     // Remember that there are 18 committed polynomials and the number of rows is stored in NUsed
     const sMap = [];
-    for (let i=0;i<18; i++) {
+    for (let i=0;i<committedPols; i++) {
         sMap[i] = new Uint32Array(NUsed);
     }
 
@@ -108,8 +110,6 @@ module.exports = async function plonkSetup(r1cs, options) {
         constPols.Compressor.FFT4[i] = 0n;
         constPols.Compressor.TREESELECTOR4[i] = 0n;
         for (let k=0; k<12; k++) {
-            constPols.Compressor.C[k][i] = 0n;
-
             const nPub = 12*i + k;
             // Since each row contains 12 public inputs, it is possible that
             // the last row is partially empty. Therefore, fulfill that last row
@@ -121,7 +121,7 @@ module.exports = async function plonkSetup(r1cs, options) {
             }
         }
 
-        for (let k=12; k<18; k++) {
+        for (let k=0; k<committedPols; k++) {
             constPols.Compressor.C[k][i] = 0n;
         }
 
@@ -170,7 +170,7 @@ module.exports = async function plonkSetup(r1cs, options) {
                 constPols.Compressor.TREESELECTOR4[r+i] = 0n;
                 constPols.Compressor.FFT4[r+i] = 0n;
 
-                for (let k=12; k<18; k++) {
+                for (let k=12; k<committedPols; k++) {
                     constPols.Compressor.C[k][r+i] = 0n;
                 }
                 extraRows.push(r+i);
@@ -211,7 +211,7 @@ module.exports = async function plonkSetup(r1cs, options) {
                 constPols.Compressor.TREESELECTOR4[r+i] = 0n;
                 constPols.Compressor.FFT4[r+i] = 0n;
 
-                for (let k=12; k<18; k++) {
+                for (let k=12; k<committedPols; k++) {
                     constPols.Compressor.C[k][r+i] = 0n;
                 }
                 extraRows.push(r+i);
@@ -235,11 +235,7 @@ module.exports = async function plonkSetup(r1cs, options) {
             constPols.Compressor.TREESELECTOR4[r] = 0n;
             constPols.Compressor.FFT4[r] = 0n;
             
-            for (let k=0; k<12; k++) {
-                constPols.Compressor.C[k][r] = 0n;
-            }
-
-            for (let k=12; k<18; k++) {
+            for (let k=0; k<committedPols; k++) {
                 constPols.Compressor.C[k][r] = 0n;
             }
             extraRows.push(r);
@@ -247,8 +243,6 @@ module.exports = async function plonkSetup(r1cs, options) {
         } else if ( typeof customGatesInfo.FFT4Parameters[cgu.id] !== "undefined") {
             for (let i=0; i<12; i++) {
                 sMap[i][r] = cgu.signals[i];
-            }
-            for (let i=0; i<12; i++) {
                 sMap[i][r+1] = cgu.signals[12+i];
             }
             constPols.Compressor.CMULADD[r] = 0n;
@@ -309,12 +303,11 @@ module.exports = async function plonkSetup(r1cs, options) {
             constPols.Compressor.C[9][r] = 0n;
             constPols.Compressor.C[10][r] = 0n;
             constPols.Compressor.C[11][r] = 0n;
-            for (let k=0; k<12; k++) {
+            for (let k=0; k<committedPols; k++) {
                 constPols.Compressor.C[k][r+1] = 0n;
             }
-            for (let k=12; k<18; k++) {
+            for (let k=12; k<committedPols; k++) {
                 constPols.Compressor.C[k][r] = 0n;
-                constPols.Compressor.C[k][r+1] = 0n;
             }
             extraRows.push(r);
             extraRows.push(r+1);
@@ -322,15 +315,12 @@ module.exports = async function plonkSetup(r1cs, options) {
         } else if (cgu.id == customGatesInfo.EvPol4Id) {
             for (let i=0; i<12; i++) {
                 sMap[i][r] = cgu.signals[i];
-                constPols.Compressor.C[i][r] = 0n;
             }
             for (let i=0; i<9; i++) {
                 sMap[i][r+1] = cgu.signals[12+i];
-                constPols.Compressor.C[i][r+1] = 0n;
             }
             for (let i=9; i<12; i++) {
                 sMap[i][r+1] = 0;
-                constPols.Compressor.C[i][r+1] = 0n;
             }
             constPols.Compressor.EVPOL4[r] = 1n;
             constPols.Compressor.TREESELECTOR4[r] = 0n;
@@ -358,7 +348,7 @@ module.exports = async function plonkSetup(r1cs, options) {
             constPols.Compressor.POSEIDONCUSTFIRST[r+1] = 0n;
             constPols.Compressor.FFT4[r+1] = 0n;
 
-            for (let k=12; k<18; k++) {
+            for (let k=0; k<committedPols; k++) {
                 constPols.Compressor.C[k][r] = 0n;
                 constPols.Compressor.C[k][r+1] = 0n;
             }
@@ -401,12 +391,7 @@ module.exports = async function plonkSetup(r1cs, options) {
             constPols.Compressor.POSEIDONCUSTFIRST[r+1] = 0n;
             constPols.Compressor.FFT4[r+1] = 0n;
 
-            for (let i=0; i<12; i++) {
-                constPols.Compressor.C[i][r] = 0n;
-                constPols.Compressor.C[i][r+1] = 0n;
-            }
-
-            for (let k=12; k<18; k++) {
+            for (let k=0; k<committedPols; k++) {
                 constPols.Compressor.C[k][r] = 0n;
                 constPols.Compressor.C[k][r+1] = 0n;
             }
@@ -419,7 +404,7 @@ module.exports = async function plonkSetup(r1cs, options) {
     }
 
     // Paste plonk constraints. 
-    // Remember that each C12 row will contain two sets of constraints, each of them should be fulfilled by two different set of wires.
+    // Remember that each row will contain two sets of constraints, each of them should be fulfilled by two different set of wires.
     const partialRows = {}; // Stores a row that is partially completed, which means that a we only have one set of wires (a_i, b_i, c_i) that fulfill a given constraint
     const halfRows = []; // Stores a row that already contains a constraint (qL, qR, qM, qO, qC) with two sets of wires that fulfill it
     for (let i=0; i<plonkConstraints.length; i++) {
@@ -433,13 +418,7 @@ module.exports = async function plonkSetup(r1cs, options) {
             sMap[pr.nUsed*3][pr.row] = c[0];
             sMap[pr.nUsed*3+1][pr.row] = c[1];
             sMap[pr.nUsed*3+2][pr.row] = c[2];
-            pr.nUsed++;
-            // If nUsed is equal to 2, it means the first set of constraints values is being fulfilled and the second half needs still to be added.
-            // Otherwise the C12 row is full
-            if (pr.nUsed == 2 || pr.nUsed == 4) {
-                halfRows.push(pr);   
-            }
-
+           
             delete partialRows[k];
         // If the constraint is not stored in partialRows (which means that there is no other row that is using this very same set of constraints and is not full)
         // check if there's any half row. If that's the case, attach the new set of constraints values to that row 
@@ -525,6 +504,22 @@ module.exports = async function plonkSetup(r1cs, options) {
                 row: r,
                 nUsed: 1
             };
+
+            halfRows.push({
+                row: r,
+                nUsed: 2
+            });
+
+            halfRows.push({
+                row: r,
+                nUsed: 4
+            });
+
+            for(let i = 6; i < committedPols; ++i) {
+                sMap[i][r] = 0;
+                constPols.Compressor.C[i][r] = 0n;
+            }
+
             r ++;
         }
     }
@@ -541,65 +536,27 @@ module.exports = async function plonkSetup(r1cs, options) {
             sMap[3][pr.row] = sMap[0][pr.row];
             sMap[4][pr.row] = sMap[1][pr.row];
             sMap[5][pr.row] = sMap[2][pr.row];
-            pr.nUsed ++;
-            halfRows.push(pr);
         } else if (pr.nUsed == 3) {
             sMap[9][pr.row] = sMap[6][pr.row];
             sMap[10][pr.row] = sMap[7][pr.row];
             sMap[11][pr.row] = sMap[8][pr.row];
-            pr.nUsed ++;
-            halfRows.push(pr);
         } else if (pr.nUsed ==5) {
             sMap[15][pr.row] = sMap[12][pr.row];
             sMap[16][pr.row] = sMap[13][pr.row];
             sMap[17][pr.row] = sMap[14][pr.row];
-            pr.nUsed ++;
-            halfRows.push(pr);
         } else {
             assert(false);
         }
     }
 
-    for (let i=0; i<halfRows.length; i++) {
-        const pr = halfRows[i];
-        if(pr.nUsed === 2) {
-            sMap[6][pr.row] = 0;
-            sMap[7][pr.row] = 0;
-            sMap[8][pr.row] = 0;
-            sMap[9][pr.row] = 0;
-            sMap[10][pr.row] = 0;
-            sMap[11][pr.row] = 0;
-            constPols.Compressor.C[6][pr.row] = 0n;
-            constPols.Compressor.C[7][pr.row] = 0n;
-            constPols.Compressor.C[8][pr.row] = 0n;
-            constPols.Compressor.C[9][pr.row] = 0n;
-            constPols.Compressor.C[10][pr.row] = 0n;
-            constPols.Compressor.C[11][pr.row] = 0n;
-        } 
-
-        if(pr.nUsed === 2 || pr.nUsed === 4) {
-            sMap[12][pr.row] = 0;
-            sMap[13][pr.row] = 0;
-            sMap[14][pr.row] = 0;
-            sMap[15][pr.row] = 0;
-            sMap[16][pr.row] = 0;
-            sMap[17][pr.row] = 0;
-            constPols.Compressor.C[12][pr.row] = 0n;
-            constPols.Compressor.C[13][pr.row] = 0n;
-            constPols.Compressor.C[14][pr.row] = 0n;
-            constPols.Compressor.C[15][pr.row] = 0n;
-            constPols.Compressor.C[16][pr.row] = 0n;
-            constPols.Compressor.C[17][pr.row] = 0n;
-        }
-    }
 
     // Calculate S Polynomials
-    const ks = getKs(F, 17);
+    const ks = getKs(F, committedPols - 1);
     let w = F.one;
     for (let i=0; i<N; i++) {
         if ((i%10000) == 0) console.log(`Point check -> Preparing S... ${i}/${N}`);
         constPols.Compressor.S[0][i] = w;
-        for (let j=1; j<18; j++) {
+        for (let j=1; j<committedPols; j++) {
             constPols.Compressor.S[j][i] = F.mul(w, ks[j-1]);
         }
         w = F.mul(w, F.w[nBits]);
@@ -609,7 +566,7 @@ module.exports = async function plonkSetup(r1cs, options) {
     const lastSignal = {}
     for (let i=0; i<r; i++) {
         if ((i%10000) == 0) console.log(`Point check -> Connection S... ${i}/${r}`);
-        for (let j=0; j<18; j++) {
+        for (let j=0; j<committedPols; j++) {
             if (sMap[j][i]) {
                 if (typeof lastSignal[sMap[j][i]] !== "undefined") {
                     const ls = lastSignal[sMap[j][i]];
@@ -642,7 +599,7 @@ module.exports = async function plonkSetup(r1cs, options) {
         constPols.Compressor.POSEIDONAFTERPART[r] = 0n;
         constPols.Compressor.POSEIDONCUSTFIRST[r] = 0n;
         constPols.Compressor.FFT4[r] = 0n;
-        for (let k=0; k<18; k++) {
+        for (let k=0; k<committedPols; k++) {
             constPols.Compressor.C[k][r] = 0n;
         }
         r +=1;

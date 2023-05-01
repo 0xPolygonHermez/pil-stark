@@ -104,14 +104,13 @@ namespace Compressor(%N);
 <% } -%>
 <% } -%>
 <%  if(r < 12) { -%>
-<%  if(r < 8) { -%>
-    pol inputPoseidon<%- r %> = POSEIDONCUSTFIRST * (custPoseidonInput<%- r %> - a[<%- r %>]) + a[<%- r %>];
-<%  } else { -%>
-    pol inputPoseidon<%- r %> = POSEIDONCUSTFIRST * (0 - a[<%- r %>]) + a[<%- r %>];
-<%  } -%>
-    pol inp<%- r %> = inputPoseidon<%- r %> + POSEIDONFIRST * <%- C[r] %>;
-<%  if (r > 0) { -%>
     // Calculate the 7th power of the <%- r %>th element
+<%  if(r < 8) { -%>
+    pol inp<%- r %> = POSEIDONCUSTFIRST * (custPoseidonInput<%- r %> - a[<%- r %>]) + a[<%- r %>] + POSEIDONFIRST * <%- C[r] %>;
+<%  } else { -%>
+    pol inp<%- r %> = POSEIDONCUSTFIRST * (-a[<%- r %>]) + a[<%- r %>] + POSEIDONFIRST * <%- C[r] %>;
+<%  } -%>
+<%  if (r > 0) { -%>
     pol inputP<%- r %> = PARTIALROUND * (s0_R<%- r - 1 %> - inp<%- r %>) + inp<%- r %>;
     pol constC<%- r %> = PARTIALROUND * (<%- C[60 + r] %> - C[<%- r %>]) + C[<%- r %>];
     pol a<%- r %>_2 = inputP<%- r %> * inputP<%- r %>;
@@ -131,24 +130,19 @@ namespace Compressor(%N);
 
     // Calculate the 7th power of the <%- r %>th element
     pol inputP<%- r %> = PARTIALROUND * (s0_R<%- r - 1 %> - poseidonM<%- r - 12 %>) + poseidonM<%- r - 12 %>;
-    pol constC_<%- r %> = PARTIALROUND * (<%- C[60 + r] %> - C[<%- r - 12 %>]') + C[<%- r - 12 %>]';
-    pol constC2_<%- r %> = POSEIDONFIRST * (<%- C[12 + r] %> - constC_<%- r %>) + constC_<%- r %>;
-    pol constC3_<%- r %> = POSEIDONP * (<%- C[36 + r] %> - constC2_<%- r %>) + constC2_<%- r %>;
-    pol constC4_<%- r %> = POSEIDONAFTERPART * (<%- C[82 + r] %> - constC3_<%- r %>) + constC3_<%- r %>;
+    pol constC_<%- r %> = PARTIALROUND * <%- C[60 + r] %> + POSEIDONFIRST * <%- C[12 + r] %> + POSEIDONP * <%- C[36 + r] %> + POSEIDONAFTERPART * <%- C[82 + r] %>;
     pol a<%- r %>_2 = inputP<%- r %> * inputP<%- r %>;
     pol a<%- r %>_4 = a<%- r %>_2 * a<%- r %>_2;
     pol a<%- r %>_6 = a<%- r %>_4 * a<%- r %>_2;
-    pol a<%- r %>_R = a<%- r %>_6 * inputP<%- r %> + constC4_<%- r %>;
+    pol a<%- r %>_R = a<%- r %>_6 * inputP<%- r %> + constC_<%- r %>;
 <%  } else { -%>
     
-    pol constC2_<%- r %> = POSEIDONFIRST * (<%- C[12 + r] %> - C[<%- r - 12 %>]') + C[<%- r - 12 %>]';
-    pol constC3_<%- r %> = POSEIDONP * (<%- C[36 + r] %> - constC2_<%- r %>) + constC2_<%- r %>;
-    pol constC4_<%- r %> = POSEIDONAFTERPART * (<%- C[82 + r] %> - constC3_<%- r %>) + constC3_<%- r %>;
+    pol constC_<%- r %> = POSEIDONAFTERPART * <%- C[82 + r] %> + POSEIDONP * <%- C[36 + r] %> + POSEIDONFIRST * <%- C[12 + r] %>;
 
     pol a<%- r %>_2 = poseidonM<%- r - 12 %> * poseidonM<%- r - 12 %>;
     pol a<%- r %>_4 = a<%- r %>_2 * a<%- r %>_2;
     pol a<%- r %>_6 = a<%- r %>_4 * a<%- r %>_2;
-    pol a<%- r %>_R = a<%- r %>_6 * poseidonM<%- r - 12 %> + constC4_<%- r %>;
+    pol a<%- r %>_R = a<%- r %>_6 * poseidonM<%- r - 12 %> + constC_<%- r %>;
 <%  } -%>
     
 <% } -%>
