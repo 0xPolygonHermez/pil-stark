@@ -3,29 +3,21 @@ pragma custom_templates;
 
 include "utils.circom";
 
-template custom TreeSelector8() {
-    signal input values[8][3];
-    signal input keys[3];
+template custom TreeSelector4() {
+    signal input values[4][3];
+    signal input keys[2];
 
     signal output out[3];
 
     var root[3];
-    if(keys[0] == 0 && keys[1] == 0 && keys[2] == 0) {
+    if(keys[0] == 0 && keys[1] == 0) {
         root = values[0];
-    } else if(keys[0] == 1 && keys[1] == 0 && keys[2] == 0) {
+    } else if(keys[0] == 1 && keys[1] == 0) {
         root = values[1];
-    } else if(keys[0] == 0 && keys[1] == 1 && keys[2] == 0) {
+    } else if(keys[0] == 0 && keys[1] == 1) {
         root = values[2];
-    } else if(keys[0] == 1 && keys[1] == 1 && keys[2] == 0){
-        root = values[3];
-    } else if(keys[0] == 0 && keys[1] == 0 && keys[2] == 1) {
-        root = values[4];
-    } else if(keys[0] == 1 && keys[1] == 0 && keys[2] == 1) {
-        root = values[5];
-    } else if(keys[0] == 0 && keys[1] == 1 && keys[2] == 1){
-        root = values[6];
     } else {
-        root = values[7];
+        root = values[3];
     }
 
     out <-- root;
@@ -46,8 +38,8 @@ template TreeSelector(nLevels, eSize) {
     //Note that if a tree has n leaves, the tree will have 2*n - 1 elements and so we only need to store n - 1
     var total = 0;
     var lev = n;
-    for(var i = 0; i < nLevels\3; i++) {
-        lev = lev\8;
+    for(var i = 0; i < nLevels\2; i++) {
+        lev = lev\4;
         total += lev;
     }
     
@@ -57,23 +49,23 @@ template TreeSelector(nLevels, eSize) {
     var o = 0; // Points to the beginning of the current tree level values
     var lo = 0; // Points to the beginning of the previous tree level values
 
-    for (var i=0; i<nLevels\3; i++) {
-        var nTrees = levelN\8;
+    for (var i=0; i<nLevels\2; i++) {
+        var nTrees = levelN\4;
         for(var j = 0; j < nTrees; j++) {
-            im[o + j] = TreeSelector8();
-            for(var l = 0; l < 8; l++) {
+            im[o + j] = TreeSelector4();
+            for(var l = 0; l < 4; l++) {
                 if(i==0) {
-                    im[o + j].values[l] <== values[8*j + l];
+                    im[o + j].values[l] <== values[4*j + l];
                 } else {
-                    im[o + j].values[l] <== im[lo + 8*j + l].out;
+                    im[o + j].values[l] <== im[lo + 4*j + l].out;
                 }
             } 
-            im[o + j].keys <== [key[3*i], key[3*i + 1], key[3*i + 2]];
+            im[o + j].keys <== [key[2*i], key[2*i + 1]];
         }
         // Update the pointers
         lo = o;
         o = o + nTrees;
-        levelN = levelN\8;
+        levelN = levelN\4;
     }
 
     if(levelN == 1) {
@@ -82,7 +74,7 @@ template TreeSelector(nLevels, eSize) {
         } else {
             out <== im[lo].out;
         }
-    } else if(levelN == 2) {
+    } else {
         for(var k = 0; k < eSize; k++) {
             if(total == 0) {
                 out[k] <== key[nLevels - 1]*(values[1][k] - values[0][k]) + values[0][k];
@@ -90,22 +82,6 @@ template TreeSelector(nLevels, eSize) {
                 out[k] <== key[nLevels - 1]*(im[lo + 1].out[k] - im[lo].out[k]) + im[lo].out[k];
             }
         }
-    } else {
-        component root = TreeSelector8();
-        for(var l = 0; l < 8; l++) {
-            if(l < 4) {
-                 if(total==0) {
-                    root.values[l] <== values[l];
-                } else {
-                    root.values[l] <== im[lo + l].out;
-                }
-            } else {
-                root.values[l] <== [0,0,0];
-            }
-           
-        } 
-        root.keys <== [key[nLevels - 2], key[nLevels - 1], 0];
-        out <== root.out;
     }
 }
 

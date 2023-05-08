@@ -19,20 +19,21 @@ template Merkle(nLevels) {
     for (var i=0; i<nLevels; i++) {
         // Hash the corresponding value with the corresponding sibling path value, which 
         // are 4 GL elements each, using Goldilocks Poseidon. Returns a 4 GL element output.
-        // Therefore, a 2 inputs Poseidon (the third input, capacity is set to zero) is being performed
-        hash[i] = Poseidon(4);
+        // Therefore, a 2 inputs Poseidon is being performed.
+        // The key that determines which element is the left one and which one the right one is also
+        // sent to the custom gate
+        hash[i] = CustPoseidon(4);
         for (var k=0; k<4; k++) {
+            hash[i].in[k] <== siblings[i][k];
             // If i == 0 we hash the sibling with the initial leave value. Otherwise with the last hash calculated
             // If key[i] == 1, the sibling value corresponds to the first input. Otherwise it corresponds to the second one. 
             if (i>0) {
-                hash[i].in[k] <== key[i]*(siblings[i][k] - hash[i-1].out[k]) + hash[i-1].out[k];
-                hash[i].in[k+4] <== key[i]*(hash[i-1].out[k] - siblings[i][k]) + siblings[i][k];
+                hash[i].in[k+4] <== hash[i-1].out[k];
             } else {
-                hash[i].in[k] <== key[i]*(siblings[i][k] - value[k]) + value[k];
-                hash[i].in[k+4] <== key[i]*(value[k] - siblings[i][k]) + siblings[i][k];
+                hash[i].in[k+4] <== value[k];
             }
-            hash[i].capacity[k] <== 0;
         }
+        hash[i].key <== key[i];
     }
 
     root <== hash[nLevels-1].out;
