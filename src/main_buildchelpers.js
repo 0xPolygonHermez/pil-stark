@@ -2,16 +2,11 @@ const fs = require("fs");
 const path = require("path");
 const version = require("../package").version;
 
-const F1Field = require("./f3g");
-const starkInfoGen = require("./starkinfo.js");
-const { compile } = require("pilcom");
-const buildCHelpers = require("./chelpers.js");
+const buildCHelpers = require("./stark/chelpers/stark_chelpers.js");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_buildchelpers.js -p <pil.json> [-P <pilconfig.json] -s <starkinfo.json> -c <chelpers.cpp> [-C <classname>]")
-    .alias("p", "pil")
-    .alias("P", "pilconfig")
+    .usage("node main_buildchelpers.js -s <starkinfo.json> -c <chelpers.cpp> [-C <classname>]")
     .alias("s", "starkinfo")
     .alias("c", "chelpers")
     .alias("C", "cls")
@@ -20,19 +15,12 @@ const argv = require("yargs")
     .argv;
 
 async function run() {
-    const F = new F1Field();
-
-    const pilFile = typeof (argv.pil) === "string" ? argv.pil.trim() : "mycircuit.pil";
-    const pilConfig = typeof (argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
-
-
     const cls = typeof (argv.cls) === "string" ? argv.cls.trim() : "Stark";
     const starkInfoFile = typeof (argv.starkinfo) === "string" ? argv.starkinfo.trim() : "mycircuit.starkinfo.json";
     const chelpersFile = typeof (argv.chelpers) === "string" ? argv.chelpers.trim() : "mycircuit.chelpers.cpp";
     const multipleCodeFiles = argv.multiple;
     const optcodes = argv.optcodes;
 
-    const pil = await compile(F, pilFile, null, pilConfig);
     const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
     const cCode = await buildCHelpers(starkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes: optcodes } : {});

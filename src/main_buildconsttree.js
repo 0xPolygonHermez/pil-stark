@@ -1,14 +1,12 @@
 const fs = require("fs");
 const version = require("../package").version;
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
-const {BigBuffer} = require("pilcom");
 
-
-const F1Field = require("./f3g");
-const { newConstantPolsArray, compile } = require("pilcom");
-const buildMerkleHashGL = require("./merklehash_p.js");
-const buildMerkleHashBN128 = require("./merklehash_bn128_p.js");
-const {interpolate} = require("./fft_p");
+const F3g = require("./helpers/f3g.js");
+const { newConstantPolsArray, compile, BigBuffer } = require("pilcom");
+const buildMerkleHashGL = require("./helpers/hash/merklehash/merklehash_p.js");
+const buildMerkleHashBN128 = require("./helpers/hash/merklehash/merklehash_bn128_p.js");
+const {interpolate} = require("./helpers/fft/fft_p");
 
 const argv = require("yargs")
     .version(version)
@@ -22,7 +20,7 @@ const argv = require("yargs")
     .argv;
 
 async function run() {
-    const F = new F1Field();
+    const F = new F3g();
 
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
     const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
@@ -36,7 +34,6 @@ async function run() {
 
     const nBits = starkStruct.nBits;
     const nBitsExt = starkStruct.nBitsExt;
-    const n = 1 << nBits;
     const nExt = 1 << nBitsExt;
 
     const constPols = newConstantPolsArray(pil);
