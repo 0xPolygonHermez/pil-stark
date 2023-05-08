@@ -1,17 +1,11 @@
 const fs = require("fs");
 const version = require("../package").version;
-
-const F1Field = require("./f3g");
-const { compile } = require("pilcom");
-const starkVerify = require("../src/stark_verify.js");
-const starkInfoGen = require("../src/starkinfo.js");
+const starkVerify = require("./stark/stark_verify.js");
 var JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });;
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_verifier.js -p <pil.json> [-P <pilconfig.json>] -s <starkinfo.json> -v <verkey.json> -o <proof.json> -b <public.json>")
-    .alias("p", "pil")
-    .alias("P", "pilconfig")
+    .usage("node main_verifier.js -s <starkinfo.json> -v <verkey.json> -o <proof.json> -b <public.json>")
     .alias("s", "starkinfo")
     .alias("v", "verkey")
     .alias("o", "proof")
@@ -19,16 +13,11 @@ const argv = require("yargs")
     .argv;
 
 async function run() {
-    const F = new F1Field();
-
-    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "main.pil.json";
-    const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
     const starkinfoFile = typeof(argv.starkinfo) === "string" ?  argv.starkinfo.trim() : "starkinfo.json";
     const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "verkey.json";
     const proofFile = typeof(argv.proof) === "string" ?  argv.proof.trim() : "verkey.json";
     const publicFile = typeof(argv.public) === "string" ?  argv.public.trim() : "verkey.json";
 
-    const pil = await compile(F, pilFile, null, pilConfig);
     const starkInfo = JSON.parse(await fs.promises.readFile(starkinfoFile, "utf8"));
     const verkey = JSONbig.parse(await fs.promises.readFile(verKeyFile, "utf8"));
     let proof = JSONbig.parse(await fs.promises.readFile(proofFile, "utf8"));

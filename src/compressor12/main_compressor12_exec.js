@@ -2,10 +2,9 @@ const fs = require("fs");
 const version = require("../../package").version;
 
 const { compile, newCommitPolsArray } = require("pilcom");
-const F1Field = require("../f3g.js");
+const F3g = require("../helpers/f3g.js");
 const { WitnessCalculatorBuilder } = require("circom_runtime");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
-const { log2 } = require("../utils.js")
 
 
 const argv = require("yargs")
@@ -20,7 +19,7 @@ const argv = require("yargs")
     .argv;
 
 async function run() {
-    const F = new F1Field();
+    const F = new F3g();
 
     const inputFile = typeof(argv.input) === "string" ?  argv.input.trim() : "mycircuit.proof.zkin.json";
     const wasmFile = typeof(argv.wasm) === "string" ?  argv.wasm.trim() : "mycircuit.verifier.wasm";

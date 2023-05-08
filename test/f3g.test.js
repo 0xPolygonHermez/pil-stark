@@ -1,14 +1,13 @@
 const { assert } = require("chai");
-const chai = require("chai");
 
-const F3G = require("../src/f3g.js");
+const F3g = require("../src/helpers/f3g");
 
 describe("f3g", function () {
     let F;
     this.timeout(100000);
 
     before( async() => {
-        F = new F3G();
+        F = new F3g();
     });
 
     it("shoud do an addition", async () => {

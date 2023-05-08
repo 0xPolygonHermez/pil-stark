@@ -1,7 +1,7 @@
 const fs = require("fs");
 const version = require("../../package").version;
 
-const F1Field = require("../f3g.js");
+const F3g = require("../helpers/f3g.js");
 const {readR1cs} = require("r1csfile");
 const plonkSetup = require("./compressor12_setup.js");
 
@@ -16,7 +16,7 @@ const argv = require("yargs")
     .argv;
 
 async function run() {
-    const F = new F1Field();
+    const F = new F3g();
 
     const r1csFile = typeof(argv.r1cs) === "string" ?  argv.r1cs.trim() : "mycircuit.verifier.r1cs";
     const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "mycircuit.c12.const";
