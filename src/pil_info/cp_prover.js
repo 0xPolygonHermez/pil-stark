@@ -129,7 +129,7 @@ function calculateImPols(pil, _exp, maxDeg) {
             if (["number", "public", "challenge"].indexOf(exp.values[1].op) >= 0 ) {
                 return _calculateImPols(pil, exp.values[0], imExpressions, maxDeg);
             }
-            const maxDegHere = getExpDim(pil, exp);
+            const maxDegHere = getExpDim(pil, exp, maxDeg);
             if (maxDegHere <= maxDeg) {
                 return [imExpressions, maxDegHere];
             }
@@ -158,7 +158,12 @@ function calculateImPols(pil, _exp, maxDeg) {
                 return [false, -1];
             }
             if (imExpressions[exp.id]) return [imExpressions, 1];
-            const [e,d] = _calculateImPols(pil, pil.expressions[exp.id], imExpressions, absoluteMax);
+            let e,d;
+            if(exp.res && exp.res[absoluteMax] && exp.res[absoluteMax][JSON.stringify(imExpressions)]) {
+                [e,d] = exp.res[absoluteMax][JSON.stringify(imExpressions)];
+            } else {
+                [e,d] = _calculateImPols(pil, pil.expressions[exp.id], imExpressions, absoluteMax);
+            }
             if (e === false) {
                 return [false, -1];
             }
@@ -168,7 +173,10 @@ function calculateImPols(pil, _exp, maxDeg) {
                 if (d>absMaxD) absMaxD = d;
                 return [ce, 1];
             } else {
-                return [e, d];
+                if(!exp.res) exp.res = {};
+                if(!exp.res[absoluteMax]) exp.res[absoluteMax] = {};
+                exp.res[absoluteMax][JSON.stringify(imExpressions)] = [e, d];
+                return exp.res[absoluteMax][JSON.stringify(imExpressions)];
             }
         } else {
             throw new Error("Exp op not defined: "+ exp.op);
@@ -178,7 +186,7 @@ function calculateImPols(pil, _exp, maxDeg) {
 }
 
 
-function getExpDim(pil, exp) {
+function getExpDim(pil, exp, maxDeg) {
     switch (exp.op) {
         case "add":
         case "sub":
@@ -197,7 +205,11 @@ function getExpDim(pil, exp) {
             return Math.max(getExpDim(pil, exp.values[0]) + getExpDim(pil, exp.values[1]), getExpDim(pil, exp.values[2]));
         case "cm": return 1;
         case "const": return 1;
-        case "exp": return getExpDim(pil, pil.expressions[exp.id]);
+        case "exp": 
+            if(exp.dim && exp.dim[maxDeg] >= 0) return exp.dim[maxDeg];
+            if(!exp.dim) exp.dim = {};
+            exp.dim[maxDeg] = getExpDim(pil, pil.expressions[exp.id]);
+            return exp.dim[maxDeg];
         case "number": return 0;
         case "public": return 0;
         case "challenge": return 0;

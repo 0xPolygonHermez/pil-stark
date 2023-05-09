@@ -359,6 +359,7 @@ function getExpDim(pil, expId) {
     return _getExpDim(pil.expressions[expId]);
 
     function _getExpDim(exp) {
+        if(typeof(exp.dimMap) !== "undefined") return exp.dimMap; 
         switch (exp.op) {
             case "add":
             case "sub":
@@ -375,7 +376,9 @@ function getExpDim(pil, expId) {
                 return md;
             case "cm": return pil.cmDims[exp.id];
             case "const": return 1;
-            case "exp": return _getExpDim(pil.expressions[exp.id]);
+            case "exp":
+                exp.dimMap = _getExpDim(pil.expressions[exp.id]);
+                return exp.dimMap;
             case "q": return _getExpDim(pil.expressions[pil.q2exp[exp.id]]);
             case "number": return 1;
             case "public": return 1;
@@ -462,6 +465,3 @@ function setCodeDimensions(code, starkInfo, dimX) {
     }
 
 }
-
-
-
