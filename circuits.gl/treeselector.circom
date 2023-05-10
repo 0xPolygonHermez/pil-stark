@@ -76,6 +76,7 @@ template TreeSelector(nLevels, eSize) {
         levelN = levelN\8;
     }
 
+    component root;
     if(levelN == 1) {
         if(total == 0) {
             out <== values[0];
@@ -91,7 +92,7 @@ template TreeSelector(nLevels, eSize) {
             }
         }
     } else {
-        component root = TreeSelector8();
+        root = TreeSelector8();
         for(var l = 0; l < 8; l++) {
             if(l < 4) {
                  if(total==0) {
