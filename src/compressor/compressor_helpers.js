@@ -3,19 +3,9 @@ const { assert } = require("chai");
 module.exports ={
     
     /*
-        Given the PLONK Constraints, which have the following form: qL*a + qR*b + qM*a*b + qO*c + qC = 0,
-        calculate the number of constraints required in the compressed Plonk. 
-        Our Plonkish arithmetic gate will have composed by 12 polynomials gates Q0, Q1, ... , Q12 (hence the name)
-        Therefore, we can compress our plonk equations by merging two Plonk equations together
-        (qL1*a + qR1*b + qM1*a*b + qO1*c + qC1) + (qL2*d + qR2*e + qM2*d*e + qO2*f + qC2) = 0;
-        In addition of 12 polynomial gates, the PIL will have 12 committed polinomials. Since each regular plonk
-        constrain only uses 3 wires (a, b and c), and two different sets of wires can share the same set of polynomial
-        gates, we can further extend the compression by storing 4 different sets of (a_i, b_i, c_i) in every row of 
-        the committed polynomial. In order for that to work, notice that (a1, b1, c1) and (a2,b2,c2) needs to fulfill 
-        the first equation (qL1*a + qR1*b + qM1*a*b + qO1*c + qC1) while (a3, b3, c3) and (a4, b4, c4) need to fulfill the 
-        second part 
-    */
-    calculatePlonkConstraints: function(plonkConstraints) {
+        Calculate the number of times that each set of gates (qL, qR, qM, qO, qC) is used
+    */ 
+    calculatePlonkConstraintsHalfs: function(plonkConstraints) {
 
         // Each constraint is defined by the following five polynomial gates [qM, qL, qR, qO, qC].
         // Store all the different combinations (and how many times each) appears in the plonkConstraints
@@ -37,6 +27,43 @@ module.exports ={
        
         
         return constraints;
+    },
+
+    /*
+        Calculate the number of rows needed to verify all plonk constraints
+    */ 
+    calculatePlonkConstraintsRowsC15: function(plonkConstraints, evalPolRows, cMulFFTRows) {
+
+        let partialRows = {};
+        let halfRows = false;
+        let r = 0;
+        for (let i=0; i<plonkConstraints.length; i++) {
+            if ((i%10000) == 0) {
+                console.log(`Point Check -> Plonk info constraint processing... ${i}/${plonkConstraints.length}`);
+            }
+            //Each plonkConstraint has the following form: [a,b,c, qM, qL, qR, qO, qC]
+            const c = plonkConstraints[i]; 
+            const k= c.slice(3, 8).map( a=> a.toString(16)).join(","); //Calculate
+            if(partialRows[k]) {
+                ++partialRows[k];
+                if(partialRows[k] === 2 || partialRows[k] === 5) delete partialRows[k];
+            } else if(halfRows) {
+                partialRows[k] = 3;
+                halfRows = false;
+            } else if(evalPolRows > 0) {
+                --evalPolRows;
+                partialRows[k] = 3;
+            } else if(cMulFFTRows > 0) {
+                --cMulFFTRows;
+                partialRows[k] = 4;
+            } else {
+                partialRows[k] = 1;
+                halfRows = true;
+                r++;
+            }
+        };
+
+        return r;
     },
 
     /*
