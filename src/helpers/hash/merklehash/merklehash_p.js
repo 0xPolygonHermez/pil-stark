@@ -9,9 +9,9 @@ const {linearHash, merkelizeLevel} = require("./merklehash_worker");
 
 buildPoseidon = require("../poseidon/poseidon");
 
-module.exports = async function buildMerkleHash(splitLinearHash = false) {
+module.exports = async function buildMerkleHash(arity, splitLinearHash = false) {
     const poseidon = await buildPoseidon();
-    const MH = new MerkleHash(poseidon, splitLinearHash);
+    const MH = new MerkleHash(poseidon, arity, splitLinearHash);
     return MH;
 }
 
