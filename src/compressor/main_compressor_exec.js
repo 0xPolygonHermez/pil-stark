@@ -4,6 +4,7 @@ const version = require("../../package").version;
 const { compile, newCommitPolsArray } = require("pilcom");
 const F3g = require("../helpers/f3g.js");
 const { WitnessCalculatorBuilder } = require("circom_runtime");
+const { readExecFile } = require("../helpers/exec_helpers");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 
 
@@ -23,22 +24,20 @@ async function run() {
 
     const inputFile = typeof(argv.input) === "string" ?  argv.input.trim() : "mycircuit.proof.zkin.json";
     const wasmFile = typeof(argv.wasm) === "string" ?  argv.wasm.trim() : "mycircuit.verifier.wasm";
-    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.c12.pil";
+    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.c15.pil";
     const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
-    const execFile = typeof(argv.exec) === "string" ?  argv.exec.trim() : "mycircuit.c12.exec";
-    const commitFile = typeof(argv.commit) === "string" ?  argv.commit.trim() : "mycircuit.c12.exec";
+    const execFile = typeof(argv.exec) === "string" ?  argv.exec.trim() : "mycircuit.c15.exec";
+    const commitFile = typeof(argv.commit) === "string" ?  argv.commit.trim() : "mycircuit.c15.exec";
 
     const input = JSONbig.parse(await fs.promises.readFile(inputFile, "utf8"));
 
     const pil = await compile(F, pilFile, null, pilConfig);
 
-    const cmPols = newCommitPolsArray(pil);
+    const cmPols = newCommitPolsArray(pil, F);
 
-    const N = cmPols.Compressor.a[0].length;
-
-    const nCols =cmPols.Compressor.a.length;
+    const nCommittedPols =cmPols.Compressor.a.length;
     
-    const { nAdds, nSMap, addsBuff, sMapBuff } = await readExecFile(execFile, nCols);
+    const { nAdds, nSMap, adds, sMap } = await readExecFile(F, execFile, nCommittedPols);
 
     const fd =await fs.promises.open(wasmFile, "r");
     const st =await fd.stat();
@@ -52,13 +51,13 @@ async function run() {
     const w = await wc.calculateWitness(input);
 
     for (let i=0; i<nAdds; i++) {
-        w.push( F.add( F.mul( w[addsBuff[i*4]], addsBuff[i*4 + 2]), F.mul( w[addsBuff[i*4+1]],  addsBuff[i*4+3]  )));
+        w.push( F.add( F.mul(w[adds[i][0]], adds[i][2]), F.mul( w[adds[i][1]], adds[i][3] )));
     }
 
     for (let i=0; i<nSMap; i++) {
-        for (let j=0; j<nCols; j++) {
-            if (sMapBuff[nCols*i+j] != 0) {
-                cmPols.Compressor.a[j][i] = w[sMapBuff[nCols*i+j]];
+        for (let j=0; j<nCommittedPols; j++) {
+            if (sMap[j][i] != 0) {
+                cmPols.Compressor.a[j][i] = w[sMap[j][i]];
             } else {
                 cmPols.Compressor.a[j][i] = 0n;
             }
@@ -80,24 +79,3 @@ run().then(()=> {
     process.exit(1);
 });
 
-
-async function readExecFile(execFile, nCols) {
-
-    const fd =await fs.promises.open(execFile, "r");
-    const buffH = new BigUint64Array(2);
-    await fd.read(buffH, 0, 2*8);
-    const nAdds= Number(buffH[0]);
-    const nSMap= Number(buffH[1]);
-
-
-    const addsBuff = new BigUint64Array(nAdds*4);
-    await fd.read(addsBuff, 0, nAdds*4*8);
-
-    const sMapBuff = new BigUint64Array(nSMap*nCols);
-    await fd.read(sMapBuff, 0, nSMap*nCols*8);
-
-    await fd.close();
-
-    return { nAdds, nSMap, addsBuff, sMapBuff };
-
-}

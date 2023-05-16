@@ -6,13 +6,12 @@ const fs = require("fs");
 const { BigBuffer } = require("pilcom");
 
 const {linearHash, merkelizeLevel} = require("./merklehash_worker");
-const { copySection } = require("@iden3/binfileutils");
 
 buildPoseidon = require("../poseidon/poseidon");
 
-module.exports = async function buildMerkleHash(splitLinearHash = false) {
+module.exports = async function buildMerkleHash(arity, splitLinearHash = false) {
     const poseidon = await buildPoseidon();
-    const MH = new MerkleHash(poseidon, splitLinearHash);
+    const MH = new MerkleHash(poseidon, arity, splitLinearHash);
     return MH;
 }
 
@@ -117,7 +116,7 @@ class MerkleHash {
             if (nOpsPerThread<minNPerThread) nOpsPerThread = minNPerThread;
             for (let i=0; i< nOps; i+=nOpsPerThread) {
                 const curNOps = Math.min(nOpsPerThread, nOps-i);
-                const bb = new BigUint64Array(tree.nodes.buffer, pIn + i*8*8, curNOps*8);
+                const bb = new BigUint64Array(tree.nodes.buffer, pIn + i*64, curNOps*8);
                 if (self.useThreads) {
                     promises.push(pool.exec("merkelizeLevel", [bb, i, nOps]));
                 } else {

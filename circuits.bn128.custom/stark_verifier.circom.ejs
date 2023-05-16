@@ -1,0 +1,926 @@
+pragma circom 2.1.0;
+pragma custom_templates;
+
+include "gl.circom";
+include "poseidon.circom";
+include "bitify.circom";
+include "sha256/sha256.circom";
+include "fft.circom";
+include "merklehash.circom";
+include "evalpol.circom";
+include "treeselector.circom";
+include "bn1togl3.circom";
+include "compconstant64.circom";
+include "rangecheck.circom";
+
+<%
+class Transcript {
+    constructor() {
+        this.state = "0";
+        this.pending = [];
+        this.out = [];
+        this.out3 = [];
+        this.stCnt =0;
+        this.hCnt =0;
+        this.hiCnt =0;
+        this.n2bCnt =0;
+        this.bn1togl3Cnt =0;
+
+        this.code = [];
+    }
+
+
+    getField(v) {
+        this.code.push(`${v} <== [${this.getFields1()}, ${this.getFields1()}, ${this.getFields1()}];`);    
+    }
+
+    getFields1() {
+        if (this.out3.length > 0) {
+            return this.out3.shift();
+        }
+        if (this.out.length > 0) {
+            const cName = `bn1togl3_${this.bn1togl3Cnt++}`;
+            this.code.push(`signal ${cName}[3] <== BN1toGL3()(${this.out.shift()});`);
+            this.out3.push(`${cName}[0]`);
+            this.out3.push(`${cName}[1]`);
+            this.out3.push(`${cName}[2]`);
+            this.hiCnt++;
+            return this.getFields1();
+        }
+        this.updateState();
+        return this.getFields1();
+    }
+
+    getFields253() {
+        if (this.out.length > 0) {
+            this.hiCnt++;
+            return this.out.shift();
+        }
+        this.updateState();
+        return this.getFields253();
+
+    }
+
+    updateState() {
+        if(this.hCnt > 0) {
+            const firstUnused = Math.max(this.hiCnt, 1);
+            if(firstUnused < (arity + 1)) {
+                this.code.push(`for(var i = ${firstUnused}; i < ${arity + 1}; i++){
+        _ <== transcriptHash_${this.hCnt -1}[i]; // Unused transcript values        
+    }`)
+            }
+        }
+        while (this.pending.length < arity) {
+            this.pending.push("0");
+        }
+        this.code.push(`\n    signal transcriptHash_${this.hCnt++}[${Number(arity) + 1}] <== CustomPoseidon(${arity})([${this.pending.join(',')}], ${this.state});`);
+        for (let i=0; i<arity+1; i++) {
+            this.out[i] = `transcriptHash_${this.hCnt-1}[${i}]`;
+        }
+        this.out3 = [];
+        this.state = `transcriptHash_${this.hCnt-1}[0]`;
+        this.pending = [];
+        this.hiCnt = 0;
+    }
+
+
+    put(a, l) {
+        if (typeof l !== "undefined") {
+            for (let i=0; i<l; i++) {
+                this._add1(`${a}[${i}]`);
+            }
+        } else {
+            this._add1(a);
+        }
+    }
+
+    _add1(a) {
+        this.out = [];
+        this.out3 = [];
+        this.pending.push(a);
+        if (this.pending.length == arity) {
+            this.updateState();
+        }
+    }
+
+    getPermutations(v, n, nBits) {
+        const totalBits = n*nBits;
+        const NFields = Math.floor((totalBits - 1)/253)+1;
+        const n2b = [];
+        for (let i=0; i<NFields; i++) {
+            const f = this.getFields253();
+            n2b[i] = `transcriptN2b_${this.n2bCnt++}`;
+            this.code.push(`signal ${n2b[i]}[254] <== CustomNum2Bits_strict()(${f});`);
+        }
+        if(this.hiCnt < arity + 1) {
+            this.code.push(`for(var i = ${this.hiCnt}; i < ${arity + 1}; i++){
+        _ <== transcriptHash_${this.hCnt - 1}[i]; // Unused transcript values           
+    }\n`)
+        }
+        this.code.push(`// From each transcript hash converted to bits, we assign those bits to ys[q] to define the query positions`)
+        this.code.push(`var q = 0; // Query number `)
+        this.code.push(`var b = 0; // Bit number `)
+        for(let i = 0; i<NFields; i++) {
+            const nBits = i + 1 == NFields ? totalBits - 253*i : 253;
+            this.code.push(`for(var j = 0; j < ${nBits}; j++) {
+        ${v}[q][b] <== ${n2b[i]}[j];
+        b++;
+        if(b == ${starkStruct.steps[0].nBits}) {
+            b = 0; 
+            q++;
+        }
+    }`);
+            if(nBits === 253) {
+                this.code.push(`_ <== ${n2b[i]}[253]; // Unused last bit\n`);
+            } else {
+                this.code.push(`for(var j = ${nBits}; j < 254; j++) {
+        _ <== ${n2b[i]}[j]; // Unused bits
+    }`);
+            }
+        }
+    }
+
+    getCode() {
+        for (let i=0; i<this.code.length; i++) this.code[i] = "    "+this.code[i];
+        return this.code.join("\n");
+    }
+
+} -%>
+<% function unrollCode(code) {                                                          -%>
+<%
+    function ref(r) {
+        if (r.type == "eval") {
+            return "evals[" + r.id + "]";
+        } else if (r.type == "challenge") {
+            return "challenges" + r.id;
+        } else if (r.type == "public") {
+            return "publics[" + r.id + "]";
+        } else if (r.type == "x") {
+            return "challenges7";
+        } else if (r.type == "Z") {
+            return "Z";
+        } else if (r.type == "xDivXSubXi") {
+            return "xDivXSubXi";
+        } else if (r.type == "xDivXSubWXi") {
+            return "xDivXSubWXi";
+        } else if (r.type == "tmp") {
+            return "tmp_"+r.id;
+        } else if (r.type == "tree1") {
+            return "mapValues.tree1_" + r.id;
+        } else if (r.type == "tree2") {
+            return "mapValues.tree2_" + (r.id - starkInfo.nCm1);
+        } else if (r.type == "tree3") {
+            return "mapValues.tree3_" + (r.id - starkInfo.nCm1 - starkInfo.nCm2);
+        } else if (r.type == "tree4") {
+            return "mapValues.tree4_" + (r.id - starkInfo.nCm1 - starkInfo.nCm2 - starkInfo.nCm3);
+        } else if (r.type == "const") {
+            return "consts[" + r.id + "]";
+        } else if (r.type == "number") {
+            return r.value;
+        } else {
+            throw new Error("Invalid Ref: " +r.type);
+        }
+    }
+-%>
+<% for(let i=0; i<code.length; i++) {                                 -%>
+<%      let inst = code[i];                                           -%>
+<%      if (inst.dest.type == "tmp" && ![1,3].includes(inst.dest.dim)) {                -%>
+<%          throw new Error("Invalid dimension");                                       -%>
+<%      }                                                                               -%>
+<%      if (inst.op == "add") {                                                         -%>
+<%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
+    signal <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>;
+<%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
+    signal <%- ref(inst.dest) %>[3] <== [<%- ref(inst.src[0]) %> + <%- ref(inst.src[1]) %>[0], <%- ref(inst.src[1]) %>[1], <%- ref(inst.src[1]) %>[2]];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
+    signal <%- ref(inst.dest) %>[3] <== [<%- ref(inst.src[0]) %>[0] + <%- ref(inst.src[1]) %>, <%- ref(inst.src[0]) %>[1], <%- ref(inst.src[0]) %>[2]];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
+    signal <%- ref(inst.dest) %>[3] <== [<%- ref(inst.src[0]) %>[0] + <%- ref(inst.src[1]) %>[0], <%- ref(inst.src[0]) %>[1] + <%- ref(inst.src[1]) %>[1], <%- ref(inst.src[0]) %>[2] + <%- ref(inst.src[1]) %>[2]];
+<%          } else throw new Error("Invalid src dimensions");                          -%>
+<%      } else if (inst.op == "sub") {                                                  -%>
+<%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
+    signal <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>;
+<%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
+    signal <%- ref(inst.dest) %>[3] <== [<%- ref(inst.src[0]) %> - <%- ref(inst.src[1]) %>[0] + p, -<%- ref(inst.src[1]) %>[1] + p, -<%- ref(inst.src[1]) %>[2] + p];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
+    signal <%- ref(inst.dest) %>[3] <== [<%- ref(inst.src[0]) %>[0] - <%- ref(inst.src[1]) %> + p, <%- ref(inst.src[0]) %>[1], <%- ref(inst.src[0]) %>[2]];
+<%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
+    signal <%- ref(inst.dest) %>[3] <== [<%- ref(inst.src[0]) %>[0] - <%- ref(inst.src[1]) %>[0] + p, <%- ref(inst.src[0]) %>[1] - <%- ref(inst.src[1]) %>[1] + p, <%- ref(inst.src[0]) %>[2] - <%- ref(inst.src[1]) %>[2] + p];
+<%          } else throw new Error("Invalid src dimensions");                          -%>
+<%      } else if (inst.op == "mul") {                                                  -%>
+<%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
+    signal <%- ref(inst.dest) %> <== GLMul1()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>);
+<%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
+    signal <%- ref(inst.dest) %>[3] <== GLCMul()([<%- ref(inst.src[0]) %>, 0, 0], <%- ref(inst.src[1]) %>);
+<%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
+    signal <%- ref(inst.dest) %>[3] <== GLCMul()(<%- ref(inst.src[0]) %>, [<%- ref(inst.src[1]) %>,0,0]);
+<%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
+    signal <%- ref(inst.dest) %>[3] <== GLCMul()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>);
+<%          } else throw new Error("Invalid src dimensions");                          -%>
+<%      } else if (inst.op == "copy") {                                                 -%>
+<%          if (inst.src[0].dim==1) {                                                   -%>
+    signal <%- ref(inst.dest) %> <== <%- ref(inst.src[0]) %>;
+<%          } else if (inst.src[0].dim==3) {                                            -%>
+    signal <%- ref(inst.dest) %>[3] <== <%- ref(inst.src[0]) %>;
+<%          } else throw new Error("Invalid src dimensions");                          -%>
+<%      } else if (inst.op == "muladd") {                                                   -%>
+<%              if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
+<%                  if (inst.src[2].dim==1) {                                                -%>
+    signal <%- ref(inst.dest) %> <== GLMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>);
+<%                  } else {                                                                 -%>
+    signal <%- ref(inst.dest) %>[3] <== [GLMulAdd()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>, <%- ref(inst.src[2]) %>[0]),<%- ref(inst.src[2]) %>[1],<%- ref(inst.src[2]) %>[2]];
+<%                  }                                                                       -%>
+<%              } else {                                                                    -%>
+<%                  let ina;
+                    let inb;
+                    let inc; 
+                    if(inst.src[0].dim==1) {
+                        ina = `[${ref(inst.src[0])},0,0]`;
+                    } else {
+                        ina = `${ref(inst.src[0])}`;
+                    }
+                    if(inst.src[1].dim==1) {
+                        inb = `[${ref(inst.src[1])},0,0]`;
+                    } else {
+                        inb = `${ref(inst.src[1])}`;
+                    }
+                    if(inst.src[2].dim==1) {
+                        inc = `[${ref(inst.src[2])},0,0]`;
+                    } else {
+                        inc = `${ref(inst.src[2])}`;
+                    } -%>
+    signal <%- ref(inst.dest) %>[3] <== GLCMulAdd()(<%- ina %>, <%- inb %>, <%- inc %>);
+<%              }                                                                           -%>
+<%      } else throw new Error("Invalid op");                                           -%>
+<% }                                                                                    -%>
+<% return ref(code[code.length-1].dest);                                                -%>
+<% }                                                                                    -%>
+
+/* 
+    Calculate the transcript
+*/ 
+template Transcript() {
+
+    signal input publics[<%- pil.publics.length %>];
+    signal input root1; 
+    signal input root2; 
+    signal input root3; 
+    signal input root4;
+    signal input evals[<%- starkInfo.evMap.length %>][3]; 
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    signal input s<%- s %>_root;
+<% }                                                     -%>
+    signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
+
+    signal output challenges[8][3];  
+    signal output ys[<%- starkStruct.nQueries %>][<%- starkStruct.steps[0].nBits %>];
+<% for (let s=0; s<starkStruct.steps.length; s++) {   -%>
+    signal output s<%- s %>_specialX[3];
+<% }                                                    -%>  
+
+<%
+const transcript = new Transcript();
+transcript.put("publics", pil.publics.length);
+transcript.put("root1");
+transcript.getField("challenges[0]", 3);
+transcript.getField("challenges[1]", 3);
+transcript.put("root2");
+transcript.getField("challenges[2]", 3);
+transcript.getField("challenges[3]", 3);
+transcript.put("root3");
+transcript.getField("challenges[4]", 3);
+transcript.put("root4");
+transcript.getField("challenges[7]", 3);
+for (let i=0; i<starkInfo.evMap.length; i++) {
+    transcript.put(`evals[${i}]`, 3);
+}
+transcript.getField("challenges[5]", 3);
+transcript.getField("challenges[6]", 3);
+for (let si=0; si<starkStruct.steps.length; si++) {
+    transcript.getField(`s${si}_specialX`, 3);
+    if (si < starkStruct.steps.length-1) {
+        transcript.put(`s${si+1}_root`);
+    } else {
+        for (let j=0; j< 1<<starkStruct.steps[starkStruct.steps.length-1].nBits; j++ ) {
+            transcript.put(`finalPol[${j}]`, 3);
+        }
+    }
+}
+transcript.getPermutations("ys", starkStruct.nQueries, starkStruct.steps[0].nBits);
+
+-%>
+
+<%- transcript.getCode() %>
+
+}
+
+/*
+    Verify that FRI polynomials are built properly
+*/
+template parallel VerifyFRI(prevStepBits, currStepBits, nextStepBits, e0, e1) {
+    var nextStep = currStepBits - nextStepBits;
+    var step = prevStepBits - currStepBits;
+
+    var p = 0xFFFFFFFF00000001;
+
+    signal input ys[currStepBits];
+    signal input s_specialX[3];
+    signal input s_vals_curr[1 << step][3];
+    signal input s_vals_next[1 << nextStep][3];
+    signal input enable;
+
+    signal s_sx[currStepBits - 1];
+    s_sx[0] <== GLMul()(ys[0] * (e1 - e0) + e0, ys[1] * (invroots(prevStepBits - 1) -1) + 1);
+    for (var i=1; i< currStepBits - 1; i++ ) {
+        s_sx[i] <== GLMul()(s_sx[i-1], ys[i + 1] * (invroots(prevStepBits - (i + 1)) -1) + 1);
+    }
+
+    signal s_X; 
+    if(currStepBits > 1) {
+        s_X <== s_sx[currStepBits - 2];
+    } else {
+        s_X <== GLMul()(e0, ys[0] * (invroots(prevStepBits) -1) + 1);
+    }
+
+    signal coefs[1 << step][3] <== FFT(step, 1)(s_vals_curr);
+    signal evalXprime[3] <== GLCMul()(s_specialX, [s_X, 0, 0]);
+    signal evalPol[3] <== EvalPol(1 << step)(coefs, evalXprime);
+    
+    signal s_keys_lowValues[nextStep];
+    for(var i = 0; i < nextStep; i++) { s_keys_lowValues[i] <== ys[i + nextStepBits]; } 
+    signal lowValues[3] <== TreeSelector(nextStep, 3)(s_vals_next, s_keys_lowValues);
+
+    signal cNorm[3] <== GLCNorm()([evalPol[0] - lowValues[0] + p, evalPol[1] - lowValues[1] + p, evalPol[2] - lowValues[2] + p]);
+    
+    enable * cNorm[0] === 0;
+    enable * cNorm[1] === 0;
+    enable * cNorm[2] === 0;
+}
+
+/* 
+    Verify that all committed polynomials are calculated correctly
+*/
+template parallel VerifyEvaluations() {
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    signal input challenges0[3];
+    signal input challenges1[3];
+<% } -%>   
+    signal input challenges2[3];
+    signal input challenges3[3];
+    signal input challenges4[3];
+    signal input challenges7[3];
+    signal input evals[<%- starkInfo.evMap.length %>][3];
+    signal input publics[<%- pil.publics.length %>];
+    signal input enable;
+
+    var p = 0xFFFFFFFF00000001;
+
+    // zMul stores all the powers of z (which is stored in challenge7) up to nBits, i.e, [z, z^2, ..., z^nBits]
+    signal zMul[<%- starkStruct.nBits %>][3];
+    for (var i=0; i< <%- starkStruct.nBits %> ; i++) {
+        if(i==0){
+            zMul[i] <== GLCMul()(challenges7, challenges7);
+        } else {
+            zMul[i] <== GLCMul()(zMul[i-1], zMul[i-1]);
+        }
+    }
+
+    // Store the vanishing polynomial Zg = x^nBits - 1 evaluated at z
+    signal Z[3] <== [zMul[<%- starkStruct.nBits - 1 %>][0] -1 + p, zMul[<%- starkStruct.nBits - 1 %>][1], zMul[<%- starkStruct.nBits - 1 %>][2]];
+
+    // Using the evaluations committed and the challenges,
+    // calculate the sum of q_i, i.e, q_0(X) + challenge * q_1(X) + challenge^2 * q_2(X) +  ... + challenge^(l-1) * q_l-1(X) evaluated at z 
+<% const evalP = unrollCode(starkInfo.verifierCode.first) -%>
+
+    signal xAcc[<%- starkInfo.qDeg %>][3]; //Stores, at each step, x^i evaluated at z
+    signal qStep[<%- starkInfo.qDeg-1 %>][3]; // Stores the evaluations of Q_i
+    signal qAcc[<%- starkInfo.qDeg %>][3]; // Stores the accumulate sum of Q_i
+    
+    // Note: Each Qi has degree < n. qDeg determines the number of polynomials of degree < n needed to define Q
+    // Calculate Q(X) = Q1(X) + X^n*Q2(X) + X^(2n)*Q3(X) + ..... X^((qDeg-1)n)*Q(X) evaluated at z 
+    for (var i=0; i< <%- starkInfo.qDeg %>; i++) {
+        if (i==0) {
+            xAcc[0] <== [1, 0, 0];
+            qAcc[0] <== evals[<%- starkInfo.evIdx.cm[0][starkInfo.qs[0]] %>+i];
+        } else {
+            xAcc[i] <== GLCMul()(xAcc[i-1], zMul[<%- starkStruct.nBits - 1 %>]);
+            qStep[i-1] <== GLCMul()(xAcc[i], evals[<%- starkInfo.evIdx.cm[0][starkInfo.qs[0]] %>+i]);
+
+            qAcc[i][0] <== qAcc[i-1][0] + qStep[i-1][0];
+            qAcc[i][1] <== qAcc[i-1][1] + qStep[i-1][1];
+            qAcc[i][2] <== qAcc[i-1][2] + qStep[i-1][2];
+        }
+    }
+
+    signal QZ[3] <== GLCMul()(qAcc[<%- starkInfo.qDeg-1 %>], Z); // Stores the result of multiplying Q(X) per Zg(X)
+
+    // Final normalization
+    signal normC[3] <== GLCNorm()([<%- evalP %>[0] - QZ[0], <%- evalP %>[1] - QZ[1],<%- evalP %>[2] - QZ[2]]);
+
+    // Final Verification. Check that Q(X)*Zg(X) = sum of linear combination of q_i, which is stored at <%- evalP %> 
+    enable * normC[0] === 0;
+    enable * normC[1] === 0;
+    enable * normC[2] === 0;
+
+}
+
+/* 
+    Verify that the initial FRI polynomial, which is the lineal combination of the committed polynomials
+    during the STARK phases, is built properly
+*/
+template parallel VerifyQuery(currStepBits, nextStepBits) {
+    var nextStep = currStepBits - nextStepBits;
+    signal input ys[<%- starkStruct.steps[0].nBits %>];
+    signal input challenges5[3];
+    signal input challenges6[3];
+    signal input challenges7[3];
+    signal input evals[<%- starkInfo.evMap.length %>][3];
+    signal input tree1[<%- starkInfo.mapSectionsN.cm1_2ns %>];
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    signal input tree2[<%- starkInfo.mapSectionsN.cm2_2ns %>];
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { %>
+    signal input tree3[<%- starkInfo.mapSectionsN.cm3_2ns %>];
+<% }                                         -%>
+    signal input tree4[<%- starkInfo.mapSectionsN.cm4_2ns %>];
+    signal input consts[<%- starkInfo.nConstants %>];
+    signal input s0_vals[1 << nextStep][3];
+    signal input enable;
+
+    // Map the s0_vals so that they are converted either into single vars (if they belong to base field) or arrays of 3 elements (if 
+    // they belong to the extended field). 
+    component mapValues = MapValues();
+    mapValues.vals1 <== tree1;
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    mapValues.vals2 <== tree2;
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+    mapValues.vals3 <== tree3;
+<% }                                         -%>
+    mapValues.vals4 <== tree4;
+
+    var p = 0xFFFFFFFF00000001;
+
+    signal xacc[<%- starkStruct.steps[0].nBits -1 %>];
+    for (var i=1; i<<%- starkStruct.steps[0].nBits %>; i++ ) {
+	if(i==1) {
+	  xacc[i-1] <== GLMul()(ys[0]*<%- F.shift * F.w[starkStruct.steps[0].nBits] - F.shift %> + <%- F.shift %>, ys[1]*(<%- F.w[starkStruct.steps[0].nBits - 1] %> - 1) +1);
+	} else {
+	  xacc[i-1] <== GLMul()(xacc[i-2],  ys[i]*(roots(<%- starkStruct.steps[0].nBits %> - i) - 1) +1);
+	}
+        
+    }
+
+<% if (starkStruct.steps[0].nBits>1) {  -%>
+    signal X <== xacc[<%- starkStruct.steps[0].nBits -2 %>];
+<% } else {                             -%>
+    signal X <== ys[0]*(<%- F.shift %> * roots(<%- starkStruct.steps[0].nBits %>)-<%- F.shift %>) + <%- F.shift %>;
+<% }                                    -%>
+
+
+    signal den1inv[3] <== GLCInv()([X - challenges7[0] + p, -challenges7[1] + p, -challenges7[2] + p]);
+    signal xDivXSubXi[3] <== GLCMul()([X, 0, 0], den1inv);
+    
+    signal wXi[3] <== GLCMul()([roots(<%- starkStruct.nBits %>), 0, 0], challenges7);
+    signal den2inv[3] <== GLCInv()([X - wXi[0] + p, -wXi[1] + p, -wXi[2] + p]);
+    signal xDivXSubWXi[3] <== GLCMul()([X, 0, 0], den2inv);
+   
+<% const evalQ = unrollCode(starkInfo.verifierQueryCode.first) -%>
+
+    // Final Normalization
+    signal queryVals[3] <== GLCNorm()(<%- evalQ %>);
+
+    var s0_keys_lowValues[nextStep];
+    for(var i = 0; i < nextStep; i++) {
+        s0_keys_lowValues[i] = ys[i + nextStepBits];
+    } 
+   
+    signal lowValues[3] <== TreeSelector(nextStep, 3)(s0_vals, s0_keys_lowValues);
+
+    enable * (lowValues[0] - queryVals[0]) === 0;
+    enable * (lowValues[1] - queryVals[1]) === 0;
+    enable * (lowValues[2] - queryVals[2]) === 0;
+}
+
+// Polynomials can either have dimension 1 (if they are defined in the base field) or dimension 3 (if they are defined in the 
+// extended field). In general, all initial polynomials (constants and tr) will have dim 1 and the other ones such as Z (grand product),
+// Q (quotient) or h_i (plookup) will have dim 3.
+// This function processes the values, which are stored in an array vals[n] and splits them in multiple signals of size 1 (vals_i) 
+// or 3 (vals_i[3]) depending on its dimension.
+template MapValues() {
+    signal input vals1[<%- starkInfo.mapSectionsN.cm1_2ns %>];
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    signal input vals2[<%- starkInfo.mapSectionsN.cm2_2ns %>];
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+    signal input vals3[<%- starkInfo.mapSectionsN.cm3_2ns %>];
+<% }                                         -%>
+    signal input vals4[<%- starkInfo.mapSectionsN.cm4_2ns  %>];
+
+<% const sNames = [null, "cm1_2ns", "cm2_2ns", "cm3_2ns", "cm4_2ns"];              -%>
+<% for (let t = 1; t<=4; t++) {                                                  -%>
+<%      for (let i=0; i< starkInfo.mapSections[sNames[t]].length; i++) {        -%>
+<%          const p = starkInfo.varPolMap[starkInfo.mapSections[sNames[t]][i]];  -%>
+<%          if (p.dim == 1) {                                                    -%>
+    signal output tree<%- t %>_<%- i %>;
+<%          } else if (p.dim == 3) {                                             -%>
+    signal output tree<%- t %>_<%- i %>[3];
+<%          } else throw new Error("Invalid dim")                                -%>
+<%      }                                                                        -%>
+<% }                                                                             -%>
+
+<% for (let t = 1; t<=4; t++) {                                                   -%>
+<%      for (let i=0; i< starkInfo.mapSections[sNames[t]].length; i++) {        -%>
+<%          const p = starkInfo.varPolMap[starkInfo.mapSections[sNames[t]][i]];  -%>
+<%          if (p.dim == 1) {                                                    -%>
+    tree<%- t %>_<%- i %> <== vals<%- t %>[<%- p.sectionPos %>];
+<%          } else if (p.dim == 3) {                                             -%>
+    tree<%- t %>_<%- i %> <== [vals<%- t %>[<%- p.sectionPos %>],vals<%- t %>[<%- p.sectionPos + 1 %>] , vals<%- t %>[<%- p.sectionPos + 2 %>]];
+<%          } else throw new Error("Invalid dim")                                -%>
+<%      }                                                                        -%>
+<% }                                                                             -%>
+}
+
+
+template StarkVerifier() {
+    signal input publics[<%- pil.publics.length %>]; // constant polynomials
+    signal input root1; // Merkle tree root of the evaluations of all trace polynomials
+    signal input root2; // Merkle tree root of the evaluations of polynomials h1 and h2 used for the plookup
+    signal input root3; // Merkle tree root of the evaluations of the grand product polynomials (Z) 
+    signal input root4; // Merkle tree root of the evaluations of the quotient Q1 and Q2 polynomials
+
+    // Notice that root2 and root3 can be zero depending on the STARK being verified 
+
+<% if (options.verkeyInput) {  -%>
+<% /* Depending on the STARK being verified, the rootC will be hardcoded or passed as an input */%>
+    signal input rootC; // Merkle tree root of the evaluations of constant polynomials
+<% } else { -%>
+    signal rootC <== <%- constRoot %>; // Merkle tree root of the evaluations of constant polynomials
+<% } -%>
+
+    signal input evals[<%- starkInfo.evMap.length %>][3]; // Evaluations of the set polynomials at a challenge value z and gz
+
+    // Leaves values of the merkle tree used to check all the queries
+    signal input s0_vals1[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_2ns %>];
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { %>
+    signal input s0_vals2[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm2_2ns %>];
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+    signal input s0_vals3[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm3_2ns %>];
+<% }                                         -%>
+    signal input s0_vals4[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm4_2ns %>];
+    signal input s0_valsC[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants%>];
+    
+    // Merkle proofs for each of the evaluations
+    signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    signal input s0_siblings2[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+    signal input s0_siblings3[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+<% }                                         -%>
+    signal input s0_siblings4[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+    signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+
+    // Contains the root of the original polynomial and all the intermediate FRI polynomials except for the last step
+<% let si_roots = []; -%>
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+<% si_roots.push(`s${s}_root`); -%>
+    signal input s<%- s %>_root;
+<% }                                                     -%>
+
+    // For each intermediate FRI polynomial and the last one, we store at vals the values needed to check the queries.
+    // Given a query r,  the verifier needs b points to check it out, being b = 2^u, where u is the difference between two consecutive step
+    // and the sibling paths for each query.
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    signal input s<%- s %>_vals[<%- starkStruct.nQueries %>][<%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits))*3 %>];
+    signal input s<%- s %>_siblings[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[s].nBits -1) /nBitsArity) +1 %>][<%- arity %>];
+<% }                                                  -%>
+
+    // Evaluations of the final FRI polynomial over a set of points of size bounded its degree
+    signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
+
+<% if (options.enableInput) { -%>
+    signal input enable;
+    enable * (enable -1 ) === 0;
+<% } else { -%>
+    signal enable;
+    enable <== 1;
+<% } -%>
+
+    // Each STARK proof requires 8 challenges (and remember that each challenge has the form a + bx + cx^2)
+    // Challenge 0 && 1 -> Used to reduce vector lookups and vector permutations (uses a initial seed + root committed in round 1)
+    // Challenge 2 && 3 -> Used to compute grand-product polynomials (uses previous output + root committed in round 2)
+    // Challenge 4 -> Used to compute the quotient polynomial (uses previous output + root committed in round 3)
+    // Challenge 7 -> Used to compute the evaluation challenge z (uses previous output + root committed in round 4)
+    // Challenge 5 + 6 -> Used to compute combination challenge required for FRI (uses the evaluations values. 
+    // Remember that each evaluation has three values since we are in an extended field GF(p^3))
+    signal challenges[8][3];
+
+    //(s_i)_special contains the random value provided by the verifier at each step of the folding so that 
+    // the prover can commit the polynomial.
+    // Remember that, when folding, the prover does as follows: f0 = g_0 + X*g_1 + ... + (X^b)*g_b and then the 
+    // verifier provides a random X so that the prover can commit it. This value is stored here.
+<% let si_specials = []; -%>
+<% for (let s=0; s<starkStruct.steps.length; s++) {   -%>
+    signal s<%- s %>_specialX[3];
+<% si_specials.push(`s${s}_specialX`); -%>
+<% }                                                    -%>
+    
+    // Each of the queries values represented in binary
+    signal ys[<%- starkStruct.nQueries %>][<%- starkStruct.steps[0].nBits %>];
+
+    var p = 0xFFFFFFFF00000001;
+
+    ///////////
+    // Calculate challenges, s_i special and queries
+    ///////////
+
+    (challenges,ys,<%- si_specials.join(",") %>) <== Transcript()(publics,root1,root2,root3,root4,evals, <%- si_roots.join(",") %>,finalPol);
+
+    ///////////
+    // Check constraints polynomial in the evaluation point
+    ///////////
+
+<%  const challengesEvaluations = ["challenges[2]", "challenges[3]", "challenges[4]", "challenges[7]"];
+    if (starkInfo.mapSectionsN.cm2_2ns > 0) { 
+        challengesEvaluations.unshift(...["challenges[0]", "challenges[1]"]);
+    }
+-%> 
+    VerifyEvaluations()(<%- challengesEvaluations.join(", ") %>, evals, publics, enable);
+
+    ///////////
+    // Preprocess s_i vals
+    ///////////
+
+    // Preprocess the s_i vals given as inputs so that we can use anonymous components.
+    // Two different processings are done:
+    // For s0_vals, the arrays are transposed so that they fit MerkleHash template
+    // For (s_i)_vals, the values are passed all together in a single array of length nVals*3. We convert them to vals[nVals][3]
+    
+    var s0_vals1_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_2ns %>][1];
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    var s0_vals2_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm2_2ns %>][1];
+<% } -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+    var s0_vals3_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm3_2ns %>][1];
+<% } -%>
+    var s0_vals4_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm4_2ns %>][1];
+    var s0_valsC_p[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants %>][1];
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    var s<%- s %>_vals_p[<%- starkStruct.nQueries %>][<%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits)) %>][3]; 
+<% } -%>
+
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
+        // Preprocess vals for the initial FRI polynomial
+        for (var i = 0; i < <%- starkInfo.mapSectionsN.cm1_2ns %>; i++) {
+            s0_vals1_p[q][i][0] = s0_vals1[q][i];
+        }
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+        for (var i = 0; i < <%- starkInfo.mapSectionsN.cm2_2ns %>; i++) {
+            s0_vals2_p[q][i][0] = s0_vals2[q][i];
+        }
+<% } -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+        for (var i = 0; i < <%- starkInfo.mapSectionsN.cm3_2ns %>; i++) {
+            s0_vals3_p[q][i][0] = s0_vals3[q][i];
+        }
+<% } -%>
+        for (var i = 0; i < <%- starkInfo.mapSectionsN.cm4_2ns %>; i++) {
+            s0_vals4_p[q][i][0] = s0_vals4[q][i];
+        }
+        for (var i = 0; i < <%- starkInfo.nConstants %>; i++) {
+            s0_valsC_p[q][i][0] = s0_valsC[q][i];
+        }
+
+        // Preprocess vals for each folded polynomial
+        for(var e=0; e < 3; e++) {
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+            for(var c=0; c < <%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits))%>; c++) {
+                s<%- s %>_vals_p[q][c][e] = s<%- s %>_vals[q][c*3+e];
+            }
+<% } -%>
+        }
+    }
+    
+    ///////////
+    // FRI
+    ///////////
+
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
+        
+        //Check that all that the root obtained using the values and the sibling path is the same as the one being sent as input 
+
+        //Calculate merkle root for s0 vals
+        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm1_2ns %>, <%- starkStruct.steps[0].nBits %>, <%- arity %>)(s0_vals1_p[q], s0_siblings1[q], ys[q], root1, enable);
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm2_2ns %>, <%- starkStruct.steps[0].nBits %>, <%- arity %>)(s0_vals2_p[q], s0_siblings2[q], ys[q], root2, enable);
+<% }                                        -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm3_2ns %>, <%- starkStruct.steps[0].nBits %>, <%- arity %>)(s0_vals3_p[q], s0_siblings3[q], ys[q], root3, enable);
+<% }     -%>
+        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm4_2ns %>, <%- starkStruct.steps[0].nBits %>,<%- arity %>)(s0_vals4_p[q], s0_siblings4[q], ys[q], root4, enable);
+        VerifyMerkleHash(1, <%- starkInfo.nConstants %>, <%- starkStruct.steps[0].nBits %>, <%- arity %>)(s0_valsC_p[q], s0_siblingsC[q], ys[q], rootC, enable);                                    
+
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+
+        // Calculate merkle root for s<%- s %> vals
+        var s<%- s %>_keys_merkle[<%- starkStruct.steps[s].nBits %>];
+        for(var i = 0; i < <%-starkStruct.steps[s].nBits %>; i++) { s<%- s %>_keys_merkle[i] = ys[q][i]; }
+        VerifyMerkleHash(3, <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>, <%- starkStruct.steps[s].nBits %>,<%- arity %>)(s<%- s %>_vals_p[q], s<%- s %>_siblings[q], s<%- s %>_keys_merkle, s<%- s %>_root, enable);
+
+<% } -%>
+
+        ///////////
+        // Verify FRI query
+        ///////////
+
+        // After checking that all merkle roots are properly built, the query and the intermediate 
+        // polynomials need to be verified 
+<%  let nextValsPol = 0 < starkStruct.steps.length-1 ? "s1_vals_p[q]" : "finalPol"; 
+    let nextStep = 0 < starkStruct.steps.length-1 ? starkStruct.steps[1].nBits : 0; 
+    let queryVals = ["s0_vals1[q]"];
+    if(starkInfo.mapSectionsN.cm2_2ns > 0) {
+        queryVals.push("s0_vals2[q]");
+    }
+    if(starkInfo.mapSectionsN.cm3_2ns > 0) {
+        queryVals.push("s0_vals3[q]");
+    }
+    queryVals.push("s0_vals4[q]");
+    queryVals.push("s0_valsC[q]");
+-%>
+        // Verify that the query is properly constructed. This is done by checking that the linear combination of the set of 
+        // polynomials committed during the different rounds evaluated at z matches with the commitment of the FRI polynomial (unsure)
+        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges[5], challenges[6], challenges[7], evals, <%- queryVals.join(", ") %>, <%- nextValsPol %>, enable);
+
+        ///////////
+        // Verify FRI construction
+        ///////////
+
+        // For each folding level we need to check that the polynomial is properly constructed
+        // Remember that if the step between polynomials is b = 2^l, the next polynomial p_(i+1) will have degree deg(p_i) / b
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+<%
+    const e1 = F.inv( F.mul(
+        F.exp(F.shift, 1 << (starkStruct.nBitsExt -starkStruct.steps[s-1].nBits) ),
+        F.w[starkStruct.steps[s-1].nBits]
+    ));
+    const e0 = F.inv(F.exp(F.shift, 1 << (starkStruct.nBitsExt -starkStruct.steps[s-1].nBits) ) );
+-%>
+
+        // Check S<%- s %> 
+        var s<%- s %>_ys[<%- starkStruct.steps[s].nBits%>];
+        for(var i = 0; i < <%- starkStruct.steps[s].nBits%>; i++) { s<%- s %>_ys[i] = ys[q][i]; } 
+<%  const nextPolFRI = s < starkStruct.steps.length-1 ? `s${s+1}_vals_p[q]` : "finalPol"; -%>
+<%  const nextStepFRI = s < starkStruct.steps.length-1 ? starkStruct.steps[s+1].nBits : 0; -%>
+        VerifyFRI(<%- starkStruct.steps[s-1].nBits %>, <%- starkStruct.steps[s].nBits %>, <%- nextStepFRI %>, <%- e0 %>, <%- e1 %>)(s<%- s %>_ys, s<%- s %>_specialX, s<%- s %>_vals_p[q], <%- nextPolFRI %>, enable);
+<% } -%>
+    }
+
+    ///////
+    // Check Degree last pol
+    ///////
+
+<% const nLastBits = starkStruct.steps[ starkStruct.steps.length-1].nBits;  -%>
+<% console.log("NLastBits", nLastBits); -%>
+<% const maxDegBits =  Math.max(nLastBits -  (starkStruct.nBitsExt - starkStruct.nBits), 0); -%>
+<% console.log("MaxDegBits", maxDegBits); -%>
+    // Calculate the IFFT to get the coefficients of finalPol 
+    signal lastIFFT[<%- 1 << nLastBits %>][3] <== FFT(<%- nLastBits %>, 1)(finalPol);
+
+    // Check that the degree of the final polynomial is bounded by the degree defined in the last step of the folding
+    // This means ?????? in terms of IFFT
+    for (var k= <%- 1 << maxDegBits %>; k< <%- 1 << nLastBits %>; k++) {
+        for (var e=0; e<3; e++) {
+            enable * lastIFFT[k][e] === 0;
+        }
+    }
+
+    // The coefficients of lower degree can have any value
+    for (var k= 0; k < <%- 1 << maxDegBits %>; k++) {
+        _ <== lastIFFT[k];
+    }
+}
+
+<% if (!options.skipMain) {  -%>
+
+template Main() {
+    signal input proverAddr;
+    signal output publicsHash;
+
+    signal input publics[<%- pil.publics.length %>];
+    signal input root1;
+    signal input root2;
+    signal input root3;
+    signal input root4;
+    signal input evals[<%- starkInfo.evMap.length %>][3];
+
+    signal input s0_vals1[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_2ns %>];
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    signal input s0_vals2[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm2_2ns %>];
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+    signal input s0_vals3[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm3_2ns %>];
+<% }                                         -%>
+    signal input s0_vals4[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm4_2ns %>];
+    signal input s0_valsC[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants%>];
+    signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    signal input s0_siblings2[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+    signal input s0_siblings3[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+<% }                                         -%>
+    signal input s0_siblings4[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+    signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+
+<% for (let s=0; s<starkStruct.steps.length-1; s++) {   -%>
+    signal input s<%- s+1 %>_root;
+<% }                                                     -%>
+
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    signal input s<%- s %>_vals[<%- starkStruct.nQueries %>][<%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits))*3 %>];
+    signal input s<%- s %>_siblings[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[s].nBits -1) /nBitsArity) +1 %>][<%- arity %>];
+<% }                                                  -%>
+
+    signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
+
+
+    component sv = StarkVerifier();
+
+    sv.publics <== publics;
+    sv.root1 <== root1;
+    sv.root2 <== root2;
+    sv.root3 <== root3;
+    sv.root4 <== root4;
+    sv.evals <== evals;
+
+
+    sv.s0_vals1 <== s0_vals1;
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    sv.s0_vals2 <== s0_vals2;
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+    sv.s0_vals3 <== s0_vals3;
+<% }                                         -%>
+    sv.s0_vals4 <== s0_vals4;
+    sv.s0_valsC <== s0_valsC;
+    sv.s0_siblings1 <== s0_siblings1;
+<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    sv.s0_siblings2 <== s0_siblings2;
+<% }                                         -%>
+<% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+    sv.s0_siblings3 <== s0_siblings3;
+<% }                                         -%>
+    sv.s0_siblings4 <== s0_siblings4;
+    sv.s0_siblingsC <== s0_siblingsC;
+
+<% for (let s=0; s<starkStruct.steps.length-1; s++) {   -%>
+    sv.s<%- s+1 %>_root <== s<%- s+1 %>_root;
+<% }                                                     -%>
+
+<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    sv.s<%- s %>_vals <== s<%- s %>_vals;
+    sv.s<%- s %>_siblings <== s<%- s %>_siblings;
+<% }                                                  -%>
+    sv.finalPol <== finalPol;
+
+    //////
+    // Calculate Publics Hash
+    //////
+
+    component publicsHasher = Sha256(<%- 160 + 64*pil.publics.length %>);
+    component n2bProverAddr = CustomNum2Bits(160);
+    component n2bPublics[<%- pil.publics.length %> ];
+    component cmpPublics[<%- pil.publics.length %> ];
+
+    n2bProverAddr.in <== proverAddr;
+    for (var i=0; i<160; i++) {
+        publicsHasher.in[160 - 1 -i] <== n2bProverAddr.out[i];
+    }
+
+    var offset = 160;
+
+    for (var i=0; i<<%- pil.publics.length %>; i++) {
+        n2bPublics[i] = CustomNum2Bits(64);
+        cmpPublics[i] = CompConstant64(0xFFFFFFFF00000000);
+        n2bPublics[i].in <== publics[i];
+        for (var j=0; j<64; j++) {
+            publicsHasher.in[offset + 64 - 1 -j] <== n2bPublics[i].out[j];
+            cmpPublics[i].in[j] <== n2bPublics[i].out[j];
+        }
+        cmpPublics[i].out === 0;
+        offset += 64;
+    }
+
+    component n2bPublicsHash = Bits2Num(256);
+    for (var i = 0; i < 256; i++) {
+        n2bPublicsHash.in[i] <== publicsHasher.out[255-i];
+    }
+
+    publicsHash <== n2bPublicsHash.out;
+}
+
+component main = Main();
+<% } -%>
+

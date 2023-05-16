@@ -6,7 +6,7 @@ const starkGen = require("./stark/stark_gen.js");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true, storeAsString: true });
 const { proof2zkin } = require("./proof2zkin");
 const buildMerklehashGL = require("./helpers/hash/merklehash/merklehash_p.js");
-const buildMerklehashBN128 = require("./helpers/hash/merklehash/merklehash_bn128_p.js");
+const buildMerkleHashBN128 = require("./helpers/hash/merklehash/merklehash_bn128_p.js");
 
 const F3g = require("./helpers/f3g.js");
 const { createHash } = require("crypto");
@@ -26,6 +26,8 @@ const argv = require("yargs")
     .alias("z", "zkin")
     .alias("b", "public")
     .string("proverAddr")
+    .string("arity")
+    .string("custom")
     .argv;
 
 async function run() {
@@ -45,24 +47,31 @@ async function run() {
     const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
 
-    const constPols =  newConstantPolsArray(pil);
+    const constPols =  newConstantPolsArray(pil, F);
     await constPols.loadFromFile(constFile);
 
-    const cmPols =  newCommitPolsArray(pil);
+    const cmPols =  newCommitPolsArray(pil, F);
     await cmPols.loadFromFile(commitFile);
 
+    let options = {};
     let MH;
     if (starkInfo.starkStruct.verificationHashType == "GL") {
         MH = await buildMerklehashGL();
     } else if (starkInfo.starkStruct.verificationHashType == "BN128") {
-        MH = await buildMerklehashBN128();
+        let arity = argv.arity || 16;
+        let custom = argv.custom || false;
+
+        options = {arity, custom};
+
+        console.log(`Arity: ${arity}, Custom: ${custom}`);
+        MH = await buildMerkleHashBN128(arity, custom);
     } else {
         throw new Error("Invalid Hash Type: "+ starkInfo.starkStruct.verificationHashType);
     }
 
     const constTree = await MH.readFromFile(constTreeFile);
 
-    const resP = await starkGen(cmPols, constPols, constTree, starkInfo);
+    const resP = await starkGen(cmPols, constPols, constTree, starkInfo, options);
 
     await fs.promises.writeFile(proofFile, JSONbig.stringify(resP.proof, null, 1), "utf8");
 
@@ -109,4 +118,3 @@ run().then(()=> {
     console.log(err.stack);
     process.exit(1);
 });
-

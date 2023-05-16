@@ -52,4 +52,21 @@ describe("f3g", function () {
         }
     });
 
+    it("shoud check that buffer to Little Endian and viceversa works fine", async () => {
+        const buff = new Uint8Array(F.n8);
+        const a = 18446744069414584316n;
+        F.toRprLE(buff, 0, a, F.n8);
+        assert(F.fromRprLE(buff, 0, F.n8) === a); 
+        
+        const buff2 = new Uint8Array(F.n8);
+        const b = 440699314584458n;
+        F.toRprLE(buff2, 0, b, F.n8);
+        assert(F.fromRprLE(buff2, 0, F.n8) === b); 
+
+        const buff3 = new Uint8Array(F.n8);
+        const c = 9n;
+        F.toRprLE(buff3, 0, c, F.n8);
+        assert(F.fromRprLE(buff3, 0, F.n8) === c); 
+    });
+
 });

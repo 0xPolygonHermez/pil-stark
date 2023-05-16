@@ -1,0 +1,6 @@
+constant %N = 2**2;
+
+namespace Global(%N);
+    pol constant L1;
+
+include "simple_connection.pil";

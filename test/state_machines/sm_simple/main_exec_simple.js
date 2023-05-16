@@ -21,7 +21,7 @@ async function run() {
     const F = new F3g();
     const pil = await compile(F, path.join(__dirname, "simple1.pil"));
 
-    const cmPols =  newCommitPolsArray(pil);
+    const cmPols =  newCommitPolsArray(pil, F);
 
     await smSimple.execute(cmPols.Simple);
 

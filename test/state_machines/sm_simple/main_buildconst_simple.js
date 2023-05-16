@@ -20,7 +20,7 @@ async function run() {
     const F = new F3g();
     const pil = await compile(F, path.join(__dirname, "simple1.pil"));
 
-    const constPols = newConstantPolsArray(pil);
+    const constPols = newConstantPolsArray(pil, F);
 
     await smSimple.buildConstants(constPols.Simple);
 

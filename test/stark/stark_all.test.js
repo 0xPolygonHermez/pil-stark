@@ -30,19 +30,19 @@ describe("test All sm", async function () {
         };
 
         const F = new F3g("0xFFFFFFFF00000001");
-        const pil = await compile(F, path.join(__dirname, "../state_machines", "sm_all", "all_main.pil"));
-        const constPols =  newConstantPolsArray(pil);
+        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_all", "all_main.pil"));
+        const constPols =  newConstantPolsArray(pil, F);
 
         await smGlobal.buildConstants(constPols.Global);
         await smPlookup.buildConstants(constPols.Plookup);
         await smFibonacci.buildConstants(constPols.Fibonacci);
         await smPermutation.buildConstants(constPols.Permutation);
-        await smConnection.buildConstants(constPols.Connection);
+        await smConnection.buildConstants(F, constPols.Connection);
 
-        const cmPols = newCommitPolsArray(pil);
+        const cmPols = newCommitPolsArray(pil, F);
 
         await smPlookup.execute(cmPols.Plookup);
-        await smFibonacci.execute(cmPols.Fibonacci, [1,2]);
+        await smFibonacci.execute(F, cmPols.Fibonacci, [1,2]);
         await smPermutation.execute(cmPols.Permutation);
         await smConnection.execute(cmPols.Connection);
 
@@ -56,7 +56,7 @@ describe("test All sm", async function () {
             assert(0);
         }
 
-        const setup = await starkSetup(constPols, pil, starkStruct);
+        const setup = await starkSetup(constPols, pil, starkStruct, {F});
 
         const resP = await starkGen(cmPols, constPols, setup.constTree, setup.starkInfo);
 

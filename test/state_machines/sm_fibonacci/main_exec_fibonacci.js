@@ -24,9 +24,9 @@ async function run() {
     const pil = await compile(F, path.join(__dirname, "fibonacci_main.pil"));
 
     const input = JSON.parse(await fs.promises.readFile(inputFile, "utf8"));
-    const cmPols =  newCommitPolsArray(pil);
+    const cmPols =  newCommitPolsArray(pil, F);
 
-    const result = await smFibonacci.execute(cmPols.Fibonacci, input);
+    const result = await smFibonacci.execute(F, cmPols.Fibonacci, input);
     console.log("Result: " + result);
 
     await cmPols.saveToFile(outputFile);

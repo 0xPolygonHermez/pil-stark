@@ -1,7 +1,3 @@
-const { assert } = require("chai");
-
-
-
 module.exports.polMulAxi = function polMulAxi(F, p, init, acc) {
     let r = init;
     for (let i=0; i<p.length; i++) {
@@ -75,12 +71,12 @@ module.exports.calculateH1H2 = function calculateH1H2(F, f, t) {
     return [h1, h2];
 }
 
-module.exports.calculateZ = function(F, num, den) {
+module.exports.calculateZ = async function(F, num, den) {
 
     const N = num.length;
     if (N != den.length) throw new Error("Num and Den different sizes");
 
-    const denI = F.batchInverse(den);
+    const denI = await F.batchInverse(den);
 
     const z = new Array(N);
     z[0] = F.one;

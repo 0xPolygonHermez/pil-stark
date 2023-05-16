@@ -1,0 +1,6 @@
+namespace SimpleConnection(%N);
+
+    pol constant S1,S2;
+    pol commit a,b;
+
+    {a,b} connect {S1,S2};
