@@ -1,7 +1,6 @@
 const { assert } = require("chai");
 const fs = require("fs");
 const path = require("path");
-const F3g = require("../helpers/f3g.js");
 const { log2 } = require("pilcom/src/utils.js");
 const {tmpName} = require("tmp-promise");
 const { newConstantPolsArray, compile, getKs } = require("pilcom");
@@ -13,9 +12,7 @@ const { getCustomGatesInfo, calculatePlonkConstraintsRowsC15 } = require("./comp
 /*
     Compress plonk constraints and verifies custom gates using 15 committed polynomials
 */
-module.exports = async function plonkSetup(r1cs, options) {
-    const F = new F3g();
-
+module.exports = async function plonkSetup(F, r1cs, options) {
     const committedPols = 15;
 
     // Calculate the number plonk Additions and plonk constraints from the R1CS
@@ -156,7 +153,7 @@ module.exports = async function plonkSetup(r1cs, options) {
                     sMap[j][r+i] = cgu.signals[counterS++];
                     // Partial rounds rows verify 11 rounds, and hence only 11 constants are needed. 
                     // For the last two rounds no constants are required according to the implementation
-                    constPols.Compressor.C[j][r+i] = (i === 4 && j === 11) || (i === 5 && j === 11) || i == 9 || i == 10 ? 0n : C[counterC++];
+                    constPols.Compressor.C[j][r+i] = (i === 4 && j === 11) || (i === 5 && j === 11) || i == 9 || i == 10 ? 0n : BigInt(C[counterC++]);
                 }
 
                 constPols.Compressor.GATE[r+i] = 0n;
@@ -184,7 +181,7 @@ module.exports = async function plonkSetup(r1cs, options) {
                     sMap[j][r+i] = (i === 0 && (j === 9 || j === 10 || j === 11)) ? 0 : cgu.signals[counterS++];
                     // Partial rounds rows verify 11 rounds, and hence only 11 constants are needed. 
                     // For the last two rounds no constants are required according to the implementation
-                    constPols.Compressor.C[j][r+i] = (i === 4 && j === 11) || (i === 5 && j === 11) || i == 9 || i == 10 ? 0n : C[counterC++];
+                    constPols.Compressor.C[j][r+i] = (i === 4 && j === 11) || (i === 5 && j === 11) || i == 9 || i == 10 ? 0n : BigInt(C[counterC++]);
                 }
 
                 constPols.Compressor.GATE[r+i] = 0n;

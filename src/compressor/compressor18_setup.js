@@ -1,7 +1,6 @@
 const { assert } = require("chai");
 const fs = require("fs");
 const path = require("path");
-const F3g = require("../helpers/f3g.js");
 const { log2 } = require("pilcom/src/utils.js");
 const {tmpName} = require("tmp-promise");
 const { newConstantPolsArray, compile, getKs } = require("pilcom");
@@ -13,9 +12,7 @@ const { getCustomGatesInfo, calculatePlonkConstraintsHalfs } = require("./compre
 /*
     Compress plonk constraints and verifies custom gates using 18 committed polynomials
 */
-module.exports = async function plonkSetup(r1cs, options) {
-    const F = new F3g();
-
+module.exports = async function plonkSetup(F, r1cs, options) {
     const committedPols = 18;
     
     // Calculate the number plonk Additions and plonk constraints from the R1CS
@@ -164,7 +161,7 @@ module.exports = async function plonkSetup(r1cs, options) {
                     sMap[j][r+i] = cgu.signals[counterS++];
                     // Row 2 verifies all 22 partial rounds and all constants are written in the PIL itself
                     // Row 5 verifies last two rounds and no constants are needed
-                    constPols.Compressor.C[j][r+i] = (i === 2 || i === 5) ? 0n : C[counterC++];
+                    constPols.Compressor.C[j][r+i] = (i === 2 || i === 5) ? 0n :  BigInt(C[counterC++]);
                 }
 
                 // Poseidon custom gates store all intermediate rounds (each round uses 12 inputs), but in C18 
@@ -212,7 +209,7 @@ module.exports = async function plonkSetup(r1cs, options) {
                     sMap[j][r+i] = (i === 0 && (j === 9 || j === 10 || j === 11)) ? 0 : cgu.signals[counterS++];
                     // Row 2 verifies all 22 partial rounds and all constants are written in the PIL itself
                     // Row 5 verifies last two rounds and no constants are needed
-                    constPols.Compressor.C[j][r+i] = (i === 2 || i === 5) ? 0n : C[counterC++];
+                    constPols.Compressor.C[j][r+i] = (i === 2 || i === 5) ? 0n : BigInt(C[counterC++]);
                 }
 
                 // Poseidon custom gates store all intermediate rounds (each round uses 12 inputs), but in C18 

@@ -37,16 +37,16 @@ async function run() {
 
     let res;
     if(cols === 15) {
-        res = await plonkSetupC15(r1cs, options);
+        res = await plonkSetupC15(F, r1cs, options);
     } else {
-        res = await plonkSetupC18(r1cs, options);
+        res = await plonkSetupC18(F, r1cs, options);
     }
 
     await fs.promises.writeFile(pilFile, res.pilStr, "utf8");
 
     await res.constPols.saveToFile(constFile);
 
-    await writeExecFile(execFile,res.plonkAdditions,  res.sMap);
+    await writeExecFile(execFile,res.plonkAdditions, res.sMap);
 
     console.log("files Generated Correctly");
 
