@@ -22,9 +22,9 @@ async function run() {
     const F = new F3g();
 
     const r1csFile = typeof(argv.r1cs) === "string" ?  argv.r1cs.trim() : "mycircuit.verifier.r1cs";
-    const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "mycircuit.c12.const";
-    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.c12.pil";
-    const execFile = typeof(argv.exec) === "string" ?  argv.exec.trim() : "mycircuit.c12.exec";
+    const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "mycircuit.c15.const";
+    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.c15.pil";
+    const execFile = typeof(argv.exec) === "string" ?  argv.exec.trim() : "mycircuit.c15.exec";
 
     const r1cs = await readR1cs(r1csFile, {F: F, logger:console });
 
