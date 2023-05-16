@@ -1,7 +1,7 @@
 pragma circom 2.1.0;
 pragma custom_templates;
 
-include "cmuladd.circom";
+include "cmul.circom";
 
 // Calculate the inverse of an element in Fp³ using (X³ - X - 1) as a irreductible polynomial
 // The coefficients of the inverse are calculated beforehand and the resulting expression is explicitly written
