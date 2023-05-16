@@ -24,13 +24,13 @@ async function run() {
     const F = new F3g();
     const pil = await compile(F, path.join(__dirname, "all_main.pil"));
 
-    const constPols = newConstantPolsArray(pil);
+    const constPols = newConstantPolsArray(pil, F);
 
     await smGlobal.buildConstants(constPols.Global);
     await smPlookup.buildConstants(constPols.Plookup);
     await smFibonacci.buildConstants(constPols.Fibonacci);
     await smPermutation.buildConstants(constPols.Permutation);
-    await smConnection.buildConstants(constPols.Connection);
+    await smConnection.buildConstants(F, constPols.Connection);
 
     await constPols.saveToFile(outputFile);
 

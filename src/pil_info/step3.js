@@ -2,14 +2,13 @@
 const {pilCodeGen, buildCode} = require("./codegen.js");
 const ExpressionOps = require("../helpers/expressionops");
 const getKs = require("pilcom").getKs;
-const F3g = require("../helpers/f3g.js");
 
-module.exports = function generateStep3(res, pil, ctx) {
+module.exports = function generateStep3(F, res, pil, ctx) {
 
     generatePermutationLC(res, pil, ctx);
     generatePlookupZ(res, pil, ctx);
     generatePermutationZ(res, pil, ctx);
-    generateConnectionsZ(res, pil, ctx);
+    generateConnectionsZ(F, res, pil, ctx);
 
     res.step3prev = buildCode(ctx);
     ctx.calculated =  { exps: {}, expsPrime: {} }
@@ -214,9 +213,8 @@ function generatePermutationZ(res, pil, ctx) {
     }
 }
 
-function generateConnectionsZ(res, pil, ctx) {
+function generateConnectionsZ(F, res, pil, ctx) {
     const E = new ExpressionOps();
-    const F = new F3g();
 
     for (let i=0; i<pil.connectionIdentities.length; i++) {
         const ci = pil.connectionIdentities[i];

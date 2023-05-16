@@ -5,6 +5,7 @@ const { compile, newCommitPolsArray } = require("pilcom");
 const F3g = require("../../src/helpers/f3g.js");
 const { log2 } = require("pilcom/src/utils.js");
 const binFileUtils = require("@iden3/binfileutils");
+const { readExecFile } = require("../../src/helpers/exec_helpers");
 
 
 const argv = require("yargs")
@@ -26,12 +27,13 @@ async function run() {
     const execFile = typeof(argv.exec) === "string" ?  argv.exec.trim() : "mycircuit.exec";
     const commitFile = typeof(argv.commit) === "string" ?  argv.commit.trim() : "mycircuit.exec";
 
-
-    const { nAdds, nSMap, addsBuff, sMapBuff } = await readExecFile(execFile);
-
     const pil = await compile(F, pilFile, null, pilConfig);
 
-    const cmPols = newCommitPolsArray(pil);
+    const cmPols = newCommitPolsArray(pil, F);
+
+    const nCommittedPols = cmPols.Final.a.length;
+
+    const { nAdds, nSMap, adds, sMap } = await readExecFile(F, execFile, nCommittedPols);
 
     const Nbits = log2(nSMap -1) +1;
     const N = 1 << Nbits;
@@ -39,22 +41,16 @@ async function run() {
     const w = await readWtns(wtnsFile);
 
     for (let i=0; i<nAdds; i++) {
-        w.push( F.add( F.mul( w[addsBuff[i*4]], addsBuff[i*4 + 2]), F.mul( w[addsBuff[i*4+1]],  addsBuff[i*4+3]  )));
+        w.push( F.add( F.mul( w[adds[i][0]], adds[i][2]), F.mul( w[adds[i][1]],  adds[i][3]  )));
     }
 
     for (let i=0; i<nSMap; i++) {
-        for (let j=0; j<3; j++) {
-            if (sMapBuff[3*i+j] != 0) {
-                cmPols.PlonkCircuit.a[j][i] = w[sMapBuff[3*i+j]];
+        for (let j=0; j<nCommittedPols; j++) {
+            if (sMap[j][i] != 0) {
+                cmPols.PlonkCircuit.a[j][i] = w[sMap[j][i]];
             } else {
                 cmPols.PlonkCircuit.a[j][i] = 0n;
             }
-        }
-    }
-
-    for (let i=nSMap; i<N; i++) {
-        for (let j=0; j<3; j++) {
-            cmPols.PlonkCircuit.a[j][i] = 0n;
         }
     }
 
@@ -71,28 +67,6 @@ run().then(()=> {
     console.log(err.stack);
     process.exit(1);
 });
-
-
-async function readExecFile(execFile) {
-
-    const fd =await fs.promises.open(execFile, "r");
-    const buffH = new BigUint64Array(2);
-    await fd.read(buffH, 0, 2*8);
-    const nAdds= Number(buffH[0]);
-    const nSMap= Number(buffH[1]);
-
-
-    const addsBuff = new BigUint64Array(nAdds*4);
-    await fd.read(addsBuff, 0, nAdds*4*8);
-
-    const sMapBuff = new BigUint64Array(nSMap*3);
-    await fd.read(sMapBuff, 0, nSMap*3*8);
-
-    await fd.close();
-
-    return { nAdds, nSMap, addsBuff, sMapBuff };
-
-}
 
 
 async function readWtns(fileName) {

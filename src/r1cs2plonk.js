@@ -142,7 +142,7 @@ module.exports = function r1cs2plonk(F, r1cs, logger ) {
     }
 
     for (let c=0; c<r1cs.constraints.length; c++) {
-        if ((logger)&&(c%10000 == 0)) logger.debug(`processing constraints: ${c}/${r1cs.nConstraints}`);
+        if ((logger)&&(c%100000 == 0)) logger.debug(`Processing constraints: ${c}/${r1cs.nConstraints}`);
         process(...r1cs.constraints[c]);
     }
 

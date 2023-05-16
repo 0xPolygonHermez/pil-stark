@@ -6,11 +6,12 @@ const assert = chai.assert;
 describe("merkle hash", async function () {
     let poseidon;
     let MH;
+    const arity = 16;
     this.timeout(10000000);
 
     before( async() => {
         poseidon = await buildPoseidon();
-        MH = new MerkleHash(poseidon);
+        MH = new MerkleHash(poseidon, arity);
     });
     it("It should merkelize and return the right number of elements", async () => {
         const N = 256;

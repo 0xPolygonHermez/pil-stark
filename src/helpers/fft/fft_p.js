@@ -2,9 +2,10 @@ const F3g = require("../f3g.js");
 const { log2 } = require("pilcom/src/utils.js");
 const workerpool = require("workerpool");
 const {BigBuffer} = require("pilcom");
+const { fft_block, interpolatePrepareBlock } = require("./fft_worker.js");
 
 const F = new F3g();
-const useThreads = true;
+const useThreads = false;
 
 function BR(x, domainPow)
 {
@@ -91,7 +92,7 @@ async function interpolatePrepare(pool, buff, nPols, nBits, nBitsExt ) {
         if (useThreads) {
             promisesLH.push(pool.exec("interpolatePrepareBlock", [bb, nPols, start, inc, i/nPerThreadF, Math.floor(n/nPerThreadF)]));
         } else {
-            res.push(await interpolatePrepareBlock(bb, nPols, start, inc, i/nPerThreadF, Math.floor(n/nPerThreadF)));
+            res.push(interpolatePrepareBlock(bb, nPols, start, inc, i/nPerThreadF, Math.floor(n/nPerThreadF)));
         }
     }
     if (useThreads) {
@@ -152,20 +153,21 @@ async function _fft(buffSrc, nPols, nBits, buffDst, inverse) {
     for (let i=0; i<nBits; i+= blockBits) {
         const sInc = Math.min(blockBits, nBits-i);
         const promisesFFT = [];
-
-        // let results = [];
+        let results = [];
         for (j=0; j<nBlocks; j++) {
             const bb = bIn.slice(j*blockSize*nPols, (j+1)*blockSize*nPols);
-            promisesFFT.push(pool.exec("fft_block", [bb, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc]));
-
-            // results[j] = await fft_block(bb, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc);
+            if(useThreads) {
+                promisesFFT.push(pool.exec("fft_block", [bb, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc]));
+            } else {
+                results[j] = fft_block(bb, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc);
+            }
         }
-        const results = await Promise.all(promisesFFT);
+        if(useThreads) results = await Promise.all(promisesFFT);
         for (let i=0; i<results.length; i++) {
             bIn.set(results[i], i*blockSize*nPols)
         }
         if (sInc < nBits) {                // Do not transpose if it's the same
-            await traspose(bOut, bIn, nPols, nBits, sInc);
+            traspose(bOut, bIn, nPols, nBits, sInc);
             [bIn, bOut] = [bOut, bIn];
         }
     }
@@ -237,21 +239,22 @@ async function interpolate(buffSrc, nPols, nBits, buffDst, nBitsExt) {
         console.log("Layer ifft"+i);
         const sInc = Math.min(blockBits, nBits-i);
         const promisesFFT = [];
-
-        // let results = [];
+        let results = [];
         for (j=0; j<nBlocks; j++) {
             const bb = bIn.slice(j*blockSize*nPols, (j+1)*blockSize*nPols);
-            promisesFFT.push(pool.exec("fft_block", [bb, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc]));
-
-            // results[j] = await fft_block(bb, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc);
+            if(useThreads) {
+                promisesFFT.push(pool.exec("fft_block", [bb, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc]));
+            } else {
+                results[j] = fft_block(bb, j*blockSize, nPols, nBits, i+sInc, blockBits, sInc);
+            }
         }
-        const results = await Promise.all(promisesFFT);
+        if(useThreads) results = await Promise.all(promisesFFT);
         for (let i=0; i<results.length; i++) {
             bIn.set(results[i], i*blockSize*nPols)
         }
 
         if (sInc < nBits) {                // Do not transpose if it's the same
-            await traspose(bOut, bIn, nPols, nBits, sInc);
+            traspose(bOut, bIn, nPols, nBits, sInc);
             [bIn, bOut] = [bOut, bIn];
         }
     }
@@ -266,21 +269,24 @@ async function interpolate(buffSrc, nPols, nBits, buffDst, nBitsExt) {
         console.log("Layer fft "+i);
         const sInc = Math.min(blockBitsExt, nBitsExt-i);
         const promisesFFT = [];
-
-        // let results = [];
+        let results = [];
         for (j=0; j<nBlocksExt; j++) {
             const bb = bIn.slice(j*blockSizeExt*nPols, (j+1)*blockSizeExt*nPols);
-            promisesFFT.push(pool.exec("fft_block", [bb, j*blockSizeExt, nPols, nBitsExt, i+sInc, blockBitsExt, sInc]));
-
-            // results[j] = await fft_block(bb, j*blockSizeExt, nPols, nBitsExt, i+sInc, blockBitsExt, sInc);
+            if(useThreads) {
+                promisesFFT.push(pool.exec("fft_block", [bb, j*blockSizeExt, nPols, nBitsExt, i+sInc, blockBitsExt, sInc]));
+            } else {
+                results[j] = fft_block(bb, j*blockSizeExt, nPols, nBitsExt, i+sInc, blockBitsExt, sInc);
+            }
         }
-        const results = await Promise.all(promisesFFT);
+        if(useThreads) {
+            results = await Promise.all(promisesFFT);
+        }
         for (let i=0; i<results.length; i++) {
             bIn.set(results[i], i*blockSizeExt*nPols)
         }
 
         if (sInc < nBitsExt) {                // Do not transpose if it's the same
-            await traspose(bOut, bIn, nPols, nBitsExt, sInc);
+            traspose(bOut, bIn, nPols, nBitsExt, sInc);
             [bIn, bOut] = [bOut, bIn];
         }
     }

@@ -9,7 +9,7 @@ const generateConstraintPolynomialVerifier = require("../pil_info/cp_ver");
 const generateVerifierQuery = require("../pil_info/fri_verifier");
 const map = require("../pil_info/map");
 
-module.exports = function starkInfoGen(_pil, starkStruct) {
+module.exports = function starkInfoGen(F, _pil, starkStruct) {
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
     const pilDeg = Object.values(pil.references)[0].polDeg;
     const starkDeg = 2 ** starkStruct.nBits;
@@ -59,7 +59,7 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
 
     generateStep2(res, pil, ctx);                        // H1, H2
 
-    generateStep3(res, pil, ctx);                        // Z Polynomials and LC of permutation chcks.
+    generateStep3(F, res, pil, ctx);                        // Z Polynomials and LC of permutation chcks.
 
     generateConstraintPolynomial(res, pil, ctx, ctx2ns);            // Step4
 

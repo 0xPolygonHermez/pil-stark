@@ -1,7 +1,7 @@
 
 const assert = require("assert");
 const buildMerklehashGL = require("../helpers/hash/merklehash/merklehash_p.js");
-const buildMerklehashBN128 = require("../helpers/hash/merklehash/merklehash_bn128_p.js");
+const buildMerkleHashBN128 = require("../helpers/hash/merklehash/merklehash_bn128_p.js");
 const Transcript = require("../helpers/transcript/transcript");
 const TranscriptBN128 = require("../helpers/transcript/transcript.bn128");
 const F3g = require("../helpers/f3g.js");
@@ -17,12 +17,12 @@ const {starkgen_execute} = require("./stark_gen_worker");
 const {BigBuffer} = require("pilcom");
 
 const parallelExec = true;
-const useThreads = true;
+const useThreads = false;
 const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
 
 
-module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo) {
+module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo, options) {
     const starkStruct = starkInfo.starkStruct;
     const N = 1 << starkStruct.nBits;
     const extendBits = starkStruct.nBitsExt - starkStruct.nBits;
@@ -32,8 +32,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     const F = new F3g();
 
-    let MH;
-    let MHS;
+    let MH;    
     let transcript;
     if (starkStruct.verificationHashType == "GL") {
         const poseidon = await buildPoseidonGL();
@@ -41,8 +40,11 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         transcript = new Transcript(poseidon);
     } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
-        MH = await buildMerklehashBN128();
-        transcript = new TranscriptBN128(poseidonBN128);
+        let arity = options.arity || 16;
+        let custom = options.custom || false;
+        console.log(`Arity: ${arity}, Custom: ${custom}`);
+        MH = await buildMerkleHashBN128(arity, custom);
+        transcript = new TranscriptBN128(poseidonBN128, arity);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
@@ -175,7 +177,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         const pu = starkInfo.puCtx[i];
         const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[pu.numId]);
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[pu.denId]);
-        const z = calculateZ(F,pNum, pDen);
+        const z = await calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
     for (let i=0; i<starkInfo.peCtx.length; i++) {
@@ -183,7 +185,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         const pe = starkInfo.peCtx[i];
         const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[pe.numId]);
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[pe.denId]);
-        const z = calculateZ(F,pNum, pDen);
+        const z = await calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
     for (let i=0; i<starkInfo.ciCtx.length; i++) {
@@ -191,7 +193,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         const ci = starkInfo.ciCtx[i];
         const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[ci.numId]);
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[ci.denId]);
-        const z = calculateZ(F,pNum, pDen);
+        const z = await calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
 
@@ -236,7 +238,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     console.log("Merkelizing 4....");
     if (global.gc) {global.gc();}
-    tree4 = await merkelize(MH, ctx.cm4_2ns , starkInfo.mapSectionsN.cm4_2ns, ctx.nBitsExt);
+    const tree4 = await merkelize(MH, ctx.cm4_2ns , starkInfo.mapSectionsN.cm4_2ns, ctx.nBitsExt);
     transcript.put(MH.root(tree4));
 
 
