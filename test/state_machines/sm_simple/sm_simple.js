@@ -1,15 +1,11 @@
-const F3g = require("../../../src/helpers/f3g.js");
-
 module.exports.buildConstants = async function (pols) {
 
 }
 
 
-module.exports.execute = async function (pols, input) {
+module.exports.execute = async function (F, pols) {
 
     const N = pols.a.length;
-
-    const F = new F3g("0xFFFFFFFF00000001");
 
     for (let i=0; i<N; i++) {
         const v = BigInt(i);

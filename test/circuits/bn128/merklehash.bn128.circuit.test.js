@@ -19,13 +19,14 @@ describe("Linear Hash Circuit Test", function () {
     let circuit;
     let MH;
     let poseidon;
+    const arity = 16;
 
 
     this.timeout(10000000);
 
     before( async() => {
         poseidon = await buildPoseidon();
-        MH = new MerkleHash(poseidon);
+        MH = new MerkleHash(poseidon, arity, false);
 
         circuit = await wasm_tester(path.join(__dirname, "circom", "merklehash.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
     });
@@ -64,6 +65,7 @@ describe("Linear Hash Circuit Test", function () {
             root: root,
             enable: 1,
         };
+
         const w1 = await circuit.calculateWitness(input, true);
 
         await circuit.assertOut(w1, {});

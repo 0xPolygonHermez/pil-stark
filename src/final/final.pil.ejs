@@ -1,0 +1,121 @@
+//Configuration values
+constant %N = 2**<%- nBits %>; // Upper bound for the number of rows to be used across various state machines.
+
+// Global state machine
+// It is used to store various polynomials representing small lookup tables 
+namespace Global(%N);
+    pol constant L1; // Lagrange polynomial for the first public
+
+<% for (let i=nCommittedPols; i<nPublics; i+=nCommittedPols) { -%>
+    pol constant L<%- Math.floor(i/nCommittedPols) +1 %>; // Lagrange polynomial for the 12 publics corresponding to the i^th row
+<% } -%>
+    
+<% for (let i=1; i<nPublics; i++) { -%>
+    pol constant L<%- i+1 %>; // Lagrange polynomial for the i^th p
+<% } -%>
+
+namespace Final(%N);
+    pol constant S[<%- nCommittedPols %>];
+    pol constant C[5];
+    pol constant PARTIAL;
+    pol constant POSEIDON_T;
+    pol constant RANGE_CHECK;
+    pol constant GATE;
+    pol commit a[<%- nCommittedPols %>];
+
+    // Set all the publics. They are stored in the following order -> a[0](0), ....  , a[11](0), a[0](1), .... , a[11](1) ... 
+<% for (let i=0; i<nPublics; i++) { -%>
+    public pub<%- i%> = a[0](<%- i %>);
+<% } -%>
+
+    // Enforces the first element of the j^th row a[0](j) to be equal to the corresponding public input
+<% for (let i=0; i<nPublics; i++) { -%>
+    Global.L<%- i+1 %> * (a[0] - :pub<%- i %>) = 0;
+<% } -%>
+
+    // Normal plonk gates
+
+    // C[0] -> Qm
+    // C[1] -> Ql
+    // C[2] -> Qr
+    // C[3] -> Qo
+    // C[4] -> Qc
+    
+<% for(let i=0; i < nPlonk; ++i) {  -%>
+    pol a<%- `${3*i}${3*i + 1}` %> = a[<%- 3*i %>]*a[<%- 3*i + 1 %>];
+    pol g<%- i %> = C[0]*a<%- `${3*i}${3*i + 1}` %> + C[1]*a[<%- 3*i %>] + C[2]*a[<%- 3*i + 1 %>] + C[3]*a[<%- 3*i + 2 %>] + C[4];
+    GATE * g<%- i %> = 0;
+
+<% } -%>
+
+<% if(addRangeChecks) {  -%>
+<% for(let i=nPlonk*3; i < nCommittedPols; ++i) {  -%>
+    pol rc<%- i %>_plonk = (a[<%- i %>] - 1)*a[<%- i %>];
+    GATE * rc<%- i %>_plonk = 0;
+    
+<% } -%>
+<% } -%>
+
+    // POSEIDON GATE - Check that a BN128 Poseidon round is valid
+
+<% for (let i=0; i<nInPoseidon; i++) { -%>
+
+    // Calculate the 7th power of the <%- i %>th element
+    pol a<%- i %>_1 = a[<%- i %>] +  C[<%- i %>];
+    pol a<%- i %>_2 = a<%- i %>_1 * a<%- i %>_1;
+    pol a<%- i %>_4 = a<%- i %>_2 * a<%- i %>_2;
+    pol a<%- i %>_5 = a<%- i %>_4 * a<%- i %>_1;
+<%      if (i==0) { -%>
+    pol a<%- i %>_R = a<%- i %>_5; // The first element is always exponentiated, no matter the round
+<%      } else { -%>
+    pol a<%- i %>_R = PARTIAL * (a<%- i %>_1 - a<%- i %>_5) + a<%- i %>_5; // Determine if the <%- i %>th element needs to be raised to the 5th power or not using PARTIAL
+<%      } -%>
+<% } -%>
+
+    // Check Poseidon rounds that use M matrix
+<%  
+const poseidonMDS = [];
+for(let i = 0; i < nInPoseidon; ++i) { 
+    const poseidonRow = [];
+    for(let j = 0; j < nInPoseidon; j++) { 
+        poseidonRow.push(`${BigInt(M[i][j])} * a${j}_R`); 
+    }
+    poseidonMDS.push(poseidonRow);
+}    -%>
+
+<% for(let i = 0; i < nInPoseidon; ++i) { -%>
+    pol poseidon<%- i %>_M = <%- poseidonMDS[i].join(' + ') %>;
+<% } -%>
+
+<% for(let i = 0; i < nInPoseidon; ++i) { -%>
+    POSEIDON_T * (a[<%- i %>]' - poseidon<%- i %>_M) = 0;
+<% } -%>
+
+<% if(addRangeChecks) {  -%>
+<% for(let i=5; i < nCommittedPols; ++i) {  -%>
+    pol rc<%- i %>_poseidon = (a[<%- i %>] - 1)*a[<%- i %>];
+    POSEIDON_T * rc<%- i %>_poseidon = 0;
+    
+<% } -%>
+<% } -%>
+  
+    // Range Checks
+<%  for(let i = 0; i < nCommittedPols; ++i) { -%>
+    pol rc<%- i %> = (a[<%- i %>] - 1)*a[<%- i %>];
+    RANGE_CHECK * rc<%- i %> = 0;
+
+<%  } -%>
+    
+    // Connection equations
+<% 
+    let a = [];
+    let S = [];
+    for(let i = 0; i < nCommittedPols; ++i) {
+        a.push(`a[${i}]`);
+        S.push(`S[${i}]`);
+    }
+-%>
+    // { <%- a.join(',') %> } connect { <%- S.join(',')  %> }
+
+
+        

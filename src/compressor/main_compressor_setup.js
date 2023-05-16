@@ -5,6 +5,7 @@ const F3g = require("../helpers/f3g.js");
 const {readR1cs} = require("r1csfile");
 const plonkSetupC18 = require("./compressor18_setup.js");
 const plonkSetupC12 = require("./compressor12_setup.js");
+const { writeExecFile } = require("../helpers/exec_helpers");
 
 
 const argv = require("yargs")
@@ -46,7 +47,7 @@ async function run() {
 
     await res.constPols.saveToFile(constFile);
 
-    await writeExecFile(execFile,res.plonkAdditions, res.sMap);
+    await writeExecFile(F, execFile ,res.plonkAdditions, res.sMap);
 
     console.log("files Generated Correctly");
 
@@ -59,31 +60,3 @@ run().then(()=> {
     console.log(err.stack);
     process.exit(1);
 });
-
-
-async function writeExecFile(execFile, adds, sMap) {
-
-    const size = 2 + adds.length*4 + sMap.length*sMap[0].length;
-    const buff = new BigUint64Array(size);
-
-    buff[0] = BigInt(adds.length);
-    buff[1] = BigInt(sMap[0].length);
-
-    for (let i=0; i< adds.length; i++) {
-        buff[2 + i*4     ] = BigInt(adds[i][0]);
-        buff[2 + i*4 + 1 ] = BigInt(adds[i][1]);
-        buff[2 + i*4 + 2 ] = adds[i][2];
-        buff[2 + i*4 + 3 ] = adds[i][3];
-    }
-
-    for (let i=0; i<sMap[0].length; i++) {
-        for (let c=0; c<sMap.length; c++) {
-            buff[2 + adds.length*4 + sMap.length*i + c] = BigInt(sMap[c][i]);
-        }
-    }
-
-    const fd =await fs.promises.open(execFile, "w+");
-    await fd.write(buff);
-    await fd.close();
-
-}

@@ -37,7 +37,7 @@ describe("Linear Hash Circuit Test", function () {
 
         const w1 = await circuit.calculateWitness(input, true);
 
-        const lh = new LinearHash(poseidon);
+        const lh = new LinearHash(poseidon, 16, false);
 
         const res = lh.hash(input.in);
 
@@ -57,7 +57,7 @@ describe("Linear Hash Circuit Test", function () {
 
         const w1 = await circuit100.calculateWitness(input, true);
 
-        const lh = new LinearHash(poseidon);
+        const lh = new LinearHash(poseidon, 16, false);
 
         const res = lh.hash(input.in);
 
