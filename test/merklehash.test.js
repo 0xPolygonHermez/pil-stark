@@ -7,13 +7,12 @@ describe("merkle hash", async function () {
     let poseidon;
     let MH;
     let MH_gpu;
-    const arity = 16;
     this.timeout(10000000);
 
     before( async() => {
         poseidon = await buildPoseidon();
-        MH = new MerkleHash(poseidon, arity, false);
-        MH_gpu = new MerkleHash(poseidon, arity, true);
+        MH = new MerkleHash(poseidon, false);
+        MH_gpu = new MerkleHash(poseidon, true);
 
     });
 
