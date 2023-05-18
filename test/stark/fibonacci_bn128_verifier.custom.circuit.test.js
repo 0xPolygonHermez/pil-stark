@@ -1,10 +1,13 @@
+const chai = require("chai");
 const path = require("path");
 const fs = require("fs");
+
+const assert = chai.assert;
 
 const wasm_tester = require("circom_tester").wasm;
 var JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });;
 
-describe("Fibonacci bn128 custom Verifier circuit Tester", function () {
+describe("Fibonacci bn128 Verifier circuit Tester", function () {
     let eddsa;
     let F;
     let circuit;
