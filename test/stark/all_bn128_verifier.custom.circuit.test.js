@@ -16,8 +16,8 @@ describe("All bn128 Verifier Custom circuit Tester", function () {
     this.timeout(10000000);
 
     before( async() => {
-        input = JSONbig.parse(await fs.promises.readFile(path.join(__dirname, "..", "tmp", "all.c18.custom.proof.zkin.json"),  "utf8"));
-        circuit = await wasm_tester(path.join(__dirname, "..", "tmp", "all.c18.custom.verifier.circom"), {O:1, verbose:true, include: ["circuits.bn128.custom", "node_modules/circomlib/circuits"]});
+        input = JSONbig.parse(await fs.promises.readFile(path.join(__dirname, "../../", "tmp", "all.c18.custom.proof.zkin.json"),  "utf8"));
+        circuit = await wasm_tester(path.join(__dirname, "../../", "tmp", "all.c18.custom.verifier.circom"), {O:1, verbose:true, include: ["circuits.bn128.custom", "node_modules/circomlib/circuits"]});
     });
 
     it("Should calculate all witness", async () => {

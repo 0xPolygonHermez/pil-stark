@@ -1,7 +1,7 @@
 
 const {iterateCode} = require("./codegen.js");
 
-module.exports = function map(res, pil) {
+module.exports = function map(res, pil, N, Next, stark) {
     res.varPolMap = [];
     function addPol(polType) {
         res.varPolMap.push(polType);
@@ -12,7 +12,6 @@ module.exports = function map(res, pil) {
     res.cm_2ns  = [];
     res.tmpExp_n = [];
     res.q_2ns = [];
-    res.f_2ns = [];
     res.mapSections = {
         cm1_n: [],
         cm1_2ns: [],
@@ -24,12 +23,17 @@ module.exports = function map(res, pil) {
         cm4_2ns:[],
         tmpExp_n:[],
         q_2ns:[],
-        f_2ns:[]
     }
-    res.mapSectionsN1 = {}    // Number of pols of base field i section
-    res.mapSectionsN3 = {}    // Number of pols of base field i section
     res.mapSectionsN = {}    // Number of pols of base field i section
     res.exp2pol = {};
+
+    if(stark) {
+        res.f_2ns = [];
+        res.mapSections.f_2ns = [];
+
+        res.mapSectionsN1 = {}    // Number of pols of base field i section
+        res.mapSectionsN3 = {}    // Number of pols of base field i section
+    }
 
     const tmpExps = {};
 
@@ -51,7 +55,7 @@ module.exports = function map(res, pil) {
     }
 
     for (let i=0; i<res.puCtx.length; i++) {
-        const dim = Math.max(getExpDim(pil, res.puCtx[i].fExpId), getExpDim(pil, res.puCtx[i].tExpId));
+        const dim = Math.max(getExpDim(pil, res.puCtx[i].fExpId, stark), getExpDim(pil, res.puCtx[i].tExpId, stark));
         const pph1_n = addPol({
             section: "cm2_n",
             dim:dim
@@ -106,7 +110,6 @@ module.exports = function map(res, pil) {
     }
 
     for (let i=0; i<res.puCtx.length + res.peCtx.length + res.ciCtx.length; i++) {
-        let e;
         if (i<res.puCtx.length) {
             o = res.puCtx[i];
         } else if (i<res.puCtx.length + res.peCtx.length) {
@@ -114,26 +117,28 @@ module.exports = function map(res, pil) {
         } else {
             o = res.ciCtx[i-res.puCtx.length-res.peCtx.length];
         }
+
+        const dim = stark ? 3 : 1;
         const ppz_n = addPol({
             section: "cm3_n",
-            dim:3
+            dim:dim
         });
         const ppz_2ns = addPol({
             section: "cm3_2ns",
-            dim:3
+            dim:dim
         });
         res.cm_n.push(ppz_n);
         res.cm_2ns.push(ppz_2ns);
         res.mapSections.cm3_n.push(ppz_n);
         res.mapSections.cm3_2ns.push(ppz_2ns);
-        pil.cmDims[res.nCm1 + res.nCm2 + i] = 3;
+        pil.cmDims[res.nCm1 + res.nCm2 + i] = dim;
 
         if (! res.imExps[o.numId]) {
             if ( typeof tmpExps[o.numId] === "undefined") {
                 tmpExps[o.numId] = res.tmpExp_n.length;
                 const ppNum_n = addPol({
                     section: "tmpExp_n",
-                    dim:3
+                    dim:dim
                 });
                 res.tmpExp_n.push(ppNum_n);
                 res.mapSections.tmpExp_n.push(ppNum_n);
@@ -145,7 +150,7 @@ module.exports = function map(res, pil) {
                 tmpExps[o.denId] = res.tmpExp_n.length;
                 const ppDen_n = addPol({
                     section: "tmpExp_n",
-                    dim:3
+                    dim:dim
                 });
                 res.tmpExp_n.push(ppDen_n);
                 res.mapSections.tmpExp_n.push(ppDen_n);
@@ -155,7 +160,7 @@ module.exports = function map(res, pil) {
     }
 
     for (let i=0; i<res.imExpsList.length; i++) {
-        const dim = getExpDim(pil, res.imExpsList[i]);
+        const dim = getExpDim(pil, res.imExpsList[i], stark);
         const ppz_n = addPol({
             section: "cm3_n",
             dim:dim
@@ -174,7 +179,7 @@ module.exports = function map(res, pil) {
 
 
 
-    res.qDim = getExpDim(pil, res.cExp);
+    res.qDim = getExpDim(pil, res.cExp, stark);
     for (let i=0; i<res.qDeg; i++) {
         const ppz_n = addPol({
             section: "cm4_n",
@@ -197,16 +202,15 @@ module.exports = function map(res, pil) {
     });
     res.q_2ns.push(ppq_2ns);
 
-    const ppf_2ns = addPol({
-        section: "f_2ns",
-        dim:3
-    });
-    res.f_2ns.push(ppf_2ns);
-
-
-    mapSections(res);
-    let N = 1 << res.starkStruct.nBits;
-    let Next = 1 << res.starkStruct.nBitsExt;
+    if(stark) {
+        const ppf_2ns = addPol({
+            section: "f_2ns",
+            dim:3
+        });
+        res.f_2ns.push(ppf_2ns);
+    }
+    
+    mapSections(res, stark);
     res.mapOffsets = {};
     res.mapOffsets.cm1_n = 0;
     res.mapOffsets.cm2_n = res.mapOffsets.cm1_n +  N * res.mapSectionsN.cm1_n;
@@ -218,8 +222,13 @@ module.exports = function map(res, pil) {
     res.mapOffsets.cm3_2ns = res.mapOffsets.cm2_2ns +  Next * res.mapSectionsN.cm2_2ns;
     res.mapOffsets.cm4_2ns = res.mapOffsets.cm3_2ns +  Next * res.mapSectionsN.cm3_2ns;
     res.mapOffsets.q_2ns = res.mapOffsets.cm4_2ns +  Next * res.mapSectionsN.cm4_2ns;
-    res.mapOffsets.f_2ns = res.mapOffsets.q_2ns +  Next * res.mapSectionsN.q_2ns;
-    res.mapTotalN = res.mapOffsets.f_2ns +  Next * res.mapSectionsN.f_2ns;
+    if(stark) {
+        res.mapOffsets.f_2ns = res.mapOffsets.q_2ns +  Next * res.mapSectionsN.q_2ns;
+        res.mapTotalN = res.mapOffsets.f_2ns +  Next * res.mapSectionsN.f_2ns;
+    } else {
+        res.mapTotalN = res.mapOffsets.q_2ns +  Next * res.mapSectionsN.q_2ns;
+    }
+    
 
     res.mapDeg = {};
     res.mapDeg.cm1_n = N;
@@ -232,8 +241,10 @@ module.exports = function map(res, pil) {
     res.mapDeg.cm3_2ns = Next;
     res.mapDeg.cm4_2ns = Next;
     res.mapDeg.q_2ns = Next;
-    res.mapDeg.f_2ns = Next;
-
+    if(stark) {
+        res.mapDeg.f_2ns = Next;
+    }
+    
     for (let i=0; i< res.publicsCode.length; i++) {
         fixProverCode(res.publicsCode[i], "n");
     }
@@ -241,37 +252,41 @@ module.exports = function map(res, pil) {
     fixProverCode(res.step3prev, "n");
     fixProverCode(res.step3, "n");
     fixProverCode(res.step42ns, "2ns");
-    fixProverCode(res.step52ns, "2ns");
-    fixProverCode(res.verifierQueryCode, "2ns");
 
-    iterateCode(res.verifierQueryCode, function fixRef(r, ctx) {
-        if (r.type == "cm") {
-            const p1 = res.varPolMap[res.cm_2ns[r.id]];
-            switch(p1.section) {
-                case "cm1_2ns": r.type = "tree1"; break;
-                case "cm2_2ns": r.type = "tree2"; break;
-                case "cm3_2ns": r.type = "tree3"; break;
-                case "cm4_2ns": r.type = "tree4"; break;
-                default: throw new Error("Invalid cm section");
-            }
-            r.treePos = p1.sectionPos;
-            r.dim = p1.dim;
-        }
-    });
+    if(stark) {
+        fixProverCode(res.step52ns, "2ns");
+        fixProverCode(res.verifierQueryCode, "2ns");
+        iterateCode(res.verifierQueryCode, function fixRef(r, ctx) {
+                if (r.type == "cm") {
+                    const p1 = res.varPolMap[res.cm_2ns[r.id]];
+                    switch(p1.section) {
+                        case "cm1_2ns": r.type = "tree1"; break;
+                        case "cm2_2ns": r.type = "tree2"; break;
+                        case "cm3_2ns": r.type = "tree3"; break;
+                        case "cm4_2ns": r.type = "tree4"; break;
+                        default: throw new Error("Invalid cm section");
+                    }
+                    r.treePos = p1.sectionPos;
+                    r.dim = p1.dim;
+                }
+            });
+    }
 
     for (let i=0; i<res.nPublics; i++) {
         if (res.publicsCode[i]) {
-            setCodeDimensions(res.publicsCode[i], res, 1);
+            setCodeDimensions(res.publicsCode[i], res, 1, stark);
         }
     }
 
-    setCodeDimensions(res.step2prev, res, 1);
-    setCodeDimensions(res.step3prev,res, 1);
-    setCodeDimensions(res.step3, res, 1);
-    setCodeDimensions(res.step42ns, res, 1);
-    setCodeDimensions(res.step52ns, res, 1);
-    setCodeDimensions(res.verifierCode, res, 3);
-    setCodeDimensions(res.verifierQueryCode, res, 1);
+    setCodeDimensions(res.step2prev, res, 1, stark);
+    setCodeDimensions(res.step3prev,res, 1, stark);
+    setCodeDimensions(res.step3, res, 1, stark);
+    setCodeDimensions(res.step42ns, res, 1, stark);
+    setCodeDimensions(res.verifierCode, res, stark ? 3 : 1, stark);
+    if(stark) {
+        setCodeDimensions(res.step52ns, res, 1);
+	setCodeDimensions(res.verifierQueryCode, res, 1, stark);
+    }
 
     function fixProverCode(code, dom) {
         const ctx = {};
@@ -299,7 +314,7 @@ module.exports = function map(res, pil) {
                         r.id = res.imExp2cm[res.imExpsList[idx]];
                     } else if ((typeof tmpExps[r.id] != "undefined")&&(ctx.dom == "n")) {
                         r.type = "tmpExp";
-                        r.dim = getExpDim(pil, r.id);
+                        r.dim = getExpDim(pil, r.id, stark);
                         r.id = tmpExps[r.id];
                     } else {
                         const p = r.prime ? 1 : 0;
@@ -317,14 +332,16 @@ module.exports = function map(res, pil) {
                 case "public":
                 case "tmp":
                 case "Zi":
-                case "xDivXSubXi":
-                case "xDivXSubWXi":
                 case "eval":
                 case "x":
                 case "q":
-                case "f":
                 case "tmpExp":
-                        break;
+                    break;
+                case "xDivXSubXi":
+                case "xDivXSubWXi": 
+                case "f":
+                    if(!stark) throw new Error("Invalid reference type" + r.type);
+                    break;
                 default:
                     throw new Error("Invalid reference type " + r.type);
             }
@@ -336,10 +353,11 @@ module.exports = function map(res, pil) {
 /*
     Set the positions of all the secitions puting
 */
-function mapSections(res) {
+function mapSections(res, stark) {
     Object.keys(res.mapSections).forEach((s) => {
         let p = 0;
-        for (let e of [1,3]) {
+        const dims = stark ? [1,3] : [1];
+        for (let e of dims) {
             for (let i=0; i<res.varPolMap.length; i++) {
                 const pp = res.varPolMap[i];
                 if ((pp.section == s) && (pp.dim==e)) {
@@ -347,14 +365,18 @@ function mapSections(res) {
                     p += e;
                 }
             }
-            if (e==1) res.mapSectionsN1[s] = p;
-            if (e==3) res.mapSectionsN[s] = p;
+            if(stark) {
+                if (e==1) res.mapSectionsN1[s] = p;
+                if (e==3) res.mapSectionsN[s] = p;
+            } else {
+                res.mapSectionsN[s] = p;
+            } 
         }
-        res.mapSectionsN3[s] = (res.mapSectionsN[s] - res.mapSectionsN1[s] ) / 3;
+        if(stark) res.mapSectionsN3[s] = (res.mapSectionsN[s] - res.mapSectionsN1[s] ) / 3;
     });
 }
 
-function getExpDim(pil, expId) {
+function getExpDim(pil, expId, stark) {
 
     return _getExpDim(pil.expressions[expId]);
 
@@ -375,24 +397,32 @@ function getExpDim(pil, expId) {
                 }
                 return md;
             case "cm": return pil.cmDims[exp.id];
-            case "const": return 1;
             case "exp":
                 exp.dimMap = _getExpDim(pil.expressions[exp.id]);
                 return exp.dimMap;
             case "q": return _getExpDim(pil.expressions[pil.q2exp[exp.id]]);
-            case "number": return 1;
-            case "public": return 1;
-            case "challenge": return 3;
-            case "eval": return 3;
-            case "xDivXSubXi":  return 3;
-            case "xDivXSubWXi": return 3;
-            case "x": return 1;
+            case "const":
+            case "number":
+            case "public": 
+            case "x": 
+                return 1;
+            case "challenge":
+            case "eval":
+                if(stark) {
+                    return 3;
+                } else {
+                    return 1;
+                }
+            case "xDivXSubXi":
+            case "xDivXSubWXi":
+                if(stark) return 3;
+                throw new Error("Exp op not defined: " + exp.op);
             default: throw new Error("Exp op not defined: " + exp.op);
         }
     }
 }
 
-function setCodeDimensions(code, starkInfo, dimX) {
+function setCodeDimensions(code, pilInfo, dimX, stark) {
     const tmpDim = [];
 
     _setCodeDimensions(code.first);
@@ -420,28 +450,43 @@ function setCodeDimensions(code, starkInfo, dimX) {
             let d;
             switch (r.type) {
                 case "tmp": d=tmpDim[r.id]; break;
-                case "tree1": d=r.dim; break;
-                case "tree2": d=r.dim; break;
-                case "tree3": d=r.dim; break;
-                case "tree4": d=r.dim; break;
+		        case "tree1":
+                case "tree2": 
+                case "tree3": 
+                case "tree4": 
+                    if(stark) {
+                        d=r.dim; 
+                        break;
+                    }
+                    throw new Error("Invalid reference type get: " + r.type);
                 case "tmpExp": d=r.dim; break;
-/*
-                case "exp": d= starkInfo.varPolMap[starkInfo.exps_2ns[r.id]] ?
-                               starkInfo.varPolMap[starkInfo.exps_2ns[r.id]].dim:
-                               starkInfo.varPolMap[starkInfo.exps_n[r.id]].dim; break;
-*/
-                case "cm": d=starkInfo.varPolMap[starkInfo.cm_2ns[r.id]].dim; break;
-                case "q": d=starkInfo.varPolMap[starkInfo.qs[r.id]].dim; break;
-                case "const": d=1; break;
-                case "eval": d=3; break;
-                case "number": d=1; break;
-                case "public": d=1; break;
-                case "challenge": d=3; break;
-                case "xDivXSubXi": d=dimX; break;
-                case "xDivXSubWXi": d=dimX; break;
+                case "cm": 
+                    if(stark) {
+                        d=pilInfo.varPolMap[pilInfo.cm_2ns[r.id]].dim; break;
+                    } else {
+                        d=1;
+                    }
+                    break;
+                case "q": d=pilInfo.varPolMap[pilInfo.qs[r.id]].dim; break;
                 case "x": d=dimX; break;
-                case "Z": d=3; break;
-                case "Zi": d=1; break;
+                case "const": 
+                case "number": 
+                case "public": 
+                case "Zi": 
+                    d=1; 
+                    break;
+                case "eval": 
+                case "challenge": 
+                case "Z":
+                    d=stark ? 3 : 1; 
+                    break;
+                case "xDivXSubXi": 
+                case "xDivXSubWXi": 
+                    if(stark) {
+                        d=dimX; 
+                        break;
+                    }
+                    throw new Error("Invalid reference type get: " + r.type);
                 default: throw new Error("Invalid reference type get: " + r.type);
             }
             if (!d) {
@@ -457,8 +502,11 @@ function setCodeDimensions(code, starkInfo, dimX) {
                 case "exp":
                 case "cm":
                 case "tmpExp":
-                case "f":
-                case "q": r.dim=dim; return;
+                case "q": 
+                    r.dim=dim; return;
+                case "f": 
+                    if(!stark) throw new Error("Invalid reference type set: " + r.type);
+                    r.dim=dim; return;
                 default: throw new Error("Invalid reference type set: " + r.type);
             }
         }
