@@ -2,7 +2,7 @@ const chai = require("chai");
 const path = require("path");
 
 const assert = chai.assert;
-const getPoseidon = require('../src/poseidon.js');
+const getPoseidon = require('../../../src/helpers/hash/poseidon/poseidon.js');
 
 
 const wasm_tester = require("circom_tester").wasm;

@@ -295,7 +295,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/circuits/gl/cmuladd.circuit.test.js"
+                "${workspaceFolder}/test/circuits/gl/cmul.circuit.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"

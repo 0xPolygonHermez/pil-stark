@@ -1,0 +1,101 @@
+name: Check PR
+
+on:
+  pull_request:
+    branches: [master, develop]
+
+jobs:
+  circuits-tests:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.17.0'
+          check-latest: true
+          cache: "npm"
+
+      - name: "Install circom" 
+        run: |
+          curl https://sh.rustup.rs -sSf -o rust.sh
+          bash -f rust.sh -y
+          git clone https://github.com/iden3/circom.git
+          cd circom
+          cargo build --release
+          cargo install --path circom
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Circuit tests
+        run: npm run test:circuits
+  
+  helpers-tests:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.17.0'
+          check-latest: true
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Helpers tests
+        run: npm run test:helpers
+
+  stark-tests:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.17.0'
+          check-latest: true
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Stark prover tests
+        run: npm run test:stark
+
+  c15-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.17.0'
+          check-latest: true
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create tmp directory
+        run: mkdir tmp
+
+      - name: Check C15
+        run: npm run test:C15
+
+  c18-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.17.0'
+          check-latest: true
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create tmp directory
+        run: mkdir tmp
+
+      - name: Check C18
+        run: npm run test:C18
