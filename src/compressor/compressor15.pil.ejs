@@ -216,61 +216,53 @@ namespace Compressor(%N);
     // (a0 + a1*x + a2*x²)*(b0 + b1*x + b2*x²) and then using long division to get the residue when dividing by the modulo
     // We get the following result: (a0*b0 + a1*b2 + a2*b1) + (a0*b1 + a1*b0 + a1*b2 + a2*b1 + a2*b2)x + (a0*b2 + a2*b2 + a2*b0 + a1*b1)x²
     // This result can be expressed using this intermediate polyonials A,B,C,D,E,F that have less than degree 2
-    pol cA1 = (a[0] + a[1])  * (a[3] + a[4]);
-    pol cB1 = (a[0] + a[2])  * (a[3] + a[5]);
-    pol cC1 = (a[1] + a[2])  * (a[4] + a[5]);
-    pol cD1 = a[0]*a[3];
-    pol cE1 = a[1]*a[4];
-    pol cF1 = a[2]*a[5];
+    pol cA1 = (a[6] + a[7])  * (a[9] + a[10]);
+    pol cB1 = (a[6] + a[8])  * (a[9] + a[11]);
+    pol cC1 = (a[7] + a[8])  * (a[10] + a[11]);
+    pol cD1 = a[6]*a[9];
+    pol cE1 = a[7]*a[10];
+    pol cF1 = a[8]*a[11];
 
     // Whenever CMUL = 1, check that the CMul result matches with the values stored in a[6], a[7] and a[8] respectively
-    CMUL * (a[6] - (cC1 + cD1 - cE1 - cF1)) = 0;
-    CMUL * (a[7] - (cA1 + cC1 - 2*cE1 - cD1)) = 0;
-    CMUL * (a[8] - (cB1 - cD1 + cE1)) = 0;
+    CMUL * (a[12] - (cC1 + cD1 - cE1 - cF1)) = 0;
+    CMUL * (a[13] - (cA1 + cC1 - 2*cE1 - cD1)) = 0;
+    CMUL * (a[14] - (cB1 - cD1 + cE1)) = 0;
 
-    g91011*CMUL = 0;
-    g121314*CMUL = 0;
+    g012*CMUL = 0;
+    g345*CMUL = 0;
 
     // FFT4
 
-    pol g0  = C[0]*a[0] + C[1]*a[3] + C[2]*a[6] + C[3]*a[9]  + C[6]*a[0] + C[7]*a[3];
-    pol g3  = C[0]*a[0] - C[1]*a[3] + C[4]*a[6] - C[5]*a[9]  + C[6]*a[0] - C[7]*a[3];
-    pol g6  = C[0]*a[0] + C[1]*a[3] - C[2]*a[6] - C[3]*a[9]  + C[6]*a[6] + C[8]*a[9];
-    pol g9  = C[0]*a[0] - C[1]*a[3] - C[4]*a[6] + C[5]*a[9]  + C[6]*a[6] - C[8]*a[9];
+    pol g0  = C[5]*a[6] + C[6]*a[9] + C[7]*a[12] + C[8]*a[0]'  + C[11]*a[6] + C[0]'*a[9];
+    pol g3  = C[5]*a[6] - C[6]*a[9] + C[9]*a[12] - C[10]*a[0]'  + C[11]*a[6] - C[0]'*a[9];
+    pol g6  = C[5]*a[6] + C[6]*a[9] - C[7]*a[12] - C[8]*a[0]'  + C[11]*a[12] + C[1]'*a[0]';
+    pol g9  = C[5]*a[6] - C[6]*a[9] - C[9]*a[12] + C[10]*a[0]'  + C[11]*a[12] - C[1]'*a[0]';
 
-    pol g1  = C[0]*a[1] + C[1]*a[4] + C[2]*a[7] + C[3]*a[10] + C[6]*a[1] + C[7]*a[4];
-    pol g4  = C[0]*a[1] - C[1]*a[4] + C[4]*a[7] - C[5]*a[10] + C[6]*a[1] - C[7]*a[4];
-    pol g7  = C[0]*a[1] + C[1]*a[4] - C[2]*a[7] - C[3]*a[10] + C[6]*a[7] + C[8]*a[10];
-    pol g10 = C[0]*a[1] - C[1]*a[4] - C[4]*a[7] + C[5]*a[10] + C[6]*a[7] - C[8]*a[10];
+    pol g1  = C[5]*a[7] + C[6]*a[10] + C[7]*a[13] + C[8]*a[1]' + C[11]*a[7] + C[0]'*a[10];
+    pol g4  = C[5]*a[7] - C[6]*a[10] + C[9]*a[13] - C[10]*a[1]' + C[11]*a[7] - C[0]'*a[10];
+    pol g7  = C[5]*a[7] + C[6]*a[10] - C[7]*a[13] - C[8]*a[1]' + C[11]*a[13] + C[1]'*a[1]';
+    pol g10 = C[5]*a[7] - C[6]*a[10] - C[9]*a[13] + C[10]*a[1]' + C[11]*a[13] - C[1]'*a[1]';
 
-    pol g2  = C[0]*a[2] + C[1]*a[5] + C[2]*a[8] + C[3]*a[11] + C[6]*a[2] + C[7]*a[5];
-    pol g5  = C[0]*a[2] - C[1]*a[5] + C[4]*a[8] - C[5]*a[11] + C[6]*a[2] - C[7]*a[5];
-    pol g8  = C[0]*a[2] + C[1]*a[5] - C[2]*a[8] - C[3]*a[11] + C[6]*a[8] + C[8]*a[11];
-    pol g11 = C[0]*a[2] - C[1]*a[5] - C[4]*a[8] + C[5]*a[11] + C[6]*a[8] - C[8]*a[11];
+    pol g2  = C[5]*a[8] + C[6]*a[11] + C[7]*a[14] + C[8]*a[2]' + C[11]*a[8] + C[0]'*a[11];
+    pol g5  = C[5]*a[8] - C[6]*a[11] + C[9]*a[14] - C[10]*a[2]' + C[11]*a[8] - C[0]'*a[11];
+    pol g8  = C[5]*a[8] + C[6]*a[11] - C[7]*a[14] - C[8]*a[2]' + C[11]*a[14] + C[1]'*a[2]';
+    pol g11 = C[5]*a[8] - C[6]*a[11] - C[9]*a[14] + C[10]*a[2]' + C[11]*a[14] - C[1]'*a[2]';
 
-    FFT4 * (a[12] - g0) = 0;
-    FFT4 * (a[13] - g1) = 0;
-    FFT4 * (a[14] - g2) = 0;
-    FFT4 * (a[0]' - g3) = 0;
-    FFT4 * (a[1]' - g4) = 0;
-    FFT4 * (a[2]' - g5) = 0;
-    FFT4 * (a[3]' - g6) = 0;
-    FFT4 * (a[4]' - g7) = 0;
-    FFT4 * (a[5]' - g8) = 0;
-    FFT4 * (a[6]' - g9) = 0;
-    FFT4 * (a[7]' - g10) = 0;
-    FFT4 * (a[8]' - g11) = 0;
+    FFT4 * (a[3]' - g0) = 0;
+    FFT4 * (a[4]' - g1) = 0;
+    FFT4 * (a[5]' - g2) = 0;
+    FFT4 * (a[6]' - g3) = 0;
+    FFT4 * (a[7]' - g4) = 0;
+    FFT4 * (a[8]' - g5) = 0;
+    FFT4 * (a[9]' - g6) = 0;
+    FFT4 * (a[10]' - g7) = 0;
+    FFT4 * (a[11]' - g8) = 0;
+    FFT4 * (a[12]' - g9) = 0;
+    FFT4 * (a[13]' - g10) = 0;
+    FFT4 * (a[14]' - g11) = 0;
 
-    pol a67p = a[6]'*a[7]';
-    pol g678p = C[6]'*a67p + C[7]'*a[6]' + C[8]'*a[7]' + C[9]'*a[8]' + C[10]';
-
-    pol a910p = a[9]'*a[10]';
-    pol g91011p = C[6]'*a910p + C[7]'*a[9]' + C[8]'*a[10]' + C[9]'*a[11]' + C[10]';
-    g91011p*FFT4 = 0;
-
-    pol a1213p = a[12]'*a[13]';
-    pol g121314p = C[6]'*a1213p + C[7]'*a[12]' + C[8]'*a[13]' + C[9]'*a[14]' + C[10]';    
-    g121314p*FFT4 = 0;
+    g012*FFT4 = 0;
+    g345*FFT4 = 0;
 
     // EVPOL4 - Check that the polynomial evaluation is valid
     // Evaluate p(x) = d0*x⁴ + d1*x³ + d2*x²+ d3*x + d4 at point z = a[0]' + a[1]'x + a[2]'x² where
@@ -300,22 +292,23 @@ namespace Compressor(%N);
 } -%>
 
     // Calculate acc = d0 * x + d1 
-<%- CMulAdd("1", "a[12]", "a[13]", "a[14]", "a[0]'", "a[1]'", "a[2]'", "a[9]", "a[10]", "a[11]") -%>
+<%- CMulAdd("1", "a[6]'", "a[7]'", "a[8]'", "a[9]'", "a[10]'", "a[11]'", "a[3]'", "a[4]'", "a[5]'") -%>
     // Calculate acc2 = acc * x + d2 
-<%- CMulAdd("2", "acc1_0", "acc1_1", "acc1_2", "a[0]'", "a[1]'", "a[2]'", "a[6]", "a[7]", "a[8]") -%>
+<%- CMulAdd("2", "acc1_0", "acc1_1", "acc1_2", "a[9]'", "a[10]'", "a[11]'", "a[0]'", "a[1]'", "a[2]'") -%>
     // Calculate acc3 = acc2 * x + d3 
-<%- CMulAdd("3", "acc2_0", "acc2_1", "acc2_2", "a[0]'", "a[1]'", "a[2]'", "a[3]", "a[4]", "a[5]") -%>
+<%- CMulAdd("3", "acc2_0", "acc2_1", "acc2_2", "a[9]'", "a[10]'", "a[11]'", "a[3]", "a[4]", "a[5]") -%>
     // Calculate p = acc4 * x + d4 
-<%- CMulAdd("4", "acc3_0", "acc3_1", "acc3_2", "a[0]'", "a[1]'", "a[2]'", "a[0]", "a[1]", "a[2]") -%>
+<%- CMulAdd("4", "acc3_0", "acc3_1", "acc3_2", "a[9]'", "a[10]'", "a[11]'", "a[0]", "a[1]", "a[2]") -%>
 
     // Whenever EVPOL4 = 1, check that the evaluation result matches with the values stored in a[6]', a[7]' and a[8]' respectively
-    EVPOL4 * (a[3]' - acc4_0) = 0;
-    EVPOL4 * (a[4]' - acc4_1) = 0;
-    EVPOL4 * (a[5]' - acc4_2) = 0;
+    EVPOL4 * (a[12]' - acc4_0) = 0;
+    EVPOL4 * (a[13]' - acc4_1) = 0;
+    EVPOL4 * (a[14]' - acc4_2) = 0;
 
-    g678p*EVPOL4 = 0;
-    g91011p*EVPOL4 = 0;
-    g121314p*EVPOL4 = 0;
+    g678*EVPOL4 = 0;
+    g91011*EVPOL4 = 0;
+    g121314*EVPOL4 = 0;
+
 
     // TREESELECTOR8 GATE - Check that given 8 values and a key, checks that the output is correct
     // The tree is created as follows: if key = 0, even values are pushed up the tree, if the key = 1 the odd ones are pushed.
