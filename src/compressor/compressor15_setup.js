@@ -201,8 +201,8 @@ module.exports = async function plonkSetup(F, r1cs, options) {
             r+=11;
         } else if (cgu.id == customGatesInfo.CMulId) {
             assert(cgu.signals.length === 9);
-            for (let i=0; i<12; i++) {
-                sMap[i][r] = i < 9 ? cgu.signals[i] : 0;
+            for (let i=0; i<9; i++) {
+                sMap[i][r] = cgu.signals[i + 6];
             }
             constPols.Compressor.CMUL[r] = 1n;
             constPols.Compressor.GATE[r] = 0n;
@@ -226,9 +226,11 @@ module.exports = async function plonkSetup(F, r1cs, options) {
             r+= 1;
         } else if ( typeof customGatesInfo.FFT4Parameters[cgu.id] !== "undefined") {
             assert(cgu.signals.length === 24);
+            for (let i=0; i<9; i++) {
+                sMap[i+6][r] = cgu.signals[i];
+            }
             for (let i=0; i<15; i++) {
-                sMap[i][r] = cgu.signals[i];
-                sMap[i][r+1] = i < 9 ? cgu.signals[15 + i] : 0;
+                sMap[i][r+1] = cgu.signals[9 + i];
             }
             constPols.Compressor.CMUL[r] = 0n;
             constPols.Compressor.GATE[r] = 0n;
@@ -260,47 +262,52 @@ module.exports = async function plonkSetup(F, r1cs, options) {
             const firstW2 = F.square(firstW);
             const incW = customGatesInfo.FFT4Parameters[cgu.id][1];
             if (type == 4n) {
-                constPols.Compressor.C[0][r] = scale;
-                constPols.Compressor.C[1][r] = F.mul(scale, firstW2);
-                constPols.Compressor.C[2][r] = F.mul(scale, firstW);
-                constPols.Compressor.C[3][r] = F.mul(scale, F.mul(firstW, firstW2));
-                constPols.Compressor.C[4][r] = F.mul(scale, F.mul(firstW, incW));
-                constPols.Compressor.C[5][r] = F.mul(F.mul(scale,firstW), F.mul(firstW2, incW));
+                constPols.Compressor.C[5][r] = scale;
+                constPols.Compressor.C[6][r] = F.mul(scale, firstW2);
+                constPols.Compressor.C[7][r] = F.mul(scale, firstW);
+                constPols.Compressor.C[8][r] = F.mul(scale, F.mul(firstW, firstW2));
+                constPols.Compressor.C[9][r] = F.mul(scale, F.mul(firstW, incW));
+                constPols.Compressor.C[10][r] = F.mul(F.mul(scale,firstW), F.mul(firstW2, incW));
+                constPols.Compressor.C[11][r] = 0n;
+                constPols.Compressor.C[0][r+1] = 0n;
+                constPols.Compressor.C[1][r+1] = 0n;
+            } else if (type == 2n) {
+                constPols.Compressor.C[5][r] = 0n;
                 constPols.Compressor.C[6][r] = 0n;
                 constPols.Compressor.C[7][r] = 0n;
                 constPols.Compressor.C[8][r] = 0n;
-            } else if (type == 2n) {
-                constPols.Compressor.C[0][r] = 0n;
-                constPols.Compressor.C[1][r] = 0n;
-                constPols.Compressor.C[2][r] = 0n;
-                constPols.Compressor.C[3][r] = 0n;
-                constPols.Compressor.C[4][r] = 0n;
-                constPols.Compressor.C[5][r] = 0n;
-                constPols.Compressor.C[6][r] = scale;
-                constPols.Compressor.C[7][r] = F.mul(scale, firstW);
-                constPols.Compressor.C[8][r] = F.mul(scale, F.mul(firstW, incW));
+                constPols.Compressor.C[9][r] = 0n;
+                constPols.Compressor.C[10][r] = 0n;
+                constPols.Compressor.C[11][r] = scale;
+                constPols.Compressor.C[0][r+1] = F.mul(scale, firstW);
+                constPols.Compressor.C[1][r+1] = F.mul(scale, F.mul(firstW, incW));
             } else {
                 throw new Error("Invalid FFT4 type: "+cgu.parameters[0]);
             }
 
-            constPols.Compressor.C[9][r] = 0n;
-            constPols.Compressor.C[10][r] = 0n;
-            constPols.Compressor.C[11][r] = 0n;
-            for (let k=0; k<12; k++) {
+            constPols.Compressor.C[0][r] = 0n;
+            constPols.Compressor.C[1][r] = 0n;
+            constPols.Compressor.C[2][r] = 0n;
+            constPols.Compressor.C[3][r] = 0n;
+            constPols.Compressor.C[4][r] = 0n;
+            for (let k=2; k<12; k++) {
                 constPols.Compressor.C[k][r+1] = 0n;
             }
 
             // Add r + 1 to extraRows so that a[9]', a[10]', a[11]' and a[12]', a[13]' and a[14]' along with C[6]', C[7]', C[8]', C[9]', C[10]' 
             // can be used to verify two sets of plonk constraints
-            extraRows.push(r + 1);
+            extraRows.push(r);
             r+= 2;
         } else if (cgu.id == customGatesInfo.EvPol4Id) {
             assert(cgu.signals.length === 21);
-            for (let i=0; i<15; i++) {
-                sMap[i][r] = cgu.signals[i];
-                sMap[i][r+1] = i < 6 ? cgu.signals[15 + i] : 0;
-               
+            for (let i=0; i<6; i++) {
+                sMap[i][r] = cgu.signals[i];               
             }
+
+            for (let i=0; i<15; i++) {
+                sMap[i][r+1] = cgu.signals[6 + i];
+            }
+
             for (let i=0; i<12; i++) {
                 constPols.Compressor.C[i][r] = 0n;
                 constPols.Compressor.C[i][r+1] = 0n;
@@ -331,7 +338,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
 
             // Add r + 1 to extraRows so that a[6]', a[7]', a[8]' and a[9]', a[10]', a[11]' and a[12]', a[13]' and a[14]' along with C[6]', C[7]', C[8]', C[9]', C[10]' 
             // can be used to verify three sets of plonk constraints
-            extraRowsEvPol.push(r + 1);
+            extraRowsEvPol.push(r);
             r+= 2;
         } else if(cgu.id == customGatesInfo.TreeSelector8Id) {
             assert(cgu.signals.length === 30);
@@ -434,20 +441,19 @@ module.exports = async function plonkSetup(F, r1cs, options) {
         // If the constraint is not stored in partialRows and all previous rows are full, start a new one
         } else if(extraRows.length > 0) {
             const row = extraRows.shift();
-            constPols.Compressor.C[6][row] = c[3];
-            constPols.Compressor.C[7][row] = c[4];
-            constPols.Compressor.C[8][row] = c[5];
-            constPols.Compressor.C[9][row] = c[6];
-            constPols.Compressor.C[10][row] = c[7];
-            constPols.Compressor.C[11][row] = 0n;
+            constPols.Compressor.C[0][row] = c[3];
+            constPols.Compressor.C[1][row] = c[4];
+            constPols.Compressor.C[2][row] = c[5];
+            constPols.Compressor.C[3][row] = c[6];
+            constPols.Compressor.C[4][row] = c[7];
 
-            sMap[9][row] = c[0];
-            sMap[10][row] = c[1];
-            sMap[11][row] = c[2];
+            sMap[0][row] = c[0];
+            sMap[1][row] = c[1];
+            sMap[2][row] = c[2];
             
             partialRows[k] = {
                 row: row,
-                nUsed: 4
+                nUsed: 1
             };
         } else {
             constPols.Compressor.C[0][r] = c[3];
