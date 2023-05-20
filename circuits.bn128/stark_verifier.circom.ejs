@@ -784,7 +784,7 @@ template StarkVerifier() {
 <% const maxDegBits =  Math.max(nLastBits -  (starkStruct.nBitsExt - starkStruct.nBits), 0); -%>
 <% console.log("MaxDegBits", maxDegBits); -%>
     // Calculate the IFFT to get the coefficients of finalPol 
-    signal lastIFFT[<%- 1 << nLastBits %>][3] <== FFT(<%- nLastBits %>, 1)(finalPol);
+    signal lastIFFT[<%- 1 << nLastBits %>][3] <== parallel FFT(<%- nLastBits %>, 1)(finalPol);
 
     // Check that the degree of the final polynomial is bounded by the degree defined in the last step of the folding
     // This means ?????? in terms of IFFT
