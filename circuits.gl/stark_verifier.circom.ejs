@@ -497,6 +497,33 @@ template MapValues() {
 <% }                                                                             -%>
 }
 
+template parallel VerifyFinalPol() {
+    ///////
+    // Check Degree last pol
+    ///////
+    signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
+    signal input enable;
+    
+<% const nLastBits = starkStruct.steps[ starkStruct.steps.length-1].nBits;  -%>
+<% console.log("NLastBits", nLastBits); -%>
+<% const maxDegBits =  Math.max(nLastBits -  (starkStruct.nBitsExt - starkStruct.nBits), 0); -%>
+<% console.log("MaxDegBits", maxDegBits); -%>
+    // Calculate the IFFT to get the coefficients of finalPol 
+    signal lastIFFT[<%- 1 << nLastBits %>][3] <== FFT(<%- nLastBits %>, 3, 1)(finalPol);
+
+    // Check that the degree of the final polynomial is bounded by the degree defined in the last step of the folding
+    // This means ?????? in terms of IFFT
+    for (var k= <%- 1 << maxDegBits %>; k< <%- 1 << nLastBits %>; k++) {
+        for (var e=0; e<3; e++) {
+            enable * lastIFFT[k][e] === 0;
+        }
+    }
+    
+    // The coefficients of lower degree can have any value
+    for (var k= 0; k < <%- 1 << maxDegBits %>; k++) {
+        _ <== lastIFFT[k];
+    }
+}
 template StarkVerifier() {
     signal input publics[<%- pil.publics.length %>]; // constant polynomials
     signal input root1[4]; // Merkle tree root of the evaluations of all trace polynomials
@@ -727,29 +754,7 @@ template StarkVerifier() {
 <% } -%>
     }
 
-    ///////
-    // Check Degree last pol
-    ///////
-    
-<% const nLastBits = starkStruct.steps[ starkStruct.steps.length-1].nBits;  -%>
-<% console.log("NLastBits", nLastBits); -%>
-<% const maxDegBits =  Math.max(nLastBits -  (starkStruct.nBitsExt - starkStruct.nBits), 0); -%>
-<% console.log("MaxDegBits", maxDegBits); -%>
-    // Calculate the IFFT to get the coefficients of finalPol 
-    signal lastIFFT[<%- 1 << nLastBits %>][3] <== FFT(<%- nLastBits %>, 3, 1)(finalPol);
-
-    // Check that the degree of the final polynomial is bounded by the degree defined in the last step of the folding
-    // This means ?????? in terms of IFFT
-    for (var k= <%- 1 << maxDegBits %>; k< <%- 1 << nLastBits %>; k++) {
-        for (var e=0; e<3; e++) {
-            enable * lastIFFT[k][e] === 0;
-        }
-    }
-    
-    // The coefficients of lower degree can have any value
-    for (var k= 0; k < <%- 1 << maxDegBits %>; k++) {
-        _ <== lastIFFT[k];
-    }
+    VerifyFinalPol()(finalPol, enable);
 }
     
 <% if (!options.skipMain) {  -%>

@@ -28,7 +28,7 @@ template MerkleHash(eSize, elementsInLinear, nLinears) {
 }
 
 
-template VerifyMerkleHash(eSize, elementsInLinear, nLinears) {
+template parallel VerifyMerkleHash(eSize, elementsInLinear, nLinears) {
     var nBits = log2(nLinears);
     assert(1 << nBits == nLinears);
     signal input values[elementsInLinear][eSize]; // Values that are contained in a leaf
