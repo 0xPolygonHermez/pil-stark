@@ -118,6 +118,9 @@ jobs:
       - name: Create tmp directory
         run: mkdir tmp
 
+      - name: Compile Verifier
+        run: npm run verifier_compile
+
       - name: Check C12
         run: npm run test:C12
 
