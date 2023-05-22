@@ -80,17 +80,6 @@ namespace Compressor(%N);
 
     // POSEIDON GATE - Check that a GL Poseidon round implemented with Neptune optimization is valid
 
-    // Check that poseidon connectors are binary
-    POSEIDONM * (POSEIDONM - 1) = 0;
-    POSEIDONP * (POSEIDONP - 1) = 0;
-    POSEIDONCUSTFIRST * (POSEIDONCUSTFIRST - 1) = 0;
-    POSEIDONFIRST * (POSEIDONFIRST - 1) = 0;
-    POSEIDONAFTERPART * (POSEIDONAFTERPART - 1) = 0;
-    PARTIALROUND * (PARTIALROUND - 1) = 0;
-
-    // Check that the sum of all Poseidon selectors is either 0 or 1
-    (PARTIALROUND + POSEIDONM + POSEIDONP + POSEIDONCUSTFIRST + POSEIDONFIRST + POSEIDONAFTERPART - 1) * (PARTIALROUND + POSEIDONM + POSEIDONP + POSEIDONCUSTFIRST + POSEIDONFIRST + POSEIDONAFTERPART) = 0;
-
     // Each Poseidon hash is verified in 6 rows. Inputs -> Round 2 -> Round 4 -> Round 26 -> Round 28 -> Output. 
     // At each row we verify two full rounds, and all the partial rounds are verified in a single step
 

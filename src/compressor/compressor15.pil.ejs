@@ -78,17 +78,6 @@ namespace Compressor(%N);
     // gate the two values to hash (value and sibling) are sent unordered and the key specifying which element is the
     // first one and which is the second one is also provided. 
     
-    // Check that poseidon connectors are binary
-    POSEIDONM * (POSEIDONM - 1) = 0;
-    POSEIDONP * (POSEIDONP - 1) = 0;
-    POSEIDONCUSTFIRST * (POSEIDONCUSTFIRST - 1) = 0;
-    POSEIDONFIRST * (POSEIDONFIRST - 1) = 0;
-    PARTIALROUND * (PARTIALROUND - 1) = 0;
-    PARTIALROUND2 * (PARTIALROUND2 - 1) = 0;
-
-    // Check that the sum of all Poseidon selectors is either 0 or 1
-    (PARTIALROUND + PARTIALROUND2 + POSEIDONM + POSEIDONP + POSEIDONCUSTFIRST + POSEIDONFIRST - 1) * (PARTIALROUND + PARTIALROUND2 + POSEIDONM + POSEIDONP + POSEIDONCUSTFIRST + POSEIDONFIRST) = 0;
-
     // Order the each of the GL Poseidon inputs according to the key, which is stored in a[8]
     
     pol custPoseidonInput0 = a[8] * (a[0] - a[4]) + a[4];
