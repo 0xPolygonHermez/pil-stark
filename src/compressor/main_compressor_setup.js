@@ -5,6 +5,7 @@ const F3g = require("../helpers/f3g.js");
 const {readR1cs} = require("r1csfile");
 const plonkSetupC18 = require("./compressor18_setup.js");
 const plonkSetupC12 = require("./compressor12_setup.js");
+const plonkSetupC132 = require("./compressor132_setup.js");
 
 
 const argv = require("yargs")
@@ -37,7 +38,7 @@ async function run() {
 
     let res;
     if(cols === 12) {
-        res = await plonkSetupC12(F, r1cs, options);
+        res = await plonkSetupC132(F, r1cs, options);
     } else {
         res = await plonkSetupC18(F, r1cs, options);
     }

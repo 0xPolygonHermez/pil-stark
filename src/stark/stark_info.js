@@ -73,6 +73,7 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
 
     res.publics = pil.publics;
 
+    console.log(res.qDeg, res.qDim, res.evMap.length);
     return res;
 
 }
