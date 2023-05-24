@@ -363,6 +363,7 @@
         },
         {
             "name": "test simple fflonk",
+            "console":"integratedTerminal",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
             "skipFiles": [

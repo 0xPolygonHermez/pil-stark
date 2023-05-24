@@ -1,7 +1,7 @@
 const {pilCodeGen, buildCode} = require("./codegen.js");
 const ExpressionOps = require("../helpers/expressionops");
 
-module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, maxDeg) {
+module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, stark, maxDeg) {
 
     const E = new ExpressionOps();
 
@@ -18,10 +18,10 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, ma
 
 
     let d = 2;
-    let [imExps, qDeg] = calculateImPols(pil, cExp, d++);
+    let [imExps, qDeg] = calculateImPols(pil, cExp, d++, stark);
     [res.imExps, res.qDeg] = [imExps, qDeg];
     while(Object.keys(imExps).length > 0 && (!maxDeg || d <= maxDeg)) {
-        [imExps, qDeg] = calculateImPols(pil, cExp, d++);
+        [imExps, qDeg] = calculateImPols(pil, cExp, d++, stark);
         if ((maxDeg && (Object.keys(imExps).length + qDeg < Object.keys(res.imExps).length + res.qDeg)) 
             || (!maxDeg && Object.keys(imExps).length === 0)) {
             [res.imExps, res.qDeg] = [imExps, qDeg];
@@ -54,8 +54,12 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, ma
 
     res.nCm3 = pil.nCommitments - res.nCm1 - res.nCm2;
     res.qs = [];
-    for (let i=0; i<res.qDeg; i++) {
-        res.qs[i] = pil.nCommitments++;
+    if(stark) {
+        for (let i=0; i<res.qDeg; i++) {
+            res.qs[i] = pil.nCommitments++;
+        }
+    } else {
+        res.qs[0] = pil.nCommitments++;
     }
 
     for (let i=0; i<res.imExpsList.length; i++) {
@@ -70,25 +74,37 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, ma
 
     pilCodeGen(ctx2ns, res.cExp);
     const code = ctx2ns.code[ctx2ns.code.length-1].code;
-    code.push({
-        op: "mul",
-        dest: {
-            type: "q",
-            id: 0
-        },
-        src: [
-           code[code.length-1].dest,
-           {
-                type: "Zi"
-           }
-        ]
-    });
+    if(stark) {
+        code.push({
+            op: "mul",
+            dest: {
+                type: "q",
+                id: 0
+            },
+            src: [
+            code[code.length-1].dest,
+            {
+                    type: "Zi"
+            }
+            ]
+        });
+        res.nCm4 = res.qDeg;
+    } else {
+        code.push({
+            op: "copy",
+            dest: {
+                type: "q",
+                id: 0
+            },
+            src: [code[code.length-1].dest]
+        });
+        res.nCm4 = res.qDeg - 1;
+    }
 
     res.step42ns = buildCode(ctx2ns);
-    res.nCm4 = res.qDeg;
 }
 
-function calculateImPols(pil, _exp, maxDeg) {
+function calculateImPols(pil, _exp, maxDeg, stark) {
 
     const imExpressions = {};
     const absoluteMax = maxDeg;
@@ -98,7 +114,12 @@ function calculateImPols(pil, _exp, maxDeg) {
 
     console.log(`maxDeg: ${maxDeg}, nIm: ${Object.keys(re).length}, d: ${rd}`);
 
-    return [re, Math.max(rd, absMaxD) - 1];  // We divide the exp polynomial by 1.
+    if(stark) {
+        return [re, Math.max(rd, absMaxD) - 1];  // We divide the exp polynomial by 1.
+    } else {
+        return [re, Math.max(rd, absMaxD)];
+    }
+   
 
     function _calculateImPols(pil, exp, imExpressions, maxDeg) {
         if (imExpressions === false) {
