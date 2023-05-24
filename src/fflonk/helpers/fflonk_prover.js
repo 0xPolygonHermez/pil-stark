@@ -198,14 +198,15 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             }
 
             let buffer = ctx.cm1_n.slice(sOffset, sOffset + sDomain);
-            buffer = await Fr.batchToMontgomery(buffer);
+            //buffer = await Fr.batchToMontgomery(buffer);
+            
             ctx.cm1_n.set(buffer, sOffset);
 
             // Compute polynomial coefficients
             ctx[name] = await Polynomial.fromEvaluations(buffer, curve, logger);
 
             // Compute extended evals
-            ctx.cm1_2ns.set(ctx[name].coef, sOffsetExt);
+            ctx.cm1_2ns.set(ctx[name].coef.slice(), sOffsetExt);
             const bufferEvs = await Fr.fft(ctx.cm1_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
             ctx.cm1_2ns.set(bufferEvs, sOffsetExt);
 
@@ -213,14 +214,7 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
                 console.log(name, j, Fr.toString(ctx.cm1_2ns.slice(sOffsetExt + j * n8r, sOffsetExt + (j+1) * n8r)));
             }
 
-        }
-
-        let i = 14;
-        console.log("A", i, Fr.toString(ctx.cm1_2ns.slice((0*16 + i)*32,(0*16 + i + 1)*32)));
-        console.log("B", i, Fr.toString(ctx.cm1_2ns.slice((1*16 + i)*32,(1*16 + i + 1)*32)));
-        let tmp0 = ctx.curve.Fr.mul(ctx.cm1_2ns.slice((0*16 + i)*32,(0*16 + i + 1)*32), ctx.cm1_2ns.slice((0*16 + i)*32,(0*16 + i + 1)*32));
-        let tmp1 = ctx.curve.Fr.sub(tmp0, ctx.cm1_2ns.slice((1*16 + i)*32,(1*16 + i + 1)*32));
-        console.log(Fr.toString(tmp1));
+        }        
 
 
         const commits1 = await commit(1, zkey, ctx, PTau, curve, { multiExp: true, logger });
@@ -409,17 +403,12 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 
         ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, curve, logger);
-
-        console.log("Q", ctx["Q"].degree());
-
-        for(let i = 0; i < 16; ++i) {
-            console.log(i, Fr.toString(ctx.q_2ns.slice(i*n8r, i*n8r + n8r)));
-        }
-        console.log("DOMAIN SIZE", domainSize);
-
         ctx["Q"].divByZerofier(domainSize, Fr.one);
 
         console.log(ctx["Q"].degree());
+        for(let i = 0; i < 16; ++i) {
+            console.log(i, Fr.toString(ctx.q_2ns.slice(i*n8r, i*n8r + n8r)));
+        }
 
         const commits4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });
         for (let j = 0; j < commits4.length; ++j) {
