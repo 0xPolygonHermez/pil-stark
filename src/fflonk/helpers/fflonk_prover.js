@@ -1,14 +1,13 @@
 const {BigBuffer} = require("ffjavascript");
-const { getPowersOfTau, Polynomial, commit, Keccak256Transcript, lcm } = require("shplonkjs");
+const { getPowersOfTau, Polynomial, commit, Keccak256Transcript } = require("shplonkjs");
 const workerpool = require("workerpool");
 const { fflonkgen_execute } = require("./fflonk_prover_worker");
-const { calculateH1H2, calculateZ, buildZhInv } = require("../../helpers/polutils");
+const { calculateH1H2, calculateZ } = require("../../helpers/polutils");
 const { open } = require("shplonkjs/src/shplonk");
 
 const Logger = require('logplease');
-const { interpolate } = require("../../helpers/fft/fft_p");
 
-const parallelExec = false;
+const parallelExec = true;
 const useThreads = false;
 const maxNperThread = 1 << 18;
 const minNperThread = 1 << 12;
@@ -143,7 +142,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     async function round1() {
         // STEP 1.1 - Compute random challenge
         // Add preprocessed polynomials to the transcript
-        // TODO: Add preprocessed polynomials to the transcript
         const cnstCommitPols = Object.keys(zkey).filter(k => k.match(/^f\d/));
         for(let i = 0; i < cnstCommitPols.length; ++i) {
             transcript.addPolCommitment(zkey[cnstCommitPols[i]]);
@@ -210,10 +208,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             const bufferEvs = await Fr.fft(ctx.cm1_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
             ctx.cm1_2ns.set(bufferEvs, sOffsetExt);
 
-            for (let j = 0; j < ctx.NExt; j++) {
-                console.log(name, j, Fr.toString(ctx.cm1_2ns.slice(sOffsetExt + j * n8r, sOffsetExt + (j+1) * n8r)));
-            }
-
         }        
 
 
@@ -233,7 +227,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             transcript.addScalar(ctx.publics[i]);
         }
 
-        // TODO REVIEW
         if (0 === transcript.data.length) {
             transcript.addScalar(Fr.one);
         }
@@ -403,12 +396,12 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 
         ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, curve, logger);
-        ctx["Q"].divByZerofier(domainSize, Fr.one);
 
-        console.log(ctx["Q"].degree());
-        for(let i = 0; i < 16; ++i) {
-            console.log(i, Fr.toString(ctx.q_2ns.slice(i*n8r, i*n8r + n8r)));
+        for(let i = 0; i < 4096; ++i) {
+            console.log(Fr.toString(ctx.q_2ns.slice(i * n8r, (i + 1) * n8r)));
         }
+
+        ctx["Q"].divByZerofier(domainSize, Fr.one);
 
         const commits4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });
         for (let j = 0; j < commits4.length; ++j) {
@@ -514,7 +507,7 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, zkey) {
 
     const cFirst = compileCode(ctx, code.first, dom);
 
-    const n = ctx.N;
+    const n = dom === "n" ? ctx.N : ctx.NExt;
     const next = 1;
     let nPerThread = Math.floor((n-1)/pool.maxWorkers)+1;
     if (nPerThread>maxNperThread) nPerThread = maxNperThread;
@@ -626,7 +619,7 @@ function compileCode(ctx, code, dom, ret) {
                 }
             }
             case "number": {
-                return `ctx.Fr.e(${r.value}n)`;
+                return `ctx.curve.Fr.e(${r.value}n)`;
             }
             case "public": return `ctx.publics[${r.id}]`;
             case "challenge": return `ctx.challenges[${r.id}]`;

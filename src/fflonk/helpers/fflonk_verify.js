@@ -115,7 +115,6 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
     ctx.x = challengeXi;
 
     const execCode = executeCode(curve.Fr, ctx, fflonkInfo.verifierCode.first);
-    console.log(JSON.stringify(fflonkInfo.verifierCode.first, 0, 2));
 
     const xN = curve.Fr.exp(challengeXi, ctx.N);
     ctx.Z = curve.Fr.sub(xN, curve.Fr.one);   
