@@ -105,7 +105,8 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
         }
     }
 
-    polsXi.push({name: "Q", stage: 4, degree: domainSize * fflonkInfo.qDeg});
+    console.log("HOLA", (((1<< Math.ceil(Math.log2(fflonkInfo.qDeg))) - 1)* domainSize));
+    polsXi.push({name: "Q", stage: 4, degree: (((1<< Math.ceil(Math.log2(fflonkInfo.qDeg))) - 1)* domainSize)});
 
     const polsWXi = [];
     
