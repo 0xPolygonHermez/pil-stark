@@ -4,353 +4,133 @@ const workerpool = require("workerpool");
 const { fflonkgen_execute } = require("./fflonk_prover_worker");
 const { calculateH1H2, calculateZ, buildZhInv } = require("../../helpers/polutils");
 const { open } = require("shplonkjs/src/shplonk");
-const fft = require("../../helpers/fft/fft");
 
-const parallelExec = true;
+const Logger = require('logplease');
+const { interpolate } = require("../../helpers/fft/fft_p");
+
+const parallelExec = false;
 const useThreads = false;
-const maxNperThread = 1<<18;
-const minNperThread = 1<<12;
+const maxNperThread = 1 << 18;
+const minNperThread = 1 << 12;
+
 
 module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonkInfo, zkey, ptauFile, options) {
-    const logger = options.logger;
-   
+    const logger = Logger.create("logger");
+    
     const {PTau, curve} = await getPowersOfTau(zkey.f, ptauFile, zkey.power, logger);
 
+    const Fr = curve.Fr;
+
     const ctx = {};
-
-
     ctx.fflonkInfo = fflonkInfo;
     ctx.challenges = [];
     ctx.curve = curve;
-
+    ctx.Fr = curve.Fr;
+    // Define the big buffers
     ctx.N = 1 << zkey.power;
     ctx.nBits = zkey.power;
+    ctx.nBitsExt = Math.ceil(Math.log2(fflonkInfo.qDeg));
+    ctx.NExt = (1 << ctx.nBitsExt) * ctx.N;
+
+    const domainSize = ctx.N;
+    const domainSizeExt = ctx.NExt;
+    const power = zkey.power;
+    const n8r = Fr.n8;
+    const sDomain = domainSize * n8r;
+    const sDomainExt = domainSizeExt * n8r;
+
+    if (logger) {
+        logger.debug("-----------------------------");
+        logger.debug("  PIL-FFLONK PROVE SETTINGS");
+        logger.debug(`  Curve:         ${curve.name}`);
+        logger.debug(`  Domain size:   ${domainSize} (2^${power})`);
+        logger.debug(`  Domain size ext: ${domainSizeExt} (${1 << ctx.nBitsExt} * N)`);
+        logger.debug(`  Const  pols:   ${fflonkInfo.nConstants}`);
+        logger.debug(`  Step 1 pols:   ${fflonkInfo.mapSectionsN.cm1_n}`);
+        logger.debug(`  Step 2 pols:   ${fflonkInfo.mapSectionsN.cm2_n}`);
+        logger.debug(`  Step 3 pols:   ${fflonkInfo.mapSectionsN.cm3_n}`);
+        logger.debug(`  Step 4 pols:   ${fflonkInfo.mapSectionsN.cm4_n}`);
+        logger.debug(`  Temp exp pols: ${fflonkInfo.mapSectionsN.tmpExp_n}`);
+        logger.debug("-----------------------------");
+    }
+
+    // Global counter
     let nCm = fflonkInfo.nCm1;
-    ctx.const_n = new BigBuffer(fflonkInfo.nConstants * ctx.N * curve.Fr.n8);
-    ctx.const_2ns = new BigBuffer(fflonkInfo.nConstants * ctx.N * curve.Fr.n8);
-    ctx.cm1_n = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * ctx.N * curve.Fr.n8);
-    ctx.cm2_n = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * ctx.N * curve.Fr.n8);
-    ctx.cm3_n = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * ctx.N * curve.Fr.n8);
-    ctx.cm4_n = new BigBuffer(fflonkInfo.mapSectionsN.cm4_n*ctx.N * curve.Fr.n8);    
-    ctx.tmpExp_n = new BigBuffer(fflonkInfo.mapSectionsN.tmpExp_n * ctx.N * curve.Fr.n8);
-    ctx.cm1_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n*ctx.N*curve.Fr.n8);
-    ctx.cm2_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n*ctx.N*curve.Fr.n8);
-    ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n*ctx.N*curve.Fr.n8);
-    ctx.cm4_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm4_n*ctx.N*curve.Fr.n8);
-    ctx.q_2ns = new BigBuffer(fflonkInfo.qDim*ctx.N*curve.Fr.n8);
-    ctx.x_n = new BigBuffer(ctx.N * curve.Fr.n8);
-    ctx.x_2ns = new BigBuffer(ctx.N * curve.Fr.n8);
 
-    let xx = curve.Fr.one;
-    for (let i=0; i<ctx.N; i++) {
-        ctx.x_n.set(xx, i * curve.Fr.n8);
-        xx = curve.Fr.mul(xx, curve.Fr.w[ctx.nBits])
+    // Reserve big buffers for the polynomial coefficients
+    ctx.const_n = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
+    ctx.cm1_n = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomain);
+    ctx.cm2_n = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomain);
+    ctx.cm3_n = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomain);
+    ctx.cm4_n = new BigBuffer(fflonkInfo.mapSectionsN.cm4_n * sDomain);
+    ctx.tmpExp_n = new BigBuffer(fflonkInfo.mapSectionsN.tmpExp_n * sDomain); // Expression polynomials
+    ctx.x_n = new BigBuffer(sDomain); // Omegas de field extension
+    ctx.x_2ns = new BigBuffer(sDomain); // Omegas a l'extès
+
+    // Reserve big buffers for the polynomial evaluations in the extended
+    ctx.const_2ns = new BigBuffer(fflonkInfo.nConstants * sDomainExt);
+    ctx.cm1_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainExt);
+    ctx.cm2_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainExt);
+    ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainExt);
+    ctx.q_2ns = new BigBuffer(fflonkInfo.qDim * sDomainExt);
+
+    // TODO REVIEW
+    let w = Fr.one;
+    let xx = Fr.one;
+    for (let i = 0; i < domainSize; i++) {
+        const i_n8r = i * n8r;
+
+        ctx.x_n.set(w, i_n8r);
+        w = Fr.mul(w, Fr.w[power])
+
+        ctx.x_2ns.set(xx, i_n8r);
+        xx = Fr.mul(xx, Fr.w[power])
     }
-
-    xx = curve.Fr.shift;
-    for (let i=0; i<ctx.N; i++) {
-        ctx.x_2ns.set(xx, i * curve.Fr.n8);
-        xx = curve.Fr.mul(xx, curve.Fr.w[ctx.nBits])
-    }
-
-    // Build ZHInv
-    const zhInv = buildZhInv(ctx.curve.Fr, ctx.nBits, 0);
-    ctx.Zi = zhInv;
        
     const committedPols = {};
 
     const transcript = new Keccak256Transcript(curve);
 
-    const cnstCommitPols = Object.keys(zkey).filter(k => k.match(/^f\d/));
-    for(let i = 0; i < cnstCommitPols.length; ++i) {
-        transcript.addPolCommitment(zkey[cnstCommitPols[i]]);
-        committedPols[`${cnstCommitPols[i]}`] = {commit: zkey[cnstCommitPols[i]]};
-    }
-
-    for (let i = 0; i < cnstPols.$$nPols; i++) {
-        let name = cnstPols.$$defArray[i].name;
-        if(cnstPols.$$defArray[i].idx >= 0) name += cnstPols.$$defArray[i].idx;
-        const cnstPolBuffer = cnstPols.$$array[i];
-
-        if (logger) {
-            logger.info(`Preparing ${name} polynomial`);
-        }
-
-
-        for (let j = 0; j < cnstPolBuffer.length; j++) {
-            ctx.const_n.set(curve.Fr.e(cnstPolBuffer[j]), (j + i * ctx.N) * curve.Fr.n8)
-        }
-
-        let coefs = await curve.Fr.ifft(ctx.const_n.slice(i*ctx.N*curve.Fr.n8, (i+1)*ctx.N*curve.Fr.n8));
-
-        for (let j = 0; j < cnstPolBuffer.length; j++) {
-            ctx.const_2ns.set(coefs.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + i * ctx.N) * curve.Fr.n8);
-        }
-        
-        ctx[name] = new Polynomial(ctx.const_2ns.slice(i*ctx.N*curve.Fr.n8, (i+1)*ctx.N*curve.Fr.n8), curve, logger);
-    }
-
-   
-    const commitsConstants = await commit(0, zkey, ctx, PTau, curve, {multiExp: false, logger});
- 
-    for(let j = 0; j < commitsConstants.length; ++j) {
-        committedPols[`${commitsConstants[j].index}`].pol = commitsConstants[j].pol;
-    }
+    if (logger) logger.debug("");
 
     const pool = workerpool.pool(__dirname + '/fflonk_prover_worker.js');
 
-    // Generate random blinding scalars (b_1, ..., b9) ∈ F
-    const randomBlinding = {}
-    for(let i = 0; i < zkey.f.length; ++i) {
-        for(let j = 0; j < zkey.f[i].stages.length; ++j) {
-            if(zkey.f[i].stages[j].stage > 0 && zkey.f[i].stages[j].stage < 4) {
-                for(let k = 0; k < zkey.f[i].stages[j].pols.length; ++k) {
-                    const polName = zkey.f[i].stages[j].pols[k].name;
-                    if(!randomBlinding[polName]) randomBlinding[polName] = 1;
-                    randomBlinding[polName] += 1;
-                }
-            }
-        }
-    }
-
-    const totalBlindings = Object.values(randomBlinding).reduce((curr, acc) => acc + curr, 0);
-
-    ctx.challenges.b = [];
-    for (let i = 0; i <= totalBlindings; i++) {
-        // ctx.challenges.b[i] = ctx.curve.Fr.random();
-        ctx.challenges.b[i] = ctx.curve.Fr.one;
-    }
-
-    let bIndex = 0;
-
-    for (let i = 0; i < cmPols.$$nPols; i++) {
-        let name = cmPols.$$defArray[i].name;
-        if(cmPols.$$defArray[i].idx >= 0) name += cmPols.$$defArray[i].idx;
-        const cmPolBuffer = cmPols.$$array[i];
-
-        if (logger) {
-            logger.info(`Preparing ${name} polynomial`);
-        }
-
-        for (let j = 0; j < cmPolBuffer.length; j++) {
-            ctx.cm1_n.set(curve.Fr.e(cmPolBuffer[j]), (j + i * ctx.N) * curve.Fr.n8);
-        }
-
-        let buffer = ctx.cm1_n.slice(i*ctx.N*curve.Fr.n8, (i+1)*ctx.N*curve.Fr.n8);
-
-        buffer = await curve.Fr.batchToMontgomery(buffer);
-        
-        let coefs = await curve.Fr.ifft(buffer);
-
-        for (let j = 0; j < cmPolBuffer.length; j++) {
-            ctx.cm1_2ns.set(coefs.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + i * ctx.N) * curve.Fr.n8);
-        }
-
-        ctx[name] = new Polynomial(ctx.cm1_2ns.slice(i*ctx.N*curve.Fr.n8, (i+1)*ctx.N*curve.Fr.n8), curve, logger);
-        
-        // if(randomBlinding[name] > 0) {
-        //     const blindingCoefs = [];
-        //     for(let l = 0; l < randomBlinding[name]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
-        //         ctx[name].blindCoefficients(blindingCoefs);
-        // }
-    }
-
-    const commits1 = await commit(1, zkey, ctx, PTau, curve, {multiExp: true, logger});
-    for(let j = 0; j < commits1.length; ++j) {
-        committedPols[`${commits1[j].index}`] = {commit: commits1[j].commit, pol: commits1[j].pol}
-    }
-
+    ctx.polynomials = {};
     ctx.publics = [];
-    for (let i=0; i<fflonkInfo.publics.length; i++) {
-        if (fflonkInfo.publics[i].polType == "cmP") {
-            ctx.publics[i] = ctx.cm1_n.slice((fflonkInfo.publics[i].polId*ctx.N + fflonkInfo.publics[i].idx)*curve.Fr.n8, (fflonkInfo.publics[i].polId*ctx.N + fflonkInfo.publics[i].idx + 1)*curve.Fr.n8);
-        } else if (fflonkInfo.publics[i].polType == "imP") {
-            ctx.publics[i] = calculateExpAtPoint(ctx, fflonkInfo.publicsCode[i], fflonkInfo.publics[i].idx);
+    for (let i = 0; i < fflonkInfo.publics.length; i++) {
+        const publicPol = fflonkInfo.publics[i];
+
+        if ("cmP" === publicPol.polType) {
+            const offset = publicPol.polId * sDomain + publicPol.idx * n8r;
+            ctx.publics[i] = ctx.cm1_n.slice(offset, offset + n8r);
+        } else if ("imP" === publicPol.polType) {
+            ctx.publics[i] = calculateExpAtPoint(ctx, fflonkInfo.publicsCode[i], publicPol.idx);
         } else {
             throw new Error(`Invalid public type: ${polType.type}`);
         }
     }
+
+    // ROUND 1. Compute Trace Column Polynomials
+    if (logger) logger.debug("> ROUND 1. Compute Trace Column Polynomials");
+    await round1();
+    await callCalculateExps("step2prev", "n", pool, ctx, fflonkInfo, zkey, logger);
+
+    // ROUND 2. Compute Inclusion Polynomials
+    if (logger) logger.debug("> ROUND 2. Compute Inclusion Polynomials");
+    await round2();
+    await callCalculateExps("step3prev", "n", pool, ctx, fflonkInfo, zkey, logger);
+
+    // ROUND 3. Compute Grand Product and Intermediate Polynomials
+    if (logger) logger.debug("> ROUND 3. Compute Grand Product and Intermediate Polynomials");
+    await round3();
+    await callCalculateExps("step3", "n", pool, ctx, fflonkInfo, zkey);
+    await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, zkey, logger);
+
+    // ROUND 4. Trace Quotient Polynomials
+    if (logger) logger.debug("> ROUND 4. Compute Trace Quotient Polynomials");
+    await round4();
     
-    for (let i=0; i<fflonkInfo.publics.length; i++) {
-        transcript.addScalar(ctx.publics[i]);
-    }
-
-    if(0 === transcript.data.length) {
-        transcript.addScalar(curve.Fr.one);
-    }
-
-    ctx.challenges[0] = transcript.getChallenge(); // u
-    transcript.reset();
-
-    transcript.addScalar(ctx.challenges[0]);
-    ctx.challenges[1] = transcript.getChallenge(); // defVal
-    transcript.reset();
-
-    if (parallelExec) {
-        await calculateExpsParallel(pool, ctx, "step2prev", fflonkInfo, zkey);
-    } else {
-        calculateExps(ctx, fflonkInfo.step2prev, "n");
-    } 
-
-    for (let i = 0; i < fflonkInfo.puCtx.length; i++) {
-        const puCtx = fflonkInfo.puCtx[i];
-        const fPol = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[puCtx.fExpId]);
-        const tPol = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[puCtx.tExpId]);
-        const [h1, h2] = calculateH1H2(curve.Fr, fPol, tPol);
-        setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], h1);
-        setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], h2);
-        
-        let coefs1 = await curve.Fr.ifft(ctx.cm2_n.slice((2*i)*ctx.N*curve.Fr.n8, (2*i + 1)*ctx.N*curve.Fr.n8));
-        let coefs2 = await curve.Fr.ifft(ctx.cm2_n.slice((2*i + 1)*ctx.N*curve.Fr.n8, (2*i + 2)*ctx.N*curve.Fr.n8));
-
-        for (let j = 0; j < ctx.N; j++) {
-            ctx.cm2_2ns.set(coefs1.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + 2*i * ctx.N) * curve.Fr.n8);
-            ctx.cm2_2ns.set(coefs2.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + (2*i + 1) * ctx.N) * curve.Fr.n8);
-        }
-
-        ctx[`Plookup.H1_${i}`] = new Polynomial(ctx.cm2_2ns.slice((2*i)*ctx.N*curve.Fr.n8, (2*i + 1)*ctx.N*curve.Fr.n8), curve, logger);
-        ctx[`Plookup.H2_${i}`] = new Polynomial(ctx.cm2_2ns.slice((2*i + 1)*ctx.N*curve.Fr.n8, (2*i + 2)*ctx.N*curve.Fr.n8), curve, logger);
-
-        // if(randomBlinding[`Plookup.H1_${i}`] > 0) {
-        //     const blindingCoefs = [];
-        //     for(let l = 0; l < randomBlinding[`Plookup.H1_${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
-        //     ctx[`Plookup.H1_${i}`].blindCoefficients(blindingCoefs);
-        // }
-        
-        // if(randomBlinding[`Plookup.H2_${i}`] > 0) {
-        //     const blindingCoefs = [];
-        //     for(let l = 0; l < randomBlinding[`Plookup.H2_${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
-        //     ctx[`Plookup.H2_${i}`].blindCoefficients(blindingCoefs);
-        // }
-    }
-    const commits2 = await commit(2, zkey, ctx, PTau, curve, {multiExp: true, logger});
-    for(let j = 0; j < commits2.length; ++j) {
-        committedPols[`${commits2[j].index}`] = {commit: commits2[j].commit, pol: commits2[j].pol}
-    }
-
-    transcript.addScalar(ctx.challenges[1]);
-    ctx.challenges[2] = transcript.getChallenge(); // beta
-    transcript.reset();
-
-    transcript.addScalar(ctx.challenges[2]);
-    ctx.challenges[3] = transcript.getChallenge(); // gamma
-    transcript.reset();
-
-    if (parallelExec) {
-        await calculateExpsParallel(pool, ctx, "step3prev", fflonkInfo, zkey);
-    } else {
-        calculateExps(ctx, fflonkInfo.step3prev, "n");
-    }
-
-    const nPlookups = fflonkInfo.puCtx.length;
-    for (let i=0; i<nPlookups; i++) {
-        console.log(`Calculating z for plookup ${i}`);
-        const pu = fflonkInfo.puCtx[i];
-        const pNum = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[pu.numId]);
-        const pDen = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[pu.denId]);
-        const z = await calculateZ(curve.Fr,pNum, pDen);
-        setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], z);
-        
-        let coefs = await curve.Fr.ifft(ctx.cm3_n.slice(i*ctx.N*curve.Fr.n8, (i + 1)*ctx.N*curve.Fr.n8));
-
-        for (let j = 0; j < ctx.N; j++) {
-            ctx.cm3_2ns.set(coefs.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + i * ctx.N) * curve.Fr.n8);
-        }
-
-        ctx[`Plookup.Z${i}`] = new Polynomial(ctx.cm3_2ns.slice(i*ctx.N*curve.Fr.n8, (i + 1)*ctx.N*curve.Fr.n8), curve, logger);
-        
-        
-        // if(randomBlinding[`Plookup.Z${i}`] > 0) {
-        //     const blindingCoefs = [];
-        //     for(let l = 0; l < randomBlinding[`Plookup.Z${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
-        //     ctx[`Plookup.Z${i}`].blindCoefficients(blindingCoefs);
-        // }
-    }
-
-
-    const nPermutations = fflonkInfo.peCtx.length;
-    for (let i=0; i<nPermutations; i++) {
-        console.log(`Calculating z for permutation check ${i}`);
-        const pe = fflonkInfo.peCtx[i];
-        const pNum = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[pe.numId]);
-        const pDen = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[pe.denId]);
-        const z = await calculateZ(curve.Fr,pNum, pDen);
-        setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], z);
-
-        let coefs = await curve.Fr.ifft(ctx.cm3_n.slice((i + nPlookups)*ctx.N*curve.Fr.n8, (i + nPlookups + 1)*ctx.N*curve.Fr.n8));
-
-        for (let j = 0; j < ctx.N; j++) {
-            ctx.cm3_2ns.set(coefs.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + (i + nPlookups) * ctx.N) * curve.Fr.n8);
-        }
-
-        ctx[`Permutation.Z${i}`] = new Polynomial(ctx.cm3_2ns.slice((i + nPlookups)*ctx.N*curve.Fr.n8, (i + nPlookups + 1)*ctx.N*curve.Fr.n8), curve, logger);
-        
-        // if(randomBlinding[`Permutation.Z${i}`] > 0) {
-        //     const blindingCoefs = [];
-        //     for(let l = 0; l < randomBlinding[`Permutation.Z${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
-        //     ctx[`Permutation.Z${i}`].blindCoefficients(blindingCoefs);
-        // }
-    }
-
-    const nConnections = fflonkInfo.ciCtx.length;
-    for (let i=0; i<nConnections; i++) {
-        console.log(`Calculating z for connection ${i}`);
-        const ci = fflonkInfo.ciCtx[i];
-        const pNum = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[ci.numId]);
-        const pDen = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[ci.denId]);
-        const z = await calculateZ(curve.Fr,pNum, pDen);
-        setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], z);
-
-        let coefs = await curve.Fr.ifft(ctx.cm3_n.slice((i + nPlookups + nPermutations)*ctx.N*curve.Fr.n8, (i + nPlookups + nPermutations + 1)*ctx.N*curve.Fr.n8));
-
-        for (let j = 0; j < ctx.N; j++) {
-            ctx.cm3_2ns.set(coefs.slice(j*curve.Fr.n8, (j+1)*curve.Fr.n8), (j + (i + nPlookups + nPermutations) * ctx.N) * curve.Fr.n8);
-        }
-
-        ctx[`Connection.Z${i}`] = new Polynomial(ctx.cm3_2ns.slice((i + nPlookups + nPermutations)*ctx.N*curve.Fr.n8, (i + nPlookups + nPermutations + 1)*ctx.N*curve.Fr.n8), curve, logger);
-        
-        // if(randomBlinding[`Connection.Z${i}`] > 0) {
-        //     const blindingCoefs = [];
-        //     for(let l = 0; l < randomBlinding[`Connection.Z${i}`]; ++l) blindingCoefs.push(ctx.challenges.b[bIndex++]); 
-        //     ctx[`Connection.Z${i}`].blindCoefficients(blindingCoefs);
-        // }
-    }
-
-    const commits3 = await commit(3, zkey, ctx, PTau, curve, {multiExp: true, logger});
-    for(let j = 0; j < commits3.length; ++j) {
-        committedPols[`${commits3[j].index}`] = {commit: commits3[j].commit, pol: commits3[j].pol}
-
-    }
-
-    if (parallelExec) {
-        await calculateExpsParallel(pool, ctx, "step3", fflonkInfo, zkey);
-    } else {
-        calculateExps(ctx, fflonkInfo.step3, "n");
-    }
-
-    transcript.addScalar(ctx.challenges[3]);
-    ctx.challenges[4] = transcript.getChallenge(); // vc
-    transcript.reset();
-
-    
-    if (parallelExec) {
-        await calculateExpsParallel(pool, ctx, "step42ns", fflonkInfo, zkey);
-    } else {
-        calculateExps(ctx, fflonkInfo.step42ns, "2ns");
-    }
-    
-    ctx[`Q`] = new Polynomial(ctx.q_2ns, curve, logger);
-
-
-    const commits4 = await commit(4, zkey, ctx, PTau, curve, {multiExp: true, logger});
-    for(let j = 0; j < commits4.length; ++j) {
-        committedPols[`${commits4[j].index}`] = {commit: commits4[j].commit, pol: commits4[j].pol}
-    }
-
-    const [cmts, evaluations, xiSeed] = await open(zkey, PTau, ctx, committedPols, curve, {logger});
-    const powerW = lcm(Object.keys(zkey).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
-    let challengeXi = curve.Fr.exp(xiSeed, powerW);
-    console.log("Q", curve.Fr.toString(ctx["Q"].evaluate(challengeXi)));
+    const [cmts, evaluations] = await open(zkey, PTau, ctx, committedPols, curve, {logger});
 
     await pool.terminate();
 
@@ -359,20 +139,317 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         evaluations,
         publics: ctx.publics,
     };    
+
+    async function round1() {
+        // STEP 1.1 - Compute random challenge
+        // Add preprocessed polynomials to the transcript
+        // TODO: Add preprocessed polynomials to the transcript
+        const cnstCommitPols = Object.keys(zkey).filter(k => k.match(/^f\d/));
+        for(let i = 0; i < cnstCommitPols.length; ++i) {
+            transcript.addPolCommitment(zkey[cnstCommitPols[i]]);
+            committedPols[`${cnstCommitPols[i]}`] = {commit: zkey[cnstCommitPols[i]]};
+        }
+        
+        // STEP 1.1 - Compute random challenge
+        for (let i = 0; i < cnstPols.$$nPols; i++) {
+            const sOffset = i * sDomain;
+            const sOffsetExt = i * sDomainExt;
+
+            const name = cnstPols.$$defArray[i].name;
+            if (cnstPols.$$defArray[i].idx >= 0) name += cnstPols.$$defArray[i].idx;
+
+            if (logger) logger.debug(`··· Preparing ${name} constant polynomial`);
+
+            const cnstPolBuffer = cnstPols.$$array[i];
+            for (let j = 0; j < cnstPolBuffer.length; j++) {
+                ctx.const_n.set(Fr.e(cnstPolBuffer[j]), sOffset + j * n8r);
+            }
+
+            // Compute coefficients
+            ctx[name] = await Polynomial.fromEvaluations(ctx.const_n.slice(sOffset, sOffset + sDomain), curve, logger);
+            
+            // Compute extended evals
+            ctx.const_2ns.set(ctx[name].coef, sOffsetExt);
+            const bufferEvs = await Fr.fft(ctx.const_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
+            ctx.const_2ns.set(bufferEvs, sOffsetExt);
+        }
+
+        const commitsConstants = await commit(0, zkey, ctx, PTau, curve, { multiExp: false, logger });
+
+        for (let j = 0; j < commitsConstants.length; ++j) {
+            committedPols[`${commitsConstants[j].index}`].pol = commitsConstants[j].pol;
+        }
+
+
+        for (let i = 0; i < cmPols.$$nPols; i++) {
+            const sOffset = i * sDomain;
+            const sOffsetExt = i * sDomainExt;
+
+            let name = cmPols.$$defArray[i].name;
+            if (cmPols.$$defArray[i].idx >= 0)
+                name += cmPols.$$defArray[i].idx;
+
+            if (logger) logger.debug(`··· Preparing '${name}' polynomial`);
+
+            // Compute polynomial evaluations
+            const cmPolBuffer = cmPols.$$array[i];
+            for (let j = 0; j < cmPolBuffer.length; j++) {
+                ctx.cm1_n.set(Fr.e(cmPolBuffer[j]), sOffset + j * n8r);
+            }
+
+            let buffer = ctx.cm1_n.slice(sOffset, sOffset + sDomain);
+            buffer = await Fr.batchToMontgomery(buffer);
+            ctx.cm1_n.set(buffer, sOffset);
+
+            // Compute polynomial coefficients
+            ctx[name] = await Polynomial.fromEvaluations(buffer, curve, logger);
+
+            // Compute extended evals
+            ctx.cm1_2ns.set(ctx[name].coef, sOffsetExt);
+            const bufferEvs = await Fr.fft(ctx.cm1_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
+            ctx.cm1_2ns.set(bufferEvs, sOffsetExt);
+
+            for (let j = 0; j < ctx.NExt; j++) {
+                console.log(name, j, Fr.toString(ctx.cm1_2ns.slice(sOffsetExt + j * n8r, sOffsetExt + (j+1) * n8r)));
+            }
+
+        }
+
+        let i = 14;
+        console.log("A", i, Fr.toString(ctx.cm1_2ns.slice((0*16 + i)*32,(0*16 + i + 1)*32)));
+        console.log("B", i, Fr.toString(ctx.cm1_2ns.slice((1*16 + i)*32,(1*16 + i + 1)*32)));
+        let tmp0 = ctx.curve.Fr.mul(ctx.cm1_2ns.slice((0*16 + i)*32,(0*16 + i + 1)*32), ctx.cm1_2ns.slice((0*16 + i)*32,(0*16 + i + 1)*32));
+        let tmp1 = ctx.curve.Fr.sub(tmp0, ctx.cm1_2ns.slice((1*16 + i)*32,(1*16 + i + 1)*32));
+        console.log(Fr.toString(tmp1));
+
+
+        const commits1 = await commit(1, zkey, ctx, PTau, curve, { multiExp: true, logger });
+        for (let j = 0; j < commits1.length; ++j) {
+            committedPols[`${commits1[j].index}`] = { commit: commits1[j].commit, pol: commits1[j].pol };
+        }
+    }
+
+    async function round2() {
+        transcript.reset();
+
+        if (logger) logger.debug("> Computing challenges alpha and beta");
+
+        // Add all the publics to the transcript
+        for (let i = 0; i < fflonkInfo.publics.length; i++) {
+            transcript.addScalar(ctx.publics[i]);
+        }
+
+        // TODO REVIEW
+        if (0 === transcript.data.length) {
+            transcript.addScalar(Fr.one);
+        }
+
+        // Compute challenge alpha
+        ctx.challenges[0] = transcript.getChallenge();
+        if (logger) logger.debug("··· challenges.alpha: " + Fr.toString(ctx.challenges[0]));
+
+        // Compute challenge beta
+        transcript.reset();
+        transcript.addScalar(ctx.challenges[0]);
+        ctx.challenges[1] = transcript.getChallenge();
+        if (logger) logger.debug("··· challenges.beta: " + Fr.toString(ctx.challenges[1]));
+
+        if(0 === fflonkInfo.puCtx.length) {
+            if(logger) logger.debug("··· !!! No polynomials to compute...skipping round 2");
+            return;
+        }
+
+        for (let i = 0; i < fflonkInfo.puCtx.length; i++) {
+            const sOffset = 2 * i * sDomain;
+            const sOffsetExt = 2 * i * sDomainExt;
+
+            const puCtx = fflonkInfo.puCtx[i];
+
+            const fPol = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[puCtx.fExpId]);
+            const tPol = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[puCtx.tExpId]);
+
+            const [h1, h2] = calculateH1H2(Fr, fPol, tPol);
+            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], h1);
+            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], h2);
+
+            // Compute polynomial coefficients
+            ctx[`Plookup.H1_${i}`] = await Polynomial.fromEvaluations(ctx.cm2_n.slice(sOffset, sOffset + sDomain), curve, logger);
+            ctx[`Plookup.H2_${i}`] = await Polynomial.fromEvaluations(ctx.cm2_n.slice(sOffset + sDomain, sOffset + 2 * sDomain), curve, logger);
+
+            // Compute extended evals
+            ctx.cm2_2ns.set(ctx[`Plookup.H1_${i}`].coef, sOffsetExt);
+            ctx.cm2_2ns.set(ctx[`Plookup.H2_${i}`].coef, sOffsetExt + sDomainExt);
+
+            const bufferEvs1 = await Fr.fft(ctx.cm2_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
+            const bufferEvs2 = await Fr.fft(ctx.cm2_2ns.slice(sOffsetExt + sDomainExt, sOffsetExt + 2*sDomainExt));
+
+            ctx.cm2_2ns.set(bufferEvs1, sOffsetExt);
+            ctx.cm2_2ns.set(bufferEvs2, sOffsetExt + sDomainExt);
+
+
+        }
+
+        const commits2 = await commit(2, zkey, ctx, PTau, curve, { multiExp: true, logger });
+        for (let j = 0; j < commits2.length; ++j) {
+            committedPols[`${commits2[j].index}`] = { commit: commits2[j].commit, pol: commits2[j].pol };
+        }
+    }
+
+    async function round3() {
+        transcript.reset();
+
+        if (logger) logger.debug("> Computing challenges gamma and delta");
+
+        // Compute challenge gamma
+        transcript.addScalar(ctx.challenges[0]);
+        transcript.addScalar(ctx.challenges[1]);
+        ctx.challenges[2] = transcript.getChallenge();
+        if (logger) logger.debug("··· challenges.gamma: " + Fr.toString(ctx.challenges[2]));
+
+        // Compute challenge delta
+        transcript.reset();
+        transcript.addScalar(ctx.challenges[2]);
+        ctx.challenges[3] = transcript.getChallenge();
+        if (logger) logger.debug("··· challenges.delta: " + Fr.toString(ctx.challenges[3]));
+
+        const nPlookups = fflonkInfo.puCtx.length;
+        const nPermutations = fflonkInfo.peCtx.length;
+        const nConnections = fflonkInfo.ciCtx.length;
+
+        if(0 === nPlookups + nPermutations + nConnections) {
+            if(logger) logger.debug("··· !!! No polynomials to compute...skipping round 3");
+            return;
+        }
+
+        for (let i = 0; i < nPlookups; i++) {
+            const sOffset = i * sDomain;
+            const sOffsetExt = i * sDomainExt;
+
+            if (logger) logger.debug(`··· Calculating z for plookup ${i}`);
+
+            const pu = fflonkInfo.puCtx[i];
+            const pNum = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[pu.numId]);
+            const pDen = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[pu.denId]);
+            const z = await calculateZ(Fr, pNum, pDen);
+
+            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], z);
+
+            // Compute polynomial coefficients
+            ctx[`Plookup.Z${i}`] = await Polynomial.fromEvaluations(ctx.cm3_n.slice(sOffset, sOffset + sDomain), curve, logger);
+
+            // Compute extended evals
+            ctx.cm3_2ns.set(ctx[`Plookup.Z${i}`].coef, sOffsetExt);
+            const bufferEvs = await Fr.fft(ctx.cm3_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
+            ctx.cm3_2ns.set(bufferEvs, sOffsetExt);
+        }
+
+        let offsetCm3 = nPlookups * sDomain;
+        let offsetCm3Ext = nPlookups * sDomainExt;
+        for (let i = 0; i < nPermutations; i++) {
+            const sOffset = offsetCm3 + i * sDomain;
+            const sOffsetExt = offsetCm3Ext + i * sDomainExt;
+            if (logger) logger.debug(`··· Calculating z for permutation check ${i}`);
+
+            const pe = fflonkInfo.peCtx[i];
+            const pNum = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[pe.numId]);
+            const pDen = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[pe.denId]);
+            const z = await calculateZ(Fr, pNum, pDen);
+
+            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], z);
+
+            // Compute polynomial coefficients
+            ctx[`Permutation.Z${i}`] = await Polynomial.fromEvaluations(ctx.cm3_n.slice(sOffset, sOffset + sDomain), curve, logger);
+
+            // Compute extended evals
+            ctx.cm3_2ns.set(ctx[`Permutation.Z${i}`].coef, sOffsetExt);
+            const bufferEvs = await Fr.fft(ctx.cm3_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
+            ctx.cm3_2ns.set(bufferEvs, sOffsetExt);
+        }
+
+        offsetCm3 += nPermutations * sDomain;
+        offsetCm3Ext += nPermutations * sDomainExt;
+        for (let i = 0; i < nConnections; i++) {
+            const sOffset = offsetCm3 + i * sDomain;
+            const sOffsetExt = offsetCm3Ext + i * sDomainExt;
+
+            if (logger)
+                logger.debug(`··· Calculating z for connection ${i}`);
+
+            const ci = fflonkInfo.ciCtx[i];
+            const pNum = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[ci.numId]);
+            const pDen = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[ci.denId]);
+            const z = await calculateZ(Fr, pNum, pDen);
+
+            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], z);
+
+            // Compute polynomial coefficients
+            ctx[`Connection.Z${i}`] = Polynomial.fromCoefficientsArray(ctx.cm3_2ns.slice(sOffset, sOffset + sDomain), curve, logger);
+
+            // Compute extended evals
+            ctx.cm3_2ns.set(ctx[`Connection.Z${i}`].coef, sOffsetExt);
+            const bufferEvs = await Fr.fft(ctx.cm3_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
+            ctx.cm3_2ns.set(bufferEvs, sOffsetExt);
+        }
+
+        const commits3 = await commit(3, zkey, ctx, PTau, curve, { multiExp: true, logger });
+        for (let j = 0; j < commits3.length; ++j) {
+            committedPols[`${commits3[j].index}`] = { commit: commits3[j].commit, pol: commits3[j].pol };
+        }
+    }
+
+    async function round4() {
+        transcript.reset();
+
+        if (logger) logger.debug("> Computing challenge a");
+
+        // Compute challenge a
+        transcript.addScalar(ctx.challenges[2]);
+        transcript.addScalar(ctx.challenges[3]);
+        ctx.challenges[4] = transcript.getChallenge();
+        if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
+
+        ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, curve, logger);
+
+        console.log("Q", ctx["Q"].degree());
+
+        for(let i = 0; i < 16; ++i) {
+            console.log(i, Fr.toString(ctx.q_2ns.slice(i*n8r, i*n8r + n8r)));
+        }
+        console.log("DOMAIN SIZE", domainSize);
+
+        ctx["Q"].divByZerofier(domainSize, Fr.one);
+
+        console.log(ctx["Q"].degree());
+
+        const commits4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });
+        for (let j = 0; j < commits4.length; ++j) {
+            committedPols[`${commits4[j].index}`] = { commit: commits4[j].commit, pol: commits4[j].pol };
+        }
+    }
+
+    async function callCalculateExps(step, dom, pool, ctx, fflonkInfo, zkey, logger) {
+        if (parallelExec) {
+            await calculateExpsParallel(pool, ctx, step, fflonkInfo, zkey);
+        } else {
+            calculateExps(ctx, fflonkInfo[step], dom, logger);
+        }
+    }
 }
 
 
-function calculateExps(ctx, code, dom) {
+function calculateExps(ctx, code, dom, logger) {
     ctx.tmp = new Array(code.tmpUsed);
 
     cFirst = new Function("ctx", "i", compileCode(ctx, code.first, dom));
 
-    const N = ctx.N;
-
+    const N = dom === "n" ? ctx.N : ctx.NExt;
     const pCtx = ctxProxy(ctx);
 
-    for (let i=0; i<N; i++) {
-        if ((i%1000) == 0) console.log(`Calculating expression.. ${i}/${N}`);
+    for (let i = 0; i < N; i++) {
+        if (i !== 0 && (i % 1000) === 0) {
+            if(logger) logger.debug(`··· Calculating expression ${i}/${N}`);
+        }
+
         cFirst(pCtx, i);
     }
 }
@@ -468,14 +545,14 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, zkey) {
         };
         for (let s =0; s<execInfo.inputSections.length; s++) {
             const si = execInfo.inputSections[s];
-            ctxIn[si.name] = new BigBuffer((curN+next)*si.width*ctx.curve.Fr.n8);
-            const s1 = si.width > 0 ? ctx[si.name].slice(i*si.width*ctx.curve.Fr.n8, (i + curN)*si.width*ctx.curve.Fr.n8) : ctx[si.name];
+            ctxIn[si.name] = new BigBuffer((curN+next)*si.width*ctx.Fr.n8);
+            const s1 = si.width > 0 ? ctx[si.name].slice(i*si.width*ctx.Fr.n8, (i + curN)*si.width*ctx.Fr.n8) : ctx[si.name];
             for(let j = 0; j < curN*si.width; ++j) {
-                ctxIn[si.name].set(s1.slice(j*ctx.curve.Fr.n8, (j+1)*ctx.curve.Fr.n8), j*ctx.curve.Fr.n8);
+                ctxIn[si.name].set(s1.slice(j*ctx.Fr.n8, (j+1)*ctx.Fr.n8), j*ctx.Fr.n8);
             }
-            const sNext = si.width > 0 ? ctx[si.name].slice( (((i+curN)%n) *si.width)*ctx.curve.Fr.n8, (((i+curN)%n) *si.width + si.width*next)*ctx.curve.Fr.n8) : ctx[si.name];
+            const sNext = si.width > 0 ? ctx[si.name].slice( (((i+curN)%n) *si.width)*ctx.Fr.n8, (((i+curN)%n) *si.width + si.width*next)*ctx.Fr.n8) : ctx[si.name];
             for(let j = 0; j < si.width*next; ++j) {
-                ctxIn[si.name].set(sNext.slice(j*ctx.curve.Fr.n8, (j+1)*ctx.curve.Fr.n8), (curN*si.width + j)*ctx.curve.Fr.n8);
+                ctxIn[si.name].set(sNext.slice(j*ctx.Fr.n8, (j+1)*ctx.Fr.n8), (curN*si.width + j)*ctx.Fr.n8);
             }
         }
         if (useThreads) {
@@ -490,8 +567,8 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, zkey) {
     for (let i=0; i<res.length; i++) {
         for (let s =0; s<execInfo.outputSections.length; s++) {
             const si = execInfo.outputSections[s];
-            for(let j = 0; j < res[i][si.name].byteLength/ctx.curve.Fr.n8 - si.width*next; ++j) {
-                ctx[si.name].set(res[i][si.name].slice(j*ctx.curve.Fr.n8, (j+1)*ctx.curve.Fr.n8), (i*nPerThread*si.width + j)*ctx.curve.Fr.n8);
+            for(let j = 0; j < res[i][si.name].byteLength/ctx.Fr.n8 - si.width*next; ++j) {
+                ctx[si.name].set(res[i][si.name].slice(j*ctx.Fr.n8, (j+1)*ctx.Fr.n8), (i*nPerThread*si.width + j)*ctx.Fr.n8);
             }
         }
     }
@@ -502,7 +579,7 @@ function compileCode(ctx, code, dom, ret) {
     const body = [];
 
     const next = 1;
-    const N = ctx.N;
+    const N = dom === "n" ? ctx.N : ctx.NExt;
 
     for (let j=0;j<code.length; j++) {
         const src = [];
@@ -536,9 +613,9 @@ function compileCode(ctx, code, dom, ret) {
             case "const": {
                 const index = r.prime ? `(i + ${next})%${N}` : "i"
                 if(dom === "n") {
-                    return `ctx.const_n.slice((${r.id}*${N} + ${index})*${ctx.curve.Fr.n8},(${r.id}*${N} + ${index} + 1)*${ctx.curve.Fr.n8})`;
+                    return `ctx.const_n.slice((${r.id}*${N} + ${index})*${ctx.Fr.n8},(${r.id}*${N} + ${index} + 1)*${ctx.Fr.n8})`;
                 } else if(dom === "2ns") {
-                    return `ctx.const_2ns.slice((${r.id}*${N} + ${index})*${ctx.curve.Fr.n8},(${r.id}*${N} + ${index} + 1)*${ctx.curve.Fr.n8})`;
+                    return `ctx.const_2ns.slice((${r.id}*${N} + ${index})*${ctx.Fr.n8},(${r.id}*${N} + ${index} + 1)*${ctx.Fr.n8})`;
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -560,20 +637,19 @@ function compileCode(ctx, code, dom, ret) {
                 }
             }
             case "number": {
-                return `ctx.curve.Fr.e(${r.value}n)`;
+                return `ctx.Fr.e(${r.value}n)`;
             }
             case "public": return `ctx.publics[${r.id}]`;
             case "challenge": return `ctx.challenges[${r.id}]`;
             case "eval": return `ctx.evals[${r.id}]`;
             case "x": 
                 if (dom=="n") {
-                    return `ctx.x_n.slice(i*ctx.curve.Fr.n8, (i+1)*ctx.curve.Fr.n8)`;
+                    return `ctx.x_n.slice(i*ctx.Fr.n8, (i+1)*ctx.Fr.n8)`;
                 } else if (dom=="2ns") {
-                    return `ctx.x_2ns.slice(i*ctx.curve.Fr.n8, (i+1)*ctx.curve.Fr.n8)`;
+                    return `ctx.x_2ns.slice(i*ctx.Fr.n8, (i+1)*ctx.Fr.n8)`;
                 } else {
                     throw new Error("Invalid dom");
                 }
-            case "Zi": return `ctx.Zi(i)`;
             default: throw new Error("Invalid reference type get: " + r.type);
         }
     }
@@ -588,7 +664,7 @@ function compileCode(ctx, code, dom, ret) {
                 if (dom=="n") {
                     throw new Error("Accessing q in domain n");
                 } else if (dom=="2ns") {
-                    body.push(`  ctx.q_2ns.set(${val}, i*${ctx.curve.Fr.n8})`);
+                    body.push(`  ctx.q_2ns.set(${val}, i*${ctx.Fr.n8})`);
                 }
                 break;
             case "cm":
@@ -616,9 +692,9 @@ function compileCode(ctx, code, dom, ret) {
         offset = p.sectionPos;
         let index = prime ? `(i + ${next})%${N}` : "i";
         if(setValue) {
-            return `ctx.${p.section}.set(${setValue},(${offset}*${N} + ${index})*${ctx.curve.Fr.n8})`;
+            return `ctx.${p.section}.set(${setValue},(${offset}*${N} + ${index})*${ctx.Fr.n8})`;
         } else {
-            return `ctx.${p.section}.slice((${offset}*${N} + ${index})*${ctx.curve.Fr.n8},(${offset}*${N} + ${index} + 1)*${ctx.curve.Fr.n8})`;
+            return `ctx.${p.section}.slice((${offset}*${N} + ${index})*${ctx.Fr.n8},(${offset}*${N} + ${index} + 1)*${ctx.Fr.n8})`;
         }
         
     }
@@ -651,7 +727,6 @@ function ctxProxy(ctx) {
     createProxy("cm1_2ns");
     createProxy("cm2_2ns");
     createProxy("cm3_2ns");
-    createProxy("cm4_2ns");
     createProxy("tmpExp_n");
     createProxy("const_n");
     createProxy("const_2ns");
@@ -661,7 +736,6 @@ function ctxProxy(ctx) {
 
 
     pCtx.curve = ctx.curve;
-    pCtx.Zi = ctx.Zi;
     pCtx.publics = ctx.publics;
     pCtx.challenges = ctx.challenges;
 
@@ -669,7 +743,7 @@ function ctxProxy(ctx) {
     pCtx.N = ctx.N;
     pCtx.fflonkInfo = ctx.fflonkInfo;
     pCtx.tmp = ctx.tmp;
-
+    pCtx.Fr = ctx.Fr;
     pCtx.evals = ctx.evals;
 
     return pCtx;
@@ -684,7 +758,7 @@ function ctxProxy(ctx) {
 function setPol(ctx, fflonkInfo, idPol, pol) {
     const p = getPolRef(ctx, fflonkInfo, idPol);
     for (let i=0; i<p.deg; i++) {
-        p.buffer.set(pol[i], (p.offset * ctx.N + i) * ctx.curve.Fr.n8);
+        p.buffer.set(pol[i], (p.offset * ctx.N + i) * ctx.Fr.n8);
     }
 }
 
@@ -705,7 +779,7 @@ function getPol(ctx, fflonkInfo, idPol) {
     const p = getPolRef(ctx, fflonkInfo, idPol);
     const res = new Array(p.deg);
     for (let i=0; i<p.deg; i++) {
-    res[i] = p.buffer.slice((p.offset * ctx.N + i) * ctx.curve.Fr.n8, (p.offset * ctx.N + i + 1) * ctx.curve.Fr.n8)
+    res[i] = p.buffer.slice((p.offset * ctx.N + i) * ctx.Fr.n8, (p.offset * ctx.N + i + 1) * ctx.Fr.n8)
     }
     return res;
 }

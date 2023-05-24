@@ -1,11 +1,16 @@
 const { verifyOpenings, Keccak256Transcript, computeChallengeXiSeed, lcm } = require("shplonkjs");
 const {getCurveFromName} = require("ffjavascript");
 
-module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits, evaluations, fflonkInfo, options) {
+const Logger = require('logplease');
 
-    const logger = options.logger;
+module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits, evaluations, fflonkInfo, options) {
+//    const logger = options.logger;
+    const logger = Logger.create("logger");
 
     const curve = await getCurveFromName("bn128");
+
+    const Fr = curve.Fr;
+
     const ctx = {};
     ctx.evals = [];
     ctx.publics = publics;
@@ -13,6 +18,25 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
     ctx.curve = curve;
     ctx.N = 1 << zkey.power;
     ctx.nBits = zkey.power;
+
+    const domainSize = ctx.N;
+    const power = zkey.power;
+    const n8r = Fr.n8;
+    const sDomain = domainSize * n8r;
+
+    if (logger) {
+        logger.debug("------------------------------");
+        logger.debug("  PIL-FFLONK VERIFY SETTINGS");
+        logger.debug(`  Curve:         ${curve.name}`);
+        logger.debug(`  Domain size:   ${domainSize} (2^${power})`);
+        logger.debug(`  Const  pols:   ${fflonkInfo.nConstants}`);
+        logger.debug(`  Step 1 pols:   ${fflonkInfo.mapSectionsN.cm1_n}`);
+        logger.debug(`  Step 2 pols:   ${fflonkInfo.mapSectionsN.cm2_n}`);
+        logger.debug(`  Step 3 pols:   ${fflonkInfo.mapSectionsN.cm3_n}`);
+        logger.debug(`  Step 4 pols:   ${fflonkInfo.mapSectionsN.cm4_n}`);
+        logger.debug(`  Temp exp pols: ${fflonkInfo.mapSectionsN.tmpExp_n}`);
+        logger.debug("------------------------------");
+    }
 
     const transcript = new Keccak256Transcript(curve);
 
@@ -29,24 +53,35 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
         transcript.addScalar(curve.Fr.one);
     }
     
-    ctx.challenges[0] = transcript.getChallenge(); // u
+    // Compute challenge alpha
+    ctx.challenges[0] = transcript.getChallenge();
+    if (logger) logger.debug("··· challenges.alpha: " + Fr.toString(ctx.challenges[0]));
+    
+    // Compute challenge beta
     transcript.reset();
-
     transcript.addScalar(ctx.challenges[0]);
-    ctx.challenges[1] = transcript.getChallenge(); // defVal
-    transcript.reset();
+    ctx.challenges[1] = transcript.getChallenge();
+    if (logger) logger.debug("··· challenges.beta: " + Fr.toString(ctx.challenges[1]));
 
+    // Compute challenge gamma
+    transcript.reset();
+    transcript.addScalar(ctx.challenges[0]);
     transcript.addScalar(ctx.challenges[1]);
-    ctx.challenges[2] = transcript.getChallenge(); // beta
-    transcript.reset();
+    ctx.challenges[2] = transcript.getChallenge();
+    if (logger) logger.debug("··· challenges.gamma: " + Fr.toString(ctx.challenges[2]));
 
+    // Compute challenge delta
+    transcript.reset();
     transcript.addScalar(ctx.challenges[2]);
-    ctx.challenges[3] = transcript.getChallenge(); // gamma
-    transcript.reset();
+    ctx.challenges[3] = transcript.getChallenge();
+    if (logger) logger.debug("··· challenges.delta: " + Fr.toString(ctx.challenges[3]));
 
-    transcript.addScalar(ctx.challenges[3]);
-    ctx.challenges[4] = transcript.getChallenge(); // vc
+    // Compute challenge a
     transcript.reset();
+    transcript.addScalar(ctx.challenges[2]);
+    transcript.addScalar(ctx.challenges[3]);
+    ctx.challenges[4] = transcript.getChallenge();
+    if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 
     // Store the polynomial commits to its corresponding fi
     for(let i = 0; i < zkey.f.length; ++i) {

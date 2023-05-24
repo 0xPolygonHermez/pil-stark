@@ -54,11 +54,11 @@ module.exports.fflonkInfoGen = function fflonkInfoGen(F, _pil) {
 
     generateStep3(F, res, pil, ctx);                        // Z Polynomials and LC of permutation checks.
 
-    generateConstraintPolynomial(res, pil, ctx, ctx_2ns);            // Step4
+    generateConstraintPolynomial(res, pil, ctx, ctx_2ns, false);            // Step4
 
     generateConstraintPolynomialVerifier(res, pil);
 
-
+    console.log(res.qDeg);
     let N = 1 << pilPower;
     map(res, pil, N, N, false);
     res.publics = pil.publics;

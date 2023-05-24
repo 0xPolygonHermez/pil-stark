@@ -1,6 +1,5 @@
 
 const workerpool = require('workerpool');
-const { buildZhInv } = require("../../helpers/polutils.js");
 const {BigBuffer} = require("ffjavascript");
 
 
@@ -10,7 +9,6 @@ module.exports.fflonkgen_execute = async function fflonkgen_execute(ctx, cFirstS
 
     console.log(`start exec ${st_name}... ${st_i}/${st_n} `);
     ctx.tmp = [];
-    ctx.Zi = buildZhInv(ctx.curve.Fr, ctx.nBits, 0, st_i);
 
     for (let s=0; s<execInfo.outputSections.length; s++) {
         const si = execInfo.outputSections[s];
