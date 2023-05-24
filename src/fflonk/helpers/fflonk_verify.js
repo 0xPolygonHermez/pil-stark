@@ -119,20 +119,12 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
 
     const xN = curve.Fr.exp(challengeXi, ctx.N);
     ctx.Z = curve.Fr.sub(xN, curve.Fr.one);   
-
-    let xAcc = curve.Fr.one;
-    let q = curve.Fr.zero;
-    for (let i=0; i<fflonkInfo.qDeg; i++) {
-        let evalName = fflonkInfo.qDeg === 1 ? "Q" : `Q${i}`;
-        q = curve.Fr.add(q, curve.Fr.mul(xAcc, evaluations[evalName]));
-        xAcc = curve.Fr.mul(xAcc, xN);
-    }
    
-    const qZ = curve.Fr.mul(q, ctx.Z);
+    const qZ = curve.Fr.mul(evaluations["Q"], ctx.Z);
 
-    Object.keys(evaluations).map(ev => console.log(ev, curve.Fr.toString(evaluations[ev])));
-    console.log("QZ", curve.Fr.toString(qZ));
-    console.log("EXEC CODE", curve.Fr.toString(execCode));
+    if(!curve.Fr.eq(qZ, execCode)) {
+        return false;
+    }
 
     const res = verifyOpenings(zkey, commits, evaluations, curve, logger);
     await curve.terminate();
