@@ -53,17 +53,17 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     console.log(`Total Number of Poseidon:  ${customGatesInfo.nPoseidon12 + customGatesInfo.nCustPoseidon12} -> Constraints ${(customGatesInfo.nPoseidon12 + customGatesInfo.nCustPoseidon12)*6}`);
     console.log(`Number of FFT4: ${customGatesInfo.nFFT4} -> Constraints: ${customGatesInfo.nFFT4*2}`);
     console.log(`Number of EvPol4: ${customGatesInfo.nEvPol4} -> Constraints: ${customGatesInfo.nEvPol4*2}`);
-    console.log(`Number of TreeSelector8: ${customGatesInfo.nTreeSelector8} -> Constraints: ${customGatesInfo.nTreeSelector8*2}`);
+    console.log(`Number of TreeSelector8: ${customGatesInfo.nTreeSelector4} -> Constraints: ${customGatesInfo.nTreeSelector4}`);
     
     const nRowsCustomGates = nPublicRows + customGatesInfo.nCustPoseidon12*6 + customGatesInfo.nPoseidon12*6 + customGatesInfo.nFFT4*2 + customGatesInfo.nEvPol4*2;
     
-    const nRowsPlonk = nRowsCustomGates >= CPlonkConstraintsHalfs ? 0 : Math.floor((CPlonkConstraintsHalfs - (nRowsCustomGates + customGatesInfo.nTreeSelector8) + 2) / 3);
+    const nRowsPlonk = nRowsCustomGates >= CPlonkConstraintsHalfs ? 0 : Math.floor((CPlonkConstraintsHalfs - nRowsCustomGates + 2) / 3);
     
     console.log(`Number of plonk constraints: ${plonkConstraints.length} -> Number of contraints halfs: ${CPlonkConstraintsHalfs}`); 
-    console.log(`Number of Plonk halfs stored in Custom gates -> ${nRowsCustomGates + customGatesInfo.nTreeSelector8}`);
+    console.log(`Number of Plonk halfs stored in Custom gates -> ${nRowsCustomGates}`);
     console.log(`Number of plonk constraints rows: ${nRowsPlonk} -> Number of halfs: ${nRowsPlonk*3}`);
 
-    const NUsed = nRowsCustomGates + nRowsPlonk + Math.floor((customGatesInfo.nCMul + 1)/2) + customGatesInfo.nTreeSelector8*2;
+    const NUsed = nRowsCustomGates + nRowsPlonk + Math.floor((customGatesInfo.nCMul + 1)/2) + customGatesInfo.nTreeSelector4;
 
     //Calculate the first power of 2 that's bigger than the number of constraints
     let nBits = log2(NUsed - 1) + 1;
@@ -123,7 +123,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
         constPols.Compressor.POSEIDONAFTERPART[i] = 0n;
         constPols.Compressor.POSEIDONCUSTFIRST[i] = 0n;
         constPols.Compressor.FFT4[i] = 0n;
-        constPols.Compressor.TREESELECTOR8[i] = 0n;
+        constPols.Compressor.TREESELECTOR4[i] = 0n;
         for (let k=0; k<12; k++) {
             const nPub = 12*i + k;
             // Since each row contains 12 public inputs, it is possible that
@@ -186,7 +186,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
                 constPols.Compressor.POSEIDONAFTERPART[r+i] = i === 3 ? 1n : 0n; // Round 26 -> Round 28
                 constPols.Compressor.CMUL[r+i] = 0n;
                 constPols.Compressor.EVPOL4[r+i] = 0n;
-                constPols.Compressor.TREESELECTOR8[r+i] = 0n;
+                constPols.Compressor.TREESELECTOR4[r+i] = 0n;
                 constPols.Compressor.FFT4[r+i] = 0n;
 
                 for (let k=12; k<18; k++) {
@@ -234,7 +234,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
                 constPols.Compressor.POSEIDONAFTERPART[r+i] = i === 3 ? 1n : 0n; // Round 26 -> Round 28
                 constPols.Compressor.CMUL[r+i] = 0n;
                 constPols.Compressor.EVPOL4[r+i] = 0n;
-                constPols.Compressor.TREESELECTOR8[r+i] = 0n;
+                constPols.Compressor.TREESELECTOR4[r+i] = 0n;
                 constPols.Compressor.FFT4[r+i] = 0n;
 
                 for (let k=12; k<18; k++) {
@@ -268,7 +268,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
                 constPols.Compressor.POSEIDONAFTERPART[r] = 0n;
                 constPols.Compressor.POSEIDONCUSTFIRST[r] = 0n;
                 constPols.Compressor.EVPOL4[r] = 0n;
-                constPols.Compressor.TREESELECTOR8[r] = 0n;
+                constPols.Compressor.TREESELECTOR4[r] = 0n;
                 constPols.Compressor.FFT4[r] = 0n;
                 
                 for (let k=0; k<18; k++) {
@@ -292,7 +292,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
             constPols.Compressor.POSEIDONAFTERPART[r] = 0n;
             constPols.Compressor.POSEIDONCUSTFIRST[r] = 0n;
             constPols.Compressor.EVPOL4[r] = 0n;
-            constPols.Compressor.TREESELECTOR8[r] = 0n;
+            constPols.Compressor.TREESELECTOR4[r] = 0n;
             constPols.Compressor.FFT4[r] = 1n;
 
             constPols.Compressor.CMUL[r+1] = 0n;
@@ -305,7 +305,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
             constPols.Compressor.POSEIDONAFTERPART[r+1] = 0n;
             constPols.Compressor.POSEIDONCUSTFIRST[r+1] = 0n;
             constPols.Compressor.EVPOL4[r+1] = 0n;
-            constPols.Compressor.TREESELECTOR8[r+1] = 0n;
+            constPols.Compressor.TREESELECTOR4[r+1] = 0n;
             constPols.Compressor.FFT4[r+1] = 0n;
 
             const type = customGatesInfo.FFT4Parameters[cgu.id][3];
@@ -357,7 +357,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
                 sMap[i][r+1] = i < 9 ? cgu.signals[12+i] : 0;
             }
             constPols.Compressor.EVPOL4[r] = 1n;
-            constPols.Compressor.TREESELECTOR8[r] = 0n;
+            constPols.Compressor.TREESELECTOR4[r] = 0n;
             constPols.Compressor.CMUL[r] = 0n;
             constPols.Compressor.GATE[r] = 0n;
             constPols.Compressor.GATE2[r] = 0n;
@@ -370,7 +370,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
             constPols.Compressor.FFT4[r] = 0n;
 
             constPols.Compressor.EVPOL4[r+1] = 0n;
-            constPols.Compressor.TREESELECTOR8[r+1] = 0n;
+            constPols.Compressor.TREESELECTOR4[r+1] = 0n;
             constPols.Compressor.CMUL[r+1] = 0n;
             constPols.Compressor.GATE[r+1] = 0n;
             constPols.Compressor.GATE2[r+1] = 0n;
@@ -391,15 +391,14 @@ module.exports = async function plonkSetup(F, r1cs, options) {
             extraRows.push(r);
             extraRows.push(r+1);
             r+= 2;
-        } else if(cgu.id == customGatesInfo.TreeSelector8Id) {
-            assert(cgu.signals.length === 30);
-            for (let i=0; i<18; i++) {
+        } else if(cgu.id == customGatesInfo.TreeSelector4Id) {
+            assert(cgu.signals.length === 17);
+            for (let i=0; i<17; i++) {
                 sMap[i][r] = cgu.signals[i];
-                sMap[i][r+1] = i < 12 ? cgu.signals[i+18] : 0;
             }
 
             constPols.Compressor.EVPOL4[r] = 0n;
-            constPols.Compressor.TREESELECTOR8[r] = 1n;
+            constPols.Compressor.TREESELECTOR4[r] = 1n;
             constPols.Compressor.CMUL[r] = 0n;
             constPols.Compressor.GATE[r] = 0n;
             constPols.Compressor.GATE2[r] = 0n;
@@ -411,27 +410,11 @@ module.exports = async function plonkSetup(F, r1cs, options) {
             constPols.Compressor.POSEIDONCUSTFIRST[r] = 0n;
             constPols.Compressor.FFT4[r] = 0n;
 
-            constPols.Compressor.EVPOL4[r+1] = 0n;
-            constPols.Compressor.TREESELECTOR8[r+1] = 0n;
-            constPols.Compressor.CMUL[r+1] = 0n;
-            constPols.Compressor.GATE[r+1] = 0n;
-            constPols.Compressor.GATE2[r+1] = 0n;
-            constPols.Compressor.POSEIDONM[r+1] = 0n;
-            constPols.Compressor.POSEIDONP[r+1] = 0n;
-            constPols.Compressor.POSEIDONFIRST[r+1] = 0n;
-            constPols.Compressor.PARTIALROUND[r+1] = 0n;
-            constPols.Compressor.POSEIDONAFTERPART[r+1] = 0n;
-            constPols.Compressor.POSEIDONCUSTFIRST[r+1] = 0n;
-            constPols.Compressor.FFT4[r+1] = 0n;
-
             for (let k=0; k<18; k++) {
                 constPols.Compressor.C[k][r] = 0n;
-                constPols.Compressor.C[k][r+1] = 0n;
             }
-            // Add r and r+1 to extraRows so that a[12], a[13], a[14] and a[15], a[16] and a[17] along with C[6], C[7], C[8], C[9], C[10] 
-            // can be used to verify two sets of plonk constraints
-            extraRows.push(r+1);
-            r += 2;
+    
+            r += 1;
         } else {
             throw new Error("Custom gate not defined", cgu.id);
         }
@@ -534,7 +517,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
             constPols.Compressor.POSEIDONAFTERPART[r] = 0n;
             constPols.Compressor.POSEIDONCUSTFIRST[r] = 0n;
             constPols.Compressor.FFT4[r] = 0n;
-            constPols.Compressor.TREESELECTOR8[r] = 0n;
+            constPols.Compressor.TREESELECTOR4[r] = 0n;
             sMap[0][r] = c[0];
             sMap[1][r] = c[1];
             sMap[2][r] = c[2];
@@ -627,7 +610,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     // Fill unused rows (NUsed < r < N) with empty gates
     while (r<N) {
         if ((r%100000) == 0) console.log(`Point check -> Empty gates... ${r}/${N}`);
-        constPols.Compressor.TREESELECTOR8[r] = 0n;
+        constPols.Compressor.TREESELECTOR4[r] = 0n;
         constPols.Compressor.EVPOL4[r] = 0n;
         constPols.Compressor.CMUL[r] = 0n;
         constPols.Compressor.GATE[r] = 0n;
