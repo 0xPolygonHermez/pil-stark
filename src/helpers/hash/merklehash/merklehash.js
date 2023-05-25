@@ -1,14 +1,16 @@
 const { assert } = require("chai");
 const LinearHash = require("../linearhash/linearhash");
+const LinearHashGPU = require("../linearhash/linearhash_gpu.js");
 
 buildPoseidon = require("../poseidon/poseidon");
 
 module.exports = class {
 
-    constructor(poseidon) {
+    constructor(poseidon, splitLinearHash = false) {
         this.poseidon = poseidon;
         this.F = poseidon.F;
-        this.lh = new LinearHash(poseidon);
+        this.splitLinearHash = splitLinearHash;
+        this.lh = splitLinearHash ? new LinearHashGPU(poseidon) : new LinearHash(poseidon);
     }
 
     async merkelize(vals, elementSize, elementsInLinear, nLinears, interleaved) {

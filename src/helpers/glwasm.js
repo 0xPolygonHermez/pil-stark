@@ -1086,8 +1086,8 @@ function build(module) {
 
     }
 
-    function buildMultiLinearHash() {
-        const f = module.addFunction("multiLinearHash");
+    function buildMultiLinearHashGPU() {
+        const f = module.addFunction("multiLinearHashGPU");
         f.addParam("pIn", "i32");       // 0
         f.addParam("width", "i32");     // 1
         f.addParam("heigth", "i32");    // 2
@@ -1115,6 +1115,102 @@ function build(module) {
                 ),
                 c.setLocal("i", c.i32_add(c.getLocal("i"), c.i32_const(1))),
                 c.setLocal("pIn", c.i32_add(c.getLocal("pIn"), c.i32_mul(c.getLocal("width"), c.i32_const(8)))),
+                c.setLocal("pOut", c.i32_add(c.getLocal("pOut"), c.i32_const(32))),
+                c.br(0)
+            ))
+        );
+    }
+
+    function buildMultiLinearHash() {
+        const f = module.addFunction("multiLinearHash");
+        f.addParam("pIn", "i32");       // 0
+        f.addParam("width", "i32");     // 1
+        f.addParam("heigth", "i32");    // 2
+        f.addParam("pOut", "i32");      // 3
+        f.addLocal("i", "i32");         // 4
+        f.addLocal("j", "i32");         // 5
+        f.addLocal("curN", "i32");      // 6
+
+        const c = f.getCodeBuilder();
+        f.addCode(
+            c.setLocal("i", c.i32_const(0)),
+            c.block(c.loop(
+                c.br_if(
+                    1,
+                    c.i32_ge_s(
+                        c.getLocal("i"),
+                        c.getLocal("heigth"),
+                    )
+                ),
+                c.i64_store(
+                    c.getLocal("pOut"),
+                    0,
+                    0,
+                    c.i64_const(0)
+                ),
+                c.i64_store(
+                    c.getLocal("pOut"),
+                    8,
+                    0,
+                    c.i64_const(0)
+                ),
+                c.i64_store(
+                    c.getLocal("pOut"),
+                    16,
+                    0,
+                    c.i64_const(0)
+                ),
+                c.i64_store(
+                    c.getLocal("pOut"),
+                    24,
+                    0,
+                    c.i64_const(0)
+                ),
+                c.setLocal("j", c.i32_const(0)),
+                c.block(c.loop(
+                    c.br_if(
+                        1,
+                        c.i32_ge_s(
+                            c.getLocal("j"),
+                            c.getLocal("width"),
+                        )
+                    ),
+                    c.setLocal("curN",
+                        c.i32_sub(
+                            c.getLocal("width"),
+                            c.getLocal("j")
+                        ),
+                    ),
+                    c.if(
+                        c.i32_gt_s(
+                            c.getLocal("curN"),
+                            c.i32_const(8)
+                        ),
+                        c.setLocal("curN", c.i32_const(8))
+                    ),
+                    c.call(
+                        "poseidon",
+                        c.getLocal("pIn"),
+                        c.getLocal("curN"),
+                        c.getLocal("pOut"),
+                        c.i32_const(4),
+                        c.getLocal("pOut"),
+                        c.i32_const(4)
+                    ),
+                    c.setLocal("j", c.i32_add(c.getLocal("j"), c.i32_const(8))),
+                    c.setLocal(
+                        "pIn",
+                        c.i32_add(
+                            c.getLocal("pIn"),
+                            c.i32_mul(
+                                c.getLocal("curN"),
+                                c.i32_const(8)
+                            )
+                        )
+                    ),
+                    c.br(0)
+                )),
+                c.setLocal("i", c.i32_add(c.getLocal("i"), c.i32_const(1))),
                 c.setLocal("pOut", c.i32_add(c.getLocal("pOut"), c.i32_const(32))),
                 c.br(0)
             ))
@@ -1167,6 +1263,7 @@ function build(module) {
     buildLinearHash();
     buildGroupLinear();
     buildMultiLinearHash();
+    buildMultiLinearHashGPU();
     buildMerkelizeLevel();
 
     module.exportFunction("add");
@@ -1174,6 +1271,7 @@ function build(module) {
     module.exportFunction("square");
     module.exportFunction("poseidon");
     module.exportFunction("multiLinearHash");
+    module.exportFunction("multiLinearHashGPU");
     module.exportFunction("merkelizeLevel");
 }
 

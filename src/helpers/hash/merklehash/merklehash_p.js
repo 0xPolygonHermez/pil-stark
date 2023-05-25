@@ -1,4 +1,6 @@
 const LinearHash = require("../linearhash/linearhash.js");
+const LinearHashGPU = require("../linearhash/linearhash_gpu.js");
+
 const workerpool = require("workerpool");
 const fs = require("fs");
 const { BigBuffer } = require("pilcom");
@@ -8,18 +10,19 @@ const { copySection } = require("@iden3/binfileutils");
 
 buildPoseidon = require("../poseidon/poseidon");
 
-module.exports = async function buildMerkleHash() {
+module.exports = async function buildMerkleHash(splitLinearHash = false) {
     const poseidon = await buildPoseidon();
-    const MH = new MerkleHash(poseidon);
+    const MH = new MerkleHash(poseidon, splitLinearHash);
     return MH;
 }
 
 class MerkleHash {
 
-    constructor(poseidon) {
+    constructor(poseidon, splitLinearHash = false) {
         this.poseidon = poseidon;
         this.F = poseidon.F;
-        this.lh = new LinearHash(poseidon);
+        this.splitLinearHash = splitLinearHash;
+        this.lh = splitLinearHash ? new LinearHashGPU(poseidon) : new LinearHash(poseidon);
         this.useThreads = true;
     }
 
@@ -69,9 +72,9 @@ class MerkleHash {
 //            const bb = new BigUint64Array(tree.elements.buffer, tree.elements.byteOffset + i*width*8, curN*width);
             if (self.useThreads) {
                 console.log("creating thread "+i);
-                promisesLH.push(pool.exec("linearHash", [bb, width, i, height]));
+                promisesLH.push(pool.exec("linearHash", [bb, width, i, height, this.splitLinearHash]));
             } else {
-                res.push(await linearHash(bb, width, i, curN));
+                res.push(await linearHash(bb, width, i, curN, this.splitLinearHash));
             }
         }
         if (self.useThreads) {

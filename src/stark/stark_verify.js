@@ -17,7 +17,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
     let transcript;
     if (starkStruct.verificationHashType == "GL") {
         const poseidonGL = await buildPoseidonGL();
-        MH = await buildMerkleHashGL();
+        MH = await buildMerkleHashGL(starkStruct.splitLinearHash);
         transcript = new Transcript(poseidonGL);
     } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();

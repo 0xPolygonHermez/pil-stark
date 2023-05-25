@@ -46,6 +46,25 @@ jobs:
       - name: Helpers tests
         run: npm run test:helpers
 
+  all-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.17.0'
+          check-latest: true
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: All prove 
+        run: npm run test:all
+
+      - name: All prove using Linear Hash GPU 
+        run: npm run test:all:gpu
+
   stark-tests:
     runs-on: ubuntu-20.04
     steps:

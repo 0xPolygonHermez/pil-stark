@@ -6,10 +6,13 @@ include "cinv.circom";
 include "poseidon.circom";
 include "bitify.circom";
 include "fft.circom";
-include "merklehash.circom";
 include "evalpol.circom";
 include "treeselector.circom";
-
+<% if(starkStruct.splitLinearHash) { -%>
+include "merklehash_gpu.circom";
+<% } else { -%>
+include "merklehash.circom";
+<% } -%>
 <%
 class Transcript {
     constructor() {
