@@ -7,7 +7,7 @@ const { open } = require("shplonkjs/src/shplonk");
 
 const Logger = require('logplease');
 
-const parallelExec = true;
+const parallelExec = false;
 const useThreads = false;
 const maxNperThread = 1 << 18;
 const minNperThread = 1 << 12;
