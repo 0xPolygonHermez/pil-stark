@@ -64,7 +64,7 @@ module.exports = function starkInfoGen(F, _pil, starkStruct) {
     const maxDeg = (1 << (res.starkStruct.nBitsExt- res.starkStruct.nBits)) + 1;
     generateConstraintPolynomial(res, pil, ctx, ctx2ns, true, maxDeg);            // Step4
 
-    generateConstraintPolynomialVerifier(res, pil);
+    generateConstraintPolynomialVerifier(res, pil, true);
 
     generateFRIPolynomial(res, pil, ctx2ns);
 

@@ -94,7 +94,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
 
     const pool = workerpool.pool(__dirname + '/fflonk_prover_worker.js');
 
-    ctx.polynomials = {};
     ctx.publics = [];
     for (let i = 0; i < fflonkInfo.publics.length; i++) {
         const publicPol = fflonkInfo.publics[i];
@@ -148,7 +147,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             committedPols[`${cnstCommitPols[i]}`] = {commit: zkey[cnstCommitPols[i]]};
         }
         
-        // STEP 1.1 - Compute random challenge
         for (let i = 0; i < cnstPols.$$nPols; i++) {
             const sOffset = i * sDomain;
             const sOffsetExt = i * sDomainExt;
@@ -200,16 +198,14 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             
             ctx.cm1_n.set(buffer, sOffset);
 
-            // Compute polynomial coefficients
+            // Compute polynomial from evaluations
             ctx[name] = await Polynomial.fromEvaluations(buffer, curve, logger);
 
             // Compute extended evals
             ctx.cm1_2ns.set(ctx[name].coef.slice(), sOffsetExt);
             const bufferEvs = await Fr.fft(ctx.cm1_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
             ctx.cm1_2ns.set(bufferEvs, sOffsetExt);
-
         }        
-
 
         const commits1 = await commit(1, zkey, ctx, PTau, curve, { multiExp: true, logger });
         for (let j = 0; j < commits1.length; ++j) {
@@ -218,6 +214,7 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     }
 
     async function round2() {
+        // STEP 2.1 - Compute random challenge
         transcript.reset();
 
         if (logger) logger.debug("> Computing challenges alpha and beta");
@@ -384,6 +381,14 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         }
     }
 
+    function printPol(buffer) {
+        const len = buffer.byteLength / n8r;
+
+        for(let i = 0; i < len; ++i) {
+            console.log(i, Fr.toString(buffer.slice(i * n8r, (i + 1) * n8r)));
+        }
+    }
+
     async function round4() {
         transcript.reset();
 
@@ -397,11 +402,27 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
 
         ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, curve, logger);
 
-        for(let i = 0; i < 4096; ++i) {
-            console.log(Fr.toString(ctx.q_2ns.slice(i * n8r, (i + 1) * n8r)));
-        }
+        // console.log("A ------------------");
+        // printPol(ctx.cm1_2ns.slice((0*16)*32,(0*16 + 15 + 1)*32));
+        // console.log("B ------------------");
+        // printPol(ctx.cm1_2ns.slice((1*16)*32,(1*16 + 15 + 1)*32));
+
+        // console.log();
+        // for(let i=0;i<16;++i) {
+        //     const val = ctx.curve.Fr.mul(ctx.cm1_2ns.slice((0*16 + (i + 1)%16)*32,(0*16 + (i + 1)%16 + 1)*32), ctx.cm1_2ns.slice((0*16 + (i + 1)%16)*32,(0*16 + (i + 1)%16 + 1)*32));
+        //     console.log(`ctx.tmp[0] = Fr.mul(${Fr.toString(ctx.cm1_2ns.slice((0*16 + (i + 1)%16)*32,(0*16 + (i + 1)%16 + 1)*32))}, ${Fr.toString(ctx.cm1_2ns.slice((0*16 + (i + 1)%16)*32,(0*16 + (i + 1)%16 + 1)*32))}) = ${Fr.toString(val)}`);
+        //     console.log(`ctx.tmp[1] = Fr.sub(ctx.tmp[0], ${Fr.toString(ctx.cm1_2ns.slice((1*16 + (i + 1)%16)*32,(1*16 + (i + 1)%16 + 1)*32))}) = ${Fr.toString(Fr.sub(val, ctx.cm1_2ns.slice((1*16 + (i + 1)%16)*32,(1*16 + (i + 1)%16 + 1)*32)))}`);
+        // }
+        // console.log();
+
+        printPol(ctx.q_2ns);
+        console.log("Q before divByZerofier() ------------------");
+        printPol(ctx["Q"].coef);
 
         ctx["Q"].divByZerofier(domainSize, Fr.one);
+
+        console.log("Q after  divByZerofier() ------------------");
+        printPol(ctx["Q"].coef);
 
         const commits4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });
         for (let j = 0; j < commits4.length; ++j) {

@@ -1,6 +1,6 @@
 const {pilCodeGen, buildCode, iterateCode} = require("./codegen.js");
 
-module.exports  = function generateConstraintPolynomialVerifier(res, pil) {
+module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark) {
     const ctxC = {
         pil: pil,
         calculated: {
@@ -28,11 +28,21 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil) {
 
     iterateCode(res.verifierCode, fixRef, ctxF);
 
-    for (let i=0; i<res.qDeg; i++) {
-        res.evIdx["cm"][0][res.qs[i]] = res.evMap.length;
+    if (stark) {
+        for (let i = 0; i < res.qDeg; i++) {
+            res.evIdx["cm"][0][res.qs[i]] = res.evMap.length;
+            const rf = {
+                type: "cm",
+                id: res.qs[i],
+                prime: false,
+            };
+            res.evMap.push(rf);
+        }
+    } else {
+        res.evIdx["cm"][0][res.qs[0]] = res.evMap.length;
         const rf = {
             type: "cm",
-            id: res.qs[i],
+            id: res.qs,
             prime: false,
         };
         res.evMap.push(rf);

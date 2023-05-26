@@ -56,9 +56,8 @@ module.exports.fflonkInfoGen = function fflonkInfoGen(F, _pil) {
 
     generateConstraintPolynomial(res, pil, ctx, ctx_2ns, false);            // Step4
 
-    generateConstraintPolynomialVerifier(res, pil);
+    generateConstraintPolynomialVerifier(res, pil, false);
 
-    console.log(res.qDeg);
     let N = 1 << pilPower;
     map(res, pil, N, N, false);
     res.publics = pil.publics;
