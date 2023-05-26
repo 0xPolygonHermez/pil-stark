@@ -105,8 +105,20 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
         }
     }
 
-    console.log("HOLA", (((1<< Math.ceil(Math.log2(fflonkInfo.qDeg))) - 1)* domainSize));
-    polsXi.push({name: "Q", stage: 4, degree: (((1<< Math.ceil(Math.log2(fflonkInfo.qDeg))) - 1)* domainSize)});
+
+    for(let i = 0; i < fflonkInfo.imExpsList.length; ++i) {
+        polsXi.push({name: `Im${fflonkInfo.imExpsList[i]}`, stage: 4, degree: domainSize})
+        pil.references[`Im${fflonkInfo.imExpsList[i]}`] = {
+            name: `Im${fflonkInfo.imExpsList[i]}`,
+            isArray: false,
+            polDeg: domainSize,
+            type: "cmP",
+            id: fflonkInfo.imExp2cm[fflonkInfo.imExpsList[i]],
+            stage:4,
+        }
+    }
+
+    polsXi.push({name: "Q", stage: 4, degree: fflonkInfo.qDeg * domainSize});
 
     const polsWXi = [];
     

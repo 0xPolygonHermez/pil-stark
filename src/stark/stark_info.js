@@ -61,8 +61,7 @@ module.exports = function starkInfoGen(F, _pil, starkStruct) {
 
     generateStep3(F, res, pil, ctx);                        // Z Polynomials and LC of permutation chcks.
 
-    const maxDeg = (1 << (res.starkStruct.nBitsExt- res.starkStruct.nBits)) + 1;
-    generateConstraintPolynomial(res, pil, ctx, ctx2ns, true, maxDeg);            // Step4
+    generateConstraintPolynomial(res, pil, ctx, ctx2ns, true);            // Step4
 
     generateConstraintPolynomialVerifier(res, pil, true);
 
