@@ -56,6 +56,15 @@ jobs:
           check-latest: true
           cache: "npm"
 
+      - name: "Install circom" 
+        run: |
+          curl https://sh.rustup.rs -sSf -o rust.sh
+          bash -f rust.sh -y
+          git clone https://github.com/iden3/circom.git
+          cd circom
+          cargo build --release
+          cargo install --path circom
+
       - name: Install dependencies
         run: npm ci
 
