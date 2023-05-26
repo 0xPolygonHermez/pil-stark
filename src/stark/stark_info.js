@@ -71,7 +71,7 @@ module.exports = function starkInfoGen(F, _pil, starkStruct) {
 
     let N = 1 << res.starkStruct.nBits;
     let Next = 1 << res.starkStruct.nBitsExt;
-    map(res, pil, N, Next, false);
+    map(res, pil, N, Next, true);
 
     res.publics = pil.publics;
 

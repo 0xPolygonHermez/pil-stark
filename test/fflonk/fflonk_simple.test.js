@@ -17,7 +17,7 @@ describe("Fflonk plookup sm", async function () {
     it("It should create the pols main", async () => {
         const F = new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
 
-        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple", "simple4p.pil"));
+        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple", "simple2.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
         await smSimple.buildConstants(constPols.Simple);

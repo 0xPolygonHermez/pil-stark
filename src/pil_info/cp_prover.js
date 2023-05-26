@@ -21,6 +21,7 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
         maxDeg = (1 << (res.starkStruct.nBitsExt- res.starkStruct.nBits)) + 1;
     } else {
         maxDeg = 2;
+        res.extendBits = Math.log2(maxDeg);
     }
     let d = 2;
     let [imExps, qDeg] = calculateImPols(pil, cExp, d++, stark);
@@ -80,32 +81,20 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
 
     pilCodeGen(ctx2ns, res.cExp);
     const code = ctx2ns.code[ctx2ns.code.length-1].code;
-    if(stark) {
-        code.push({
-            op: "mul",
-            dest: {
-                type: "q",
-                id: 0
-            },
-            src: [
-            code[code.length-1].dest,
-            {
-                    type: "Zi"
-            }
-            ]
-        });
-        res.nCm4 = res.qDeg;
-    } else {
-        code.push({
-            op: "copy",
-            dest: {
-                type: "q",
-                id: 0
-            },
-            src: [code[code.length-1].dest]
-        });
-        res.nCm4 = res.qDeg - 1;
-    }
+    code.push({
+        op: "mul",
+        dest: {
+            type: "q",
+            id: 0
+        },
+        src: [
+        code[code.length-1].dest,
+        {
+                type: "Zi"
+        }
+        ]
+    });
+    res.nCm4 = res.qDeg;
 
     res.step42ns = buildCode(ctx2ns);
 }
