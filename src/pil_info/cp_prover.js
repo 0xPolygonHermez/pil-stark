@@ -1,7 +1,7 @@
 const {pilCodeGen, buildCode} = require("./codegen.js");
 const ExpressionOps = require("../helpers/expressionops");
 
-module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, stark, maxDeg) {
+module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, stark) {
 
     const E = new ExpressionOps();
 
@@ -16,11 +16,16 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
         }
     }
 
-
+    let maxDeg;
+    if(stark) {
+        maxDeg = (1 << (res.starkStruct.nBitsExt- res.starkStruct.nBits)) + 1;
+    } else {
+        maxDeg = 2;
+    }
     let d = 2;
     let [imExps, qDeg] = calculateImPols(pil, cExp, d++, stark);
     [res.imExps, res.qDeg] = [imExps, qDeg];
-    while(Object.keys(imExps).length > 0 && (!maxDeg || d <= maxDeg)) {
+    while(Object.keys(imExps).length > 0 && d <= maxDeg) {
         [imExps, qDeg] = calculateImPols(pil, cExp, d++, stark);
         if ((maxDeg && (Object.keys(imExps).length + qDeg < Object.keys(res.imExps).length + res.qDeg)) 
             || (!maxDeg && Object.keys(imExps).length === 0)) {
