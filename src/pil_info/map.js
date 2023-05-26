@@ -284,8 +284,8 @@ module.exports = function map(res, pil, N, Next, stark) {
     setCodeDimensions(res.step42ns, res, 1, stark);
     setCodeDimensions(res.verifierCode, res, stark ? 3 : 1, stark);
     if(stark) {
-        setCodeDimensions(res.step52ns, res, 1);
-	setCodeDimensions(res.verifierQueryCode, res, 1, stark);
+        setCodeDimensions(res.step52ns, res, 1, stark);
+	    setCodeDimensions(res.verifierQueryCode, res, 1, stark);
     }
 
     function fixProverCode(code, dom) {
@@ -485,9 +485,10 @@ function setCodeDimensions(code, pilInfo, dimX, stark) {
                     if(stark) {
                         d=dimX; 
                         break;
+                    } else {
+                        throw new Error("Invalid reference type: " + r.type);
                     }
-                    throw new Error("Invalid reference type get: " + r.type);
-                default: throw new Error("Invalid reference type get: " + r.type);
+                default: throw new Error("Invalid reference type: " + r.type);
             }
             if (!d) {
                 throw new Error("Invalid dim");
