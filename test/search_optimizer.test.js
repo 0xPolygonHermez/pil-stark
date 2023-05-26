@@ -5,7 +5,7 @@ const chai = require("chai");
 const path = require("path");
 const assert = chai.assert;
 const binFileUtils = require("@iden3/binfileutils");
-const {BigBuffer} = require("ffjavascript");
+const { BigBuffer } = require("ffjavascript");
 
 
 const { buildBn128 } = require("ffjavascript");
@@ -17,11 +17,11 @@ describe("test search optimizer", async function () {
     let curve;
     const powerOfTwo = 10;
     const iterations = 5;
-    const ptauFilename =  path.join(__dirname, "../", "tmp", "powersOfTau28_hez_final_19.ptau");
+    const ptauFilename = path.join(__dirname, "../", "tmp", "powersOfTau28_hez_final_19.ptau");
 
     let PTau;
     let domain;
-    
+
     before(async () => {
         curve = await buildBn128();
 
@@ -29,18 +29,18 @@ describe("test search optimizer", async function () {
         const sG1 = curve.G1.F.n8 * 2;
         domain = Math.pow(2, powerOfTwo);
 
-        const {fd: fdPTau, sections: pTauSections} = await binFileUtils.readBinFile(ptauFilename, "ptau", 1, 1 << 22, 1 << 24);
-    
+        const { fd: fdPTau, sections: pTauSections } = await binFileUtils.readBinFile(ptauFilename, "ptau", 1, 1 << 22, 1 << 24);
+
         if (pTauSections[2][0].size < domain * curve.G1.F.n8 * 2) {
             throw new Error("Powers of Tau is not big enough for this circuit size. Section 2 too small.");
         }
-    
+
         PTau = new BigBuffer(domain * sG1);
         await fdPTau.readToBuffer(PTau, 0, domain * sG1, pTauSections[2][0].p);
 
         fdPTau.close();
     })
-    after( async() => {
+    after(async () => {
         curve.terminate();
     });
 
@@ -63,5 +63,5 @@ describe("test search optimizer", async function () {
     it("it gets the MSMtoFFT ratio", async () => {
         let res = await exhaustiveSearchOptimizerFflonk(curve, ptauFilename, powerOfTwo, iterations);
         console.log(`> Best result for fflonk exhaustive search optimizer: ${res.degP}n`);
-    }); 
+    });
 });

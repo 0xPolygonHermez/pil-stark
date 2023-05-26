@@ -11,8 +11,9 @@ const MAX_PTAU_DEGREE = 28;
 // This is a simple optimizer that tries all possible combinations with the used powers of tau
 // to potimize the number of scalar multiplications.
 
-module.exports.exhaustiveSearchOptimizerFflonk = async function (curve, ptauFilename, powerOfTwo, iterations) {
-    let ratio = await getRatioMSMtoFFT(curve, ptauFilename, powerOfTwo, iterations);
+module.exports.exhaustiveSearchOptimizerFflonk = async function (curve, ptauFilename, currentPowerOfTwo, iterations) {
+    // TODO previously we have to compute the ratio between msm and fft for each power of two
+    const currentRatio = await getRatioMSMtoFFT(curve, ptauFilename, currentPowerOfTwo, iterations);
 
     // from 3n to 10n
     const nLowBound = 3;
@@ -33,22 +34,32 @@ module.exports.exhaustiveSearchOptimizerFflonk = async function (curve, ptauFile
 
     let data = [];
     for (let i = nLowBound; i <= nHighBound; i++) {
-        const blowup = Math.floor(Math.log2(i-2)) + 2;
+        const blowup = Math.floor(Math.log2(i - 2)) + 2;
 
-        const _data = {
-            degP: i, degZ: i - 1, blowup, msm: numI + i - 1, fft: (numP + numI) * Math.pow(2, blowup - 1), maxDeg: MAX_PTAU_DEGREE - (blowup - 1)
-        };
+        const maxPowerOfTwo = MAX_PTAU_DEGREE - (blowup - 1);
 
-        _data.cost = _data.msm * ratio + _data.fft;
+        if (currentPowerOfTwo <= maxPowerOfTwo) {
+            const _data = {
+                degP: i,
+                degZ: i - 1,
+                blowup,
+                msm: numI + i - 1,
+                fft: (numP + numI) * Math.pow(2, blowup - 1),
+                maxDeg: maxPowerOfTwo
+            };
 
-        data.push(_data);
+            _data.cost = _data.msm * currentRatio + _data.fft;
+            console.log(_data);
+            data.push(_data);
+        }
     }
 
     // Search the best, the lowesrt cost
     let minValue = data[0].cost;
     let minIndex = 0;
-    for(let i = 1; i < data.length; i++) {
-        if(data[i].cost < minValue) {
+    for (let i = 1; i < data.length; i++) {
+
+        if (data[i].cost < minValue) {
             minValue = data[i].cost;
             minIndex = i;
         }
