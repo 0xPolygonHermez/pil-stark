@@ -387,7 +387,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/test/benches.test.js"
+                "${workspaceFolder}/test/search_optimizer.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
