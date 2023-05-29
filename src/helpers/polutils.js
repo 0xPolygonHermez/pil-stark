@@ -39,7 +39,10 @@ module.exports.buildZhInv = function buildZhInv(F, Nbits, extendBits, _offset) {
         w = F.mul(w, F.w[extendBits])
     }
     return function (i) {
-        return ZHInv[(i + offset) % ZHInv.length];
+        // let ith = i + offset;
+        // let n =  (1 << Nbits);
+        // return ZHInv[(ith >= n) * (Math.floor((ith - n) / n) + 1)];
+        return ZHInv[i + offset % ZHInv.length];
     }
 }
 
