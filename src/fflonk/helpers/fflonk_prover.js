@@ -28,7 +28,7 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     // Define the big buffers
     ctx.N = 1 << zkey.power;
     ctx.nBits = zkey.power;
-    ctx.extendBits = fflonkInfo.extendBits;
+    ctx.extendBits = Math.max(1, Math.ceil(Math.log2(fflonkInfo.qDeg)));
     ctx.nBitsExt = zkey.power + ctx.extendBits;
     ctx.NExt = (1 << ctx.nBitsExt);
 
@@ -201,7 +201,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             }
 
             let buffer = ctx.cm1_n.slice(sOffset, sOffset + sDomain);
-            //buffer = await Fr.batchToMontgomery(buffer);
             
             ctx.cm1_n.set(buffer, sOffset);
 
@@ -209,9 +208,7 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             ctx[name] = await Polynomial.fromEvaluations(buffer, curve, logger);
 
             // Compute extended evals
-            ctx.cm1_2ns.set(ctx[name].coef.slice(), sOffsetExt);
-            const bufferEvs = await Fr.fft(ctx.cm1_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
-            ctx.cm1_2ns.set(bufferEvs, sOffsetExt);
+            await extend(Fr, ctx[name].coef, ctx.cm1_2ns, sDomainExt, sOffsetExt);
         }        
 
         const commits1 = await commit(1, zkey, ctx, PTau, curve, { multiExp: true, logger });
@@ -270,14 +267,17 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             ctx[`Plookup.H2_${i}`] = await Polynomial.fromEvaluations(ctx.cm2_n.slice(sOffset + sDomain, sOffset + 2 * sDomain), curve, logger);
 
             // Compute extended evals
-            ctx.cm2_2ns.set(ctx[`Plookup.H1_${i}`].coef, sOffsetExt);
-            ctx.cm2_2ns.set(ctx[`Plookup.H2_${i}`].coef, sOffsetExt + sDomainExt);
+            await extend(Fr, ctx[`Plookup.H1_${i}`].coef, ctx.cm2_2ns, sDomainExt, sOffsetExt);
+            await extend(Fr, ctx[`Plookup.H2_${i}`].coef, ctx.cm2_2ns, sDomainExt, sOffsetExt + sDomainExt);
 
-            const bufferEvs1 = await Fr.fft(ctx.cm2_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
-            const bufferEvs2 = await Fr.fft(ctx.cm2_2ns.slice(sOffsetExt + sDomainExt, sOffsetExt + 2*sDomainExt));
+            // ctx.cm2_2ns.set(ctx[`Plookup.H1_${i}`].coef, sOffsetExt);
+            // ctx.cm2_2ns.set(ctx[`Plookup.H2_${i}`].coef, sOffsetExt + sDomainExt);
 
-            ctx.cm2_2ns.set(bufferEvs1, sOffsetExt);
-            ctx.cm2_2ns.set(bufferEvs2, sOffsetExt + sDomainExt);
+            // const bufferEvs1 = await Fr.fft(ctx.cm2_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
+            // const bufferEvs2 = await Fr.fft(ctx.cm2_2ns.slice(sOffsetExt + sDomainExt, sOffsetExt + 2*sDomainExt));
+
+            // ctx.cm2_2ns.set(bufferEvs1, sOffsetExt);
+            // ctx.cm2_2ns.set(bufferEvs2, sOffsetExt + sDomainExt);
 
 
         }
@@ -333,9 +333,11 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             ctx[`Plookup.Z${i}`] = await Polynomial.fromEvaluations(ctx.cm3_n.slice(sOffset, sOffset + sDomain), curve, logger);
 
             // Compute extended evals
-            ctx.cm3_2ns.set(ctx[`Plookup.Z${i}`].coef, sOffsetExt);
-            const bufferEvs = await Fr.fft(ctx.cm3_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
-            ctx.cm3_2ns.set(bufferEvs, sOffsetExt);
+            await extend(Fr, ctx[`Plookup.Z${i}`].coef, ctx.cm3_2ns, sDomainExt, sOffsetExt);
+
+            // ctx.cm3_2ns.set(ctx[`Plookup.Z${i}`].coef, sOffsetExt);
+            // const bufferEvs = await Fr.fft(ctx.cm3_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
+            // ctx.cm3_2ns.set(bufferEvs, sOffsetExt);
         }
 
         let offsetCm3 = nPlookups * sDomain;
@@ -356,9 +358,11 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             ctx[`Permutation.Z${i}`] = await Polynomial.fromEvaluations(ctx.cm3_n.slice(sOffset, sOffset + sDomain), curve, logger);
 
             // Compute extended evals
-            ctx.cm3_2ns.set(ctx[`Permutation.Z${i}`].coef, sOffsetExt);
-            const bufferEvs = await Fr.fft(ctx.cm3_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
-            ctx.cm3_2ns.set(bufferEvs, sOffsetExt);
+            await extend(Fr, ctx[`Permutation.Z${i}`].coef, ctx.cm3_2ns, sDomainExt, sOffsetExt);
+
+            // ctx.cm3_2ns.set(ctx[`Permutation.Z${i}`].coef, sOffsetExt);
+            // const bufferEvs = await Fr.fft(ctx.cm3_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
+            // ctx.cm3_2ns.set(bufferEvs, sOffsetExt);
         }
 
         offsetCm3 += nPermutations * sDomain;
@@ -381,9 +385,11 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             ctx[`Connection.Z${i}`] = await Polynomial.fromEvaluations(ctx.cm3_n.slice(sOffset, sOffset + sDomain), curve, logger);
 
             // Compute extended evals
-            ctx.cm3_2ns.set(ctx[`Connection.Z${i}`].coef, sOffsetExt);
-            const bufferEvs = await Fr.fft(ctx.cm3_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
-            ctx.cm3_2ns.set(bufferEvs, sOffsetExt);
+            await extend(Fr, ctx[`Connection.Z${i}`].coef, ctx.cm3_2ns, sDomainExt, sOffsetExt);
+
+            // ctx.cm3_2ns.set(ctx[`Connection.Z${i}`].coef, sOffsetExt);
+            // const bufferEvs = await Fr.fft(ctx.cm3_2ns.slice(sOffsetExt, sOffsetExt + sDomainExt));
+            // ctx.cm3_2ns.set(bufferEvs, sOffsetExt);
         }
 
         const commits3 = await commit(3, zkey, ctx, PTau, curve, { multiExp: true, logger });
@@ -409,8 +415,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             ctx[`Im${fflonkInfo.imExpsList[i]}`] = Polynomial.fromCoefficientsArray(imPol, curve, logger);
         }
 
-        await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, zkey, logger);
-
         transcript.reset();
 
         if (logger) logger.debug("> Computing challenge a");
@@ -421,11 +425,15 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         ctx.challenges[4] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 
+        await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, zkey, logger);
+
         const qq1 = await ctx.curve.Fr.ifft(ctx.q_2ns);
         const qq2 = new BigBuffer(ctx.fflonkInfo.qDim*ctx.fflonkInfo.qDeg*sDomain);
 
         let curS = Fr.one;
         const shiftIn = Fr.exp(Fr.inv(Fr.shift), ctx.N);
+
+        printPol(ctx.q_2ns);
         for (let p =0; p<ctx.fflonkInfo.qDeg; p++) {
             for (let i=0; i<ctx.N; i++) {
                 for (let k=0; k<fflonkInfo.qDim; k++) {
@@ -438,9 +446,10 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             curS = Fr.mul(curS, shiftIn);
         }
 
-        ctx["Q"] = new Polynomial(qq2, curve, logger);
+        printPol(qq1);
+        printPol(qq2);
 
-        printPol(ctx["Q"].coef);
+        ctx["Q"] = new Polynomial(qq2, curve, logger);
 
         const commits4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });
         for (let j = 0; j < commits4.length; ++j) {
@@ -775,6 +784,20 @@ function ctxProxy(ctx) {
             pCtx[section] = new Proxy(ctx[section], BigBufferHandler);
         }
     }
+}
+
+async function extend(Fr, buffFrom, buffTo, sDomainExt, sOffsetExt) {
+    const coefficientsN = new BigBuffer(sDomainExt);
+    coefficientsN.set(buffFrom, 0);
+
+    // for(let i = 0; i < sDomainExt; i+=32) {
+    //     console.log(ctx.curve.Fr.toString(coefficientsN.slice(i, i + 32)));
+    // }
+    const extendedEvals = await Fr.fft(coefficientsN);
+    // for(let i = 0; i < sDomainExt; i+=32) {
+    //     console.log(ctx.curve.Fr.toString(extendedEvals.slice(i, i + 32)));
+    // }
+    buffTo.set(extendedEvals, sOffsetExt);
 }
 
 function setPol(ctx, fflonkInfo, idPol, pol) {

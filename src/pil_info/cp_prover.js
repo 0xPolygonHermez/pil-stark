@@ -33,8 +33,6 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
         }
     }
 
-    res.extendBits = Math.max(1, Math.ceil(Math.log2(res.qDeg)));
-
     res.imExpsList = Object.keys(res.imExps).map(Number);
     res.imExp2cm = {}
     for (let i=0; i<res.imExpsList.length; i++) {
