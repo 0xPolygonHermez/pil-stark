@@ -8,7 +8,7 @@ module.exports.fflonkgen_execute = async function fflonkgen_execute(ctx, cFirstS
 
     cFirst = new Function("ctx", "i", cFirstSrc);
 
-    ctx.Zi = buildZhInv(ctx.F, ctx.nBits, ctx.extendBits, st_i);
+    ctx.Zi = buildZhInv(ctx.curve.Fr, ctx.nBits, ctx.extendBits, st_i);
 
     console.log(`start exec ${st_name}... ${st_i}/${st_n} `);
     ctx.tmp = [];

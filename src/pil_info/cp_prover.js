@@ -20,19 +20,20 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
     if(stark) {
         maxDeg = (1 << (res.starkStruct.nBitsExt- res.starkStruct.nBits)) + 1;
     } else {
-        maxDeg = 2;
-        res.extendBits = Math.log2(maxDeg);
+        maxDeg = 4;
     }
     let d = 2;
-    let [imExps, qDeg] = calculateImPols(pil, cExp, d++, stark);
+    let [imExps, qDeg] = calculateImPols(pil, cExp, d++);
     [res.imExps, res.qDeg] = [imExps, qDeg];
     while(Object.keys(imExps).length > 0 && d <= maxDeg) {
-        [imExps, qDeg] = calculateImPols(pil, cExp, d++, stark);
+        [imExps, qDeg] = calculateImPols(pil, cExp, d++);
         if ((maxDeg && (Object.keys(imExps).length + qDeg < Object.keys(res.imExps).length + res.qDeg)) 
             || (!maxDeg && Object.keys(imExps).length === 0)) {
             [res.imExps, res.qDeg] = [imExps, qDeg];
         }
     }
+
+    res.extendBits = Math.max(1, Math.ceil(Math.log2(res.qDeg)));
 
     res.imExpsList = Object.keys(res.imExps).map(Number);
     res.imExp2cm = {}
@@ -99,7 +100,7 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
     res.step42ns = buildCode(ctx2ns);
 }
 
-function calculateImPols(pil, _exp, maxDeg, stark) {
+function calculateImPols(pil, _exp, maxDeg) {
 
     const imExpressions = {};
     const absoluteMax = maxDeg;
@@ -109,12 +110,7 @@ function calculateImPols(pil, _exp, maxDeg, stark) {
 
     console.log(`maxDeg: ${maxDeg}, nIm: ${Object.keys(re).length}, d: ${rd}`);
 
-    if(stark) {
-        return [re, Math.max(rd, absMaxD) - 1];  // We divide the exp polynomial by 1.
-    } else {
-        return [re, Math.max(rd, absMaxD)];
-    }
-   
+    return [re, Math.max(rd, absMaxD) - 1];  // We divide the exp polynomial by 1.   
 
     function _calculateImPols(pil, exp, imExpressions, maxDeg) {
         if (imExpressions === false) {

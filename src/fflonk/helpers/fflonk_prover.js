@@ -94,7 +94,7 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
        
 
     // Build ZHInv
-    const zhInv = buildZhInv(Fr, ctx.nBits, fflonkInfo.extendBits);
+    const zhInv = buildZhInv(Fr, ctx.nBits, ctx.extendBits);
     ctx.Zi = zhInv;
 
     const committedPols = {};
@@ -221,8 +221,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     }
 
     async function round2() {
-        await callCalculateExps("step2prev", "n", pool, ctx, fflonkInfo, zkey, logger);
-
         // STEP 2.1 - Compute random challenge
         transcript.reset();
 
@@ -246,6 +244,8 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         transcript.addScalar(ctx.challenges[0]);
         ctx.challenges[1] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.beta: " + Fr.toString(ctx.challenges[1]));
+        
+        await callCalculateExps("step2prev", "n", pool, ctx, fflonkInfo, zkey, logger);
 
         if(0 === fflonkInfo.puCtx.length) {
             if(logger) logger.debug("··· !!! No polynomials to compute...skipping round 2");
@@ -289,8 +289,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     }
 
     async function round3() {
-        await callCalculateExps("step3prev", "n", pool, ctx, fflonkInfo, zkey, logger);
-
         transcript.reset();
 
         if (logger) logger.debug("> Computing challenges gamma and delta");
@@ -306,6 +304,8 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         transcript.addScalar(ctx.challenges[2]);
         ctx.challenges[3] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.delta: " + Fr.toString(ctx.challenges[3]));
+
+        await callCalculateExps("step3prev", "n", pool, ctx, fflonkInfo, zkey, logger);
 
         const nPlookups = fflonkInfo.puCtx.length;
         const nPermutations = fflonkInfo.peCtx.length;
@@ -406,7 +406,7 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
 
         for(let i = 0; i < fflonkInfo.imExpsList.length; ++i) {
             const imPol = getPol(ctx, fflonkInfo, fflonkInfo.imExp2cm[fflonkInfo.imExpsList[i]]);
-            ctx[`Im${fflonkInfo.imExpsList[i]}`] = await Polynomial.fromEvaluations(imPol, curve, logger);
+            ctx[`Im${fflonkInfo.imExpsList[i]}`] = Polynomial.fromCoefficientsArray(imPol, curve, logger);
         }
 
         await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, zkey, logger);
@@ -422,17 +422,17 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 
         const qq1 = await ctx.curve.Fr.ifft(ctx.q_2ns);
-        const qq2 = new BigBuffer(ctx.fflonkInfo.qDim*(ctx.fflonkInfo.qDeg - 1)*sDomainExt);
+        const qq2 = new BigBuffer(ctx.fflonkInfo.qDim*ctx.fflonkInfo.qDeg*sDomain);
 
         let curS = Fr.one;
         const shiftIn = Fr.exp(Fr.inv(Fr.shift), ctx.N);
         for (let p =0; p<ctx.fflonkInfo.qDeg; p++) {
             for (let i=0; i<ctx.N; i++) {
                 for (let k=0; k<fflonkInfo.qDim; k++) {
-                    //TODO: WRONG
-                    const element = Fr.mul(qq1.slice((p*ctx.N + i)*n8r, (p*ctx.N + i + 1)*n8r), curS);
-                    const index = (i*fflonkInfo.qDim*fflonkInfo.qDeg + fflonkInfo.qDim*p + k)*n8r;
-                    qq2.set(element, index);
+                    const indexqq1 = (p*ctx.N*fflonkInfo.qDim + i*fflonkInfo.qDim + k)*n8r;
+                    const indexqq2 = (i*fflonkInfo.qDim*fflonkInfo.qDeg + fflonkInfo.qDim*p + k)*n8r;
+                    const element = Fr.mul(qq1.slice(indexqq1, indexqq1 + n8r), curS);
+                    qq2.set(element, indexqq2);
                 }
             }
             curS = Fr.mul(curS, shiftIn);
@@ -559,6 +559,7 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, zkey) {
             curve: ctx.curve,
             n: n,
             nBits: ctx.nBits,
+            extendBits: ctx.extendBits,
             next: next,
             evals: ctx.evals,
             publics: ctx.publics,
@@ -608,8 +609,6 @@ function compileCode(ctx, code, dom, ret) {
             src.push(getRef(code[j].src[k]));
         }
         let exp;
-        // body.push(`console.log("${src[0]} ->",ctx.curve.Fr.toString(${src[0]}))`)
-        // if(src[1]) body.push(`console.log("${src[1]} ->",ctx.curve.Fr.toString(${src[1]}))`)
 
         switch (code[j].op) {
             case 'add': exp = `ctx.curve.Fr.add(${src[0]}, ${src[1]})`;  break;
