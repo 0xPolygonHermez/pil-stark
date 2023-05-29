@@ -61,7 +61,7 @@ describe("test search optimizer", async function () {
     });
 
     it("it gets the MSMtoFFT ratio", async () => {
-        let res = await exhaustiveSearchOptimizerFflonk(curve, ptauFilename, powerOfTwo, iterations);
+        let res = await exhaustiveSearchOptimizerFflonk(curve, ptauFilename, powerOfTwo);
         console.log(`> Best result for fflonk exhaustive search optimizer: ${res.degP}n`);
     });
 });

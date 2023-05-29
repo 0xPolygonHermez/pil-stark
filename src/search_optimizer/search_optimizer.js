@@ -11,27 +11,32 @@ const MAX_PTAU_DEGREE = 28;
 // This is a simple optimizer that tries all possible combinations with the used powers of tau
 // to potimize the number of scalar multiplications.
 
-module.exports.exhaustiveSearchOptimizerFflonk = async function (curve, ptauFilename, currentPowerOfTwo, iterations) {
+module.exports.exhaustiveSearchOptimizerFflonk = async function (curve, ptauFilename, currentPowerOfTwo, nIntermediatePols, numP) {
     // TODO previously we have to compute the ratio between msm and fft for each power of two
+    const iterations = 5;
     const currentRatio = await getRatioMSMtoFFT(curve, ptauFilename, currentPowerOfTwo, iterations);
 
-    // from 3n to 10n
+    // Build a table with all the possible combinations from nLowBound to nHighBound
     const nLowBound = 3;
     const nHighBound = 10;
-    const numI = 10; //TODO CHANGE
-    const numP = 10; //TODO CHANGE
 
-    // TODO review the formula
-    // deg(P(x)) deg(Z(X))  blowup   MSM              FT            Max degree
-    //    3n        2n        2    #Im + 2         2F #Im + P        n <= 2^27
-    //    4n        3n        3    #Im + 3         4F #Im + P        n <= 2^26
-    //    5n        4n        3    #Im + 4         4F #Im + P        n <= 2^26
-    //    6n        5n        4    #Im + 5         8F #Im + P        n <= 2^25
-    //    7n        6n        4    #Im + 6         8F #Im + P        n <= 2^25
-    //    8n        7n        4    #Im + 7         8F #Im + P        n <= 2^25
-    //    9n        8n        4    #Im + 8         8F #Im + P        n <= 2^25
-    //   10n        9n        5    #Im + 9         16F #Im + P        n <= 2^24
+    let costsByDegree = constructFflonkCostTable(nLowBound, nHighBound, currentPowerOfTwo, nIntermediatePols, numP, currentRatio);
 
+    // Search the minimum cost
+    let minValue = costsByDegree[0].cost;
+    let minIndex = 0;
+    for (let i = 1; i < costsByDegree.length; i++) {
+
+        if (costsByDegree[i].cost < minValue) {
+            minValue = costsByDegree[i].cost;
+            minIndex = i;
+        }
+    }
+
+    return costsByDegree[minIndex];
+}
+ 
+function constructFflonkCostTable(nLowBound, nHighBound, currentPowerOfTwo, numI, numP, currentRatio) {
     let data = [];
     for (let i = nLowBound; i <= nHighBound; i++) {
         const blowup = Math.floor(Math.log2(i - 2)) + 2;
@@ -53,19 +58,11 @@ module.exports.exhaustiveSearchOptimizerFflonk = async function (curve, ptauFile
             data.push(_data);
         }
     }
+    return data;
+}
 
-    // Search the best, the lowesrt cost
-    let minValue = data[0].cost;
-    let minIndex = 0;
-    for (let i = 1; i < data.length; i++) {
-
-        if (data[i].cost < minValue) {
-            minValue = data[i].cost;
-            minIndex = i;
-        }
-    }
-
-    return data[minIndex];
+function computeCostByDegree(blowup, ratioMSMtoFFT, numI, numP) {
+    return ratioMSMtoFFT * (numI + blowup - 1) + (numP + numI) * Math.pow(2, blowup - 1);
 }
 
 async function getRatioMSMtoFFT(curve, ptauFilename, powerOfTwo, iterations) {
