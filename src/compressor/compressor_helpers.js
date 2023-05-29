@@ -32,7 +32,7 @@ module.exports ={
     /*
         Calculate the number of rows needed to verify all plonk constraints
     */ 
-    calculatePlonkConstraintsRowsC15: function(plonkConstraints, evalPolRows, cMulFFTRows) {
+    calculatePlonkConstraintsRowsC12: function(plonkConstraints, evalPolCMulRows, treeSelectorRows) {
 
         let partialRows = {};
         let halfRows = false;
@@ -46,16 +46,15 @@ module.exports ={
             const k= c.slice(3, 8).map( a=> a.toString(16)).join(","); //Calculate
             if(partialRows[k]) {
                 ++partialRows[k];
-                if(partialRows[k] === 2 || partialRows[k] === 5) delete partialRows[k];
+                if(partialRows[k] === 2 || partialRows[k] === 4) delete partialRows[k];
             } else if(halfRows) {
                 partialRows[k] = 3;
                 halfRows = false;
-            } else if(evalPolRows > 0) {
-                --evalPolRows;
-                partialRows[k] = 3;
-            } else if(cMulFFTRows > 0) {
-                --cMulFFTRows;
-                partialRows[k] = 4;
+            } else if(treeSelectorRows > 0) {
+                --treeSelectorRows;
+                partialRows[k] = 1;
+            } else if(evalPolCMulRows > 0) {
+                --evalPolCMulRows;
             } else {
                 partialRows[k] = 1;
                 halfRows = true;
@@ -79,14 +78,14 @@ module.exports ={
             CMulId:0,
             FFT4Parameters: {},
             EvPol4Id: 0,
-            TreeSelector8Id: 0,
+            TreeSelector4Id: 0,
             nCMulAdd: 0,
             nCMul:0,
             nPoseidon12: 0,
             nCustPoseidon12: 0,
             nFFT4: 0,
             nEvPol4: 0,
-            nTreeSelector8: 0
+            nTreeSelector4: 0
         }
     
         // Each custom gate in the r1cs has the following structure: {templateName: "Poseidon12", parameters: []}
@@ -112,8 +111,8 @@ module.exports ={
                     res.EvPol4Id =i;
                     assert(r1cs.customGates[i].parameters.length == 0);
                     break;
-                case "TreeSelector8":
-                    res.TreeSelector8Id =i;
+                case "TreeSelector4":
+                    res.TreeSelector4Id =i;
                     assert(r1cs.customGates[i].parameters.length == 0);
                     break;
                 case "FFT4":
@@ -136,8 +135,8 @@ module.exports ={
                 res.nFFT4 ++;
             } else if (r1cs.customGatesUses[i].id == res.EvPol4Id) {
                 res.nEvPol4 ++;
-            } else if (r1cs.customGatesUses[i].id == res.TreeSelector8Id) {
-                res.nTreeSelector8 ++;
+            } else if (r1cs.customGatesUses[i].id == res.TreeSelector4Id) {
+                res.nTreeSelector4 ++;
             } else {
                 throw new Error("Custom gate not defined" + r1cs.customGatesUses[i].id);
             }

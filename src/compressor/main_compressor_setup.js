@@ -4,7 +4,7 @@ const version = require("../../package").version;
 const F3g = require("../helpers/f3g.js");
 const {readR1cs} = require("r1csfile");
 const plonkSetupC18 = require("./compressor18_setup.js");
-const plonkSetupC15 = require("./compressor15_setup.js");
+const plonkSetupC12 = require("./compressor12_setup.js");
 
 
 const argv = require("yargs")
@@ -31,13 +31,13 @@ async function run() {
         forceNBits: argv.forceNBits
     };
 
-    let cols = argv.cols ? Number(argv.cols) : 15;
+    let cols = argv.cols ? Number(argv.cols) : 12;
     
-    if(![15,18].includes(cols)) throw new Error("Invalid number of cols");
+    if(![12,18].includes(cols)) throw new Error("Invalid number of cols");
 
     let res;
-    if(cols === 15) {
-        res = await plonkSetupC15(F, r1cs, options);
+    if(cols === 12) {
+        res = await plonkSetupC12(F, r1cs, options);
     } else {
         res = await plonkSetupC18(F, r1cs, options);
     }

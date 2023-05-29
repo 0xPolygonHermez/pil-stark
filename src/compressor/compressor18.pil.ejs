@@ -22,7 +22,7 @@ namespace Compressor(%N);
     pol constant CMUL;
     pol constant EVPOL4;
     pol constant FFT4;
-    pol constant TREESELECTOR8;
+    pol constant TREESELECTOR4;
     pol commit a[<%- committedPols %>];
 
 <% for (let i=0; i<nPublics; i++) { -%>
@@ -200,12 +200,11 @@ namespace Compressor(%N);
     PARTIALROUND * (a[<%- i %>]' - s<%- i %>_R21) = 0;
 <% } -%>
 
-    // CMUL GATE - Check that a * b + c in Fp³ using (X³ - X - 1) as a generator is performed correctly
+    // CMUL GATE - Check that a * b in Fp³ using (X³ - X - 1) as a generator is performed correctly
     // In this particular case, 
     // a = [a[0], a[1], a[2]]
     // b = [a[3], a[4], a[5]]
-    // c = [a[6], a[7], a[8]]
-    // and this must be equal to [ a[9], a[10], a[11] ]
+    // and this must be equal to [ a[6], a[7], a[8] ]
     
     // Since the modulo is known (X³ - X - 1) we can calculate the coefficients in general form by calculating 
     // (a0 + a1*x + a2*x²)*(b0 + b1*x + b2*x²) and then using long division to get the residue when dividing by the modulo
@@ -222,6 +221,12 @@ namespace Compressor(%N);
     CMUL * (a[6] - (cC1 + cD1 - cE1 - cF1)) = 0;
     CMUL * (a[7] - (cA1 + cC1 - 2*cE1 - cD1)) = 0;
     CMUL * (a[8] - (cB1 - cD1 + cE1)) = 0;
+
+    // CMUL GATE - Check that a * b in Fp³ using (X³ - X - 1) as a generator is performed correctly
+    // In this particular case, 
+    // a = [a[9], a[10], a[11]]
+    // b = [a[12], a[13], a[14]]
+    // and this must be equal to [ a[15], a[16], a[17] ]
 
     pol cA2 = (a[9] + a[10])  * (a[12] + a[13]);
     pol cB2 = (a[9] + a[11])  * (a[12] + a[14]);
@@ -306,101 +311,53 @@ namespace Compressor(%N);
     EVPOL4 * (a[7]' - acc4_1) = 0;
     EVPOL4 * (a[8]' - acc4_2) = 0;
 
-    // TREESELECTOR8 GATE - Check that given 8 values and a key, checks that the output is correct
+    // TREESELECTOR4 GATE - Check that given 4 values and a key, checks that the output is correct
     // The tree is created as follows: if key = 0, even values are pushed up the tree, if the key = 1 the odd ones are pushed.
     // Therefore, we need to check that 
-    // key == [0,0,0] -> [value1, value2, value3, value4, value5, value6, value7, value8] -> [value1, value3, value5, value7] -> [value1, value5] -> [value1]
-    // key == [1,0,0] -> [value1, value2, value3, value4, value5, value6, value7, value8] -> [value2, value4, value6, value8] -> [value2, value6] -> [value2]
-    // key == [0,1,0] -> [value1, value2, value3, value4, value5, value6, value7, value8] -> [value1, value3, value5, value7] -> [value3, value7] -> [value3]
-    // key == [1,1,0] -> [value1, value2, value3, value4, value5, value6, value7, value8] -> [value2, value4, value6, value8] -> [value4, value8] -> [value4]
-    // key == [0,0,1] -> [value1, value2, value3, value4, value5, value6, value7, value8] -> [value1, value3, value5, value7] -> [value1, value5] -> [value5]
-    // key == [1,0,1] -> [value1, value2, value3, value4, value5, value6, value7, value8] -> [value2, value4, value6, value8] -> [value2, value6] -> [value6]
-    // key == [0,1,1] -> [value1, value2, value3, value4, value5, value6, value7, value8] -> [value1, value3, value5, value7] -> [value3, value7] -> [value7]
-    // key == [1,1,1] -> [value1, value2, value3, value4, value5, value6, value7, value8] -> [value2, value4, value6, value8] -> [value4, value8] -> [value8]
+    // key == [0,0] -> [value1, value2, value3, value4] -> [value1, value3] -> [value1]
+    // key == [1,0] -> [value1, value2, value3, value4] -> [value2, value4] -> [value2]
+    // key == [0,1] -> [value1, value2, value3, value4] -> [value1, value3] -> [value3]
+    // key == [1,1] -> [value1, value2, value3, value4] -> [value2, value4] -> [value4]
 
-    // The values are stored from a[0] to a[18] and from a[0]' to a[5]'
-    // The key is stored in [a[6]', a[7]', a[8]']
-    // The output is stored in [a[9]', a[10]', a[11]']
+    // The values are stored from a[0], a[1], a[2] // a[3], a[4], a[5] // a[6], a[7], a[8] // a[9], a[10], a[11] 
+    // The key is stored in [a[12], a[13]]
+    // The output is stored in [a[14], a[15], a[16]]
 
-    // keys11 will only be 1 if both a[6]', a[7]' and a[8]' are equal to 0
-    pol keys1 = (1 - a[6]')*(1 - a[7]');
-    pol keys11 = keys1*(1 - a[8]');
-    pol treeSelect1_1 = keys11 * (a[0] - a[9]');
-    pol treeSelect1_2 = keys11 * (a[1] - a[10]');
-    pol treeSelect1_3 = keys11 * (a[2] - a[11]');
-    TREESELECTOR8 * treeSelect1_1 = 0;
-    TREESELECTOR8 * treeSelect1_2 = 0;
-    TREESELECTOR8 * treeSelect1_3 = 0;
+    // keys1 will only be 1 if both a[12], a[13] are zero
+    pol keys1 = (1 - a[12])*(1 - a[13]);
+    pol treeSelect1_1 = keys1 * (a[0] - a[14]);
+    pol treeSelect1_2 = keys1 * (a[1] - a[15]);
+    pol treeSelect1_3 = keys1 * (a[2] - a[16]);
+    TREESELECTOR4 * treeSelect1_1 = 0;
+    TREESELECTOR4 * treeSelect1_2 = 0;
+    TREESELECTOR4 * treeSelect1_3 = 0;
 
-    // keys22 will only be 1 if a[6]' equals 1 and a[7]'and a[8]' equals 0
-    pol keys2 = (a[6]')*(1 - a[7]');
-    pol keys22 = keys2*(1 - a[8]');
-    pol treeSelect2_1 = keys22 * (a[3] - a[9]');
-    pol treeSelect2_2 = keys22 * (a[4] - a[10]');
-    pol treeSelect2_3 = keys22 * (a[5] - a[11]');
-    TREESELECTOR8 * treeSelect2_1 = 0;
-    TREESELECTOR8 * treeSelect2_2 = 0;
-    TREESELECTOR8 * treeSelect2_3 = 0;
+    // keys2 will only be 1 if a[12] equals 1 and a[13] equals 0
+    pol keys2 = (a[12])*(1 - a[13]);
+    pol treeSelect2_1 = keys2 * (a[3] - a[14]);
+    pol treeSelect2_2 = keys2 * (a[4] - a[15]);
+    pol treeSelect2_3 = keys2 * (a[5] - a[16]);
+    TREESELECTOR4 * treeSelect2_1 = 0;
+    TREESELECTOR4 * treeSelect2_2 = 0;
+    TREESELECTOR4 * treeSelect2_3 = 0;
 
-    // keys33 will only be 1 if a[6]' and a[8]'equals 0 and a[7]' equals 1
-    pol keys3 = (1 - a[6]')*(a[7]');
-    pol keys33 = keys3*(1 - a[8]');
-    pol treeSelect3_1 = keys33 * (a[6] - a[9]');
-    pol treeSelect3_2 = keys33 * (a[7] - a[10]');
-    pol treeSelect3_3 = keys33 * (a[8] - a[11]');
-    TREESELECTOR8 * treeSelect3_1 = 0;
-    TREESELECTOR8 * treeSelect3_2 = 0;
-    TREESELECTOR8 * treeSelect3_3 = 0;
+    // keys3 will only be 1 if a[12] equals 0 and a[13] equals 1
+    pol keys3 = (1 - a[12])*(a[13]);
+    pol treeSelect3_1 = keys3 * (a[6] - a[14]);
+    pol treeSelect3_2 = keys3 * (a[7] - a[15]);
+    pol treeSelect3_3 = keys3 * (a[8] - a[16]);
+    TREESELECTOR4 * treeSelect3_1 = 0;
+    TREESELECTOR4 * treeSelect3_2 = 0;
+    TREESELECTOR4 * treeSelect3_3 = 0;
 
-    // keys44 will only be 1 if a[6]' and a[7]' equals 1 and a[8]' equals 0
-    pol keys4 = (a[6]')*(a[7]');
-    pol keys44 = keys4*(1 - a[8]');
-    pol treeSelect4_1 = keys44 * (a[9] - a[9]');
-    pol treeSelect4_2 = keys44 * (a[10] - a[10]');
-    pol treeSelect4_3 = keys44 * (a[11] - a[11]');
-    TREESELECTOR8 * treeSelect4_1 = 0;
-    TREESELECTOR8 * treeSelect4_2 = 0;
-    TREESELECTOR8 * treeSelect4_3 = 0;
-
-    // keys55 will only be 1 if a[6]' and a[7]' equals 0 and a[8]' equals 1
-    pol keys5 = (1 - a[6]')*(1 - a[7]');
-    pol keys55 = keys5*(a[8]');
-    pol treeSelect5_1 = keys55 * (a[12] - a[9]');
-    pol treeSelect5_2 = keys55 * (a[13] - a[10]');
-    pol treeSelect5_3 = keys55 * (a[14] - a[11]');
-    TREESELECTOR8 * treeSelect5_1 = 0;
-    TREESELECTOR8 * treeSelect5_2 = 0;
-    TREESELECTOR8 * treeSelect5_3 = 0;
-
-    // keys66 will only be 1 if a[6]' and a[8]' equals 1 and a[7]' equals 0
-    pol keys6 = (a[6]')*(1 - a[7]');
-    pol keys66 = keys6*(a[8]');
-    pol treeSelect6_1 = keys66 * (a[15] - a[9]');
-    pol treeSelect6_2 = keys66 * (a[16] - a[10]');
-    pol treeSelect6_3 = keys66 * (a[17] - a[11]');
-    TREESELECTOR8 * treeSelect6_1 = 0;
-    TREESELECTOR8 * treeSelect6_2 = 0;
-    TREESELECTOR8 * treeSelect6_3 = 0;
-
-    // keys77 will only be 1 if a[7]' and a[8]' equals 1 and a[6]' equals 0
-    pol keys7 = (1 - a[6]')*(a[7]');
-    pol keys77 = keys7*(a[8]');
-    pol treeSelect7_1 = keys77 * (a[0]' - a[9]');
-    pol treeSelect7_2 = keys77 * (a[1]' - a[10]');
-    pol treeSelect7_3 = keys77 * (a[2]' - a[11]');
-    TREESELECTOR8 * treeSelect7_1 = 0;
-    TREESELECTOR8 * treeSelect7_2 = 0;
-    TREESELECTOR8 * treeSelect7_3 = 0;
-
-    // keys88 will only be 1 if both a[6]', a[7]' and a[8]' are equal to 1
-    pol keys8 = (a[6]')*(a[7]');
-    pol keys88 = keys8*(a[8]');
-    pol treeSelect8_1 = keys88 * (a[3]' - a[9]');
-    pol treeSelect8_2 = keys88 * (a[4]' - a[10]');
-    pol treeSelect8_3 = keys88 * (a[5]' - a[11]');
-    TREESELECTOR8 * treeSelect8_1 = 0;
-    TREESELECTOR8 * treeSelect8_2 = 0;
-    TREESELECTOR8 * treeSelect8_3 = 0;
+    // keys4 will only be 1 if a[12] and a[13] equals 1 
+    pol keys4 = (a[12])*(a[13]);
+    pol treeSelect4_1 = keys4 * (a[9] - a[14]);
+    pol treeSelect4_2 = keys4 * (a[10] - a[15]);
+    pol treeSelect4_3 = keys4 * (a[11] - a[16]);
+    TREESELECTOR4 * treeSelect4_1 = 0;
+    TREESELECTOR4 * treeSelect4_2 = 0;
+    TREESELECTOR4 * treeSelect4_3 = 0;
 
 
     // Check connection equations of Plonk

@@ -34,7 +34,7 @@ async function buildWasm(nPages) {
 }
 
 // a deliberately inefficient implementation of the fibonacci sequence
-async function linearHash(buffIn, width, st_i, st_n) {
+async function linearHash(buffIn, width, st_i, st_n, splitLinearHash) {
     console.log(`linear hash start.... ${st_i}/${st_n}`);
     const heigth = buffIn.length / width;
     const buffOut = new BigUint64Array(heigth*4);
@@ -67,7 +67,11 @@ async function linearHash(buffIn, width, st_i, st_n) {
         const curN = Math.min(hashesPerStep, heigth-i);
         const src = new Uint8Array(buffIn.buffer, buffIn.byteOffset + i*width*8, width * curN*8);
         wasmMem8.set(src, pIn);
-        glwasm.multiLinearHash(pIn, width, heigth, pOut);
+        if(splitLinearHash) {
+            glwasm.multiLinearHashGPU(pIn, width, heigth, pOut);
+        } else {
+            glwasm.multiLinearHash(pIn, width, heigth, pOut);
+        }
         const dst = new BigUint64Array(wasmMem.buffer, pOut, curN*4);
         buffOut.set(dst, i*4);
     }

@@ -33,11 +33,10 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     const F = new F3g();
 
     let MH;
-    let MHS;
     let transcript;
     if (starkStruct.verificationHashType == "GL") {
         const poseidon = await buildPoseidonGL();
-        MH = await buildMerklehashGL();
+        MH = await buildMerklehashGL(starkStruct.splitLinearHash);
         transcript = new Transcript(poseidon);
     } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();

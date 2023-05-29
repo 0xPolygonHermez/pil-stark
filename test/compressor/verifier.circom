@@ -6,10 +6,9 @@ include "cinv.circom";
 include "poseidon.circom";
 include "bitify.circom";
 include "fft.circom";
-include "merklehash.circom";
 include "evalpol.circom";
-include "treeselector.circom";
-
+include "treeselector4.circom";
+include "merklehash.circom";
 
 /* 
     Calculate the transcript
@@ -766,6 +765,29 @@ template MapValues() {
     tree4_1 <== [vals4[3],vals4[4] , vals4[5]];
 }
 
+template parallel VerifyFinalPol() {
+    ///////
+    // Check Degree last pol
+    ///////
+    signal input finalPol[8][3];
+    signal input enable;
+    
+    // Calculate the IFFT to get the coefficients of finalPol 
+    signal lastIFFT[8][3] <== FFT(3, 3, 1)(finalPol);
+
+    // Check that the degree of the final polynomial is bounded by the degree defined in the last step of the folding
+    // This means ?????? in terms of IFFT
+    for (var k= 4; k< 8; k++) {
+        for (var e=0; e<3; e++) {
+            enable * lastIFFT[k][e] === 0;
+        }
+    }
+    
+    // The coefficients of lower degree can have any value
+    for (var k= 0; k < 4; k++) {
+        _ <== lastIFFT[k];
+    }
+}
 template StarkVerifier() {
     signal input publics[3]; // constant polynomials
     signal input root1[4]; // Merkle tree root of the evaluations of all trace polynomials
@@ -775,7 +797,7 @@ template StarkVerifier() {
 
     // Notice that root2 and root3 can be zero depending on the STARK being verified 
 
-    signal rootC[4] <== [16218095109405336560,8863310181052137464,1625895490826151860,12221892138084256606 ]; // Merkle tree root of the evaluations of constant polynomials
+    signal rootC[4] <== [1586467561057753308,1229990203770229397,10559924528244357123,6072090729782730028 ]; // Merkle tree root of the evaluations of constant polynomials
 
     signal input evals[43][3]; // Evaluations of the set polynomials at a challenge value z and gz
 
@@ -949,25 +971,7 @@ template StarkVerifier() {
         VerifyFRI(11, 7, 3, 0, 11131999729878195124)(s2_ys, s2_specialX, s2_vals_p[q], finalPol, enable);
     }
 
-    ///////
-    // Check Degree last pol
-    ///////
-    
-    // Calculate the IFFT to get the coefficients of finalPol 
-    signal lastIFFT[8][3] <== FFT(3, 3, 1)(finalPol);
-
-    // Check that the degree of the final polynomial is bounded by the degree defined in the last step of the folding
-    // This means ?????? in terms of IFFT
-    for (var k= 4; k< 8; k++) {
-        for (var e=0; e<3; e++) {
-            enable * lastIFFT[k][e] === 0;
-        }
-    }
-    
-    // The coefficients of lower degree can have any value
-    for (var k= 0; k < 4; k++) {
-        _ <== lastIFFT[k];
-    }
+    VerifyFinalPol()(finalPol, enable);
 }
     
 component main {public [publics]}= StarkVerifier();

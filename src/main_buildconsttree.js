@@ -47,7 +47,7 @@ async function run() {
 
     let MH;
     if (starkStruct.verificationHashType == "GL") {
-        MH = await buildMerkleHashGL();
+        MH = await buildMerkleHashGL(starkStruct.splitLinearHash);
     } else if (starkStruct.verificationHashType == "BN128") {
         MH = await buildMerkleHashBN128();
     } else {

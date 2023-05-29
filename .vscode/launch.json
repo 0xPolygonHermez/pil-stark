@@ -767,7 +767,7 @@
             ]
         },
         {
-            "name": "fibonacci C15 setup",
+            "name": "fibonacci C12 setup",
             "program": "src/compressor/main_compressor_setup.js",
             "request": "launch",
             "skipFiles": [
@@ -776,16 +776,16 @@
             "type": "pwa-node",
             "args": [
                 "-r ${workspaceFolder}/tmp/fibonacci.verifier.r1cs",
-                "-p ${workspaceFolder}/tmp/fibonacci.c15.pil",
-                "-c ${workspaceFolder}/tmp/fibonacci.c15.const",
-                "-e ${workspaceFolder}/tmp/fibonacci.c15.exec",
+                "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
+                "-c ${workspaceFolder}/tmp/fibonacci.c12.const",
+                "-e ${workspaceFolder}/tmp/fibonacci.c12.exec",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
             ]
         },
         {
-            "name": "fibonacci C15 genStarkInfo",
+            "name": "fibonacci C12 genStarkInfo",
             "program": "${workspaceFolder}/src/main_genstarkinfo.js",
             "request": "launch",
             "skipFiles": [
@@ -793,16 +793,16 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-p tmp/fibonacci.c15.pil",
-                "-s ${workspaceFolder}/test/state_machines/sm_fibonacci/fibonacci.c15.starkstruct.json",
-                "-i tmp/fibonacci.c15.starkinfo.json"
+                "-p tmp/fibonacci.c12.pil",
+                "-s ${workspaceFolder}/test/state_machines/sm_fibonacci/fibonacci.c12.starkstruct.json",
+                "-i tmp/fibonacci.c12.starkinfo.json"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
             ]
         },
         {
-            "name": "fibonacci C15 exec",
+            "name": "fibonacci C12 exec",
             "program": "src/compressor/main_compressor_exec.js",
             "request": "launch",
             "skipFiles": [
@@ -812,16 +812,16 @@
             "args": [
                 "-i ${workspaceFolder}/tmp/fibonacci.proof.zkin.json",
                 "-w ${workspaceFolder}/tmp/fibonacci.verifier_js/fibonacci.verifier.wasm",
-                "-p ${workspaceFolder}/tmp/fibonacci.c15.pil",
-                "-e ${workspaceFolder}/tmp/fibonacci.c15.exec",
-                "-m ${workspaceFolder}/tmp/fibonacci.c15.commit",
+                "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
+                "-e ${workspaceFolder}/tmp/fibonacci.c12.exec",
+                "-m ${workspaceFolder}/tmp/fibonacci.c12.commit",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
             ]
         },
         {
-            "name": "fibonacci C15 PIL verify",
+            "name": "fibonacci C12 PIL verify",
             "program": "node_modules/pilcom/src/main_pilverifier.js",
             "request": "launch",
             "skipFiles": [
@@ -829,16 +829,16 @@
             ],
             "type": "pwa-node",
             "args": [
-                "tmp/fibonacci.c15.commit",
-                "-p tmp//fibonacci.c15.pil",
-                "-c tmp/fibonacci.c15.const"
+                "tmp/fibonacci.c12.commit",
+                "-p tmp//fibonacci.c12.pil",
+                "-c tmp/fibonacci.c12.const"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
             ]
         },
         {
-            "name": "fibonacci C15 build consttree",
+            "name": "fibonacci C12 build consttree",
             "program": "src/main_buildconsttree.js",
             "request": "launch",
             "skipFiles": [
@@ -846,18 +846,18 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-c ${workspaceFolder}/tmp/fibonacci.c15.const",
-                "-p ${workspaceFolder}/tmp/fibonacci.c15.pil",
-                "-s ${workspaceFolder}/test/state_machines/sm_fibonacci/fibonacci.c15.starkstruct.json",
-                "-t ${workspaceFolder}/tmp/fibonacci.c15.consttree",
-                "-v ${workspaceFolder}/tmp/fibonacci.c15.verkey.json",
+                "-c ${workspaceFolder}/tmp/fibonacci.c12.const",
+                "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
+                "-s ${workspaceFolder}/test/state_machines/sm_fibonacci/fibonacci.c12.starkstruct.json",
+                "-t ${workspaceFolder}/tmp/fibonacci.c12.consttree",
+                "-v ${workspaceFolder}/tmp/fibonacci.c12.verkey.json",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
             ]
         },
         {
-            "name": "fibonacci C15 prove",
+            "name": "fibonacci C12 prove",
             "program": "src/main_prover.js",
             "request": "launch",
             "skipFiles": [
@@ -865,14 +865,14 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-m ${workspaceFolder}/tmp/fibonacci.c15.commit",
-                "-c ${workspaceFolder}/tmp/fibonacci.c15.const",
-                "-t ${workspaceFolder}/tmp/fibonacci.c15.consttree",
-                "-p ${workspaceFolder}/tmp/fibonacci.c15.pil",
-                "-s ${workspaceFolder}/tmp/fibonacci.c15.starkinfo.json",
-                "-o ${workspaceFolder}/tmp/fibonacci.c15.proof.json",
-                "-z ${workspaceFolder}/tmp/fibonacci.c15.proof.zkin.json",
-                "-b ${workspaceFolder}/tmp/fibonacci.c15.public.json",
+                "-m ${workspaceFolder}/tmp/fibonacci.c12.commit",
+                "-c ${workspaceFolder}/tmp/fibonacci.c12.const",
+                "-t ${workspaceFolder}/tmp/fibonacci.c12.consttree",
+                "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
+                "-s ${workspaceFolder}/tmp/fibonacci.c12.starkinfo.json",
+                "-o ${workspaceFolder}/tmp/fibonacci.c12.proof.json",
+                "-z ${workspaceFolder}/tmp/fibonacci.c12.proof.zkin.json",
+                "-b ${workspaceFolder}/tmp/fibonacci.c12.public.json",
                 "--proverAddr=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
             ],
             "runtimeArgs": [
@@ -880,7 +880,7 @@
             ]
         },
         {
-            "name": "fibonacci C15 verify proof",
+            "name": "fibonacci C12 verify proof",
             "program": "src/main_verifier.js",
             "request": "launch",
             "skipFiles": [
@@ -888,10 +888,10 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-s ${workspaceFolder}/tmp/fibonacci.c15.starkinfo.json",
-                "-o ${workspaceFolder}/tmp/fibonacci.c15.proof.json",
-                "-b ${workspaceFolder}/tmp/fibonacci.c15.public.json",
-                "-v ${workspaceFolder}/tmp/fibonacci.c15.verkey.json"
+                "-s ${workspaceFolder}/tmp/fibonacci.c12.starkinfo.json",
+                "-o ${workspaceFolder}/tmp/fibonacci.c12.proof.json",
+                "-b ${workspaceFolder}/tmp/fibonacci.c12.public.json",
+                "-v ${workspaceFolder}/tmp/fibonacci.c12.verkey.json"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -906,10 +906,10 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-p ${workspaceFolder}/tmp/fibonacci.c15.pil",
-                "-s ${workspaceFolder}/tmp/fibonacci.c15.starkinfo.json",
-                "-v ${workspaceFolder}/tmp/fibonacci.c15.verkey.json",
-                "-o ${workspaceFolder}/tmp/fibonacci.c15.verifier.circom",
+                "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
+                "-s ${workspaceFolder}/tmp/fibonacci.c12.starkinfo.json",
+                "-v ${workspaceFolder}/tmp/fibonacci.c12.verkey.json",
+                "-o ${workspaceFolder}/tmp/fibonacci.c12.verifier.circom",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1366,7 +1366,7 @@
             ]
         },
         {
-            "name": "zkevm c15 verify",
+            "name": "zkevm c12 verify",
             "program": "src/main_verifier.js",
             "request": "launch",
             "args": [
