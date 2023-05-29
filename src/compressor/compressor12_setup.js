@@ -21,13 +21,13 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     // Given the PLONK Constraints, which have the following form: qL*a + qR*b + qM*a*b + qO*c + qC = 0,
     // calculate the number of constraints required in the compressed Plonk. 
     // Since each regular plonk constrain only uses 3 wires (a, b and c), and several sets of wires can share the same set of polynomial
-    // gates, we can further extend the compression by storing 2 or 3 different sets of (a_i, b_i, c_i) for every set of (qL, qR, qM, Q0, qC)
+    // gates, we can further extend the compression by storing 2 different sets of (a_i, b_i, c_i) for every set of (qL, qR, qM, Q0, qC)
     // the committed polynomial. 
     // In this particular case, we will store two sets of gates in every row. The first one will correspond to a[0], a[1], a[2] and a[3], a[4], a[5] 
-    // and the second on will correspond to a[6], a[7], a[8] and a[9], a[10], a[11] and a[12], a[13], a[14]
-    // In addition to that, since the second row of EvPol custom gate only uses 6 committed polynomials and it doesn't use any constant value, we will 
-    // verify three plonk constraints in those rows.
-    // In the same way, since Cmul and FFT have 6 committed polynomial values empty we will verify two plonk constraints in each row
+    // and the second on will correspond to a[6], a[7], a[8] and a[9], a[10], a[11]
+    // In addition to that, since the first row of TreeSelector custom gate only uses 6 committed polynomials and it doesn't use any constant value, we will 
+    // verify two plonk constraints in those rows.
+    // In the same way, since Cmul and EvalPol have 3 committed polynomial values empty we will verify two plonk constraints in each row
 
     // Get information about the custom gates from the R1CS
     const customGatesInfo = getCustomGatesInfo(r1cs);
@@ -383,7 +383,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     // Paste plonk constraints.
     // Each row can be split in two subsets: 
     // a[0], a[1], a[2] and a[3], a[4], a[5] --> C[0], C[1], C[2], C[3], C[4]
-    // a[6], a[7], a[8] and a[9], a[10], a[11] and a[12], a[13], a[14] --> C[6], C[7], C[8], C[9], C[10]  
+    // a[6], a[7], a[8] and a[9], a[10], a[11] --> C[6], C[7], C[8], C[9], C[10]  
     // Remember that each row will contain two sets of constraints, each of them should be fulfilled by two different set of wires.
     const partialRows = {}; // Stores a row that is partially completed, which means that a we only have one set of wires (a_i, b_i, c_i) that fulfill a given constraint
     const halfRows = []; // Stores a row that already contains a constraint (qL, qR, qM, qO, qC) with two sets of wires that fulfill it
