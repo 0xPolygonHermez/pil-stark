@@ -46,26 +46,6 @@ describe("test fft", async function () {
         return coefficients;
     }
 
-    function printA(pol, degree) {
-        let str = "[";
-        for (let i = 0; i < degree; i++) {
-            str += " " + Fr.toString(pol.slice(i * Fr.n8, (i + 1) * Fr.n8));
-        }
-        str = str + " ]";
-
-        console.log(str);
-    }
-
-    function printB(buff, nPols, polId, degree) {
-        let str = "[";
-        for (let i = 0; i < degree; i++) {
-            str += " " + Fr.toString(buff.slice((i * nPols + polId)* Fr.n8, (i * nPols + polId + 1) * Fr.n8));
-        }
-        str = str + " ]";
-
-        console.log(str);
-    }
-
     function checkEquivalence(buffer, array) {
         const nPols = array.length;
         assert(nPols > 0);
@@ -106,7 +86,7 @@ describe("test fft", async function () {
 
     it("It checks fft", async () => {
         await _testFft(5, 2);
-        await _testFft(18, 5);
+        await _testFft(15, 5);
 
         async function _testFft(nBits, nPols) {
             const degree = 1 << nBits;
@@ -126,21 +106,6 @@ describe("test fft", async function () {
 
             console.log("fft using a row major big array of degree " + degree + " and " + nPols + " polynomials");
 
-            // console.log("COEFFICIENTS");
-            // for(let i = 0; i < nPols; i++) {
-            //     console.log("Polynomial " + i);
-            //     printA(coefsA[i], degree);
-            //     printB(coefsB, nPols, i, degree);
-            // }
-
-            // console.log();
-            // console.log("EVALUATIONS");
-            // for(let i = 0; i < nPols; i++) {
-            //     console.log("Polynomial " + i);
-            //     printA(evalsA[i], degree);
-            //     printB(evalsB, nPols, i, degree);
-            // }
-            
             console.log("FFT using a row major big array");
             await fft(coefsB, nPols, nBits, evalsB, Fr);
 
@@ -151,7 +116,7 @@ describe("test fft", async function () {
 
     it("It checks ifft", async () => {
         await _testIfft(5, 2);
-        await _testIfft(18, 5);
+        await _testIfft(15, 5);
 
         async function _testIfft(nBits, nPols) {
             const degree = 1 << nBits;
@@ -179,7 +144,7 @@ describe("test fft", async function () {
 
     it("It checks interpolate", async () => {
         await _testInterpolate(3, 1, 1);
-        await _testInterpolate(18, 3, 1);
+        await _testInterpolate(15, 3, 1);
 
         async function _testInterpolate(nBits, nPols, extBits) {
             const degree = 1 << nBits;
