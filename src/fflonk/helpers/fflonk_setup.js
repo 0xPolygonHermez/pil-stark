@@ -114,7 +114,7 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
             polDeg: domainSize,
             type: "cmP",
             id: fflonkInfo.imExp2cm[fflonkInfo.imExpsList[i]],
-            stage:4,
+            stage:3,
         }
     }
 

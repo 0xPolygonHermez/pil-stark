@@ -2,11 +2,10 @@ const {BigBuffer} = require("ffjavascript");
 const { getPowersOfTau, Polynomial, commit, Keccak256Transcript } = require("shplonkjs");
 const workerpool = require("workerpool");
 const { fflonkgen_execute } = require("./fflonk_prover_worker");
-const { calculateH1H2, calculateZ, buildZhInv } = require("../../helpers/polutils");
+const { calculateH1H2, calculateZ } = require("../../helpers/polutils");
 const { open } = require("shplonkjs/src/shplonk");
 
 const Logger = require('logplease');
-const { interpolate, ifft, fft } = require("../../helpers/fft/fft_p.bn128");
 
 const parallelExec = false;
 const useThreads = false;
@@ -93,10 +92,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         xx = Fr.mul(xx, Fr.w[ctx.nBitsExt]);
     }
        
-
-    // Build ZHInv
-    const zhInv = buildZhInv(Fr, ctx.nBits, ctx.extendBits);
-    ctx.Zi = zhInv;
 
     const committedPols = {};
 
@@ -239,12 +234,12 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         ctx.challenges[1] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.beta: " + Fr.toString(ctx.challenges[1]));
         
-        await callCalculateExps("step2prev", "n", pool, ctx, fflonkInfo, zkey, logger);
-
-        if(0 === fflonkInfo.puCtx.length) {
+        if(!fflonkInfo.mapSectionsN.cm2_n) {
             if(logger) logger.debug("··· !!! No polynomials to compute...skipping round 2");
             return;
         }
+
+        await callCalculateExps("step2prev", "n", pool, ctx, fflonkInfo, zkey, logger);
 
         for (let i = 0; i < fflonkInfo.puCtx.length; i++) {
             const puCtx = fflonkInfo.puCtx[i];
@@ -293,16 +288,16 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         ctx.challenges[3] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.delta: " + Fr.toString(ctx.challenges[3]));
 
-        await callCalculateExps("step3prev", "n", pool, ctx, fflonkInfo, zkey, logger);
+        if(!fflonkInfo.mapSectionsN.cm3_n) {
+            if(logger) logger.debug("··· !!! No polynomials to compute...skipping round 3");
+            return;
+        }
 
         const nPlookups = fflonkInfo.puCtx.length;
         const nPermutations = fflonkInfo.peCtx.length;
         const nConnections = fflonkInfo.ciCtx.length;
 
-        if(0 === nPlookups + nPermutations + nConnections) {
-            if(logger) logger.debug("··· !!! No polynomials to compute...skipping round 3");
-            return;
-        }
+        await callCalculateExps("step3prev", "n", pool, ctx, fflonkInfo, zkey, logger);
 
         for (let i = 0; i < nPlookups; i++) {
             if (logger) logger.debug(`··· Calculating z for plookup ${i}`);
@@ -365,12 +360,19 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             nCm++;
         }
 
+        await callCalculateExps("step3", "n", pool, ctx, fflonkInfo, zkey);
+
+        for(let i = 0; i < fflonkInfo.imExpsList.length; ++i) {
+            const imPol = getPolBuffer(ctx, fflonkInfo, fflonkInfo.imExp2cm[fflonkInfo.imExpsList[i]]);
+            ctx[`Im${fflonkInfo.imExpsList[i]}`] = await Polynomial.fromEvaluations(imPol, curve, logger);
+
+            await extend(ctx, ctx[`Im${fflonkInfo.imExpsList[i]}`].coef, fflonkInfo.mapSections.cm3_2ns[i + nPlookups + nPermutations + nConnections], sDomainNext);
+        }
+
         const commits3 = await commit(3, zkey, ctx, PTau, curve, { multiExp: true, logger });
         for (let j = 0; j < commits3.length; ++j) {
             committedPols[`${commits3[j].index}`] = { commit: commits3[j].commit, pol: commits3[j].pol };
         }
-
-        await callCalculateExps("step3", "n", pool, ctx, fflonkInfo, zkey);
     }
 
     function printPol(buffer) {
@@ -384,11 +386,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     }
 
     async function round4() {
-
-        for(let i = 0; i < fflonkInfo.imExpsList.length; ++i) {
-            const imPol = getPol(ctx, fflonkInfo, fflonkInfo.imExp2cm[fflonkInfo.imExpsList[i]]);
-            ctx[`Im${fflonkInfo.imExpsList[i]}`] = Polynomial.fromCoefficientsArray(imPol, curve, logger);
-        }
 
         transcript.reset();
 
@@ -405,8 +402,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         printPol(ctx.q_2ns);
         ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, curve, logger);
         ctx["Q"].divZh(ctx.N, (1<<ctx.extendBits));
-
-        printPol(ctx["Q"].coef);
 
         const commits4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });
         for (let j = 0; j < commits4.length; ++j) {
@@ -632,7 +627,6 @@ function compileCode(ctx, code, dom, ret) {
                 } else {
                     throw new Error("Invalid dom");
                 }
-            case "Zi": return `ctx.Zi(i)`;
             default: throw new Error("Invalid reference type get: " + r.type);
         }
     }
@@ -729,7 +723,6 @@ function ctxProxy(ctx) {
     pCtx.tmp = ctx.tmp;
     pCtx.Fr = ctx.Fr;
     pCtx.evals = ctx.evals;
-    pCtx.Zi = ctx.Zi;
 
     return pCtx;
 
