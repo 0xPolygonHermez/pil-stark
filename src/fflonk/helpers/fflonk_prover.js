@@ -537,7 +537,7 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, zkey) {
     const cFirst = compileCode(ctx, code.first, dom);
 
     const n = dom === "n" ? ctx.N : ctx.Next;
-    const Next = 1;
+    const Next = dom === "n" ? 1 : (1 << ctx.extendBits);
     let nPerThread = Math.floor((n-1)/pool.maxWorkers)+1;
     if (nPerThread>maxNperThread) nPerThread = maxNperThread;
     if (nPerThread<minNperThread) nPerThread = minNperThread;
@@ -584,7 +584,7 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, zkey) {
 function compileCode(ctx, code, dom, ret) {
     const body = [];
 
-    const Next = 1;
+    const Next = dom === "n" ? 1 : (1 << ctx.extendBits);
     const N = dom === "n" ? ctx.N : ctx.Next;
 
     for (let j=0;j<code.length; j++) {
@@ -615,12 +615,10 @@ function compileCode(ctx, code, dom, ret) {
         switch (r.type) {
             case "tmp": return `ctx.tmp[${r.id}]`;
             case "const": {
-                const index = r.prime ? `(i + ${Next})%${N}` : "i"
+                const index = r.prime ? `((i + ${Next})%${N})` : "i"
                 if(dom === "n") {
-                    //return `ctx.const_n.slice((${r.id}*${N} + ${index})*${ctx.Fr.n8},(${r.id}*${N} + ${index} + 1)*${ctx.Fr.n8})`;
                     return `ctx.const_n.slice((${r.id} + ${index} * ${ctx.fflonkInfo.nConstants})*${ctx.Fr.n8}, (${r.id} + ${index} * ${ctx.fflonkInfo.nConstants} + 1)*${ctx.Fr.n8})`;
                 } else if(dom === "2ns") {
-                    //return `ctx.const_2ns.slice((${r.id}*${N} + ${index})*${ctx.Fr.n8},(${r.id}*${N} + ${index} + 1)*${ctx.Fr.n8})`;
                     return `ctx.const_2ns.slice((${r.id} + ${index} * ${ctx.fflonkInfo.nConstants})*${ctx.Fr.n8}, (${r.id} + ${index} * ${ctx.fflonkInfo.nConstants} + 1)*${ctx.Fr.n8})`;
                 } else {
                     throw new Error("Invalid dom");
@@ -696,12 +694,12 @@ function compileCode(ctx, code, dom, ret) {
     function evalMap(polId, prime, setValue) {
         let p = ctx.fflonkInfo.varPolMap[polId];
         offset = p.sectionPos;
-        let index = prime ? `(i + ${Next})%${N}` : "i";
+        let index = prime ? `((i + ${Next})%${N})` : "i";
         let size = ctx.fflonkInfo.mapSectionsN[p.section];
         if(setValue) {
             return `ctx.${p.section}.set(${setValue},(${offset} + (${index}*${size}))*${ctx.Fr.n8})`;
         } else {
-            return `ctx.${p.section}.slice((${offset} + (${index}*${size}))*${ctx.Fr.n8},(${offset} + (${index} + 1)*${size})*${ctx.Fr.n8})`;
+            return `ctx.${p.section}.slice((${offset} + (${index}*${size}))*${ctx.Fr.n8},(${offset} + ${index}*${size} + 1)*${ctx.Fr.n8})`;
         }
         
     }

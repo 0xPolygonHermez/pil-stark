@@ -15,12 +15,12 @@ describe("test fibonacci sm", async function () {
 
     it("It should create the pols main", async () => {
         const starkStruct = {
-            nBits: 10,
-            nBitsExt: 11,
+            nBits: 3,
+            nBitsExt: 4,
             nQueries: 8,
             verificationHashType : "GL",
             steps: [
-                {nBits: 11},
+                {nBits: 4},
                 {nBits: 3}
             ]
         };
