@@ -1,8 +1,20 @@
+const { BigBuffer } = require("ffjavascript");
+
 module.exports.polMulAxi = function polMulAxi(F, p, init, acc) {
     let r = init;
     for (let i=0; i<p.length; i++) {
         p[i] = F.mul(p[i], r);
         r = F.mul(r, acc);
+    }
+}
+
+module.exports.polMulAxiBuffer = function polMulAxi(Fr, buffer, init, acc) {
+    let r = init;
+    let len = buffer.byteLength / Fr.n8;
+
+    for (let i = 0; i < len; i++) {
+        buffer.set(Fr.mul(buffer.slice(i * Fr.n8, (i + 1) * Fr.n8), r), i * Fr.n8);
+        r = Fr.mul(r, acc);
     }
 }
 
@@ -25,6 +37,17 @@ module.exports.extendPol = function extendPol(F, p, extendBits) {
     module.exports.polMulAxi(F, res, F.one, F.shift);
     for (let i=p.length; i<(p.length<<extendBits); i++) res[i] = F.zero;
     res = F.fft(res);
+    return res;
+}
+
+module.exports.extendPolBuffer = async function extendPol(Fr, buffer, extendBits) {
+    extendBits = extendBits || 1;
+    let res = new BigBuffer(buffer.byteLength << extendBits);
+
+    res.set(await Fr.ifft(buffer), 0);
+    module.exports.polMulAxiBuffer(Fr, res, Fr.one, Fr.shift);
+    res = await Fr.fft(res);
+
     return res;
 }
 

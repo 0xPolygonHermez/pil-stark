@@ -3,8 +3,8 @@ const assert = chai.assert;
 
 const { BigBuffer } = require("ffjavascript");
 const { buildBn128 } = require("ffjavascript");
-const { fft, ifft, interpolate } = require("../src/helpers/fft/fft_p");
-const { extendPol } = require("../src/helpers/polutils");
+const { fft, ifft, interpolate } = require("../src/helpers/fft/fft_p.bn128");
+const { extendPolBuffer } = require("../src/helpers/polutils");
 
 describe("test fft", async function () {
     this.timeout(10000000);
@@ -44,6 +44,26 @@ describe("test fft", async function () {
             }
         }
         return coefficients;
+    }
+
+    function printA(pol, degree) {
+        let str = "[";
+        for (let i = 0; i < degree; i++) {
+            str += " " + Fr.toString(pol.slice(i * Fr.n8, (i + 1) * Fr.n8));
+        }
+        str = str + " ]";
+
+        console.log(str);
+    }
+
+    function printB(buff, nPols, polId, degree) {
+        let str = "[";
+        for (let i = 0; i < degree; i++) {
+            str += " " + Fr.toString(buff.slice((i * nPols + polId)* Fr.n8, (i * nPols + polId + 1) * Fr.n8));
+        }
+        str = str + " ]";
+
+        console.log(str);
     }
 
     function checkEquivalence(buffer, array) {
@@ -101,12 +121,28 @@ describe("test fft", async function () {
 
             console.log("Legacy fft");
             for (let i = 0; i < nPols; i++) {
-                evalsA[i] = Fr.fft(coefsA[i]);
+                evalsA[i] = await Fr.fft(coefsA[i]);
             }
 
-            console.log("FFT using a row major big array");
-            await fft(coefsB, nPols, nBits, evalsB);
+            console.log("fft using a row major big array of degree " + degree + " and " + nPols + " polynomials");
 
+            // console.log("COEFFICIENTS");
+            // for(let i = 0; i < nPols; i++) {
+            //     console.log("Polynomial " + i);
+            //     printA(coefsA[i], degree);
+            //     printB(coefsB, nPols, i, degree);
+            // }
+
+            // console.log();
+            // console.log("EVALUATIONS");
+            // for(let i = 0; i < nPols; i++) {
+            //     console.log("Polynomial " + i);
+            //     printA(evalsA[i], degree);
+            //     printB(evalsB, nPols, i, degree);
+            // }
+            
+            console.log("FFT using a row major big array");
+            await fft(coefsB, nPols, nBits, evalsB, Fr);
 
             console.log("Check equality of evaluations");
             checkEquivalence(evalsB, evalsA);
@@ -130,11 +166,11 @@ describe("test fft", async function () {
 
             console.log("Legacy ifft");
             for (let i = 0; i < nPols; i++) {
-                coefsA[i] = Fr.ifft(evalsA[i]);
+                coefsA[i] = await Fr.ifft(evalsA[i]);
             }
 
             console.log("IFFT using a row major big array");
-            await ifft(evalsB, nPols, nBits, coefsB);
+            await ifft(evalsB, nPols, nBits, coefsB, Fr);
 
             console.log("Check equality of evaluations");
             checkEquivalence(coefsB, coefsA);
@@ -159,11 +195,11 @@ describe("test fft", async function () {
 
             console.log("Legacy interpolate");
             for (let i = 0; i < nPols; i++) {
-                evalsA[i] = extendPol(Fr, coefsA[i], extBits);
+                evalsA[i] = await extendPolBuffer(Fr, coefsA[i], extBits);
             }
 
             console.log("Interpolate using a row major big array");
-            await interpolate(coefsB, nPols, nBits, evalsB, nBits + extBits);
+            await interpolate(coefsB, nPols, nBits, evalsB, nBits + extBits, Fr);
 
             console.log("Check equality of interpolations");
             checkEquivalence(evalsB, evalsA);
