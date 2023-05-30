@@ -7,7 +7,7 @@ const { open } = require("shplonkjs/src/shplonk");
 
 const Logger = require('logplease');
 
-const parallelExec = false;
+const parallelExec = true;
 const useThreads = false;
 const maxNperThread = 1 << 18;
 const minNperThread = 1 << 12;
@@ -260,14 +260,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             const bufferEvals2  = getPolBuffer(ctx, fflonkInfo, fflonkInfo.cm_n[nCm+1]);
             ctx[`Plookup.H2_${i}`] = await Polynomial.fromEvaluations(bufferEvals2, curve, logger);
 
-            console.log("--------H1-------------")
-            printPol(ctx[`Plookup.H1_${i}`].coef);
-            console.log("--------H1-------------")
-
-            console.log("--------H2-------------")
-            printPol(ctx[`Plookup.H2_${i}`].coef);
-            console.log("--------H2-------------")
-
             // Compute extended evals
             await extend(ctx, ctx[`Plookup.H1_${i}`].coef, fflonkInfo.mapSections.cm2_2ns[2*i], sDomaiNext);
             await extend(ctx, ctx[`Plookup.H1_${i}`].coef, fflonkInfo.mapSections.cm2_2ns[2*i + 1], sDomaiNext);
@@ -405,9 +397,10 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
 
         await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, zkey, logger);
 
-        printPol(ctx.q_2ns);
         const qq1 = await ctx.curve.Fr.ifft(ctx.q_2ns);
         const qq2 = new BigBuffer(ctx.fflonkInfo.qDim*ctx.fflonkInfo.qDeg*sDomain);
+
+        printPol(ctx.q_2ns);
 
         let curS = Fr.one;
         const shiftIn = Fr.exp(Fr.inv(Fr.shift), ctx.N);
@@ -544,7 +537,7 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, zkey) {
             n: n,
             nBits: ctx.nBits,
             extendBits: ctx.extendBits,
-            Next: Next,
+            next: Next,
             evals: ctx.evals,
             publics: ctx.publics,
             challenges: ctx.challenges
@@ -553,13 +546,9 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, zkey) {
             const si = execInfo.inputSections[s];
             ctxIn[si.name] = new BigBuffer((curN+Next)*si.width*ctx.Fr.n8);
             const s1 = si.width > 0 ? ctx[si.name].slice(i*si.width*ctx.Fr.n8, (i + curN)*si.width*ctx.Fr.n8) : ctx[si.name];
-            for(let j = 0; j < curN*si.width; ++j) {
-                ctxIn[si.name].set(s1.slice(j*ctx.Fr.n8, (j+1)*ctx.Fr.n8), j*ctx.Fr.n8);
-            }
+            ctxIn[si.name].set(s1, ctx.Fr.n8);
             const sNext = si.width > 0 ? ctx[si.name].slice( (((i+curN)%n) *si.width)*ctx.Fr.n8, (((i+curN)%n) *si.width + si.width*Next)*ctx.Fr.n8) : ctx[si.name];
-            for(let j = 0; j < si.width*Next; ++j) {
-                ctxIn[si.name].set(sNext.slice(j*ctx.Fr.n8, (j+1)*ctx.Fr.n8), (curN*si.width + j)*ctx.Fr.n8);
-            }
+            ctxIn[si.name].set(sNext, curN*si.width*ctx.Fr.n8);
         }
         if (useThreads) {
             promises.push(pool.exec("fflonkgen_execute", [ctxIn, cFirst, curN, execInfo, execPart, i ,n]));
@@ -573,9 +562,7 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, zkey) {
     for (let i=0; i<res.length; i++) {
         for (let s =0; s<execInfo.outputSections.length; s++) {
             const si = execInfo.outputSections[s];
-            for(let j = 0; j < res[i][si.name].byteLength/ctx.Fr.n8 - si.width*Next; ++j) {
-                ctx[si.name].set(res[i][si.name].slice(j*ctx.Fr.n8, (j+1)*ctx.Fr.n8), (i*nPerThread*si.width + j)*ctx.Fr.n8);
-            }
+            ctx[si.name].set(res[i][si.name], i*nPerThread*si.width*ctx.Fr.n8);
         }
     }
 
