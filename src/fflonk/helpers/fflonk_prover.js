@@ -203,13 +203,10 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             ctx[name] = await Polynomial.fromEvaluations(evalsBuffer, curve, logger);
 
 
-            // Compute extended evals
-            //await extend(ctx, ctx[name].coef, fflonkInfo.mapSections.cm1_2ns[i], sDomainNext);
+            //Compute extended evals
+            await extend(ctx, ctx[name].coef, fflonkInfo.mapSections.cm1_2ns[i], sDomainNext);
         }        
 
-
-        // Compute extended evals
-        await interpolate(ctx.cm1_n, fflonkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.cm1_2ns, ctx.nBitsExt, Fr);
 
         const commits1 = await commit(1, zkey, ctx, PTau, curve, { multiExp: true, logger });
         for (let j = 0; j < commits1.length; ++j) {
@@ -405,31 +402,11 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
 
         await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, zkey, logger);
 
-        const qq1 = new BigBuffer(fflonkInfo.qDim*sDomainNext);
-        const qq2 = new BigBuffer(ctx.fflonkInfo.qDim*ctx.fflonkInfo.qDeg*sDomain);
+        printPol(ctx.q_2ns);
+        ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, curve, logger);
+        ctx["Q"].divZh(ctx.N, (1<<ctx.extendBits));
 
-        await ifft(ctx.q_2ns, fflonkInfo.qDim, ctx.nBitsExt, qq1, Fr);
-
-        printPol(qq1);
-
-        let curS = Fr.one;
-        const shiftIn = Fr.exp(Fr.inv(Fr.shift), ctx.N);
-
-        for (let p =0; p<ctx.fflonkInfo.qDeg; p++) {
-            for (let i=0; i<ctx.N; i++) {
-                for (let k=0; k<fflonkInfo.qDim; k++) {
-                    const indexqq1 = (p*ctx.N*fflonkInfo.qDim + i*fflonkInfo.qDim + k)*n8r;
-                    const indexqq2 = (i*fflonkInfo.qDim*fflonkInfo.qDeg + fflonkInfo.qDim*p + k)*n8r;
-                    const element = Fr.mul(qq1.slice(indexqq1, indexqq1 + n8r), curS);
-                    qq2.set(element, indexqq2);
-                }
-            }
-            curS = Fr.mul(curS, shiftIn);
-        }
-
-        printPol(qq2);
-
-        ctx["Q"] = new Polynomial(qq2, curve, logger);
+        printPol(ctx["Q"].coef);
 
         const commits4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });
         for (let j = 0; j < commits4.length; ++j) {

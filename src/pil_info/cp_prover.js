@@ -80,19 +80,31 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
 
     pilCodeGen(ctx2ns, res.cExp);
     const code = ctx2ns.code[ctx2ns.code.length-1].code;
-    code.push({
-        op: "mul",
-        dest: {
-            type: "q",
-            id: 0
-        },
-        src: [
-        code[code.length-1].dest,
-        {
-                type: "Zi"
-        }
-        ]
-    });
+    if(stark) {
+        code.push({
+            op: "mul",
+            dest: {
+                type: "q",
+                id: 0
+            },
+            src: [
+            code[code.length-1].dest,
+            {
+                    type: "Zi"
+            }
+            ]
+        });
+    } else {
+        code.push({
+            op: "copy",
+            dest: {
+                type: "q",
+                id: 0
+            },
+            src: [code[code.length-1].dest],
+        });
+    }
+    
     res.nCm4 = res.qDeg;
 
     res.step42ns = buildCode(ctx2ns);
