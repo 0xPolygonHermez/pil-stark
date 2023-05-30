@@ -416,6 +416,18 @@ function compileCode(ctx, code, dom, ret) {
         body.push(`  return ${getRef(code[code.length-1].dest)};`);
     }
 
+'  ctx.tmp[0] = ctx.curve.Fr.sub(ctx.cm1_2ns.slice((0 + (((i + 2)%16)*2))*32,(0 + (((i + 2)%16) + 1)*2)*32), ctx.cm3_2ns.slice((0 + (i*1))*32,(0 + (i + 1)*1)*32));'
+'  ctx.tmp[1] = ctx.curve.Fr.sub(ctx.curve.Fr.e(1n), ctx.const_2ns.slice((1 + i * 2)*32, (1 + i * 2 + 1)*32));'
+'  ctx.tmp[2] = ctx.curve.Fr.mul(ctx.tmp[0], ctx.tmp[1]);'
+'  ctx.tmp[8] = ctx.curve.Fr.sub(ctx.tmp[2], ctx.curve.Fr.e(0n));'
+'  ctx.tmp[3] = ctx.curve.Fr.mul(ctx.challenges[4], ctx.tmp[8]);'
+'  ctx.tmp[4] = ctx.curve.Fr.mul(ctx.cm1_2ns.slice((0 + (i*2))*32,(0 + (i + 1)*2)*32), ctx.cm1_2ns.slice((0 + (i*2))*32,(0 + (i + 1)*2)*32));'
+'  ctx.tmp[5] = ctx.curve.Fr.mul(ctx.cm1_2ns.slice((1 + (i*2))*32,(1 + (i + 1)*2)*32), ctx.cm1_2ns.slice((1 + (i*2))*32,(1 + (i + 1)*2)*32));'
+'  ctx.tmp[6] = ctx.curve.Fr.add(ctx.tmp[4], ctx.tmp[5]);'
+'  ctx.tmp[7] = ctx.curve.Fr.sub(ctx.tmp[6], ctx.cm3_2ns.slice((0 + (i*1))*32,(0 + (i + 1)*1)*32));'
+'  ctx.tmp[9] = ctx.curve.Fr.add(ctx.tmp[3], ctx.tmp[7]);'
+'  ctx.q_2ns.set(ctx.tmp[9], i*32)'
+
     return body.join("\n");
 
     function getRef(r) {

@@ -22,5 +22,7 @@ module.exports.execute = async function (F, pols, input) {
         pols.l1[i] =F.add(F.square(pols.l2[i-1]), F.square(pols.l1[i-1]));
     }
 
+    console.log(pols);
     return pols.l1[N-1];
 }
+
