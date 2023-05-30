@@ -407,6 +407,7 @@ function compileCode(ctx, code, dom, ret) {
         setRef(code[j].dest, exp);
     }
 
+    console.log(body);
     if (ret) {
         body.push(`  return ${getRef(code[code.length-1].dest)};`);
     }
