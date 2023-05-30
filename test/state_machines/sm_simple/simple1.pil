@@ -4,4 +4,4 @@ namespace Simple(%N);
 
     pol commit a, b;
 
-    a=a;
+    a=a; 

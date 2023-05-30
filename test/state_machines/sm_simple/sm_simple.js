@@ -1,5 +1,11 @@
 module.exports.buildConstants = async function (pols) {
+    if(pols) {
+        const N = pols.LAST.length;
 
+        for ( let i=0; i<N; i++) {
+            pols.LAST[i] = (i == N-1) ? 1n : 0n;
+        }
+    }
 }
 
 

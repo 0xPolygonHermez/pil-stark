@@ -57,20 +57,23 @@ async function runTest(pilFile) {
 describe("simple sm", async function () {
     this.timeout(10000000);
 
-    // it("Simple1", async () => {
-    //     await runTest("simple1.pil");
-    // });
+    it("Simple1", async () => {
+        await runTest("simple1.pil");
+    });
     it("Simple2", async () => {
         await runTest("simple2.pil");
+    });
+    it("Simple2p", async () => {
+        await runTest("simple2p.pil");
     });
     it("Simple3", async () => {
         await runTest("simple3.pil");
     });
-    // it("Simple4", async () => {
-    //     await runTest("simple4.pil");
-    // });
-    // it("Simple4p", async () => {
-    //     await runTest("simple4p.pil");
-    // });
+    it("Simple4", async () => {
+        await runTest("simple4.pil");
+    });
+    it("Simple4p", async () => {
+        await runTest("simple4p.pil");
+    });
 
 });

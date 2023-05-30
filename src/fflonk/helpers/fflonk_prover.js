@@ -101,20 +101,8 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
 
     const pool = workerpool.pool(__dirname + '/fflonk_prover_worker.js');
 
-    ctx.publics = [];
-    for (let i = 0; i < fflonkInfo.publics.length; i++) {
-        const publicPol = fflonkInfo.publics[i];
-
-        if ("cmP" === publicPol.polType) {
-            //const offset = publicPol.polId * sDomain + publicPol.idx * n8r;
-            const offset = (publicPol.idx * fflonkInfo.mapSectionsN.cm1_n + publicPol.polId)*n8r;
-            ctx.publics[i] = ctx.cm1_n.slice(offset, offset + n8r);
-        } else if ("imP" === publicPol.polType) {
-            ctx.publics[i] = calculateExpAtPoint(ctx, fflonkInfo.publicsCode[i], publicPol.idx);
-        } else {
-            throw new Error(`Invalid public type: ${polType.type}`);
-        }
-    }
+    // ROUND 0. Store constants and committed values. Calculate publics
+    await round0(); 
 
     // ROUND 1. Compute Trace Column Polynomials
     if (logger) logger.debug("> ROUND 1. Compute Trace Column Polynomials");
@@ -141,15 +129,55 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         evaluations,
         publics: ctx.publics,
     };    
+    
+    async function round0() {
+   
+        for (let i = 0; i < cnstPols.$$nPols; i++) {
+
+            const name = cnstPols.$$defArray[i].name;
+            if (cnstPols.$$defArray[i].idx >= 0) name += cnstPols.$$defArray[i].idx;
+
+            if (logger) logger.debug(`··· Preparing ${name} constant polynomial`);
+
+            const cnstPolBuffer = cnstPols.$$array[i];
+            for (let j = 0; j < cnstPolBuffer.length; j++) {
+                ctx.const_n.set(Fr.e(cnstPolBuffer[j]), (i + fflonkInfo.nConstants * j) * n8r);
+            }
+        }
+
+        for (let i = 0; i < cmPols.$$nPols; i++) {
+            let name = cmPols.$$defArray[i].name;
+            if (cmPols.$$defArray[i].idx >= 0)
+                name += cmPols.$$defArray[i].idx;
+
+            if (logger) logger.debug(`··· Preparing '${name}' polynomial`);
+
+            // Compute polynomial evaluations
+            const cmPolBuffer = cmPols.$$array[i];
+            for (let j = 0; j < cmPolBuffer.length; j++) {
+                ctx.cm1_n.set(Fr.e(cmPolBuffer[j]), (i + j*fflonkInfo.mapSectionsN.cm1_n)*n8r);
+            }
+        }   
+        
+        ctx.publics = [];
+        for (let i = 0; i < fflonkInfo.publics.length; i++) {
+            const publicPol = fflonkInfo.publics[i];
+    
+            if ("cmP" === publicPol.polType) {
+                //const offset = publicPol.polId * sDomain + publicPol.idx * n8r;
+                const offset = (fflonkInfo.publics[i].idx * fflonkInfo.mapSectionsN.cm1_n + fflonkInfo.publics[i].polId)*n8r;
+                ctx.publics[i] = ctx.cm1_n.slice(offset, offset + n8r);
+            } else if ("imP" === publicPol.polType) {
+                ctx.publics[i] = calculateExpAtPoint(ctx, fflonkInfo.publicsCode[i], publicPol.idx);
+            } else {
+                throw new Error(`Invalid public type: ${polType.type}`);
+            }
+        }
+    }
 
     async function round1() {
         // STEP 1.1 - Compute random challenge
         // Add preprocessed polynomials to the transcript
-        const cnstCommitPols = Object.keys(zkey).filter(k => k.match(/^f\d/));
-        for(let i = 0; i < cnstCommitPols.length; ++i) {
-            transcript.addPolCommitment(zkey[cnstCommitPols[i]]);
-            committedPols[`${cnstCommitPols[i]}`] = {commit: zkey[cnstCommitPols[i]]};
-        }
         
         for (let i = 0; i < cnstPols.$$nPols; i++) {
 
@@ -161,7 +189,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             const cnstPolBuffer = cnstPols.$$array[i];
             const evalsBuffer = new BigBuffer(cnstPolBuffer.length * ctx.Fr.n8);
             for (let j = 0; j < cnstPolBuffer.length; j++) {
-                ctx.const_n.set(Fr.e(cnstPolBuffer[j]), (i + fflonkInfo.nConstants * j) * n8r);
                 evalsBuffer.set(Fr.e(cnstPolBuffer[j]), j * n8r);
             }
 
@@ -175,7 +202,7 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         const commitsConstants = await commit(0, zkey, ctx, PTau, curve, { multiExp: false, logger });
 
         for (let j = 0; j < commitsConstants.length; ++j) {
-            committedPols[`${commitsConstants[j].index}`].pol = commitsConstants[j].pol;
+            committedPols[`${commitsConstants[j].index}`] = { pol:commitsConstants[j].pol };
         }
 
 
@@ -190,7 +217,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             const cmPolBuffer = cmPols.$$array[i];
             const evalsBuffer = new BigBuffer(cmPolBuffer.length * ctx.Fr.n8);
             for (let j = 0; j < cmPolBuffer.length; j++) {
-                ctx.cm1_n.set(Fr.e(cmPolBuffer[j]), (i + j*fflonkInfo.mapSectionsN.cm1_n)*n8r);
                 evalsBuffer.set(Fr.e(cmPolBuffer[j]), j * n8r);
             }
             
@@ -210,10 +236,13 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     }
 
     async function round2() {
-        // STEP 2.1 - Compute random challenge
-        transcript.reset();
-
         if (logger) logger.debug("> Computing challenges alpha and beta");
+
+        const cnstCommitPols = Object.keys(zkey).filter(k => k.match(/^f\d/));
+        for(let i = 0; i < cnstCommitPols.length; ++i) {
+            transcript.addPolCommitment(zkey[cnstCommitPols[i]]);
+            committedPols[`${cnstCommitPols[i]}`].commit = zkey[cnstCommitPols[i]];
+        }
 
         // Add all the publics to the transcript
         for (let i = 0; i < fflonkInfo.publics.length; i++) {
