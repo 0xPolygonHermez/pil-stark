@@ -8,7 +8,7 @@ module.exports.polMulAxi = function polMulAxi(F, p, init, acc) {
     }
 }
 
-module.exports.polMulAxiBuffer = function polMulAxi(Fr, buffer, init, acc) {
+module.exports.polMulAxiBuffer = function polMulAxiBuffer(Fr, buffer, init, acc) {
     let r = init;
     let len = buffer.byteLength / Fr.n8;
 
@@ -46,8 +46,9 @@ module.exports.extendPolBuffer = async function extendPol(Fr, buffer, extendBits
     let res = new BigBuffer(buffer.byteLength << extendBits);
 
     res.set(await Fr.ifft(buffer), 0);
-    let acc = shift ? Fr.shift : Fr.w[extendBits];
-    module.exports.polMulAxiBuffer(Fr, res, Fr.one, acc);
+    if (shift) {
+        module.exports.polMulAxiBuffer(Fr, res, Fr.one, Fr.shift);
+    }
     res = await Fr.fft(res);
 
     return res;
