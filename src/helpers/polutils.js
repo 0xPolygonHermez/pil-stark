@@ -27,25 +27,27 @@ module.exports.evalPol = function evalPol(F, p, x) {
     return res;
 }
 
-module.exports.extendPol = function extendPol(F, p, extendBits) {
+module.exports.extendPol = function extendPol(F, p, extendBits, shift = true) {
     extendBits = extendBits || 1;
     let res = new Array(p.length);
     for (let i=0; i<p.length; i++) {
         res[i] = F.e(p[i]);
     }
     res = F.ifft(res);
-    module.exports.polMulAxi(F, res, F.one, F.shift);
+    let acc = shift ? Fr.shift : Fr.w[extendBits];
+    module.exports.polMulAxi(F, res, F.one, acc);
     for (let i=p.length; i<(p.length<<extendBits); i++) res[i] = F.zero;
     res = F.fft(res);
     return res;
 }
 
-module.exports.extendPolBuffer = async function extendPol(Fr, buffer, extendBits) {
+module.exports.extendPolBuffer = async function extendPol(Fr, buffer, extendBits, shift = true) {
     extendBits = extendBits || 1;
     let res = new BigBuffer(buffer.byteLength << extendBits);
 
     res.set(await Fr.ifft(buffer), 0);
-    module.exports.polMulAxiBuffer(Fr, res, Fr.one, Fr.shift);
+    let acc = shift ? Fr.shift : Fr.w[extendBits];
+    module.exports.polMulAxiBuffer(Fr, res, Fr.one, acc);
     res = await Fr.fft(res);
 
     return res;

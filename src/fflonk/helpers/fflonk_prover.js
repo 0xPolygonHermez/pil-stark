@@ -6,6 +6,7 @@ const { calculateH1H2, calculateZ } = require("../../helpers/polutils");
 const { open } = require("shplonkjs/src/shplonk");
 
 const Logger = require('logplease');
+const { interpolate } = require("../../helpers/fft/fft_p.bn128");
 
 const parallelExec = false;
 const useThreads = false;
@@ -202,6 +203,12 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             committedPols[`${commitsConstants[j].index}`] = { pol:commitsConstants[j].pol };
         }
 
+        //Compute extended evals
+        await interpolate(ctx.cm1_n, fflonkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.cm1_2ns, ctx.nBitsExt, Fr, false);
+        
+        // TODO: CHECK
+        console.log("ESTA DESPLAÇAT... PQ ??????")
+        printPol(ctx.cm1_2ns);
 
         for (let i = 0; i < cmPols.$$nPols; i++) {
             let name = cmPols.$$defArray[i].name;
@@ -219,7 +226,10 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
 
             //Compute extended evals
             await extend(ctx, ctx[name].coef, fflonkInfo.mapSections.cm1_2ns[i], sDomainNext);
-        }        
+        }    
+        
+        // TODO: CHECK
+        printPol(ctx.cm1_2ns);
 
 
         const commits1 = await commit(1, zkey, ctx, PTau, curve, { multiExp: true, logger });
