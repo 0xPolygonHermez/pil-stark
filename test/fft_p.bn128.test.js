@@ -142,7 +142,7 @@ describe("test fft", async function () {
         }
     });
 
-    it("It checks interpolate", async () => {
+    it("It checks interpolate with shift", async () => {
         await _testInterpolate(3, 1, 1);
         await _testInterpolate(15, 3, 1);
 
@@ -160,11 +160,40 @@ describe("test fft", async function () {
 
             console.log("Legacy interpolate");
             for (let i = 0; i < nPols; i++) {
-                evalsA[i] = await extendPolBuffer(Fr, coefsA[i], extBits);
+                evalsA[i] = await extendPolBuffer(Fr, coefsA[i], extBits, true);
             }
 
             console.log("Interpolate using a row major big array");
-            await interpolate(coefsB, nPols, nBits, evalsB, nBits + extBits, Fr);
+            await interpolate(coefsB, nPols, nBits, evalsB, nBits + extBits, Fr, true);
+
+            console.log("Check equality of interpolations");
+            checkEquivalence(evalsB, evalsA);
+        }
+    });
+
+    it("It checks interpolate without shift", async () => {
+        await _testInterpolate(3, 1, 1);
+        await _testInterpolate(15, 3, 1);
+
+        async function _testInterpolate(nBits, nPols, extBits) {
+            const degree = 1 << nBits;
+            const degreeExt = 1 << (nBits + extBits);
+
+            // Coefficients and evaluations using legacy fft from Fr. As an array of coefficients
+            const coefsA = getArrayInitialized(nPols, degree)
+            const evalsA = [];
+
+            // Coefficients and evaluations using fft_p. As a buffer with all the polynomial coefficients in row major order
+            const coefsB = getBufferInitialized(nPols, degree);
+            const evalsB = new BigBuffer(degreeExt * nPols * Fr.n8);
+
+            console.log("Legacy interpolate");
+            for (let i = 0; i < nPols; i++) {
+                evalsA[i] = await extendPolBuffer(Fr, coefsA[i], extBits, false);
+            }
+
+            console.log("Interpolate using a row major big array");
+            await interpolate(coefsB, nPols, nBits, evalsB, nBits + extBits, Fr, false);
 
             console.log("Check equality of interpolations");
             checkEquivalence(evalsB, evalsA);
