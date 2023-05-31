@@ -1,0 +1,13 @@
+namespace SimplePermutation(%N);
+
+    // pol commit a, b;
+    // pol constant selA, selB;
+
+    // selA {a} is selB {b};
+
+
+    pol commit c, d;
+    pol constant selC, selD;
+
+    selC {c} is selD {d};
+

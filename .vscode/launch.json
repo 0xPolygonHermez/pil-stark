@@ -226,7 +226,22 @@
                 "--max-old-space-size=32000"
             ]
         },
-	{
+        {
+            "name": "test simple permutation stark",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/stark/stark_simple_permutation.test.js"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+	    {
             "name": "test simple connection stark",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",
@@ -342,6 +357,21 @@
             "type": "pwa-node",
             "args": [
                 "${workspaceFolder}/test/fflonk/fflonk_permutation.test.js"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "test simple permutation fflonk",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/fflonk/fflonk_simple_permutation.test.js"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"

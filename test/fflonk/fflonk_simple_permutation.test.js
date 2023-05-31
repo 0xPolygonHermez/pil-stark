@@ -8,25 +8,25 @@ const { fflonkProve } = require("../../src/fflonk/helpers/fflonk_prover.js");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
-const smSimplePlookup = require("../state_machines/sm_simple_plookup/sm_simple_plookup.js");
+const smPermutation = require("../state_machines/sm_simple_permutation/sm_simple_permutation.js");
 const { fflonkInfoGen } = require("../../src/fflonk/helpers/fflonk_info.js");
 const { fflonkVerify } = require("../../src/fflonk/helpers/fflonk_verify.js");
 
-describe("Fflonk plookup sm", async function () {
+describe("Fflonk permutation sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
         const F = new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
 
-        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple_plookup", "simple_plookup_main.pil"));
+        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple_permutation", "simple_permutation_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
         await smGlobal.buildConstants(constPols.Global);
-        await smSimplePlookup.buildConstants(constPols.SimplePlookup);
+        await smPermutation.buildConstants(constPols.SimplePermutation);
 
         const cmPols = newCommitPolsArray(pil, F);
 
-        await smSimplePlookup.execute(cmPols.SimplePlookup);
+        await smPermutation.execute(cmPols.SimplePermutation);
 
         const res = await verifyPil(F, pil, cmPols , constPols);
 
@@ -42,7 +42,7 @@ describe("Fflonk plookup sm", async function () {
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        const zkey = await fflonkSetup(pil, constPols, ptauFile, fflonkInfo, {extraMuls: 4});
+        const zkey = await fflonkSetup(pil, constPols, ptauFile, fflonkInfo, {extraMuls: 2});
 
         const {commits, evaluations, publics} = await fflonkProve(cmPols, constPols, fflonkInfo, zkey, ptauFile, {});
 

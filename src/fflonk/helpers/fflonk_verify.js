@@ -108,7 +108,6 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
         }
     }
     
-    // TODO: VERIFY EVALUATIONS
     let xiSeed = computeChallengeXiSeed(zkey.f.sort((a,b) => a.index - b.index).map(fi => fi.commit), curve, logger);
     const powerW = lcm(Object.keys(zkey).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
     let challengeXi = curve.Fr.exp(xiSeed, powerW);
@@ -122,6 +121,7 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
     const qZ = curve.Fr.mul(evaluations["Q"], ctx.Z);
 
     if(!curve.Fr.eq(qZ, execCode)) {
+        console.log("Verify evaluations failed");
         return false;
     }
 

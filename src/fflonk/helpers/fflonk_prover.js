@@ -28,7 +28,7 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     // Define the big buffers
     ctx.N = 1 << zkey.power;
     ctx.nBits = zkey.power;
-    ctx.extendBits = Math.max(1, Math.ceil(Math.log2(fflonkInfo.qDeg)));
+    ctx.extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
     ctx.nBitsExt = zkey.power + ctx.extendBits;
     ctx.Next = (1 << ctx.nBitsExt);
 
@@ -44,7 +44,8 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         logger.debug("  PIL-FFLONK PROVE SETTINGS");
         logger.debug(`  Curve:         ${curve.name}`);
         logger.debug(`  Domain size:   ${domainSize} (2^${power})`);
-        logger.debug(`  Domain size ext: ${domainSizeExt} (${1 << ctx.nBitsExt} * N)`);
+        logger.debug(`  Extended Bits:   ${ctx.extendBits}`);
+        logger.debug(`  Domain size ext: ${domainSizeExt} (2^${power + ctx.extendBits})`);
         logger.debug(`  Const  pols:   ${fflonkInfo.nConstants}`);
         logger.debug(`  Step 1 pols:   ${fflonkInfo.mapSectionsN.cm1_n}`);
         logger.debug(`  Step 2 pols:   ${fflonkInfo.mapSectionsN.cm2_n}`);
