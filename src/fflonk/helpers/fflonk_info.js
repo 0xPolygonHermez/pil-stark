@@ -10,12 +10,7 @@ const { log2 } = require("pilcom/src/utils.js");
 module.exports.fflonkInfoGen = function fflonkInfoGen(F, _pil) {
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
 
-    let maxPilPolDeg = 0;
-    for (const polRef in pil.references) {
-        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
-    }
 
-    const pilPower = log2(maxPilPolDeg - 1) + 1;
 
     const res = {
         varPolMap: [],
@@ -23,6 +18,12 @@ module.exports.fflonkInfoGen = function fflonkInfoGen(F, _pil) {
         peCtx: [],
         ciCtx: []
     };
+
+    let maxPilPolDeg = 0;
+    for (const polRef in pil.references) {
+        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+    }
+    res.pilPower = log2(maxPilPolDeg - 1) + 1;
 
     res.nConstants = pil.nConstants;
     res.nPublics = pil.publics.length;
@@ -58,9 +59,7 @@ module.exports.fflonkInfoGen = function fflonkInfoGen(F, _pil) {
 
     generateConstraintPolynomialVerifier(res, pil, false);
 
-    let N = 1 << pilPower;
-    let Next = 1 << (pilPower + Math.max(1, Math.ceil(Math.log2(res.qDeg))));
-    map(res, pil, N, Next, false);
+    map(res, pil, false);
     res.publics = pil.publics;
 
     return res;

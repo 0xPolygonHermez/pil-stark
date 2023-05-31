@@ -69,9 +69,7 @@ module.exports = function starkInfoGen(F, _pil, starkStruct) {
 
     generateVerifierQuery(res, pil);
 
-    let N = 1 << res.starkStruct.nBits;
-    let Next = 1 << res.starkStruct.nBitsExt;
-    map(res, pil, N, Next, true);
+    map(res, pil, true);
 
     res.publics = pil.publics;
 

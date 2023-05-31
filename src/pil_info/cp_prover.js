@@ -33,6 +33,9 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
         }
     }
 
+    console.log("Number of intermediate expressions: " + Object.keys(res.imExps).length);
+    console.log("Q degree: " + res.qDeg);
+
     res.imExpsList = Object.keys(res.imExps).map(Number);
     res.imExp2cm = {}
     for (let i=0; i<res.imExpsList.length; i++) {
@@ -59,13 +62,11 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
 
     res.nCm3 = pil.nCommitments - res.nCm1 - res.nCm2;
     
-    res.qs = [];
     if(stark) {
+        res.qs = [];
         for (let i=0; i<res.qDeg; i++) {
             res.qs[i] = pil.nCommitments++;
         }
-    } else {
-        res.qs[0] = pil.nCommitments++;
     }
 
     for (let i=0; i<res.imExpsList.length; i++) {

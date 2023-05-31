@@ -1,7 +1,10 @@
 
 const {iterateCode} = require("./codegen.js");
 
-module.exports = function map(res, pil, N, Next, stark) {
+module.exports = function map(res, pil, stark) {
+    const N = stark ? 1 << res.starkStruct.nBits : 1 << res.pilPower;
+    const Next = stark ? 1 << res.starkStruct.nBitsExt : 1 << (res.pilPower + Math.ceil(Math.log2(res.qDeg + 1)));
+    
     res.varPolMap = [];
     function addPol(polType) {
         res.varPolMap.push(polType);
@@ -467,7 +470,14 @@ function setCodeDimensions(code, pilInfo, dimX, stark) {
                         d=1;
                     }
                     break;
-                case "q": d=pilInfo.varPolMap[pilInfo.qs[r.id]].dim; break;
+                case "q": {
+                    if(stark) {
+                        d=pilInfo.varPolMap[pilInfo.cm_2ns[r.id]].dim;
+                    } else {
+                        throw new Error("Invalid reference type: " + r.type);
+                    }
+                    break;
+                }
                 case "x": d=dimX; break;
                 case "const": 
                 case "number": 

@@ -38,14 +38,6 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
             };
             res.evMap.push(rf);
         }
-    } else {
-        res.evIdx["cm"][0][res.qs[0]] = res.evMap.length;
-        const rf = {
-            type: "cm",
-            id: res.qs,
-            prime: false,
-        };
-        res.evMap.push(rf);
     }
 
     function fixRef(r, ctx) {
