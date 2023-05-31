@@ -56,7 +56,7 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     }
 
     // Global counter
-    let nCm = fflonkInfo.nCm1;
+    let nCm = 0;
 
     // Reserve big buffers for the polynomial coefficients
     ctx.const_n = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
@@ -76,7 +76,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     ctx.x_2ns = new BigBuffer(sDomainNext); // Omegas a l'extès
 
 
-    // TODO REVIEW
     let w = Fr.one;
     for (let i = 0; i < domainSize; i++) {
         const i_n8r = i * n8r;
@@ -85,12 +84,12 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         w = Fr.mul(w, Fr.w[power])
     }
 
-    let xx = Fr.shift;
+    w = Fr.one;
     for (let i=0; i< domainSizeExt; i++) {
         const i_n8r = i * n8r;
 
-        ctx.x_2ns.set(xx, i_n8r);
-        xx = Fr.mul(xx, Fr.w[ctx.nBitsExt]);
+        ctx.x_2ns.set(w, i_n8r);
+        w = Fr.mul(w, Fr.w[ctx.nBitsExt]);
     }
        
 
@@ -187,14 +186,11 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
 
             if (logger) logger.debug(`··· Preparing ${name} constant polynomial`);
 
-            const cnstPolBuffer = cnstPols.$$array[i];
-            const evalsBuffer = new BigBuffer(cnstPolBuffer.length * ctx.Fr.n8);
-            for (let j = 0; j < cnstPolBuffer.length; j++) {
-                evalsBuffer.set(Fr.e(cnstPolBuffer[j]), j * n8r);
-            }
+            // Get evaluations
+            const evals = getPolBuffer(ctx, fflonkInfo, i, true);
 
             // Compute coefficients
-            ctx[name] = await Polynomial.fromEvaluations(evalsBuffer, curve, logger);
+            ctx[name] = await Polynomial.fromEvaluations(evals, curve, logger);
             
             // Compute extended evals 
             await extend(ctx, ctx[name].coef, i, sDomainNext, true);
@@ -214,15 +210,11 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
 
             if (logger) logger.debug(`··· Preparing '${name}' polynomial`);
 
-            // Compute polynomial evaluations
-            const cmPolBuffer = cmPols.$$array[i];
-            const evalsBuffer = new BigBuffer(cmPolBuffer.length * ctx.Fr.n8);
-            for (let j = 0; j < cmPolBuffer.length; j++) {
-                evalsBuffer.set(Fr.e(cmPolBuffer[j]), j * n8r);
-            }
+            // Get evaluations
+            const evals = getPolBuffer(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++]);
             
             // Compute polynomial from evaluations
-            ctx[name] = await Polynomial.fromEvaluations(evalsBuffer, curve, logger);
+            ctx[name] = await Polynomial.fromEvaluations(evals, curve, logger);
 
 
             //Compute extended evals
@@ -807,8 +799,8 @@ function getPol(ctx, fflonkInfo, idPol) {
     return res;
 }
 
-function getPolBuffer(ctx, fflonkInfo, idPol) {
-    const p = getPolRef(ctx, fflonkInfo, idPol);
+function getPolBuffer(ctx, fflonkInfo, idPol, constants) {
+    const p = constants ? {buffer: ctx.const_n, deg: ctx.N, offset: idPol, size: fflonkInfo.nConstants} : getPolRef(ctx, fflonkInfo, idPol);
     const res = new BigBuffer(p.deg * ctx.Fr.n8);
     for (let i=0; i<p.deg; i++) {
         res.set(p.buffer.slice((p.offset + i*p.size) * ctx.Fr.n8, (p.offset + i*p.size + 1) * ctx.Fr.n8), i*ctx.Fr.n8);
