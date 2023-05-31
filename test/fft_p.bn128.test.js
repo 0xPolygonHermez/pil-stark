@@ -143,8 +143,8 @@ describe("test fft", async function () {
     });
 
     it("It checks interpolate with shift", async () => {
-        await _testInterpolate(3, 1, 1);
-        await _testInterpolate(15, 3, 1);
+        await _testInterpolate(3, 2, 1);
+        await _testInterpolate(15, 3, 2);
 
         async function _testInterpolate(nBits, nPols, extBits) {
             const degree = 1 << nBits;
@@ -173,7 +173,7 @@ describe("test fft", async function () {
 
     it("It checks interpolate without shift", async () => {
         await _testInterpolate(3, 1, 1);
-        await _testInterpolate(15, 3, 1);
+        await _testInterpolate(15, 3, 2);
 
         async function _testInterpolate(nBits, nPols, extBits) {
             const degree = 1 << nBits;
