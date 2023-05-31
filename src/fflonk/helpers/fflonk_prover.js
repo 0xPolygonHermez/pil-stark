@@ -392,10 +392,11 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         await callCalculateExps("step3", "n", pool, ctx, fflonkInfo, zkey);
 
         for(let i = 0; i < fflonkInfo.imExpsList.length; ++i) {
-            const imPol = getPolBuffer(ctx, fflonkInfo, fflonkInfo.imExp2cm[fflonkInfo.imExpsList[i]]);
+            const imPol = getPolBuffer(ctx, fflonkInfo, fflonkInfo.cm_n[nCm]);
             ctx[`Im${fflonkInfo.imExpsList[i]}`] = await Polynomial.fromEvaluations(imPol, curve, logger);
 
             await extend(ctx, ctx[`Im${fflonkInfo.imExpsList[i]}`].coef, fflonkInfo.mapSections.cm3_2ns[i + nPlookups + nPermutations + nConnections], sDomainNext);
+            nCm++;
         }
 
         const commits3 = await commit(3, zkey, ctx, PTau, curve, { multiExp: true, logger });
