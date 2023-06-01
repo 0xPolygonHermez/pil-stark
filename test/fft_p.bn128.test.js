@@ -1,8 +1,7 @@
 const chai = require("chai");
 const assert = chai.assert;
 
-const { BigBuffer } = require("ffjavascript");
-const { buildBn128 } = require("ffjavascript");
+const { BigBuffer, buildBn128 } = require("ffjavascript");
 const { fft, ifft, interpolate } = require("../src/helpers/fft/fft_p.bn128");
 const { extendPolBuffer } = require("../src/helpers/polutils");
 

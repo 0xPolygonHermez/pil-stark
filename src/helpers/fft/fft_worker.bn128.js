@@ -1,6 +1,13 @@
 const workerpool = require('workerpool');
+const {buildBn128} = require('ffjavascript');
 
-function interpolatePrepareBlock(buff, width, start, inc, st_i, st_n, Fr) {
+async function buildFr() {
+    const curve = await buildBn128();
+    return curve.Fr;
+}
+
+async function interpolatePrepareBlock(buff, width, start, inc, st_i, st_n) {
+    const Fr = await buildFr();
     console.log(`linear interpolatePrepare start.... ${st_i}/${st_n}`);
 
     const height = buff.byteLength / Fr.n8 / width;
@@ -65,7 +72,8 @@ function _fft_block(buff, rel_pos, start_pos, nPols, nBits, s, blockBits, layers
     }
 }
 
-function fft_block(buff, start_pos, nPols, nBits, s, blockBits, layers, Fr) {
+async function fft_block(buff, start_pos, nPols, nBits, s, blockBits, layers) {
+    const Fr = await buildFr();
     console.log(`start block ${s} ${start_pos}`)
     _fft_block(buff, start_pos, start_pos, nPols, nBits, s, blockBits, layers, Fr);
     console.log(`end block ${s} ${start_pos}`)

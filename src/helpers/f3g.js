@@ -11,7 +11,6 @@ Irreducible polynomial: x^3 - x -1
 const crypto = require("crypto");
 const buildFFT = require("./fft/fft.js");
 const buildSqrt = require("./sqrt.js");
-const { Scalar } = require("ffjavascript");
 
 module.exports = class F3g {
 
@@ -404,7 +403,12 @@ module.exports = class F3g {
     }
 
     toRprLE(buff, o, e) {
-        Scalar.toRprLE(buff, o, e, this.n8);
+        const s = "0000000" + e.toString(16);
+        const v = new Uint32Array(buff.buffer, buff.byteOffset + o, this.n8/4);
+        const l = (((s.length-7)*4 - 1) >> 5)+1;    // Number of 32bit words;
+        for (let i=0; i<l; i++) v[i] = parseInt(s.substring(s.length-8*i-8, s.length-8*i), 16);
+        for (let i=l; i<v.length; i++) v[i] = 0;
+        for (let i=v.length*4; i<this.n8; i++) buff[i] = toNumber(band(shiftRight(e, i*8), 0xFF));
     }
 }
 

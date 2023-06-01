@@ -5,7 +5,7 @@ const {BigBuffer} = require("pilcom");
 const { fft_block, interpolatePrepareBlock } = require("./fft_worker.js");
 
 const F = new F3g();
-const useThreads = false;
+const useThreads = true;
 
 function BR(x, domainPow)
 {

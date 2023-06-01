@@ -19,12 +19,12 @@ describe("test All sm", async function () {
 
     it("It should create the pols main", async () => {
         const starkStruct = {
-            nBits: 10,
-            nBitsExt: 11,
+            nBits: 8,
+            nBitsExt: 9,
             nQueries: 8,
             verificationHashType : "GL",
             steps: [
-                {nBits: 11},
+                {nBits: 9},
                 {nBits: 3}
             ]
         };

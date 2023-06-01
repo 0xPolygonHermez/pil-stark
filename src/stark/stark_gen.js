@@ -16,7 +16,7 @@ const workerpool = require("workerpool");
 const {starkgen_execute} = require("./stark_gen_worker");
 const {BigBuffer} = require("pilcom");
 
-const parallelExec = false;
+const parallelExec = true;
 const useThreads = false;
 const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
@@ -32,7 +32,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     const F = new F3g();
 
-    let MH;    
+    let MH;
     let transcript;
     if (starkStruct.verificationHashType == "GL") {
         const poseidon = await buildPoseidonGL();
@@ -223,8 +223,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     const qq2 = new BigBuffer(starkInfo.qDim*starkInfo.qDeg*ctx.Next);
     await ifft(ctx.q_2ns, starkInfo.qDim, ctx.nBitsExt, qq1);
 
-    console.log(qq1);
-
     let curS = 1n;
     const shiftIn = F.exp(F.inv(F.shift), N);
     for (let p =0; p<starkInfo.qDeg; p++) {
@@ -235,8 +233,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         }
         curS = F.mul(curS, shiftIn);
     }
-
-    console.log(qq2);
 
     await fft(qq2, starkInfo.qDim * starkInfo.qDeg, ctx.nBitsExt, ctx.cm4_2ns);
 
@@ -411,7 +407,6 @@ function compileCode(ctx, code, dom, ret) {
         setRef(code[j].dest, exp);
     }
 
-    console.log(body);
     if (ret) {
         body.push(`  return ${getRef(code[code.length-1].dest)};`);
     }

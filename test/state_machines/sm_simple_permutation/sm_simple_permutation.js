@@ -20,8 +20,6 @@ module.exports.buildConstants = async function (pols) {
             }
         }
     }
-        
-    console.log(pols);
 }
 
 
@@ -46,7 +44,4 @@ module.exports.execute = async function (pols) {
             }
         }
     }
-   
-
-    console.log(pols);
 }
