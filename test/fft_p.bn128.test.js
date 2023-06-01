@@ -156,6 +156,7 @@ describe("test fft", async function () {
 
             // Coefficients and evaluations using fft_p. As a buffer with all the polynomial coefficients in row major order
             const coefsB = getBufferInitialized(nPols, degree);
+            const coefs = new BigBuffer(degree * nPols * Fr.n8);
             const evalsB = new BigBuffer(degreeExt * nPols * Fr.n8);
 
             console.log("Legacy interpolate");
@@ -164,7 +165,7 @@ describe("test fft", async function () {
             }
 
             console.log("Interpolate using a row major big array");
-            await interpolate(coefsB, nPols, nBits, evalsB, nBits + extBits, Fr, true);
+            await interpolate(coefsB, nPols, nBits, coefs, evalsB, nBits + extBits, Fr, true);
 
             console.log("Check equality of interpolations");
             checkEquivalence(evalsB, evalsA);
@@ -185,6 +186,7 @@ describe("test fft", async function () {
 
             // Coefficients and evaluations using fft_p. As a buffer with all the polynomial coefficients in row major order
             const coefsB = getBufferInitialized(nPols, degree);
+            const coefs = new BigBuffer(degree * nPols * Fr.n8);
             const evalsB = new BigBuffer(degreeExt * nPols * Fr.n8);
 
             console.log("Legacy interpolate");
@@ -193,7 +195,7 @@ describe("test fft", async function () {
             }
 
             console.log("Interpolate using a row major big array");
-            await interpolate(coefsB, nPols, nBits, evalsB, nBits + extBits, Fr, false);
+            await interpolate(coefsB, nPols, nBits, coefs, evalsB, nBits + extBits, Fr, false);
 
             console.log("Check equality of interpolations");
             checkEquivalence(evalsB, evalsA);

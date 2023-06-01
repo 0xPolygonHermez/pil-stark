@@ -1,4 +1,4 @@
 
-constant %N = 2**3;
+constant %N = 2**6;
 
 include "fibonacci.pil";

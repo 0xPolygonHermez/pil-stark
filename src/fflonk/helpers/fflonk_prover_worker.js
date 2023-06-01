@@ -13,7 +13,7 @@ module.exports.fflonkgen_execute = async function fflonkgen_execute(ctx, cFirstS
     for (let s=0; s<execInfo.outputSections.length; s++) {
         const si = execInfo.outputSections[s];
         if (typeof ctx[si.name] == "undefined") {
-            ctx[si.name] = new BigBuffer(si.width*(n+ctx.next)*ctx.curve.Fr.n8);
+            ctx[si.name] = new BigBuffer(si.width*(n+ctx.next)*ctx.Fr.n8);
         }
     }
 

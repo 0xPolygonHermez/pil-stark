@@ -1,4 +1,4 @@
-constant %N = 2**10;
+constant %N = 2**8;
 
 namespace Global(%N);
     pol constant L1;
