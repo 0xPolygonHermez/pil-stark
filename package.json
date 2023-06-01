@@ -106,7 +106,7 @@
     "json-bigint": "^1.0.0",
     "pilcom": "https://github.com/0xPolygonHermez/pilcom.git#polsArrayGeneric",
     "r1csfile": "^0.0.44",
-    "shplonkjs": "^0.0.2",
+    "shplonkjs": "https://github.com/0xPolygonHermez/shplonkjs.git#main",
     "wasmbuilder": "^0.0.12",
     "wasmcurves": "^0.1.5",
     "workerpool": "^6.2.1"

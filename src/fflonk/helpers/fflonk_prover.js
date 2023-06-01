@@ -108,6 +108,30 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
 
     const pool = workerpool.pool(__dirname + '/fflonk_prover_worker.js');
 
+    // Generate random blinding scalars ∈ F
+    const randomBlinding = {}
+    for(let i = 0; i < zkey.f.length; ++i) {
+        for(let j = 0; j < zkey.f[i].stages.length; ++j) {
+            if(zkey.f[i].stages[j].stage > 0 && zkey.f[i].stages[j].stage < 4) {
+                for(let k = 0; k < zkey.f[i].stages[j].pols.length; ++k) {
+                    const polName = zkey.f[i].stages[j].pols[k].name;
+                    if(!randomBlinding[polName]) randomBlinding[polName] = 1;
+                    randomBlinding[polName] += 1;
+                }
+            }
+        }
+    }
+
+    const totalBlindings = Object.values(randomBlinding).reduce((curr, acc) => acc + curr, 0);
+
+    ctx.challenges.b = [];
+    for (let i = 0; i < totalBlindings; i++) {
+        // TODO: ZERO KNOWLEDGE
+        ctx.challenges.b[i] = ctx.curve.Fr.random();
+    }
+
+    let bIndex = 0;
+
     // ROUND 0. Store constants and committed values. Calculate publics
     await round0(); 
 
