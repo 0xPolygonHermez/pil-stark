@@ -47,7 +47,7 @@ describe("Fflonk permutation sm", async function () {
         const {commits, evaluations, publics} = await fflonkProve(cmPols, constPols, fflonkInfo, zkey, ptauFile, {});
 
         const isValid = await fflonkVerify(zkey, publics, commits, evaluations, fflonkInfo, {});
-        console.log(isValid);
+        assert(isValid);
 
     });
 

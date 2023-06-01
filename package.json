@@ -11,6 +11,7 @@
     "test:circuits:gl": "mocha test/circuits/gl/**/*.test.js",
     "test:helpers": "mocha test/*.test.js",
     "test:stark": "mocha $(find test/stark -name '*.test.js' ! -name 'all*.test.js' ! -name 'fibonacci*.test.js')",
+    "test:fflonk": "mocha test/fflonk",
     "test:fibonacci": "npm run fibonacci_buildconst && npm run fibonacci_exec && npm run fibonacci_pil_verify && npm run fibonacci_buildstarkinfo && npm run fibonacci_buildconsttree && npm run fibonacci_prove && npm run fibonacci_verify && npm run fibonacci_starkVerifier",
     "test:fibonacci:gpu": "npm run fibonacci_buildconst && npm run fibonacci_exec && npm run fibonacci_pil_verify && npm run fibonacci_buildstarkinfo_gpu && npm run fibonacci_buildconsttree_gpu && npm run fibonacci_prove && npm run fibonacci_verify && npm run fibonacci_starkVerifier_gpu",
     "test:fibonacci:C12:pil": "npm run fibonacci_C12_setup && npm run fibonacci_C12_exec && npm run fibonacci_C12_pil_verify",
