@@ -32,6 +32,21 @@
             ]
         },
         {
+            "name": "test fft parallel bn128",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/fft_p.bn128.test.js"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=128000"
+            ]
+        },
+        {
             "name": "test f3g",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "request": "launch",

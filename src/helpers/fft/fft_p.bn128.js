@@ -94,9 +94,9 @@ async function interpolatePrepare(pool, buff, nPols, nBits, Fr, shift = true) {
         const inc = shift ? Fr.shift : Fr.one;
         let start = shift ? Fr.mul(invN, Fr.exp(inc, i)) : invN;
         if (useThreads) {
-            promisesLH.push(pool.exec("interpolatePrepareBlock", [bb, nPols, start, inc, i / nPerThreadF, Math.floor(n / nPerThreadF), Fr]));
+            promisesLH.push(pool.exec("interpolatePrepareBlock", [bb, nPols, start, inc, i / nPerThreadF, Math.floor(n / nPerThreadF)]));
         } else {
-            res.push(interpolatePrepareBlock(bb, nPols, start, inc, i / nPerThreadF, Math.floor(n / nPerThreadF), Fr));
+            res.push(await interpolatePrepareBlock(bb, nPols, start, inc, i / nPerThreadF, Math.floor(n / nPerThreadF)));
         }
     }
     if (useThreads) {
@@ -120,7 +120,7 @@ async function _fft(buffSrc, nPols, nBits, buffDst, inverse, Fr) {
 
     let bIn, bOut;
 
-    const pool = workerpool.pool(__dirname + '/fft_worker.js');
+    const pool = workerpool.pool(__dirname + '/fft_worker.bn128.js');
 
     const idealNBlocks = pool.maxWorkers * blocksPerThread;
     let blockBits = log2(n * nPols / idealNBlocks);
@@ -161,9 +161,9 @@ async function _fft(buffSrc, nPols, nBits, buffDst, inverse, Fr) {
             console.log("nBlocks", nBlocks);
             const bb = bIn.slice(j * blockSize * nPols * Fr.n8, (j + 1) * blockSize * nPols * Fr.n8);
             if (useThreads) {
-                promisesFFT.push(pool.exec("fft_block", [bb, j * blockSize, nPols, nBits, i + sInc, blockBits, sInc, Fr]));
+                promisesFFT.push(pool.exec("fft_block", [bb, j * blockSize, nPols, nBits, i + sInc, blockBits, sInc]));
             } else {
-                results[j] = fft_block(bb, j * blockSize, nPols, nBits, i + sInc, blockBits, sInc, Fr);
+                results[j] = await fft_block(bb, j * blockSize, nPols, nBits, i + sInc, blockBits, sInc);
             }
         }
         if (useThreads) results = await Promise.all(promisesFFT);
@@ -246,9 +246,9 @@ async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsEx
         for (j = 0; j < nBlocks; j++) {
             const bb = bIn.slice(j * blockSize * nPols * Fr.n8, (j + 1) * blockSize * nPols * Fr.n8);
             if (useThreads) {
-                promisesFFT.push(pool.exec("fft_block", [bb, j * blockSize, nPols, nBits, i + sInc, blockBits, sInc, Fr]));
+                promisesFFT.push(pool.exec("fft_block", [bb, j * blockSize, nPols, nBits, i + sInc, blockBits, sInc]));
             } else {
-                results[j] = fft_block(bb, j * blockSize, nPols, nBits, i + sInc, blockBits, sInc, Fr);
+                results[j] = await fft_block(bb, j * blockSize, nPols, nBits, i + sInc, blockBits, sInc);
             }
         }
         if (useThreads) results = await Promise.all(promisesFFT);
@@ -279,9 +279,9 @@ async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsEx
         for (j = 0; j < nBlocksExt; j++) {
             const bb = bIn.slice(j * blockSizeExt * nPols * Fr.n8, (j + 1) * blockSizeExt * nPols * Fr.n8);
             if (useThreads) {
-                promisesFFT.push(pool.exec("fft_block", [bb, j * blockSizeExt, nPols, nBitsExt, i + sInc, blockBitsExt, sInc, Fr]));
+                promisesFFT.push(pool.exec("fft_block", [bb, j * blockSizeExt, nPols, nBitsExt, i + sInc, blockBitsExt, sInc]));
             } else {
-                results[j] = fft_block(bb, j * blockSizeExt, nPols, nBitsExt, i + sInc, blockBitsExt, sInc, Fr);
+                results[j] = await fft_block(bb, j * blockSizeExt, nPols, nBitsExt, i + sInc, blockBitsExt, sInc);
             }
         }
         if (useThreads) {

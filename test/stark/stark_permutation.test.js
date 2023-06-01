@@ -11,17 +11,17 @@ const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require
 const smGlobal = require("../state_machines/sm/sm_global.js");
 const smPermutation = require("../state_machines/sm_permutation/sm_permutation.js");
 
-describe("test plookup sm", async function () {
+describe("test permutation sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
         const starkStruct = {
-            nBits: 10,
-            nBitsExt: 11,
+            nBits: 8,
+            nBitsExt: 9,
             nQueries: 8,
             verificationHashType : "GL",
             steps: [
-                {nBits: 11},
+                {nBits: 9},
                 {nBits: 3}
             ]
         };
