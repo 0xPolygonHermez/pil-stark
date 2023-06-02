@@ -49,6 +49,14 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
         transcript.addScalar(publics[i]);
     }
 
+    if(zkey.openBy === "stage") {
+        // Add round1 commitments to the transcript
+        const cm1CommitPols = zkey.f.filter(f => f.stages[0].stage === 1);
+        for (let i = 0; i < cm1CommitPols.length; i++) {
+            transcript.addPolCommitment(commits[`f${cm1CommitPols[i].index}`]);
+        }
+    }
+
     if(0 === transcript.data.length) {
         transcript.addScalar(curve.Fr.one);
     }
@@ -65,8 +73,16 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
 
     // Compute challenge gamma
     transcript.reset();
-    transcript.addScalar(ctx.challenges[0]);
     transcript.addScalar(ctx.challenges[1]);
+
+    if(zkey.openBy === "stage") {
+        // Add round1 commitments to the transcript
+        const cm2CommitPols = zkey.f.filter(f => f.stages[0].stage === 2);
+        for (let i = 0; i < cm2CommitPols.length; i++) {
+            transcript.addPolCommitment(commits[`f${cm2CommitPols[i].index}`]);
+        }
+    }
+
     ctx.challenges[2] = transcript.getChallenge();
     if (logger) logger.debug("··· challenges.gamma: " + Fr.toString(ctx.challenges[2]));
 
@@ -78,8 +94,16 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
 
     // Compute challenge a
     transcript.reset();
-    transcript.addScalar(ctx.challenges[2]);
     transcript.addScalar(ctx.challenges[3]);
+
+    if(zkey.openBy === "stage") {
+        // Add round3 commitments to the transcript
+        const cm3CommitPols = zkey.f.filter(f => f.stages[0].stage === 3);
+        for (let i = 0; i < cm3CommitPols.length; i++) {
+            transcript.addPolCommitment(commits[`f${cm3CommitPols[i].index}`]);
+        }
+    }
+
     ctx.challenges[4] = transcript.getChallenge();
     if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 
@@ -108,7 +132,7 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
         }
     }
     
-    let xiSeed = computeChallengeXiSeed(zkey.f.sort((a,b) => a.index - b.index).map(fi => fi.commit), curve, logger);
+    let xiSeed = computeChallengeXiSeed(zkey.f.sort((a,b) => a.index - b.index).map(fi => fi.commit), curve, {logger, previousChallenge: ctx.challenges[4]});
     const powerW = lcm(Object.keys(zkey).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
     let challengeXi = curve.Fr.exp(xiSeed, powerW);
     ctx.x = challengeXi;
@@ -125,7 +149,7 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
         return false;
     }
 
-    const res = verifyOpenings(zkey, commits, evaluations, curve, logger);
+    const res = verifyOpenings(zkey, commits, evaluations, curve, {logger, previousChallenge: ctx.challenges[4]});
     await curve.terminate();
 
     return res;

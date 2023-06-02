@@ -6,6 +6,8 @@ const {setup, Polynomial, commit} = require("shplonkjs");
 module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInfo, options) {
     const logger = options.logger;
 
+    const openBy = options.openBy || "openingPoints";
+
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
 
     if(logger) logger.info("Starting fflonk setup");
@@ -161,12 +163,11 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
         power: pilPower, 
         polDefs,
         extraMuls: options.extraMuls || 0,
-        openBy: "openingPoints"
+        openBy: openBy,
     }
 
-    console.log(config);
-
     const {zkey, PTau, curve} = await setup(config, ptauFile, logger);
+
 
     const ctx = {};
     for (let i = 0; i < cnstPols.$$nPols; i++) {
@@ -203,6 +204,7 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
     }
 
     zkey.polsMap = polsMap;
+    zkey.openBy = openBy;
     
     if(logger) logger.info("Fflonk setup finished");
 

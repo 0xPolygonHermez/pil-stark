@@ -151,7 +151,7 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     if (logger) logger.debug("> ROUND 4. Compute Trace Quotient Polynomials");
     await round4();
     
-    const [cmts, evaluations] = await open(zkey, PTau, ctx, committedPols, curve, {logger});
+    const [cmts, evaluations] = await open(zkey, PTau, ctx, committedPols, curve, {logger, previousChallenge: ctx.challenges[4]});
 
     await pool.terminate();
 
@@ -276,6 +276,15 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             transcript.addScalar(ctx.publics[i]);
         }
 
+        if(zkey.openBy === "stage") {
+            // Add round1 commitments to the transcript
+            const cm1CommitPols = zkey.f.filter(f => f.stages[0].stage === 1);
+            for (let i = 0; i < cm1CommitPols.length; i++) {
+                transcript.addPolCommitment(committedPols[`f${cm1CommitPols[i].index}_1`].commit);
+            }
+        }
+
+
         if (0 === transcript.data.length) {
             transcript.addScalar(Fr.one);
         }
@@ -334,8 +343,16 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         if (logger) logger.debug("> Computing challenges gamma and delta");
 
         // Compute challenge gamma
-        transcript.addScalar(ctx.challenges[0]);
         transcript.addScalar(ctx.challenges[1]);
+
+        if(zkey.openBy === "stage") {
+            // Add round2 commitments to the transcript
+            const cm2CommitPols = zkey.f.filter(f => f.stages[0].stage === 2);
+            for (let i = 0; i < cm2CommitPols.length; i++) {
+                transcript.addPolCommitment(committedPols[`f${cm2CommitPols[i].index}_2`].commit);
+            }
+        }
+
         ctx.challenges[2] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.gamma: " + Fr.toString(ctx.challenges[2]));
 
@@ -432,8 +449,16 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
         if (logger) logger.debug("> Computing challenge a");
 
         // Compute challenge a
-        transcript.addScalar(ctx.challenges[2]);
         transcript.addScalar(ctx.challenges[3]);
+
+        if(zkey.openBy === "stage") {
+            // Add round3 commitments to the transcript
+            const cm3CommitPols = zkey.f.filter(f => f.stages[0].stage === 3);
+            for (let i = 0; i < cm3CommitPols.length; i++) {
+                transcript.addPolCommitment(committedPols[`f${cm3CommitPols[i].index}_3`].commit);
+            }
+        }
+
         ctx.challenges[4] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 
