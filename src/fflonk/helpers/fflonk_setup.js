@@ -14,11 +14,31 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
     //Find the max PIL polynomial degree
     const cnstPolsDefs = [];
     const cmPolsDefs = [];
+
     let maxPilPolDeg = 0;
+
+    for (const polRef in pil.references) {
+        const polInfo = pil.references[polRef];
+
+        // TODO check
+        // Add 2 to the degree of the polynomial to account for the zero knowledge applied
+        if (polInfo.type === 'cmP') polInfo.polDeg += 0;
+
+        maxPilPolDeg = Math.max(maxPilPolDeg, polInfo.polDeg);
+    }
+
+    const pilPower = log2(maxPilPolDeg - 1) + 1;
+    const domainSize = 2 ** pilPower;
+    const powerZK = log2(maxPilPolDeg + 2 - 1) + 1;
+    const domainSizeZK = 1 << powerZK;
+    const powerZKExt = powerZK + 1;
+    const domainSizeZKExt = 1 << powerZKExt;
 
     const polsOpenings = {};
     for (const polRef in pil.references) {
         const polInfo = pil.references[polRef];
+        //polInfo.polDeg = domainSize;
+
         const name = polRef;
         if(polInfo.type === 'constP') {
             polInfo.stage = 0;
@@ -29,31 +49,23 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
             } else {
                 cnstPolsDefs.push({name, stage: 0, degree: polInfo.polDeg})
             }
-        } 
-        
-        if(polInfo.type === 'cmP') {
+        } else if(polInfo.type === 'cmP') {
             polInfo.stage = 1;
             if(polInfo.isArray) {
                 for(let i = 0; i < polInfo.len; ++i) {
-                    cmPolsDefs.push({name: name + i, stage: 1, degree: polInfo.polDeg})
+                    cmPolsDefs.push({name: name + i, stage: 1, degree: domainSizeZK})
                 }
             } else {
-                cmPolsDefs.push({name, stage: 1, degree: polInfo.polDeg})
+                cmPolsDefs.push({name, stage: 1, degree: domainSizeZK})
             }
         }
 
         if(!polsOpenings[name]) polsOpenings[name] = 1;
         ++polsOpenings[name];
-
-        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
     }
-
-    const pilPower = log2(maxPilPolDeg - 1) + 1;
-    const domainSize = 2 ** pilPower;
 
     const polsXi = [...cnstPolsDefs, ...cmPolsDefs]; 
 
-   
     for(let i = 0; i < fflonkInfo.puCtx.length; ++i) {
         polsXi.push({name: `Plookup.H1_${i}`, stage: 2, degree: domainSize})
         pil.references[`Plookup.H1_${i}`] = {
@@ -127,10 +139,10 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
             id: fflonkInfo.imExp2cm[fflonkInfo.imExpsList[i]],
             stage:3,
         }
-	polsOpenings[`Im${fflonkInfo.imExpsList[i]}`] = 2;
+	    polsOpenings[`Im${fflonkInfo.imExpsList[i]}`] = 2;
     }
 
-    polsXi.push({name: "Q", stage: 4, degree: fflonkInfo.qDeg * domainSize});
+    polsXi.push({name: "Q", stage: 4, degree: fflonkInfo.qDeg * domainSizeZKExt});
 
     const polsWXi = [];
     
@@ -158,7 +170,7 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
         // polsWXi.forEach(p => p.degree += polsOpenings[p.name]);
         polDefs.push(polsWXi);
     }
-
+    
     const config = {
         power: pilPower, 
         polDefs,
@@ -205,7 +217,8 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
 
     zkey.polsMap = polsMap;
     zkey.openBy = openBy;
-    
+    zkey.polsOpenings = polsOpenings;
+
     if(logger) logger.info("Fflonk setup finished");
 
     return zkey;
