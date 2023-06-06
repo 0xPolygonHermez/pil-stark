@@ -78,8 +78,8 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     // Reserve big buffers for the polynomial evaluations
     ctx.const_n = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
     ctx.cm1_n = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomain);
-    ctx.cm2_n = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomain);
-    ctx.cm3_n = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomain);
+    ctx.cm2_n = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainZK);
+    ctx.cm3_n = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainZK);
     ctx.cm4_n = new BigBuffer(fflonkInfo.mapSectionsN.cm4_n * sDomainZK);
     ctx.tmpExp_n = new BigBuffer(fflonkInfo.mapSectionsN.tmpExp_n * sDomain); // Expression polynomials
     ctx.x_n = new BigBuffer(sDomain); // Omegas de field extension
@@ -87,14 +87,14 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     // Reserve big buffers for the polynomial coefficients
     ctx.const_coefs = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
     ctx.cm1_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainZK);
-    ctx.cm2_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomain);
-    ctx.cm3_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomain);
+    ctx.cm2_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainZK);
+    ctx.cm3_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainZK);
 
     // Reserve big buffers for the polynomial evaluations in the extended
     ctx.const_2ns = new BigBuffer(fflonkInfo.nConstants * sDomainNext);
     ctx.cm1_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainZKExt);
-    ctx.cm2_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainNext);
-    ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainNext);
+    ctx.cm2_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainZKExt);
+    ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainZKExt);
     ctx.q_2ns = new BigBuffer(fflonkInfo.qDim * sDomainZKExt);
     ctx.x_2ns = new BigBuffer(sDomainNext); // Omegas a l'extès
 
