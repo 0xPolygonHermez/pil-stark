@@ -1,9 +1,10 @@
 const chai = require("chai");
 const assert = chai.assert;
-const {F1Field} = require("ffjavascript");
+const {F1Field, getCurveFromName} = require("ffjavascript");
 const path = require("path");
 const { fflonkSetup } = require("../../src/fflonk/helpers/fflonk_setup.js");
 const { fflonkProve } = require("../../src/fflonk/helpers/fflonk_prover.js");
+const { exportSolidityShPlonkVerifier } = require("shplonkjs");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
@@ -14,8 +15,24 @@ const smPermutation = require("../state_machines/sm_permutation/sm_permutation.j
 const smConnection = require("../state_machines/sm_connection/sm_connection.js");
 const { fflonkInfoGen } = require("../../src/fflonk/helpers/fflonk_info.js");
 const { fflonkVerify } = require("../../src/fflonk/helpers/fflonk_verify.js");
+const { exportCalldata } = require("../../src/fflonk/solidity/exportCalldata.js");
+const { exportSolidityVerifier } = require("../../src/fflonk/solidity/exportSolidityVerifier.js");
+const fs = require("fs")
 
 describe("Fflonk All sm", async function () {
+    let curve;
+
+    before(async () => {
+        if (!fs.existsSync(`./tmp/contracts`)){
+            fs.mkdirSync(`./tmp/contracts`, {recursive: true});
+        }
+        curve = await getCurveFromName("bn128");
+    })
+
+    after(async () => {
+        await curve.terminate();
+    })
+
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
@@ -58,6 +75,14 @@ describe("Fflonk All sm", async function () {
 
         const isValid = await fflonkVerify(zkey, publics, commits, evaluations, fflonkInfo, {});
         assert(isValid);
+
+        
+        const calldata = await exportCalldata(zkey, curve, commits, evaluations, {})
+        const verifierCode = await exportSolidityVerifier(zkey, curve, fflonkInfo, {});
+        const verifierShPlonkCode = await exportSolidityShPlonkVerifier(zkey, curve, {nonCommittedPols: ["Q"], xiSeed: true });
+
+        fs.writeFileSync(`./tmp/contracts/pilfflonk_verifier.sol`, verifierCode, "utf-8");
+        fs.writeFileSync(`./tmp/contracts/shplonk_verifier.sol`, verifierShPlonkCode, "utf-8");
     });
 
 });
