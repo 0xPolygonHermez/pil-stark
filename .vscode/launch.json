@@ -1172,31 +1172,6 @@
             ]
         },
         {
-            "name": "fibonacci C12 prove (custom with arity 4)",
-            "program": "src/main_prover.js",
-            "request": "launch",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node",
-            "args": [
-                "-m ${workspaceFolder}/tmp/fibonacci.c12.commit",
-                "-c ${workspaceFolder}/tmp/fibonacci.c12.const",
-                "-t ${workspaceFolder}/tmp/fibonacci.c12.custom.consttree",
-                "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
-                "-s ${workspaceFolder}/tmp/fibonacci.c12.starkinfo.json",
-                "-o ${workspaceFolder}/tmp/fibonacci.c12.custom.proof.json",
-                "-z ${workspaceFolder}/tmp/fibonacci.c12.custom.proof.zkin.json",
-                "-b ${workspaceFolder}/tmp/fibonacci.c12.custom.public.json",
-                "--proverAddr=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
-                "--custom=true",
-                "--arity=4",
-            ],
-            "runtimeArgs": [
-                "--max-old-space-size=32000"
-            ]
-        },
-        {
             "name": "fibonacci C12 verify proof",
             "program": "src/main_verifier.js",
             "request": "launch",
@@ -1235,26 +1210,6 @@
             ]
         },
         {
-            "name": "fibonacci C12 verify proof (custom with arity 4)",
-            "program": "src/main_verifier.js",
-            "request": "launch",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node",
-            "args": [
-                "-s ${workspaceFolder}/tmp/fibonacci.c12.starkinfo.json",
-                "-o ${workspaceFolder}/tmp/fibonacci.c12.custom.proof.json",
-                "-b ${workspaceFolder}/tmp/fibonacci.c12.custom.public.json",
-                "-v ${workspaceFolder}/tmp/fibonacci.c12.custom.verkey.json",
-                "--custom=true",
-                "--arity=4",
-            ],
-            "runtimeArgs": [
-                "--max-old-space-size=32000"
-            ]
-        },
-        {
             "name": "fibonacci generate BN128 final circom",
             "program": "src/main_pil2circom.js",
             "request": "launch",
@@ -1267,26 +1222,6 @@
                 "-s ${workspaceFolder}/tmp/fibonacci.c12.starkinfo.json",
                 "-v ${workspaceFolder}/tmp/fibonacci.c12.verkey.json",
                 "-o ${workspaceFolder}/tmp/fibonacci.c12.verifier.circom",
-            ],
-            "runtimeArgs": [
-                "--max-old-space-size=32000"
-            ]
-        },
-        {
-            "name": "fibonacci generate BN128 final circom (custom with arity 4)",
-            "program": "src/main_pil2circom.js",
-            "request": "launch",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node",
-            "args": [
-                "-p ${workspaceFolder}/tmp/fibonacci.c12.pil",
-                "-s ${workspaceFolder}/tmp/fibonacci.c12.starkinfo.json",
-                "-v ${workspaceFolder}/tmp/fibonacci.c12.custom.verkey.json",
-                "-o ${workspaceFolder}/tmp/fibonacci.c12.custom.verifier.circom",
-                "--custom=true",
-                "--arity=4",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
