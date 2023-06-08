@@ -3,7 +3,7 @@ const {getCurveFromName} = require("ffjavascript");
 
 const Logger = require('logplease');
 
-module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits, evaluations, fflonkInfo, options) {
+module.exports = async function fflonkVerify(zkey, publics, commits, evaluations, fflonkInfo, options) {
 //    const logger = options.logger;
     const logger = Logger.create("logger");
 
@@ -47,14 +47,6 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
         transcript.addScalar(publics[i]);
     }
 
-    if(zkey.openBy === "stage") {
-        // Add round1 commitments to the transcript
-        const cm1CommitPols = zkey.f.filter(f => f.stages[0].stage === 1);
-        for (let i = 0; i < cm1CommitPols.length; i++) {
-            transcript.addPolCommitment(commits[`f${cm1CommitPols[i].index}`]);
-        }
-    }
-
     if(0 === transcript.data.length) {
         transcript.addScalar(curve.Fr.one);
     }
@@ -73,14 +65,6 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
     transcript.reset();
     transcript.addScalar(ctx.challenges[1]);
 
-    if(zkey.openBy === "stage") {
-        // Add round1 commitments to the transcript
-        const cm2CommitPols = zkey.f.filter(f => f.stages[0].stage === 2);
-        for (let i = 0; i < cm2CommitPols.length; i++) {
-            transcript.addPolCommitment(commits[`f${cm2CommitPols[i].index}`]);
-        }
-    }
-
     ctx.challenges[2] = transcript.getChallenge();
     if (logger) logger.debug("··· challenges.gamma: " + Fr.toString(ctx.challenges[2]));
 
@@ -94,14 +78,6 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
     transcript.reset();
     transcript.addScalar(ctx.challenges[3]);
 
-    if(zkey.openBy === "stage") {
-        // Add round3 commitments to the transcript
-        const cm3CommitPols = zkey.f.filter(f => f.stages[0].stage === 3);
-        for (let i = 0; i < cm3CommitPols.length; i++) {
-            transcript.addPolCommitment(commits[`f${cm3CommitPols[i].index}`]);
-        }
-    }
-
     ctx.challenges[4] = transcript.getChallenge();
     if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 
@@ -111,13 +87,11 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
         zkey.f[i].commit = commits[`f${zkey.f[i].index}`];
     }
     
-    let countEv = 0;
     for(let i = 0; i < fflonkInfo.evIdx.cm.length; ++i) {
         for(const polId in fflonkInfo.evIdx.cm[i]) {
             let polName = i === 0 ? zkey.polsMap.cm[polId] : i === 1 ? zkey.polsMap.cm[polId] + "w" : zkey.polsMap.cm[polId] + `w${i}`;
             const evalIndex = fflonkInfo.evIdx.cm[i][polId];
             ctx.evals[evalIndex] = evaluations[polName];   
-            ++countEv;
         }
     }
 
@@ -125,12 +99,12 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
         for(const polId in fflonkInfo.evIdx.const[i]) {
             let polName = i === 0 ? zkey.polsMap.const[polId] : i === 1 ? zkey.polsMap.const[polId] + "w" : zkey.polsMap.const[polId] + `w${i}`;
             const evalIndex = fflonkInfo.evIdx.const[i][polId];
-            ctx.evals[evalIndex] = evaluations[polName];
-            ++countEv;              
+            ctx.evals[evalIndex] = evaluations[polName];                          
+
         }
     }
     
-    let xiSeed = computeChallengeXiSeed(zkey.f.sort((a,b) => a.index - b.index), curve, {logger, fflonkPreviousChallenge: ctx.challenges[4]});
+    let xiSeed = computeChallengeXiSeed(zkey.f.sort((a,b) => a.index - b.index), curve, {logger, fflonkPreviousChallenge: ctx.challenges[4] });
     const powerW = lcm(Object.keys(zkey).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
     let challengeXi = curve.Fr.exp(xiSeed, powerW);
     ctx.x = challengeXi;
@@ -140,14 +114,16 @@ module.exports.fflonkVerify = async function fflonkVerify(zkey, publics, commits
     const xN = curve.Fr.exp(challengeXi, ctx.N);
     ctx.Z = curve.Fr.sub(xN, curve.Fr.one);   
    
-    const qZ = curve.Fr.mul(evaluations["Q"], ctx.Z);
+    const Q = curve.Fr.div(execCode, ctx.Z);
 
-    // if(!curve.Fr.eq(qZ, execCode)) {
-    //     console.log("Verify evaluations failed");
-    //     return false;
-    // }
+    console.log("Q", curve.Fr.toString(Q));
+    console.log("xiSeed", curve.Fr.toString(xiSeed));
+    if(!curve.Fr.eq(Q, evaluations["Q"])) {
+        console.log("Verify evaluations failed");
+        return false;
+    }
 
-    const res = verifyOpenings(zkey, commits, evaluations, curve, {logger, fflonkPreviousChallenge: ctx.challenges[4]});
+    const res = verifyOpenings(zkey, commits, evaluations, curve, {logger, fflonkPreviousChallenge: ctx.challenges[4], nonCommittedPols: ["Q"]});
     await curve.terminate();
 
     return res;

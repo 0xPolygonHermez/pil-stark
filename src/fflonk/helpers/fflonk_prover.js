@@ -1,5 +1,5 @@
 const {BigBuffer} = require("ffjavascript");
-const { getPowersOfTau, Polynomial, commit, Keccak256Transcript } = require("shplonkjs");
+const { getPowersOfTau, Polynomial, commit, Keccak256Transcript, lcm } = require("shplonkjs");
 const workerpool = require("workerpool");
 const { fflonkgen_execute } = require("./fflonk_prover_worker");
 const { calculateH1H2, calculateZ } = require("../../helpers/polutils");
@@ -14,7 +14,7 @@ const maxNperThread = 1 << 18;
 const minNperThread = 1 << 12;
 
 
-module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonkInfo, zkey, ptauFile, options) {
+module.exports = async function fflonkProve(cmPols, cnstPols, fflonkInfo, zkey, ptauFile, options) {
     const logger = Logger.create("logger");
     
     const {PTau, curve} = await getPowersOfTau(zkey.f, ptauFile, zkey.power, logger);
@@ -166,7 +166,16 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
     if (logger) logger.debug("> ROUND 4. Compute Trace Quotient Polynomials");
     await round4();
     
-    const [cmts, evaluations] = await open(zkey, PTau, ctx, committedPols, curve, {logger, fflonkPreviousChallenge: ctx.challenges[4]});
+    const [cmts, evaluations,xiSeed] = await open(zkey, PTau, ctx, committedPols, curve, {logger, fflonkPreviousChallenge: ctx.challenges[4], nonCommittedPols: ["Q"]});
+
+    // Compute xiSeed 
+    const powerW = lcm(Object.keys(zkey).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
+    let challengeXi = curve.Fr.exp(xiSeed, powerW);
+
+    const xN = curve.Fr.exp(challengeXi, ctx.N);
+    const Z = curve.Fr.sub(xN, curve.Fr.one);   
+
+    evaluations.inv_zh = curve.Fr.inv(Z);
 
     await pool.terminate();
 
@@ -320,15 +329,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
             transcript.addScalar(ctx.publics[i]);
         }
 
-        if(zkey.openBy === "stage") {
-            // Add round1 commitments to the transcript
-            const cm1CommitPols = zkey.f.filter(f => f.stages[0].stage === 1);
-            for (let i = 0; i < cm1CommitPols.length; i++) {
-                transcript.addPolCommitment(committedPols[`f${cm1CommitPols[i].index}_1`].commit);
-            }
-        }
-
-
         if (0 === transcript.data.length) {
             transcript.addScalar(Fr.one);
         }
@@ -388,14 +388,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
 
         // Compute challenge gamma
         transcript.addScalar(ctx.challenges[1]);
-
-        if(zkey.openBy === "stage") {
-            // Add round2 commitments to the transcript
-            const cm2CommitPols = zkey.f.filter(f => f.stages[0].stage === 2);
-            for (let i = 0; i < cm2CommitPols.length; i++) {
-                transcript.addPolCommitment(committedPols[`f${cm2CommitPols[i].index}_2`].commit);
-            }
-        }
 
         ctx.challenges[2] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.gamma: " + Fr.toString(ctx.challenges[2]));
@@ -494,14 +486,6 @@ module.exports.fflonkProve = async function fflonkProve(cmPols, cnstPols, fflonk
 
         // Compute challenge a
         transcript.addScalar(ctx.challenges[3]);
-
-        if(zkey.openBy === "stage") {
-            // Add round3 commitments to the transcript
-            const cm3CommitPols = zkey.f.filter(f => f.stages[0].stage === 3);
-            for (let i = 0; i < cm3CommitPols.length; i++) {
-                transcript.addPolCommitment(committedPols[`f${cm3CommitPols[i].index}_3`].commit);
-            }
-        }
 
         ctx.challenges[4] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));

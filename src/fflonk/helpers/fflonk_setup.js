@@ -3,10 +3,8 @@ const {log2} = require("pilcom/src/utils");
 const {setup, Polynomial, commit} = require("shplonkjs");
 
 
-module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInfo, options) {
+module.exports = async function fflonkSetup(_pil, cnstPols, ptauFile, fflonkInfo, options) {
     const logger = options.logger;
-
-    const openBy = options.openBy || "openingPoints";
 
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
 
@@ -175,7 +173,7 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
         power: pilPower, 
         polDefs,
         extraMuls: options.extraMuls || 0,
-        openBy: openBy,
+        openBy: "openingPoints",
     }
 
     const {zkey, PTau, curve} = await setup(config, ptauFile, logger);
@@ -216,9 +214,10 @@ module.exports.fflonkSetup = async function (_pil, cnstPols, ptauFile, fflonkInf
     }
 
     zkey.polsMap = polsMap;
-    zkey.openBy = openBy;
     zkey.polsOpenings = polsOpenings;
 
+    zkey.nPublics = fflonkInfo.nPublics;
+    
     if(logger) logger.info("Fflonk setup finished");
 
     return zkey;
