@@ -2,14 +2,14 @@ const chai = require("chai");
 const assert = chai.assert;
 const {F1Field} = require("ffjavascript");
 const path = require("path");
-const { fflonkSetup } = require("../../src/fflonk/helpers/fflonk_setup.js");
-const { fflonkProve } = require("../../src/fflonk/helpers/fflonk_prover.js");
+const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
+const fflonkProve = require("../../src/fflonk/helpers/fflonk_prover.js");
+const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
+const fflonkVerify  = require("../../src/fflonk/helpers/fflonk_verify.js");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
 const smSimple = require("../state_machines/sm_simple/sm_simple.js");
-const { fflonkInfoGen } = require("../../src/fflonk/helpers/fflonk_info.js");
-const { fflonkVerify } = require("../../src/fflonk/helpers/fflonk_verify.js");
 
 
 describe("simple sm", async function () {
