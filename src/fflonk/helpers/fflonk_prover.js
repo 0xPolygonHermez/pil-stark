@@ -66,36 +66,27 @@ module.exports = async function fflonkProve(cmPols, cnstPols, fflonkInfo, zkey, 
         maxN = Math.max(maxN, currentN);
     }
 
-    const powerZK = log2(maxN - 1) + 1;
-    const powerZKExt = powerZK + 1;
-    const domainSizeZK = 1 << powerZK;
-    const domainSizeZKExt = 1 << powerZKExt;
-    const sDomainZK = domainSizeZK * n8r;
-    const sDomainZKExt = domainSizeZKExt * n8r;
-    ctx.N = domainSizeZK;
-    ctx.Next = domainSizeZKExt;
-
     // Reserve big buffers for the polynomial evaluations
     ctx.const_n = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
-    ctx.cm1_n = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainZK);
-    ctx.cm2_n = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainZK);
-    ctx.cm3_n = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainZK);
-    ctx.cm4_n = new BigBuffer(fflonkInfo.mapSectionsN.cm4_n * sDomainZK);
-    ctx.tmpExp_n = new BigBuffer(fflonkInfo.mapSectionsN.tmpExp_n * sDomainZK); // Expression polynomials
+    ctx.cm1_n = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomain);
+    ctx.cm2_n = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomain);
+    ctx.cm3_n = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomain);
+    ctx.cm4_n = new BigBuffer(fflonkInfo.mapSectionsN.cm4_n * sDomain);
+    ctx.tmpExp_n = new BigBuffer(fflonkInfo.mapSectionsN.tmpExp_n * sDomain); // Expression polynomials
     ctx.x_n = new BigBuffer(sDomain); // Omegas de field extension
 
     // Reserve big buffers for the polynomial coefficients
     ctx.const_coefs = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
-    ctx.cm1_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainZK);
-    ctx.cm2_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainZK);
-    ctx.cm3_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainZK);
+    ctx.cm1_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomain);
+    ctx.cm2_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomain);
+    ctx.cm3_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomain);
 
     // Reserve big buffers for the polynomial evaluations in the extended
     ctx.const_2ns = new BigBuffer(fflonkInfo.nConstants * sDomainNext);
-    ctx.cm1_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainZKExt);
-    ctx.cm2_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainZKExt);
-    ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainZKExt);
-    ctx.q_2ns = new BigBuffer(fflonkInfo.qDim * sDomainZKExt);
+    ctx.cm1_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainNext);
+    ctx.cm2_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainNext);
+    ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainNext);
+    ctx.q_2ns = new BigBuffer(fflonkInfo.qDim * sDomainNext);
     ctx.x_2ns = new BigBuffer(sDomainNext); // Omegas a l'extès
 
 
@@ -142,7 +133,7 @@ module.exports = async function fflonkProve(cmPols, cnstPols, fflonkInfo, zkey, 
 
     ctx.challenges.b = [];
     for (let i = 0; i < totalBlindings; i++) {
-        ctx.challenges.b[i] = Fr.random();
+        ctx.challenges.b[i] =Fr.one; // Fr.random();
     }
 
     let bIndex = 0;
@@ -166,7 +157,11 @@ module.exports = async function fflonkProve(cmPols, cnstPols, fflonkInfo, zkey, 
     if (logger) logger.debug("> ROUND 4. Compute Trace Quotient Polynomials");
     await round4();
     
-    const [cmts, evaluations,xiSeed] = await open(zkey, PTau, ctx, committedPols, curve, {logger, fflonkPreviousChallenge: ctx.challenges[4], nonCommittedPols: ["Q"]});
+    for(let committedPol in committedPols) {
+        console.log(curve.G1.toString(committedPols[committedPol].commit));
+    }
+
+    const [cmts, evaluations,xiSeed] = await open(zkey, PTau, ctx, committedPols, curve, {logger/*, fflonkPreviousChallenge: ctx.challenges[4], nonCommittedPols: ["Q"]*/});
 
     // Compute xiSeed 
     const powerW = lcm(Object.keys(zkey).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
@@ -223,10 +218,13 @@ module.exports = async function fflonkProve(cmPols, cnstPols, fflonkInfo, zkey, 
 
         // Add ZK coefs to the end of the buffer
         for (let i = 0; i < cmPols.$$nPols; i++) {
+            let polName = cmPols.$$defArray[i].name;
+            if (cmPols.$$defArray[i].idx >= 0) polName += cmPols.$$defArray[i].idx;
+
             // Add ZK evaluations to the two lasts positions of the buffer
-            for (let j = 0; j < 2; j++) {
+            for (let j = 0; j < randomBlinding[polName]; j++) {
                 const randomBlinding = ctx.challenges.b[bIndex++];
-                ctx.cm1_n.set(randomBlinding, ((domainSizeZK - (j + 1)) * cmPols.$$nPols + i) * n8r);
+                ctx.cm1_n.set(randomBlinding, ((domainSize - (j + 1)) * cmPols.$$nPols + i) * n8r);
             }
         }
         
@@ -312,7 +310,7 @@ module.exports = async function fflonkProve(cmPols, cnstPols, fflonkInfo, zkey, 
         console.log("----------------------------------> ZK ctx.cm1_n");
         printPol(ctx.cm1_n, Fr);
 
-        await interpolate(ctx.cm1_n, fflonkInfo.mapSectionsN.cm1_n, powerZK, ctx.cm1_coefs, ctx.cm1_2ns, powerZKExt, Fr, false);
+        await interpolate(ctx.cm1_n, fflonkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.cm1_coefs, ctx.cm1_2ns, ctx.nBitsExt, Fr, false);
         
         for (let i = 0; i < cmPols.$$nPols; i++) {
             const name = cmPols.$$defArray[i].name;
@@ -321,7 +319,7 @@ module.exports = async function fflonkProve(cmPols, cnstPols, fflonkInfo, zkey, 
             if (logger) logger.debug(`··· Preparing '${name}' polynomial`);
 
             // Get coefs
-            const coefs = getPolBuffer(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], { coefs: true, zkExt: true });
+            const coefs = getPolBuffer(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], { coefs: true });
 
             // Define polynomial
             ctx[name] = new Polynomial(coefs, curve, logger);
@@ -529,7 +527,6 @@ module.exports = async function fflonkProve(cmPols, cnstPols, fflonkInfo, zkey, 
         for (let j = 0; j < commits4.length; ++j) {
             committedPols[`${commits4[j].index}`] = { commit: commits4[j].commit, pol: commits4[j].pol };
         }
-
     }
 
     async function callCalculateExps(step, dom, pool, ctx, fflonkInfo, logger) {

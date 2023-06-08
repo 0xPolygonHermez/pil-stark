@@ -104,7 +104,7 @@ module.exports = async function fflonkVerify(zkey, publics, commits, evaluations
         }
     }
     
-    let xiSeed = computeChallengeXiSeed(zkey.f.sort((a,b) => a.index - b.index), curve, {logger, fflonkPreviousChallenge: ctx.challenges[4] });
+    let xiSeed = computeChallengeXiSeed(zkey.f.sort((a,b) => a.index - b.index), curve, {logger/*, fflonkPreviousChallenge: ctx.challenges[4]*/ });
     const powerW = lcm(Object.keys(zkey).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
     let challengeXi = curve.Fr.exp(xiSeed, powerW);
     ctx.x = challengeXi;
@@ -123,7 +123,7 @@ module.exports = async function fflonkVerify(zkey, publics, commits, evaluations
         //return false;
     }
 
-    const res = verifyOpenings(zkey, commits, evaluations, curve, {logger, fflonkPreviousChallenge: ctx.challenges[4], nonCommittedPols: ["Q"]});
+    const res = verifyOpenings(zkey, commits, evaluations, curve, {logger/*, fflonkPreviousChallenge: ctx.challenges[4], nonCommittedPols: ["Q"]*/  });
     await curve.terminate();
 
     return res;

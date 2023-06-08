@@ -25,12 +25,8 @@ module.exports = async function fflonkSetup(_pil, cnstPols, ptauFile, fflonkInfo
         maxPilPolDeg = Math.max(maxPilPolDeg, polInfo.polDeg);
     }
 
-    const pilPower = log2(maxPilPolDeg - 1) + 1;
-    const domainSize = 2 ** pilPower;
-    const powerZK = log2(maxPilPolDeg + 2 - 1) + 1;
-    const domainSizeZK = 1 << powerZK;
-    const powerZKExt = powerZK + 1;
-    const domainSizeZKExt = 1 << powerZKExt;
+    const pilPower = fflonkInfo.pilPower;
+    const domainSize = 1 << pilPower;
 
     const polsOpenings = {};
     for (const polRef in pil.references) {
@@ -42,19 +38,19 @@ module.exports = async function fflonkSetup(_pil, cnstPols, ptauFile, fflonkInfo
             polInfo.stage = 0;
             if(polInfo.isArray) {
                 for(let i = 0; i < polInfo.len; ++i) {
-                    cnstPolsDefs.push({name: name + i, stage: 0, degree: polInfo.polDeg})
+                    cnstPolsDefs.push({name: name + i, stage: 0, degree: domainSize})
                 }
             } else {
-                cnstPolsDefs.push({name, stage: 0, degree: polInfo.polDeg})
+                cnstPolsDefs.push({name, stage: 0, degree: domainSize})
             }
         } else if(polInfo.type === 'cmP') {
             polInfo.stage = 1;
             if(polInfo.isArray) {
                 for(let i = 0; i < polInfo.len; ++i) {
-                    cmPolsDefs.push({name: name + i, stage: 1, degree: domainSizeZK})
+                    cmPolsDefs.push({name: name + i, stage: 1, degree: domainSize})
                 }
             } else {
-                cmPolsDefs.push({name, stage: 1, degree: domainSizeZK})
+                cmPolsDefs.push({name, stage: 1, degree: domainSize})
             }
         }
 
@@ -140,7 +136,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, ptauFile, fflonkInfo
 	    polsOpenings[`Im${fflonkInfo.imExpsList[i]}`] = 2;
     }
 
-    polsXi.push({name: "Q", stage: 4, degree: fflonkInfo.qDeg * domainSizeZKExt});
+    polsXi.push({name: "Q", stage: 4, degree: fflonkInfo.qDeg * domainSize});
 
     const polsWXi = [];
     

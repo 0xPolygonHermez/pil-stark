@@ -21,7 +21,7 @@ describe("simple sm", async function () {
     it("Simple2", async () => {
         await runTest("simple2.pil");
     });
-    it("Simple2p", async () => {
+    it.only("Simple2p", async () => {
         await runTest("simple2p.pil");
     });
     it("Simple3", async () => {
