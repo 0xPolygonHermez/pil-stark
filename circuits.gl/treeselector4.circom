@@ -10,6 +10,10 @@ template custom TreeSelector4() {
     signal output out[3];
 
     var root[3];
+
+    assert(keys[0]*(keys[0] - 1) == 0);
+    assert(keys[1]*(keys[1] - 1) == 0);
+    
     if(keys[0] == 0 && keys[1] == 0) {
         root = values[0];
     } else if(keys[0] == 1 && keys[1] == 0) {

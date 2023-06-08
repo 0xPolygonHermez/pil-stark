@@ -91,6 +91,8 @@ template custom CustPoseidon12() {
     signal output im[9][12];
     signal output out[12];
 
+    assert(key*(key - 1) == 0);
+
     var initialSt[12];
     
     // Order the inputs of the Poseidon hash according to the key bit.

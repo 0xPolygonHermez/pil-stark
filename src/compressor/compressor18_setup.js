@@ -178,7 +178,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
 
                 constPols.Compressor.GATE[r+i] = 0n;
                 constPols.Compressor.GATE2[r+i] = 0n;
-                constPols.Compressor.POSEIDONM[r+i] = i === 4 ? 1n : 0n; // Round 28 -> Output  
+                constPols.Compressor.POSEIDONM[r+i] = i === 4 || i === 0 || i === 3 ? 1n : 0n; // Round 28 -> Output  
                 constPols.Compressor.POSEIDONP[r+i] = i === 1 ? 1n : 0n; // Round 2 -> Round 4
                 constPols.Compressor.POSEIDONCUSTFIRST[r+i] = 0n;
                 constPols.Compressor.POSEIDONFIRST[r+i] = i === 0 ? 1n : 0n; // Inputs -> Round 2
@@ -226,7 +226,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
 
                 constPols.Compressor.GATE[r+i] = 0n;
                 constPols.Compressor.GATE2[r+i] = 0n;
-                constPols.Compressor.POSEIDONM[r+i] = i === 4 ? 1n : 0n; // Round 28 -> Output 
+                constPols.Compressor.POSEIDONM[r+i] = i === 4 || i === 0 || i === 3 ? 1n : 0n; // Round 28 -> Output 
                 constPols.Compressor.POSEIDONP[r+i] = i === 1 ? 1n : 0n; // Round 2 -> Round 4
                 constPols.Compressor.POSEIDONCUSTFIRST[r+i] = i === 0 ? 1n : 0n; // Inputs -> Round 2
                 constPols.Compressor.POSEIDONFIRST[r+i] = 0n;
@@ -460,7 +460,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
                 pr.nUsed++;
                 partialRows[k] = pr;
             } else if(pr.nUsed === 4) {
-                constPols.Compressor.GATE2[pr.row] = 0n;
+                constPols.Compressor.GATE2[pr.row] = 1n;
                 constPols.Compressor.C[12][pr.row] = c[3];
                 constPols.Compressor.C[13][pr.row] = c[4];
                 constPols.Compressor.C[14][pr.row] = c[5];
