@@ -133,7 +133,7 @@ module.exports = async function fflonkProve(cmPols, cnstPols, fflonkInfo, zkey, 
 
     ctx.challenges.b = [];
     for (let i = 0; i < totalBlindings; i++) {
-        ctx.challenges.b[i] =Fr.one; // Fr.random();
+        ctx.challenges.b[i] =Fr.zero; // Fr.random();
     }
 
     let bIndex = 0;
@@ -288,24 +288,6 @@ module.exports = async function fflonkProve(cmPols, cnstPols, fflonkInfo, zkey, 
             return;
         }
 
-
-        // let coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomain);
-        // await ifft(ctx.cm1_n, fflonkInfo.mapSectionsN.cm1_n, ctx.nBits, coefs, Fr);
-
-        // ctx.cm1_coefs.set(coefs, 0);
-
-        // // Add ZK coefs to the end of the buffer
-        // for (let i = 0; i < cmPols.$$nPols; i++) {
-        //     // Add ZK evaluations to the two lasts positions of the buffer
-        //     for (let j = 0; j < 2; j++) {
-        //         // TODO change Fr.one to a random value
-        //         const randomBlinding = ctx.challenges.b[bIndex++];
-        //         ctx.cm1_coefs.set(randomBlinding, ((domainSizeZK - (j + 1)) * cmPols.$$nPols + i) * n8r);
-        //     }
-        // }
-
-        //Compute extended evals
-        // await fft(ctx.cm1_coefs, fflonkInfo.mapSectionsN.cm1_n, powerZKExt, ctx.cm1_2ns, Fr);
 
         console.log("----------------------------------> ZK ctx.cm1_n");
         printPol(ctx.cm1_n, Fr);

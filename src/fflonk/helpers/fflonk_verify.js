@@ -119,8 +119,8 @@ module.exports = async function fflonkVerify(zkey, publics, commits, evaluations
     console.log("Q", curve.Fr.toString(Q));
     console.log("xiSeed", curve.Fr.toString(xiSeed));
     if(!curve.Fr.eq(Q, evaluations["Q"])) {
-        //console.log("Verify evaluations failed");
-        //return false;
+        console.log("Verify evaluations failed");
+        return false;
     }
 
     const res = verifyOpenings(zkey, commits, evaluations, curve, {logger/*, fflonkPreviousChallenge: ctx.challenges[4], nonCommittedPols: ["Q"]*/  });

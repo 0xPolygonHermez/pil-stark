@@ -19,24 +19,13 @@ module.exports = function fflonkInfoGen(F, _pil) {
         ciCtx: []
     };
 
-    // for (let i = 0; i < primePols.length; i++) {
-    //     const reference = findPolynomialByTypeId(pil, primePols[i].type + "P", primePols[i].id);
-    //     let name = reference;
-    //     if (pil.references[reference].isArray) {
-    //         name += (primePols[i].id - pil.references[reference].id);
-    //     }
-    //     const stage = pil.references[reference].stage;
-    //     polsWXi.push({ name, stage, degree: pil.references[reference].polDeg });
-    //     if (!polsOpenings[name]) polsOpenings[name] = 1;
-    //     ++polsOpenings[name];
-    // }
-
     let maxPilPolDeg = 0;
     for (const polRef in pil.references) {
-        let currentDeg = pil.references[polRef].polDeg;
-        // TODO REVIEW
-        if(pil.references[polRef].type === 'cmP') currentDeg += 3;
-        maxPilPolDeg = Math.max(maxPilPolDeg, currentDeg);
+        // let currentDeg = pil.references[polRef].polDeg;
+        // // TODO REVIEW
+        // if(pil.references[polRef].type === 'cmP') currentDeg += 3;
+        // maxPilPolDeg = Math.max(maxPilPolDeg, currentDeg);
+        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg + 1);
     }
     res.pilPower = log2(maxPilPolDeg - 1) + 1;
 
