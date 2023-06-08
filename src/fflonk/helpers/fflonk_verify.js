@@ -21,8 +21,6 @@ module.exports = async function fflonkVerify(zkey, publics, commits, evaluations
 
     const domainSize = ctx.N;
     const power = zkey.power;
-    const n8r = Fr.n8;
-    const sDomain = domainSize * n8r;
 
     if (logger) {
         logger.debug("------------------------------");

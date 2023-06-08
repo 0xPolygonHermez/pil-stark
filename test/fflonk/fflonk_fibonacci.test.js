@@ -2,14 +2,14 @@ const chai = require("chai");
 const assert = chai.assert;
 const {F1Field} = require("ffjavascript");
 const path = require("path");
-const { fflonkSetup } = require("../../src/fflonk/helpers/fflonk_setup.js");
-const { fflonkProve } = require("../../src/fflonk/helpers/fflonk_prover.js");
+const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
+const fflonkProve = require("../../src/fflonk/helpers/fflonk_prover.js");
+const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
+const fflonkVerify  = require("../../src/fflonk/helpers/fflonk_verify.js");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
 const smFibonacci = require("../state_machines/sm_fibonacci/sm_fibonacci.js");
-const { fflonkInfoGen } = require("../../src/fflonk/helpers/fflonk_info.js");
-const { fflonkVerify } = require("../../src/fflonk/helpers/fflonk_verify.js");
 
 describe("Fflonk Fibonacci sm", async function () {
     this.timeout(10000000);

@@ -2,15 +2,16 @@ const chai = require("chai");
 const assert = chai.assert;
 const {F1Field} = require("ffjavascript");
 const path = require("path");
-const { fflonkSetup } = require("../../src/fflonk/helpers/fflonk_setup.js");
-const { fflonkProve } = require("../../src/fflonk/helpers/fflonk_prover.js");
+const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
+const fflonkProve = require("../../src/fflonk/helpers/fflonk_prover.js");
+const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
+const fflonkVerify  = require("../../src/fflonk/helpers/fflonk_verify.js");
+
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
 const smConnection = require("../state_machines/sm_connection/sm_connection.js");
-const { fflonkInfoGen } = require("../../src/fflonk/helpers/fflonk_info.js");
-const { fflonkVerify } = require("../../src/fflonk/helpers/fflonk_verify.js");
 
 describe("Fflonk connection sm", async function () {
     this.timeout(10000000);

@@ -2,15 +2,14 @@ const chai = require("chai");
 const assert = chai.assert;
 const {F1Field} = require("ffjavascript");
 const path = require("path");
-const { fflonkSetup } = require("../../src/fflonk/helpers/fflonk_setup.js");
-const { fflonkProve } = require("../../src/fflonk/helpers/fflonk_prover.js");
-
+const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
+const fflonkProve = require("../../src/fflonk/helpers/fflonk_prover.js");
+const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
+const fflonkVerify  = require("../../src/fflonk/helpers/fflonk_verify.js");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
 const smPermutation = require("../state_machines/sm_simple_permutation/sm_simple_permutation.js");
-const { fflonkInfoGen } = require("../../src/fflonk/helpers/fflonk_info.js");
-const { fflonkVerify } = require("../../src/fflonk/helpers/fflonk_verify.js");
 
 describe("Fflonk permutation sm", async function () {
     this.timeout(10000000);
