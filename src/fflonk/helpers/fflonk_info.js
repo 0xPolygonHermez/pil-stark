@@ -21,7 +21,7 @@ module.exports = function fflonkInfoGen(F, _pil) {
 
     let maxPilPolDeg = 0;
     for (const polRef in pil.references) {
-        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg + 2);
     }
     res.pilPower = log2(maxPilPolDeg - 1) + 1;
 
