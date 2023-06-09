@@ -1,15 +1,19 @@
 const { verifyOpenings, Keccak256Transcript, computeChallengeXiSeed, lcm } = require("shplonkjs");
 const {getCurveFromName} = require("ffjavascript");
+const { readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 
 const Logger = require('logplease');
 
-module.exports = async function fflonkVerify(zkey, publics, commits, evaluations, fflonkInfo, options) {
+module.exports = async function fflonkVerify(zkeyFilename, publics, commits, evaluations, fflonkInfo, options) {
 //    const logger = options.logger;
     const logger = Logger.create("logger");
 
     const curve = await getCurveFromName("bn128");
 
     const Fr = curve.Fr;
+
+    // Load zkey file
+    const zkey = await readPilFflonkZkeyFile(zkeyFilename, curve, {logger});
 
     const ctx = {};
     ctx.evals = [];

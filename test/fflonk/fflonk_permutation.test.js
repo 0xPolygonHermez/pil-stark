@@ -40,14 +40,15 @@ describe("Fflonk permutation sm", async function () {
         }
 
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
+        const zkeyFilename =  path.join(__dirname, "../../", "tmp", "fflonk_simple.zkey");
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        const zkey = await fflonkSetup(pil, constPols, ptauFile, fflonkInfo, {extraMuls: 2});
+        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 2});
 
-        const {commits, evaluations, publics} = await fflonkProve(cmPols, constPols, fflonkInfo, zkey, ptauFile, {});
+        const {commits, evaluations, publics} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
 
-        const isValid = await fflonkVerify(zkey, publics, commits, evaluations, fflonkInfo, {});
+        const isValid = await fflonkVerify(zkeyFilename, publics, commits, evaluations, fflonkInfo, {});
         assert(isValid);
 
     });

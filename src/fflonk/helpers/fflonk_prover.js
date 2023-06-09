@@ -5,6 +5,8 @@ const { fflonkgen_execute } = require("./fflonk_prover_worker");
 const { calculateH1H2, calculateZ } = require("../../helpers/polutils");
 const { open } = require("shplonkjs");
 
+const { readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
+const {buildBn128} = require('ffjavascript');
 const Logger = require('logplease');
 const { interpolate } = require("../../helpers/fft/fft_p.bn128");
 
@@ -14,10 +16,15 @@ const maxNperThread = 1 << 18;
 const minNperThread = 1 << 12;
 
 
-module.exports = async function fflonkProve(cmPols, cnstPols, fflonkInfo, zkey, ptauFile, options) {
+module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflonkInfo, ptauFile, options) {
     const logger = Logger.create("logger");
     
-    const {PTau, curve} = await getPowersOfTau(zkey.f, ptauFile, zkey.power, logger);
+    const curve = await buildBn128();
+
+    // Load zkey file
+    const zkey = await readPilFflonkZkeyFile(zkeyFilename, curve, {logger});
+
+    const {PTau} = await getPowersOfTau(zkey.f, ptauFile, zkey.power, logger);
 
     const Fr = curve.Fr;
 
