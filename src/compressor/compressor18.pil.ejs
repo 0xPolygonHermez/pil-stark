@@ -99,6 +99,9 @@ namespace Compressor(%N);
     pol custPoseidonInput6 = a[8] * (a[6] - a[2]) + a[2];
     pol custPoseidonInput7 = a[8] * (a[7] - a[3]) + a[3];
 
+    pol checkBinary = a[8] * (a[8] - 1);
+    POSEIDONCUSTFIRST * checkBinary = 0;
+
 <% for(let r = 0; r < 24; ++r) { -%>
 <% if(r === 12) { -%>
 <% for(let i = 0; i < 12; ++i) { -%>
@@ -193,7 +196,7 @@ namespace Compressor(%N);
 <% } -%>
 
 <% for(let i = 0; i < 12; ++i) { -%>
-    (POSEIDONM + POSEIDONAFTERPART + POSEIDONFIRST + POSEIDONCUSTFIRST) * poseidonM<%- i + 12 + 1 %> = 0;
+    POSEIDONM * poseidonM<%- i + 12 + 1 %> = 0;
 <% } -%>
 
 <% for(let i = 0; i < 12; i++)  { -%>
@@ -322,6 +325,11 @@ namespace Compressor(%N);
     // The values are stored from a[0], a[1], a[2] // a[3], a[4], a[5] // a[6], a[7], a[8] // a[9], a[10], a[11] 
     // The key is stored in [a[12], a[13]]
     // The output is stored in [a[14], a[15], a[16]]
+
+    pol checkBinaryKey1 = a[12]*(1 - a[12]);
+    pol checkBinaryKey2 = a[13]*(1 - a[13]);
+    TREESELECTOR4 * checkBinaryKey1 = 0;
+    TREESELECTOR4 * checkBinaryKey2 = 0;
 
     // keys1 will only be 1 if both a[12], a[13] are zero
     pol keys1 = (1 - a[12])*(1 - a[13]);

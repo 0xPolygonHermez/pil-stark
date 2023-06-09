@@ -85,6 +85,9 @@ namespace Compressor(%N);
     pol custPoseidonInput6 = a[8] * (a[6] - a[2]) + a[2];
     pol custPoseidonInput7 = a[8] * (a[7] - a[3]) + a[3];
 
+    pol checkBinary = a[8] * (a[8] - 1);
+    POSEIDONCUSTFIRST * checkBinary = 0;
+
 <% for(let r = 0; r < 12; ++r) { -%>
     // If it is the first round of CustPoseidon, we need to set as input the previously calculated one. 
     // If it is the first round, we will add the corresponding constant and directly verify round 1.
@@ -95,7 +98,7 @@ namespace Compressor(%N);
 <%  } -%>
 <%  if (r > 0 && r < 11) { -%>
     // Calculate the 7th power of the <%- r %>th element
-    pol inpP<%- r %> = PARTIALROUND * s0_R<%- r - 1 %> + PARTIALROUND2 * s0_R<%- r + 11 - 1 %> + (POSEIDONM + POSEIDONFIRST + POSEIDONP + POSEIDONCUSTFIRST) * inp<%- r %>;
+    pol inpP<%- r %> = PARTIALROUND * s0_R<%- r - 1 %> + PARTIALROUND2 * s0_R<%- r + 11 - 1 %> + (POSEIDONM + POSEIDONP) * inp<%- r %>;
     pol a<%- r %>_2 = inpP<%- r %> * inpP<%- r %>;
     pol a<%- r %>_4 = a<%- r %>_2 * a<%- r %>_2;
     pol a<%- r %>_6 = a<%- r %>_4 * a<%- r %>_2;
@@ -174,7 +177,7 @@ namespace Compressor(%N);
 
 
 <% for(let i = 0; i < 12; ++i) { -%>
-    (POSEIDONM + POSEIDONFIRST + POSEIDONCUSTFIRST) * poseidonM<%- i %> = 0;
+    POSEIDONM * poseidonM<%- i %> = 0;
 <% } -%>
 
 <% for(let i = 0; i < 12; ++i) { -%>
@@ -340,6 +343,11 @@ namespace Compressor(%N);
     // Check that the plonk constraint stored in a[0], a[1], a[2] and a[3], a[4], a[5] are correct
     g012*TREESELECTOR4 = 0;
     g345*TREESELECTOR4 = 0;
+
+    pol checkBinaryKey1 = a[6]'*(1 - a[6]');
+    pol checkBinaryKey2 = a[7]'*(1 - a[7]');
+    TREESELECTOR4 * checkBinaryKey1 = 0;
+    TREESELECTOR4 * checkBinaryKey2 = 0;
 
     // Check connection equations of Plonk
 <% 
