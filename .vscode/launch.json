@@ -1793,6 +1793,148 @@
             ]
         },
         {
+            "name": "fibonacci buildconst bn128",
+            "program": "test/state_machines/sm_fibonacci/main_buildconst_fibonacci.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-o tmp/fibonacci.const",
+                "--curve=bn128"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "fibonacci exec bn128",
+            "program": "test/state_machines/sm_fibonacci/main_exec_fibonacci.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-i test/state_machines/sm_fibonacci/fibonacci.input.json",
+                "-o tmp/fibonacci.commit",
+                "--curve=bn128"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "fibonacci gen FflonkInfo",
+            "program": "${workspaceFolder}/src/fflonk/main_fflonkinfo.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p test/state_machines/sm_fibonacci/fibonacci_main.pil",
+                "-i tmp/fibonacci.fflonkinfo.json"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "fibonacci fflonk setup",
+            "program": "${workspaceFolder}/src/fflonk/main_setup.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p test/state_machines/sm_fibonacci/fibonacci_main.pil",
+                "-t tmp/powersOfTau28_hez_final_19.ptau",
+                "-f tmp/fibonacci.fflonkinfo.json",
+                "-c tmp/fibonacci.const",
+                "-z tmp/fibonacci.zkey"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "fibonacci fflonk prove",
+            "program": "${workspaceFolder}/src/fflonk/main_prover.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p test/state_machines/sm_fibonacci/fibonacci_main.pil",
+                "-m tmp/fibonacci.commit",
+                "-c tmp/fibonacci.const",
+                "-t tmp/powersOfTau28_hez_final_19.ptau",
+                "-f tmp/fibonacci.fflonkinfo.json",
+                "-z tmp/fibonacci.zkey",
+                "-o tmp/fibonacci.fflonk.proof.json",
+                "-b tmp/fibonacci.fflonk.publics.json"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "fibonacci fflonk verify",
+            "program": "${workspaceFolder}/src/fflonk/main_verifier.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-f tmp/fibonacci.fflonkinfo.json",
+                "-z tmp/fibonacci.zkey",
+                "-o tmp/fibonacci.fflonk.proof.json",
+                "-b tmp/fibonacci.fflonk.publics.json"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "fibonacci fflonk calldata",
+            "program": "${workspaceFolder}/src/fflonk/main_exportCalldata.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-z tmp/fibonacci.zkey",
+                "-o tmp/fibonacci.fflonk.proof.json",
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "fibonacci fflonk solidity verifier",
+            "program": "${workspaceFolder}/src/fflonk/main_exportSolidityVerifier.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-z tmp/fibonacci.zkey",
+                "-f tmp/fibonacci.fflonkinfo.json",
+                "-p tmp/fibonacci_pilfflonk_verifier.sol",
+                "-s tmp/fibonacci_shplonk_verifier.sol"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "zkevm build const tree",
             "program": "src/main_buildconsttree.js",
             "request": "launch",
