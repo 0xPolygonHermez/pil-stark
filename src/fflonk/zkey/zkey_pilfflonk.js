@@ -73,7 +73,7 @@ async function writePilFflonkHeaderSection(fdZKey, zkey, curve) {
 
     await fdZKey.writeULE32(zkey.power);
     await fdZKey.writeULE32(zkey.nPublics);
-    //await fdZKey.write(zkey.X_2);
+    await fdZKey.write(zkey.X_2);
 
     await endWriteSection(fdZKey);
 }
@@ -248,7 +248,7 @@ async function readPilFflonkHeaderSection(fdZKey, sections, zkey) {
 
     zkey.power = await fdZKey.readULE32();
     zkey.nPublics = await fdZKey.readULE32();
-    //    zkey.X_2 = await readG2(fdZKey, zkey.curve, toObject);
+    zkey.X_2 = await fdZKey.read(128);
 
     await endReadSection(fdZKey);
 }
@@ -296,7 +296,8 @@ async function readFSection(fdZKey, sections, zkey) {
         }
     }
 
-    async function readStage(fdZKey, stage) {
+    async function readStage(fdZKey, stages) {
+        let stage = {};
         stage.stage = await fdZKey.readULE32();
 
         const lenPols = await fdZKey.readULE32();
@@ -305,6 +306,7 @@ async function readFSection(fdZKey, sections, zkey) {
         for (let i = 0; i < lenPols; i++) {
             await readPol(fdZKey, stage.pols);
         }
+        stages.push(stage);
     }
 
     async function readPol(fdZKey, pols) {
