@@ -1911,6 +1911,7 @@
             "args": [
                 "-z tmp/fibonacci.zkey",
                 "-o tmp/fibonacci.fflonk.proof.json",
+                "-b tmp/fibonacci.fflonk.publics.json"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"

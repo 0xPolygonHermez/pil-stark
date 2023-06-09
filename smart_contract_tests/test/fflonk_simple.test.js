@@ -41,10 +41,10 @@ async function runTest(pilFile, curve) {
 
     await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1});
 
-        const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
-    
-        const proofInputs = await exportFflonkCalldata(zkeyFilename, proof, {})
-        const verifierCode = await exportPilFflonkVerifier(zkeyFilename, fflonkInfo, {});
+    const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
+
+    const proofInputs = await exportFflonkCalldata(zkeyFilename, proof, publicSignals, {})
+    const verifierCode = await exportPilFflonkVerifier(zkeyFilename, fflonkInfo, {});
 
     fs.writeFileSync(`./tmp/contracts/pilfflonk_verifier_${pilFile}.sol`, verifierCode.verifierPilFflonkCode, "utf-8");
     fs.writeFileSync(`./tmp/contracts/shplonk_verifier_${pilFile}.sol`,  verifierCode.verifierShPlonkCode, "utf-8");
@@ -61,13 +61,16 @@ async function runTest(pilFile, curve) {
 
     await pilFflonkVerifier.deployed();
 
-    const inputs = JSON.parse(proofInputs);
-
+   
     if(publicSignals.length > 0) {
-        const publicInputs = publicSignals.map(p => ethers.utils.hexZeroPad(ethers.BigNumber.from(p).toHexString(), 32));
-        expect(await pilFflonkVerifier.verifyProof(inputs, publicInputs)).to.equal(true);
+        const inputs = proofInputs.split("],[")
+        .map((str, index) => (index === 0 ? str + ']' : '[' + str))
+        .map(str => JSON.parse(str));
+        expect(await pilFflonkVerifier.verifyProof(...inputs)).to.equal(true);
+
     } else {
-        expect(await pilFflonkVerifier.verifyProof(inputs)).to.equal(true);
+        expect(await pilFflonkVerifier.verifyProof(JSON.parse(proofInputs))).to.equal(true);
+
     }
 }
 
