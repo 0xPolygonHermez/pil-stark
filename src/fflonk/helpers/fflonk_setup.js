@@ -1,7 +1,7 @@
 const {BigBuffer} = require("ffjavascript");
 const {log2} = require("pilcom/src/utils");
 const {setup, Polynomial, commit} = require("shplonkjs");
-
+const writePilFflonkZkeyFile = require("../zkey/zkey_pilfflonk");
 
 module.exports = async function fflonkSetup(_pil, cnstPols, ptauFile, fflonkInfo, options) {
     const logger = options.logger;
@@ -205,6 +205,8 @@ module.exports = async function fflonkSetup(_pil, cnstPols, ptauFile, fflonkInfo
     zkey.nPublics = fflonkInfo.nPublics;
     
     if(logger) logger.info("Fflonk setup finished");
+
+    // await writePilFflonkZkeyFile(zkey, "test/fflonk.zkey", curve, {logger});
 
     return zkey;
 }
