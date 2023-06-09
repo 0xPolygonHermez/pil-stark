@@ -11,6 +11,11 @@ const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require
 
 const smSimple = require("../state_machines/sm_simple/sm_simple.js");
 
+const Logger = require("logplease");
+
+const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+Logger.setLogLevel("DEBUG");
+
 
 describe("simple sm", async function () {
     this.timeout(10000000);
@@ -59,12 +64,14 @@ describe("simple sm", async function () {
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
     
         const fflonkInfo = fflonkInfoGen(F, pil);
+
+        const zkeyFilename =  path.join(__dirname, "../../", "tmp", "fflonk_simple.zkey");
+
+        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1, logger});
     
-        const zkey = await fflonkSetup(pil, constPols, ptauFile, fflonkInfo, {extraMuls: 1});
+        const {commits, evaluations, publics} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
     
-        const {commits, evaluations, publics} = await fflonkProve(cmPols, constPols, fflonkInfo, zkey, ptauFile, {});
-    
-        const isValid = await fflonkVerify(zkey, publics, commits, evaluations, fflonkInfo, {});
+        const isValid = await fflonkVerify(zkeyFilename, publics, commits, evaluations, fflonkInfo, {});
         assert(isValid);
     }
 });

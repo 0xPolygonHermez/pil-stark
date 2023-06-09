@@ -366,7 +366,6 @@ async function readOmegasSection(fdZKey, sections, zkey) {
     await endReadSection(fdZKey);
 }
 
-
 // TODO add this method to fastfile?
 async function writeStringToFile(fd, str) {
     let buff = new Uint8Array(str.length + 1);

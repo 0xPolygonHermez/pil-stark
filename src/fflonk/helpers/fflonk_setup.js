@@ -1,9 +1,9 @@
 const {BigBuffer} = require("ffjavascript");
 const {log2} = require("pilcom/src/utils");
 const {setup, Polynomial, commit} = require("shplonkjs");
-const { writePilFflonkZkeyFile, readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
+const { writePilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 
-module.exports = async function fflonkSetup(_pil, cnstPols, ptauFile, fflonkInfo, options) {
+module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFile, fflonkInfo, options) {
     const logger = options.logger;
 
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
@@ -206,9 +206,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, ptauFile, fflonkInfo
     
     if(logger) logger.info("Fflonk setup finished");
 
-    //await writePilFflonkZkeyFile(zkey, "test/fflonk.zkey", curve, {logger});
-
-    return zkey;
+    await writePilFflonkZkeyFile(zkey, zkeyFilename, curve, {logger});
 }
 
 function findPolynomialByTypeId(pil, type, id) {
