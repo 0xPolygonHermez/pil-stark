@@ -3,6 +3,7 @@ const { createBinFile,
     readBinFile,
     startWriteSection,
     writeBigInt,
+    readBigInt,
     startReadUniqueSection,
     endReadSection } = require("@iden3/binfileutils");
 const {
@@ -14,7 +15,7 @@ const {
     ZKEY_PF_OMEGAS_SECTION,
 } = require("./zkey_pilfflonk_constants.js");
 const { HEADER_ZKEY_SECTION, PILFFLONK_PROTOCOL_ID } = require("./zkey_constants.js");
-const { Scalar } = require("ffjavascript");
+const { Scalar, getCurveFromQ } = require("ffjavascript");
 
 
 exports.writePilFflonkZkeyFile = async function (zkey, zkeyFilename, curve, options) {
@@ -52,7 +53,7 @@ exports.writePilFflonkZkeyFile = async function (zkey, zkeyFilename, curve, opti
     await fdZKey.close();
 }
 
-async function writeZkeyHeaderSection(fdZKey, zkey) {
+async function writeZkeyHeaderSection(fdZKey, zkey, curve) {
     await startWriteSection(fdZKey, HEADER_ZKEY_SECTION);
     await fdZKey.writeULE32(PILFFLONK_PROTOCOL_ID);
     await endWriteSection(fdZKey);
@@ -61,15 +62,15 @@ async function writeZkeyHeaderSection(fdZKey, zkey) {
 async function writePilFflonkHeaderSection(fdZKey, zkey, curve) {
     await startWriteSection(fdZKey, ZKEY_PF_HEADER_SECTION);
 
-    // const primeQ = curve.q;
-    // const n8q = (Math.floor((Scalar.bitLength(primeQ) - 1) / 64) + 1) * 8;
-    // await fdZKey.writeULE32(n8q);
-    // await writeBigInt(fdZKey, primeQ, n8q);
+    const primeQ = curve.q;
+    const n8q = (Math.floor((Scalar.bitLength(primeQ) - 1) / 64) + 1) * 8;
+    await fdZKey.writeULE32(n8q);
+    await writeBigInt(fdZKey, primeQ, n8q);
 
-    // const primeR = curve.r;
-    // const n8r = (Math.floor((Scalar.bitLength(primeR) - 1) / 64) + 1) * 8;
-    // await fdZKey.writeULE32(n8r);
-    // await writeBigInt(fdZKey, primeR, n8r);
+    const primeR = curve.r;
+    const n8r = (Math.floor((Scalar.bitLength(primeR) - 1) / 64) + 1) * 8;
+    await fdZKey.writeULE32(n8r);
+    await writeBigInt(fdZKey, primeR, n8r);
 
     await fdZKey.writeULE32(zkey.power);
     await fdZKey.writeULE32(zkey.nPublics);
@@ -197,7 +198,7 @@ async function writeOmegasSection(fdZKey, zkey, curve) {
     await endWriteSection(fdZKey);
 }
 
-exports.readPilFflonkZkeyFile = async function (zkeyFilename, curve, options) {
+exports.readPilFflonkZkeyFile = async function (zkeyFilename, options) {
     let logger;
     if (options && options.logger) logger = options.logger;
 
@@ -245,6 +246,15 @@ exports.readPilFflonkZkeyFile = async function (zkeyFilename, curve, options) {
 
 async function readPilFflonkHeaderSection(fdZKey, sections, zkey) {
     await startReadUniqueSection(fdZKey, sections, ZKEY_PF_HEADER_SECTION);
+
+    const n8q = await fdZKey.readULE32();
+    zkey.n8q = n8q;
+    zkey.q = await readBigInt(fdZKey, n8q);
+    zkey.curve = await getCurveFromQ(zkey.q);
+
+    const n8r = await fdZKey.readULE32();
+    zkey.n8r = n8r;
+    zkey.r = await readBigInt(fdZKey, n8r);
 
     zkey.power = await fdZKey.readULE32();
     zkey.nPublics = await fdZKey.readULE32();

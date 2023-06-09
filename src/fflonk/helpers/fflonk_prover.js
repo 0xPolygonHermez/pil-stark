@@ -19,11 +19,11 @@ const minNperThread = 1 << 12;
 module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflonkInfo, ptauFile, options) {
     const logger = Logger.create("logger");
     
-    const curve = await buildBn128();
-
     // Load zkey file
-    const zkey = await readPilFflonkZkeyFile(zkeyFilename, curve, {logger});
+    const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 
+    const curve = zkey.curve;
+    
     const {PTau} = await getPowersOfTau(zkey.f, ptauFile, zkey.power, logger);
 
     const Fr = curve.Fr;
