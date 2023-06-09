@@ -44,9 +44,9 @@ describe("Fflonk permutation sm", async function () {
 
         await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 2});
 
-        const {commits, evaluations, publics} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
+        const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
 
-        const isValid = await fflonkVerify(zkeyFilename, publics, commits, evaluations, fflonkInfo, {});
+        const isValid = await fflonkVerify(zkeyFilename, publicSignals, proof, fflonkInfo, {});
         assert(isValid);
 
     });

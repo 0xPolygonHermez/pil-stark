@@ -107,7 +107,7 @@ pragma solidity >=0.7.0 <0.9.0;
 <%      } -%>
 <%      } else throw new Error("Invalid op: " + inst.op); -%>
 <%  } -%>
-                mstore(add(pMem, pQ), mulmod(tmp, invZh, q))
+                mstore(add(pMem, pQ), mulmod(tmp, calldataload(pEval_invZh), q))
 <%  } -%>
 
 
@@ -172,17 +172,17 @@ contract PilFflonkVerifier {
 <%  let nBytesCommits = (vk.f.filter(fi => fi.stages.length !== 1 || fi.stages[0].stage !== 0).length + 2) * 2 + orderedEvals.length -%>
 
 <%  if (vk.nPublics > 0) { -%>
-    function verifyProof(bytes32[<%- nBytesCommits %>] calldata proof, uint256[<%- Math.max(vk.nPublics, 1) %>] calldata pubSignals,  bytes32 zhInv) public view returns (bool) {
+    function verifyProof(bytes32[<%- nBytesCommits %>] calldata proof, uint256[<%- Math.max(vk.nPublics, 1) %>] calldata pubSignals) public view returns (bool) {
 <%  } else { -%>
-    function verifyProof(bytes32[<%- nBytesCommits %>] calldata proof, bytes32 zhInv) public view returns (bool) {
+    function verifyProof(bytes32[<%- nBytesCommits %>] calldata proof) public view returns (bool) {
 <%  } -%>
         address shPlonkAddr = shPlonkAddress;
         bytes4 shPlonkSelector = _VERIFY_COMMITMENTS_SIGNATURE;
         assembly {
 <%  if (vk.nPublics > 0) { -%>
-            function computeChallenges(pMem, invZh, pPublic) { 
+            function computeChallenges(pMem, pPublic) { 
 <%  } else { -%>
-            function computeChallenges(pMem, invZh) {
+            function computeChallenges(pMem) {
 <%  } -%>
                 let mIn := mload(0x40)
 
@@ -256,7 +256,7 @@ contract PilFflonkVerifier {
                 let zh := mod(add(sub(xin, 1), q), q)
 
                 // Check that eval zh inv is correct
-                if iszero(eq(1, mulmod(zh, invZh, q))) {
+                if iszero(eq(1, mulmod(zh, calldataload(pEval_invZh), q))) {
                     mstore(0, 0)
                     return(0,0x20)
                 }
@@ -300,9 +300,9 @@ contract PilFflonkVerifier {
             }
 
 <%  if (vk.nPublics > 0) { -%>
-            function computeQ(pMem, invZh, pPublic) {
+            function computeQ(pMem, pPublic) {
 <%  } else { -%>
-            function computeQ(pMem, invZh) {
+            function computeQ(pMem) {
 <%  } -%>    
             
                 let mIn := mload(0x40)
@@ -326,24 +326,24 @@ contract PilFflonkVerifier {
            
             // Compute the challenges
 <%  if (vk.nPublics > 0) { -%>
-            computeChallenges(pMem, zhInv, pubSignals)
+            computeChallenges(pMem, pubSignals)
 <%  } else { -%>
-            computeChallenges(pMem, zhInv)
+            computeChallenges(pMem)
 <%  } -%>   
 
             // Compute q
 <%  if (vk.nPublics > 0) { -%>
-            computeQ(pMem, zhInv, pubSignals)
+            computeQ(pMem, pubSignals)
 <%  } else { -%>
-            computeQ(pMem, zhInv)
+            computeQ(pMem)
 <%  } -%>               
             // Call shPlonk contract 
             mstore(add(pMem, pLastMem),shPlonkSelector)
-            calldatacopy(add(pMem, add(pLastMem, 0x04)),0x04, <%- nBytesCommits * 32 %>)
-            mstore(add(pMem, add(pLastMem, <%- nBytesCommits * 32 + 4 %>)), mload(add(pMem, pXiSeed)))
-            mstore(add(pMem, add(pLastMem, <%- nBytesCommits * 32 + 4 + 32 %>)), mload(add(pMem, pQ)))
+            calldatacopy(add(pMem, add(pLastMem, 0x04)),0x04, <%- (nBytesCommits - 1) * 32 %>)
+            mstore(add(pMem, add(pLastMem, <%- (nBytesCommits - 1) * 32 + 4 %>)), mload(add(pMem, pXiSeed)))
+            mstore(add(pMem, add(pLastMem, <%- (nBytesCommits - 1) * 32 + 4 + 32 %>)), mload(add(pMem, pQ)))
 
-            let success := staticcall(gas(), shPlonkAddr, add(pMem, pLastMem), <%- nBytesCommits * 32 + 4 + 64 %>, add(pMem, pLastMem), 32)
+            let success := staticcall(gas(), shPlonkAddr, add(pMem, pLastMem), <%- (nBytesCommits - 1) * 32 + 4 + 64 %>, add(pMem, pLastMem), 32)
 
             let isValid := and(success, mload(add(pMem, pLastMem)))
             mstore(0, isValid)

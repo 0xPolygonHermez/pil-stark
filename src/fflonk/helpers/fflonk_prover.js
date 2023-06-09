@@ -1,4 +1,4 @@
-const {BigBuffer} = require("ffjavascript");
+const {BigBuffer, utils} = require("ffjavascript");
 const { getPowersOfTau, Polynomial, commit, Keccak256Transcript, lcm } = require("shplonkjs");
 const workerpool = require("workerpool");
 const { fflonkgen_execute } = require("./fflonk_prover_worker");
@@ -15,6 +15,7 @@ const useThreads = false;
 const maxNperThread = 1 << 18;
 const minNperThread = 1 << 12;
 
+const { stringifyBigInts } = utils;
 
 module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflonkInfo, ptauFile, options) {
     const logger = Logger.create("logger");
@@ -162,20 +163,36 @@ module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflo
 
     // Compute xiSeed 
     const powerW = lcm(Object.keys(zkey).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
+
     let challengeXi = curve.Fr.exp(xiSeed, powerW);
 
     const xN = curve.Fr.exp(challengeXi, ctx.N);
     const Z = curve.Fr.sub(xN, curve.Fr.one);   
 
-    evaluations.inv_zh = curve.Fr.inv(Z);
+    evaluations.invZh = curve.Fr.inv(Z);
 
     await pool.terminate();
+   
+    let proof = {polynomials: {}, evaluations: {}};
+    proof.protocol = "pilfflonk";
+    proof.curve = curve.name;
+    Object.keys(cmts).forEach(key => {
+        proof.polynomials[key] = ctx.curve.G1.toObject(cmts[key]);
+    });
+
+    Object.keys(evaluations).forEach(key => {
+        proof.evaluations[key] = ctx.curve.Fr.toObject(evaluations[key]);
+    });
+
+    proof = stringifyBigInts(proof);
+
+    // Prepare public inputs
+    let publicSignals = stringifyBigInts(ctx.publics.map(p => ctx.curve.Fr.toObject(p)));
 
     return {
-        commits: cmts,
-        evaluations,
-        publics: ctx.publics,
-    };    
+        proof,
+        publicSignals,
+    };  
     
     async function round0() {
    

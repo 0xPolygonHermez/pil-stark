@@ -40,15 +40,15 @@ describe("Fflonk plookup sm", async function () {
 
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
 
-        const zkeyFilename =  path.join(__dirname, "../../", "tmp", "fflonk_simple.zkey");
+        const zkeyFilename =  path.join(__dirname, "../../", "tmp", "fflonk_simple_plookup.zkey");
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
         await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 4});
 
-        const {commits, evaluations, publics} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
+        const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
 
-        const isValid = await fflonkVerify(zkeyFilename, publics, commits, evaluations, fflonkInfo, {});
+        const isValid = await fflonkVerify(zkeyFilename, publicSignals, proof, fflonkInfo, {});
         assert(isValid);
 
     });

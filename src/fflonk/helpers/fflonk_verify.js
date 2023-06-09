@@ -1,10 +1,11 @@
 const { verifyOpenings, Keccak256Transcript, computeChallengeXiSeed, lcm } = require("shplonkjs");
-const {getCurveFromName} = require("ffjavascript");
 const { readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
+const {utils} = require("ffjavascript");
+const { unstringifyBigInts } = utils;
 
 const Logger = require('logplease');
 
-module.exports = async function fflonkVerify(zkeyFilename, publics, commits, evaluations, fflonkInfo, options) {
+module.exports = async function fflonkVerify(zkeyFilename, publicSignals, proof, fflonkInfo, options) {
 //    const logger = options.logger;
     const logger = Logger.create("logger");
 
@@ -13,6 +14,18 @@ module.exports = async function fflonkVerify(zkeyFilename, publics, commits, eva
 
     const curve = zkey.curve;
     const Fr = curve.Fr;
+
+    proof = unstringifyBigInts(proof);
+
+    Object.keys(proof.polynomials).forEach(key => {
+        proof.polynomials[key] = curve.G1.fromObject(proof.polynomials[key]);
+    });
+
+    Object.keys(proof.evaluations).forEach(key => {
+        proof.evaluations[key] = curve.Fr.fromObject(proof.evaluations[key]);
+    });
+
+    let publics = unstringifyBigInts(publicSignals).map(p => Fr.e(p));
 
     const ctx = {};
     ctx.evals = [];
@@ -86,15 +99,15 @@ module.exports = async function fflonkVerify(zkeyFilename, publics, commits, eva
 
     // Store the polynomial commits to its corresponding fi
     for(let i = 0; i < zkey.f.length; ++i) {
-        if(!commits[`f${zkey.f[i].index}`]) throw new Error(`f${zkey.f[i].index} commit is missing`);
-        zkey.f[i].commit = commits[`f${zkey.f[i].index}`];
+        if(!proof.polynomials[`f${zkey.f[i].index}`]) throw new Error(`f${zkey.f[i].index} commit is missing`);
+        zkey.f[i].commit = proof.polynomials[`f${zkey.f[i].index}`];
     }
     
     for(let i = 0; i < fflonkInfo.evIdx.cm.length; ++i) {
         for(const polId in fflonkInfo.evIdx.cm[i]) {
             let polName = i === 0 ? zkey.polsMap.cm[polId] : i === 1 ? zkey.polsMap.cm[polId] + "w" : zkey.polsMap.cm[polId] + `w${i}`;
             const evalIndex = fflonkInfo.evIdx.cm[i][polId];
-            ctx.evals[evalIndex] = evaluations[polName];   
+            ctx.evals[evalIndex] = proof.evaluations[polName];   
         }
     }
 
@@ -102,7 +115,7 @@ module.exports = async function fflonkVerify(zkeyFilename, publics, commits, eva
         for(const polId in fflonkInfo.evIdx.const[i]) {
             let polName = i === 0 ? zkey.polsMap.const[polId] : i === 1 ? zkey.polsMap.const[polId] + "w" : zkey.polsMap.const[polId] + `w${i}`;
             const evalIndex = fflonkInfo.evIdx.const[i][polId];
-            ctx.evals[evalIndex] = evaluations[polName];                          
+            ctx.evals[evalIndex] = proof.evaluations[polName];                          
 
         }
     }
@@ -121,12 +134,12 @@ module.exports = async function fflonkVerify(zkeyFilename, publics, commits, eva
 
     console.log("Q", curve.Fr.toString(Q));
     console.log("xiSeed", curve.Fr.toString(xiSeed));
-    if(!curve.Fr.eq(Q, evaluations["Q"])) {
+    if(!curve.Fr.eq(Q, proof.evaluations["Q"])) {
         console.log("Verify evaluations failed");
         return false;
     }
 
-    const res = verifyOpenings(zkey, commits, evaluations, curve, {logger, fflonkPreviousChallenge: ctx.challenges[4], nonCommittedPols: ["Q"]});
+    const res = verifyOpenings(zkey, proof.polynomials, proof.evaluations, curve, {logger, fflonkPreviousChallenge: ctx.challenges[4], nonCommittedPols: ["Q"]});
     await curve.terminate();
 
     return res;
