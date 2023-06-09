@@ -3,7 +3,6 @@ const version = require("../../package").version;
 
 const { newConstantPolsArray, newCommitPolsArray, compile } = require("pilcom");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true, storeAsString: true });
-const { proof2zkin } = require("../proof2zkin");
 const { F1Field } = require("ffjavascript");
 const {fflonkProve} = require("./helpers/fflonk_prover");
 
@@ -20,7 +19,6 @@ const argv = require("yargs")
     .alias("f", "fflonkinfo")
     .alias("k", "zkey")
     .alias("o", "proof")
-    .alias("z", "zkin")
     .alias("b", "public")
     .string("proverAddr")
     .argv;
@@ -36,14 +34,11 @@ async function run() {
     const fflonkInfoFile = typeof(argv.starkinfo) === "string" ?  argv.starkinfo.trim() : "mycircuit.starkinfo.json";
     const zkeyFile = typeof(argv.zkey) === "string" ?  argv.zkey.trim() : "mycircuit_zkey.json";
     const proofFile = typeof(argv.proof) === "string" ?  argv.proof.trim() : "mycircuit.proof.json";
-    const zkinFile = typeof(argv.zkin) === "string" ?  argv.zkin.trim() : "mycircuit.proof.zkin.json";
     const publicFile = typeof(argv.public) === "string" ?  argv.public.trim() : "mycircuit.public.json";
 
     const pil = await compile(F, pilFile, null, pilConfig);
     const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
     const zkey = JSON.parse(await fs.promises.readFile(zkeyFile, "utf8"));
-
-    console.log(zkey);
 
     const constPols =  newConstantPolsArray(pil, F);
     await constPols.loadFromFile(constFile);
@@ -54,6 +49,10 @@ async function run() {
     const options = {F, logger: console};
     const resP = await fflonkProve(cmPols, constPols, fflonkInfo, ptauFile, options);
     
+    await fs.promises.writeFile(proofFile, JSONbig.stringify(resP.proof, null, 1), "utf8");
+
+    await fs.promises.writeFile(publicFile, JSONbig.stringify(resP.publics, null, 1), "utf8");
+
     console.log("files Generated Correctly");
 }
 

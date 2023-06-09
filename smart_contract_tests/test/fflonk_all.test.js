@@ -5,8 +5,7 @@ const {F1Field, getCurveFromName} = require("ffjavascript");
 const path = require("path");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
-const { fflonkSetup, fflonkProve, fflonkVerify, fflonkInfoGen, exportCalldata, exportSolidityVerifier} = require("pil-stark");
-const { exportSolidityShPlonkVerifier } = require("shplonkjs");
+const { fflonkSetup, fflonkProve, fflonkInfoGen, exportFflonkCalldata, exportPilFflonkVerifier} = require("pil-stark");
 
 const smGlobal = require("../../test/state_machines/sm/sm_global.js");
 const smPlookup = require("../../test/state_machines/sm_plookup/sm_plookup.js");
@@ -64,23 +63,19 @@ describe("Fflonk All sm", async function () {
         }
 
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
+        const zkeyFilename =  path.join(__dirname, "../../", "tmp", "fflonk_all.zkey");
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        const zkey = await fflonkSetup(pil, constPols, ptauFile, fflonkInfo, {extraMuls: 3});
+        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 3});
 
-        const {commits, evaluations, publics} = await fflonkProve(cmPols, constPols, fflonkInfo, zkey, ptauFile, {});
+        const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
     
-        const isValid = await fflonkVerify(zkey, publics, commits, evaluations, fflonkInfo, {});
-        
-        assert(isValid);
+        const proofInputs = await exportFflonkCalldata(zkeyFilename, proof, {})
+        const verifierCode = await exportPilFflonkVerifier(zkeyFilename, fflonkInfo, {});
 
-        const proofInputs = await exportCalldata(zkey, curve, commits, evaluations, {})
-        const verifierCode = await exportSolidityVerifier(zkey, curve, fflonkInfo, {});
-        const verifierShPlonkCode = await exportSolidityShPlonkVerifier(zkey, curve, {nonCommittedPols: ["Q"], xiSeed: true, checkInputs: false });
-
-        fs.writeFileSync("./tmp/contracts/pilfflonk_verifier_all.sol", verifierCode, "utf-8");
-        fs.writeFileSync("./tmp/contracts/shplonk_verifier_all.sol", verifierShPlonkCode, "utf-8");
+        fs.writeFileSync("./tmp/contracts/pilfflonk_verifier_all.sol", verifierCode.verifierPilFflonkCode, "utf-8");
+        fs.writeFileSync("./tmp/contracts/shplonk_verifier_all.sol", verifierCode.verifierShPlonkCode, "utf-8");
 
         await run("compile");
 
@@ -95,14 +90,13 @@ describe("Fflonk All sm", async function () {
         await pilFflonkVerifier.deployed();
 
         const inputs = JSON.parse(proofInputs);
-        const invZh = ethers.utils.hexZeroPad(ethers.BigNumber.from(curve.Fr.toString(evaluations.inv_zh)).toHexString(), 32);
 
-        if(publics.length > 0) {
-            const publicInputs = publics.map(p => ethers.utils.hexZeroPad(ethers.BigNumber.from(curve.Fr.toString(p)).toHexString(), 32));
-            expect(await pilFflonkVerifier.verifyProof(inputs, publicInputs, invZh)).to.equal(true);
+        if(publicSignals.length > 0) {
+            const publicInputs = publicSignals.map(p => ethers.utils.hexZeroPad(ethers.BigNumber.from(p).toHexString(), 32));
+            expect(await pilFflonkVerifier.verifyProof(inputs, publicInputs)).to.equal(true);
         } else {
-            expect(await pilFflonkVerifier.verifyProof(inputs, invZh)).to.equal(true);
-        }        
+            expect(await pilFflonkVerifier.verifyProof(inputs)).to.equal(true);
+        }
     });
 
 });
