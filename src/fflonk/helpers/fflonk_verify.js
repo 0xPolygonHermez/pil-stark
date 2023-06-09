@@ -8,12 +8,11 @@ module.exports = async function fflonkVerify(zkeyFilename, publics, commits, eva
 //    const logger = options.logger;
     const logger = Logger.create("logger");
 
-    const curve = await getCurveFromName("bn128");
-
-    const Fr = curve.Fr;
-
     // Load zkey file
-    const zkey = await readPilFflonkZkeyFile(zkeyFilename, curve, {logger});
+    const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
+
+    const curve = zkey.curve;
+    const Fr = curve.Fr;
 
     const ctx = {};
     ctx.evals = [];
