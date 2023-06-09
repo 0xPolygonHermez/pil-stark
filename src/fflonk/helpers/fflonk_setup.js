@@ -13,6 +13,8 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     const cnstPolsDefs = [];
     const cmPolsDefs = [];
 
+    const polsOpenings = {};
+
     const pilPower = fflonkInfo.pilPower;
     const domainSize = (1 << pilPower);
 
@@ -40,6 +42,9 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
                 cmPolsDefs.push({name, stage: 1, degree: domainSize})
             }
         }
+
+        if(!polsOpenings[name]) polsOpenings[name] = 1;
+        ++polsOpenings[name];
     }
 
     const polsXi = [...cnstPolsDefs, ...cmPolsDefs]; 
@@ -55,6 +60,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             id: fflonkInfo.puCtx[i].h1Id,
             stage: 2,
         }
+        polsOpenings[`Plookup.H1_${i}`] = 2;
 
         polsXi.push({name: `Plookup.H2_${i}`, stage: 2, degree: domainSize})
         pil.references[`Plookup.H2_${i}`] = {
@@ -65,6 +71,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             id: fflonkInfo.puCtx[i].h2Id,
             stage: 2,
         }
+        polsOpenings[`Plookup.H2_${i}`] = 2;
 
         polsXi.push({name: `Plookup.Z${i}`, stage: 3, degree: domainSize})
         pil.references[`Plookup.Z${i}`] = {
@@ -75,6 +82,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             id: fflonkInfo.puCtx[i].zId,
             stage:3,
         }
+        polsOpenings[`Plookup.Z${i}`] = 2;
     }
 
 
@@ -88,6 +96,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             id: fflonkInfo.peCtx[i].zId,
             stage:3,
         }
+        polsOpenings[`Permutation.Z${i}`] = 2;
     }
 
     for(let i = 0; i < fflonkInfo.ciCtx.length; ++i) {
@@ -100,6 +109,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             id: fflonkInfo.ciCtx[i].zId,
             stage:3,
         }
+        polsOpenings[`Connection.Z${i}`] = 2;
     }
 
 
@@ -113,6 +123,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             id: fflonkInfo.imExp2cm[fflonkInfo.imExpsList[i]],
             stage:3,
         }
+        polsOpenings[`Im${fflonkInfo.imExpsList[i]}`] = 2;
     }
 
     polsXi.push({name: "Q", stage: 4, degree: fflonkInfo.qDeg * domainSize});
@@ -128,12 +139,19 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             name += (primePols[i].id - pil.references[reference].id);
         }
         const stage = pil.references[reference].stage;
-        polsWXi.push({name, stage, degree: domainSize});
+        polsWXi.push({name, stage,  degree: domainSize});
+        if(!polsOpenings[name]) polsOpenings[name] = 1;
+        ++polsOpenings[name];
     }
+
+    // TODO: ZERO KNOWLEDGE
+    // polsXi.forEach(p => { if(p.name !== "Q") {p.degree += polsOpenings[p.name]} });
     
     const polDefs = [polsXi];
 
     if(polsWXi.length > 0) {
+        // TODO: ZERO KNOWLEDGE
+        // polsWXi.forEach(p => p.degree += polsOpenings[p.name]);
         polDefs.push(polsWXi);
     }
 
