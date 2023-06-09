@@ -2,12 +2,12 @@ const fs = require("fs");
 const version = require("../../package").version;
 
 const { F1Field } = require("ffjavascript");
-const {fflonkInfoGen} = require("./helpers/fflonk_info.js");
+const fflonkInfoGen = require("./helpers/fflonk_info.js");
 const { compile } = require("pilcom");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_genfflonkinfo.js -p <pil.json> [-P <pilconfig.json] -i <fflonkinfo.json>")
+    .usage("node main_fflonkinfo.js -p <pil.json> [-P <pilconfig.json] -i <fflonkinfo.json>")
     .alias("p", "pil")
     .alias("P", "pilconfig")
     .alias("i", "fflonkinfo")
