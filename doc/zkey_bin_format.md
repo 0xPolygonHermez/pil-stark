@@ -3,8 +3,10 @@ TODO
 ## zkey format
 
 zkey: {
-    X power: number (bytes)
-    X nPublics: number
+    power: number (bytes)
+    nPublics: number
+    X_2: 128 bytes
+
     f: [
         {
             index: number (32),
@@ -25,12 +27,14 @@ zkey: {
         },
         ...
     ]
+
     fX_Y: 64 bytes
+
     polsMap: {
         !!!!!
     }
+
     wX_YdZ: 32 bytes
-    X X_2: 128 bytes
 }
 
 S1: PF HEADER

@@ -1,4 +1,10 @@
-const { createBinFile, endWriteSection, readBinFile, startWriteSection, writeBigInt } = require("@iden3/binfileutils");
+const { createBinFile,
+    endWriteSection,
+    readBinFile,
+    startWriteSection,
+    writeBigInt,
+    startReadUniqueSection,
+    endReadSection } = require("@iden3/binfileutils");
 const {
     ZKEY_PF_NSECTIONS,
     ZKEY_PF_HEADER_SECTION,
@@ -11,11 +17,11 @@ const { HEADER_ZKEY_SECTION, PILFFLONK_PROTOCOL_ID } = require("./zkey_constants
 const { Scalar } = require("ffjavascript");
 
 
-module.exports = async function writePilFflonkZkeyFile(zkey, zkeyFilename, curve, options) {
+exports.writePilFflonkZkeyFile = async function (zkey, zkeyFilename, curve, options) {
     let logger = options.logger
 
     if (logger) logger.info("> Writing the Pil-Fflonk zkey file");
-    const fdZKey = await createBinFile(zkeyFilename, "zkey", 2, ZKEY_PF_NSECTIONS, 1 << 22, 1 << 24);
+    const fdZKey = await createBinFile(zkeyFilename, "zkey", 1, ZKEY_PF_NSECTIONS, 1 << 22, 1 << 24);
 
     if (logger) logger.info(`··· Writing Section ${HEADER_ZKEY_SECTION}. Zkey Header`);
     await writeZkeyHeaderSection(fdZKey, zkey);
@@ -55,19 +61,19 @@ async function writeZkeyHeaderSection(fdZKey, zkey) {
 async function writePilFflonkHeaderSection(fdZKey, zkey, curve) {
     await startWriteSection(fdZKey, ZKEY_PF_HEADER_SECTION);
 
-    const primeQ = curve.q;
-    const n8q = (Math.floor((Scalar.bitLength(primeQ) - 1) / 64) + 1) * 8;
-    await fdZKey.writeULE32(n8q);
-    await writeBigInt(fdZKey, primeQ, n8q);
+    // const primeQ = curve.q;
+    // const n8q = (Math.floor((Scalar.bitLength(primeQ) - 1) / 64) + 1) * 8;
+    // await fdZKey.writeULE32(n8q);
+    // await writeBigInt(fdZKey, primeQ, n8q);
 
-    const primeR = curve.r;
-    const n8r = (Math.floor((Scalar.bitLength(primeR) - 1) / 64) + 1) * 8;
-    await fdZKey.writeULE32(n8r);
-    await writeBigInt(fdZKey, primeR, n8r);
+    // const primeR = curve.r;
+    // const n8r = (Math.floor((Scalar.bitLength(primeR) - 1) / 64) + 1) * 8;
+    // await fdZKey.writeULE32(n8r);
+    // await writeBigInt(fdZKey, primeR, n8r);
 
     await fdZKey.writeULE32(zkey.power);
-    await fdZKey.writeULE32(zkey.nPublic);
-    await fdZKey.write(zkey.X_2);
+    await fdZKey.writeULE32(zkey.nPublics);
+    //await fdZKey.write(zkey.X_2);
 
     await endWriteSection(fdZKey);
 }
@@ -78,7 +84,7 @@ async function writeFSection(fdZKey, zkey, curve) {
     //Write the length of the array
     await fdZKey.writeULE32(len);
 
-    for(let i = 0; i < len; i++) {
+    for (let i = 0; i < len; i++) {
         await writeF(fdZKey, i, zkey.f[i]);
     }
 
@@ -92,7 +98,7 @@ async function writeFSection(fdZKey, zkey, curve) {
         const lenOpeningPoints = f.openingPoints.length;
         await fdZKey.writeULE32(lenOpeningPoints);
 
-        for(let i = 0; i < lenOpeningPoints; i++) {
+        for (let i = 0; i < lenOpeningPoints; i++) {
             await fdZKey.writeULE32(f.openingPoints[i]);
         }
 
@@ -100,7 +106,7 @@ async function writeFSection(fdZKey, zkey, curve) {
         const lenPols = f.pols.length;
         await fdZKey.writeULE32(lenPols);
 
-        for(let i = 0; i < lenPols; i++) {
+        for (let i = 0; i < lenPols; i++) {
             await writeStringToFile(fdZKey, f.pols[i]);
         }
 
@@ -108,7 +114,7 @@ async function writeFSection(fdZKey, zkey, curve) {
         const lenStages = f.stages.length;
         await fdZKey.writeULE32(lenStages);
 
-        for(let i = 0; i < lenStages; i++) {
+        for (let i = 0; i < lenStages; i++) {
             await writeStage(fdZKey, f.stages[i]);
         }
     }
@@ -119,7 +125,7 @@ async function writeFSection(fdZKey, zkey, curve) {
         const lenPols = stage.pols.length;
         await fdZKey.writeULE32(lenPols);
 
-        for(let i = 0; i < lenPols; i++) {
+        for (let i = 0; i < lenPols; i++) {
             await writePol(fdZKey, stage.pols[i]);
         }
     }
@@ -139,7 +145,7 @@ async function writeFCommitmentsSection(fdZKey, zkey, curve) {
     //Write the length of the array
     await fdZKey.writeULE32(len);
 
-    for(let i = 0; i < len; i++) {
+    for (let i = 0; i < len; i++) {
         await writeStringToFile(fdZKey, commitments[i]);
         await fdZKey.write(zkey[commitments[i]]);
     }
@@ -156,7 +162,7 @@ async function writePolsMapSection(fdZKey, zkey, curve) {
     //Write the length of the array
     await fdZKey.writeULE32(len);
 
-    for(let i = 0; i < len; i++) {
+    for (let i = 0; i < len; i++) {
         await writeStringToFile(fdZKey, keys[i]);
 
         const subkeys = Object.keys(zkey.polsMap[keys[i]]);
@@ -164,7 +170,7 @@ async function writePolsMapSection(fdZKey, zkey, curve) {
         const lenSubkeys = subkeys.length;
         await fdZKey.writeULE32(lenSubkeys);
 
-        for(let j = 0; j < lenSubkeys; j++) {
+        for (let j = 0; j < lenSubkeys; j++) {
             /// TO CHECK els indexos de les subkeys son inters sempre????
             await fdZKey.writeULE32(parseInt(subkeys[j]));
             await writeStringToFile(fdZKey, zkey.polsMap[keys[i]][subkeys[j]]);
@@ -183,7 +189,7 @@ async function writeOmegasSection(fdZKey, zkey, curve) {
     //Write the length of the array
     await fdZKey.writeULE32(len);
 
-    for(let i = 0; i < len; i++) {
+    for (let i = 0; i < len; i++) {
         await writeStringToFile(fdZKey, omegas[i]);
         await fdZKey.write(zkey[omegas[i]]);
     }
@@ -191,91 +197,172 @@ async function writeOmegasSection(fdZKey, zkey, curve) {
     await endWriteSection(fdZKey);
 }
 
-// module.exports = async function readPilFflonkZkeyFile(zkeyFilename, options) {
-//     let logger;
-//     if (options && options.logger) logger = options.logger;
+exports.readPilFflonkZkeyFile = async function (zkeyFilename, curve, options) {
+    let logger;
+    if (options && options.logger) logger = options.logger;
 
-//     if (logger) logger.info("> Reading the Pil-Fflonk zkey file");
+    if (logger) logger.info("> Reading the Pil-Fflonk zkey file");
 
-//     // TODO change to version 2
-//     const { fd: fdZKey, sections: zkeySections } = await readBinFile(zkeyFilename, "zkey", 1, 1 << 25, 1 << 23);
+    // TODO change to version 2
+    const { fd: fdZKey, sections } = await readBinFile(zkeyFilename, "zkey", 1, 1 << 25, 1 << 23);
 
-//     const zkey = {};
+    const zkey = {};
 
-//     await binFileUtils.startReadUniqueSection(fd, sections, HEADER_ZKEY_SECTION);
-//     const protocolId = await fd.readULE32();
-//     if (protocolId !== PILFFLONK_PROTOCOL_ID) throw new Error(`Invalid protocol id ${protocolId} in zkey file`);
-//     await binFileUtils.endReadSection(fd);
+    await startReadUniqueSection(fdZKey, sections, HEADER_ZKEY_SECTION);
+    const protocolId = await fdZKey.readULE32();
+    if (protocolId !== PILFFLONK_PROTOCOL_ID) throw new Error(`Invalid protocol id ${protocolId} in zkey file`);
+    await endReadSection(fdZKey);
 
-//     zkey.protocol = "pil-fflonk";
-//     zkey.protocolId = PILFFLONK_PROTOCOL_ID;
+    zkey.protocol = "pil-fflonk";
+    zkey.protocolId = PILFFLONK_PROTOCOL_ID;
 
-//     if (logger) logger.info(`··· Reading Section ${ZKEY_PF_HEADER_SECTION}. Zkey Pil-Fflonk Header`);
-//     await readPilFflonkHeaderSection(fdZKey, zkey);
-//     if (globalThis.gc) globalThis.gc();
+    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_HEADER_SECTION}. Zkey Pil-Fflonk Header`);
+    await readPilFflonkHeaderSection(fdZKey, sections, zkey);
+    if (globalThis.gc) globalThis.gc();
 
-//     if (logger) logger.info(`··· Reading Section ${ZKEY_PF_F_SECTION}. F Section`);
-//     await readFSection(fdZKey, zkey);
-//     if (globalThis.gc) globalThis.gc();
+    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_F_SECTION}. F Section`);
+    await readFSection(fdZKey, sections, zkey);
+    if (globalThis.gc) globalThis.gc();
 
-//     if (logger) logger.info(`··· Reading Section ${ZKEY_PF_F_COMMITMENTS_SECTION}. F commitments Section`);
-//     await readFCommitmentsSection(fdZKey, zkey);
-//     if (globalThis.gc) globalThis.gc();
+    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_F_COMMITMENTS_SECTION}. F commitments Section`);
+    await readFCommitmentsSection(fdZKey, sections, zkey);
+    if (globalThis.gc) globalThis.gc();
 
-//     if (logger) logger.info(`··· Reading Section ${ZKEY_PF_POLSMAP_SECTION}. Polynomials map Section`);
-//     await readPolsMapSection(fdZKey, zkey);
-//     if (globalThis.gc) globalThis.gc();
+    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_POLSMAP_SECTION}. Polynomials map Section`);
+    await readPolsMapSection(fdZKey, sections, zkey);
+    if (globalThis.gc) globalThis.gc();
 
-//     if (logger) logger.info(`··· Reading Section ${ZKEY_PF_OMEGAS_SECTION}. Omegas Section`);
-//     await readOmegasSection(fdZKey, zkey);
-//     if (globalThis.gc) globalThis.gc();
+    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_OMEGAS_SECTION}. Omegas Section`);
+    await readOmegasSection(fdZKey, sections, zkey);
+    if (globalThis.gc) globalThis.gc();
 
-//     if (logger) logger.info("> Reading the zkey file finished");
+    if (logger) logger.info("> Reading the zkey file finished");
 
-//     await fdZKey.close();
+    await fdZKey.close();
 
-//     return zkey;
-// }
+    return zkey;
+}
 
-// async function readPilFflonkHeaderSection(fdZKey, sections, zkey) {
-//     await binFileUtils.startReadUniqueSection(fdZKey, sections, ZKEY_PF_HEADER_SECTION);
+async function readPilFflonkHeaderSection(fdZKey, sections, zkey) {
+    await startReadUniqueSection(fdZKey, sections, ZKEY_PF_HEADER_SECTION);
 
-//     zkey.power = await fdZKey.readULE32();
-//     zkey.nPublic = await fdZKey.readULE32();
-//     //    zkey.X_2 = await readG2(fdZKey, zkey.curve, toObject);
+    zkey.power = await fdZKey.readULE32();
+    zkey.nPublics = await fdZKey.readULE32();
+    //    zkey.X_2 = await readG2(fdZKey, zkey.curve, toObject);
 
-//     await binFileUtils.endReadSection(fdZKey);
-// }
-// async function readFSection(fdZKey, sections, zkey) {
-//     await binFileUtils.startReadUniqueSection(fdZKey, sections, ZKEY_PF_F_SECTION);
+    await endReadSection(fdZKey);
+}
+async function readFSection(fdZKey, sections, zkey) {
+    await startReadUniqueSection(fdZKey, sections, ZKEY_PF_F_SECTION);
 
-//     zkey.f = await fdZKey.readULE32();
+    const len = await fdZKey.readULE32();
 
-//     await binFileUtils.endReadSection(fdZKey);
-// }
-// async function readFCommitmentsSection(fdZKey, sections, zkey) {
-//     await binFileUtils.startReadUniqueSection(fdZKey, sections, ZKEY_PF_F_COMMITMENTS_SECTION);
+    if (len > 0) zkey.f = [];
+    for (let i = 0; i < len; i++) {
+        await readF(fdZKey, zkey.f);
+    }
 
-//     zkey.fXY = await fdZKey.readULE32();
+    await endReadSection(fdZKey);
 
-//     await binFileUtils.endReadSection(fdZKey);
-// }
+    async function readF(fdZKey, f) {
+        const index = await fdZKey.readULE32();
+        f[index] = {};
 
-// async function readPolsMapSection(fdZKey, sections, zkey) {
-//     await binFileUtils.startReadUniqueSection(fdZKey, sections, ZKEY_PF_POLSMAP_SECTION);
+        f[index].index = index;
+        f[index].degree = await fdZKey.readULE32();
 
-//     zkey.polsMap = await fdZKey.readULE32();
+        // Read opening points
+        const lenOpeningPoints = await fdZKey.readULE32();
 
-//     await binFileUtils.endReadSection(fdZKey);
-// }
+        if (lenOpeningPoints > 0) f[index].openingPoints = [];
+        for (let i = 0; i < lenOpeningPoints; i++) {
+            f[index].openingPoints[i] = await fdZKey.readULE32();
+        }
 
-// async function readOmegasSection(fdZKey, sections, zkey) {
-//     await binFileUtils.startReadUniqueSection(fdZKey, sections, ZKEY_PF_OMEGAS_SECTION);
+        // Read pols
+        const lenPols = await fdZKey.readULE32();
 
-//     zkey.omegas = await fdZKey.readULE32();
+        if (lenPols > 0) f[index].pols = [];
+        for (let i = 0; i < lenPols; i++) {
+            f[index].pols[i] = await fdZKey.readString()
+        }
 
-//     await binFileUtils.endReadSection(fdZKey);
-// }
+        // Read stages
+        const lenStages = await fdZKey.readULE32();
+
+        if (lenStages > 0) f[index].stages = [];
+        for (let i = 0; i < lenStages; i++) {
+            await readStage(fdZKey, f[index].stages);
+        }
+    }
+
+    async function readStage(fdZKey, stage) {
+        stage.stage = await fdZKey.readULE32();
+
+        const lenPols = await fdZKey.readULE32();
+
+        if (lenPols > 0) stage.pols = [];
+        for (let i = 0; i < lenPols; i++) {
+            await readPol(fdZKey, stage.pols);
+        }
+    }
+
+    async function readPol(fdZKey, pols) {
+        let pol = {};
+        pol.name = await fdZKey.readString();
+        pol.degree = await fdZKey.readULE32();
+        pols.push(pol);
+    }
+}
+async function readFCommitmentsSection(fdZKey, sections, zkey) {
+    await startReadUniqueSection(fdZKey, sections, ZKEY_PF_F_COMMITMENTS_SECTION);
+
+    const len = await fdZKey.readULE32();
+
+    for (let i = 0; i < len; i++) {
+        const name = await fdZKey.readString();
+        zkey[name] = await fdZKey.read(64);
+    }
+
+    await endReadSection(fdZKey);
+}
+
+async function readPolsMapSection(fdZKey, sections, zkey) {
+    await startReadUniqueSection(fdZKey, sections, ZKEY_PF_POLSMAP_SECTION);
+
+    // const keys = Object.keys(zkey.polsMap);
+
+    const len = await fdZKey.readULE32();
+
+    if (len > 0) zkey.polsMap = {};
+    for (let i = 0; i < len; i++) {
+        const name = await fdZKey.readString();
+
+        zkey.polsMap[name] = {};
+
+        const lenSubkeys = await fdZKey.readULE32();
+
+        for (let j = 0; j < lenSubkeys; j++) {
+            const index = await fdZKey.readULE32();
+            zkey.polsMap[name][index.toString()] = await fdZKey.readString();
+        }
+    }
+
+    await endReadSection(fdZKey);
+}
+
+async function readOmegasSection(fdZKey, sections, zkey) {
+    await startReadUniqueSection(fdZKey, sections, ZKEY_PF_OMEGAS_SECTION);
+
+    const len = await fdZKey.readULE32();
+
+    for (let i = 0; i < len; i++) {
+        const name = await fdZKey.readString();
+        zkey[name] = await fdZKey.read(32);
+    }
+
+    await endReadSection(fdZKey);
+}
 
 
 // TODO add this method to fastfile?
