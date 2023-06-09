@@ -8,9 +8,9 @@ const { open } = require("shplonkjs");
 const { readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 const {buildBn128} = require('ffjavascript');
 const Logger = require('logplease');
-const { interpolate } = require("../../helpers/fft/fft_p.bn128");
+const { interpolate, ifft, fft } = require("../../helpers/fft/fft_p.bn128");
 
-const parallelExec = true;
+const parallelExec = false;
 const useThreads = false;
 const maxNperThread = 1 << 18;
 const minNperThread = 1 << 12;
@@ -66,6 +66,13 @@ module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflo
 
     // Global counter
     let nCm = 0;
+
+    // Calculate the power of cm1_n when ZK will be applied
+    let maxN = 0;
+    for (let i = 0; i < cmPols.$$nPols; i++) {
+        const currentN = cmPols.$$array[i].length + 2;
+        maxN = Math.max(maxN, currentN);
+    }
 
     // Reserve big buffers for the polynomial evaluations
     ctx.const_n = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
@@ -134,8 +141,8 @@ module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflo
 
     ctx.challenges.b = [];
     for (let i = 0; i < totalBlindings; i++) {
-        // TODO: ZERO KNOWLEDGE
-        ctx.challenges.b[i] = ctx.curve.Fr.random();
+        ctx.challenges.b[i] =Fr.zero; // Fr.random();
+        // ctx.challenges.b[i] = Fr.one;
     }
 
     let bIndex = 0;
@@ -195,41 +202,60 @@ module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflo
     };  
     
     async function round0() {
-   
+        // SETUP CONSTANT POLYNOMIALS EVALUATIONS
+        if (cnstPols.$$nPols > 0 && logger) logger.debug(`> Preparing constant polynomials`);
         for (let i = 0; i < cnstPols.$$nPols; i++) {
-
             const name = cnstPols.$$defArray[i].name;
             if (cnstPols.$$defArray[i].idx >= 0) name += cnstPols.$$defArray[i].idx;
 
-            if (logger) logger.debug(`··· Preparing ${name} constant polynomial`);
+            if (logger) logger.debug(`··· '${name}' polynomial`);
 
-            const cnstPolBuffer = cnstPols.$$array[i];
-            for (let j = 0; j < cnstPolBuffer.length; j++) {
-                ctx.const_n.set(Fr.e(cnstPolBuffer[j]), (i + fflonkInfo.nConstants * j) * n8r);
+            const buffer = cnstPols.$$array[i];
+            const degree = buffer.length - 1;
+            for (let j = 0; j < degree + 1; j++) {
+                ctx.const_n.set(Fr.e(buffer[j]), (i + fflonkInfo.nConstants * j) * n8r);
             }
         }
 
+        // SETUP COMMITTED POLYNOMIALS EVALUATIONS
+        if (cmPols.$$nPols > 0 && logger) logger.debug(`> Preparing committed polynomials`);
         for (let i = 0; i < cmPols.$$nPols; i++) {
             let name = cmPols.$$defArray[i].name;
-            if (cmPols.$$defArray[i].idx >= 0)
-                name += cmPols.$$defArray[i].idx;
+            if (cmPols.$$defArray[i].idx >= 0) name += cmPols.$$defArray[i].idx;
 
-            if (logger) logger.debug(`··· Preparing '${name}' polynomial`);
+            if (logger) logger.debug(`··· '${name}' polynomial`);
 
             // Compute polynomial evaluations
-            const cmPolBuffer = cmPols.$$array[i];
-            for (let j = 0; j < cmPolBuffer.length; j++) {
-                ctx.cm1_n.set(Fr.e(cmPolBuffer[j]), (i + j*fflonkInfo.mapSectionsN.cm1_n)*n8r);
+            const buffer = cmPols.$$array[i];
+            const nElements = buffer.length;
+            for (let j = 0; j < nElements; j++) {
+                ctx.cm1_n.set(Fr.e(buffer[j]), (i + j * fflonkInfo.mapSectionsN.cm1_n) * n8r);
             }
-        }   
+        }
+
+        // TODO batchToMontgomery
+        // ctx.const_n = await Fr.batchToMontgomery(ctx.const_n);
+        // ctx.cm1_n = await Fr.batchToMontgomery(ctx.cm1_n);
+
+        // Add ZK coefs to the end of the buffer
+        for (let i = 0; i < cmPols.$$nPols; i++) {
+            let polName = cmPols.$$defArray[i].name;
+            if (cmPols.$$defArray[i].idx >= 0) polName += cmPols.$$defArray[i].idx;
+
+            // Add ZK evaluations to the two lasts positions of the buffer
+            for (let j = 0; j < randomBlinding[polName]; j++) {
+                const randomBlinding = ctx.challenges.b[bIndex++];
+                ctx.cm1_n.set(randomBlinding, ((domainSize - (j + 1)) * cmPols.$$nPols + i) * n8r);
+            }
+        }
         
         ctx.publics = [];
         for (let i = 0; i < fflonkInfo.publics.length; i++) {
             const publicPol = fflonkInfo.publics[i];
-    
+
             if ("cmP" === publicPol.polType) {
                 //const offset = publicPol.polId * sDomain + publicPol.idx * n8r;
-                const offset = (fflonkInfo.publics[i].idx * fflonkInfo.mapSectionsN.cm1_n + fflonkInfo.publics[i].polId)*n8r;
+                const offset = (fflonkInfo.publics[i].idx * fflonkInfo.mapSectionsN.cm1_n + fflonkInfo.publics[i].polId) * n8r;
                 ctx.publics[i] = ctx.cm1_n.slice(offset, offset + n8r);
             } else if ("imP" === publicPol.polType) {
                 ctx.publics[i] = calculateExpAtPoint(ctx, fflonkInfo.publicsCode[i], publicPol.idx);
@@ -244,50 +270,69 @@ module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflo
         // Add preprocessed polynomials to the transcript
         
         //Compute extended evals
-        if(fflonkInfo.nConstants > 0) {
+        if (fflonkInfo.nConstants > 0) {
             await interpolate(ctx.const_n, fflonkInfo.nConstants, ctx.nBits, ctx.const_coefs, ctx.const_2ns, ctx.nBitsExt, Fr, false);
-            for (let i = 0; i < cnstPols.$$nPols; i++) {
 
+            for (let i = 0; i < cnstPols.$$nPols; i++) {
                 const name = cnstPols.$$defArray[i].name;
                 if (cnstPols.$$defArray[i].idx >= 0) name += cnstPols.$$defArray[i].idx;
-    
+
                 if (logger) logger.debug(`··· Preparing ${name} constant polynomial`);
-                
-                 // Get coefs
-                const coefs = getPolBuffer(ctx, fflonkInfo, i, {constants: true, coefs: true});
-            
+
+                // Get coefs
+                const coefs = getPolBuffer(ctx, fflonkInfo, i, { constants: true, coefs: true });
+
                 // Define polynomial
                 ctx[name] = new Polynomial(coefs, curve, logger);
             }
-    
+
             const commitsConstants = await commit(0, zkey, ctx, PTau, curve, { multiExp: false, logger });
-    
+
             for (let j = 0; j < commitsConstants.length; ++j) {
-                committedPols[`${commitsConstants[j].index}`] = { pol:commitsConstants[j].pol };
+                committedPols[`${commitsConstants[j].index}`] = { pol: commitsConstants[j].pol };
             }
+
+            console.log("----------------------------------> ZK ctx.const_n");
+            printPol(ctx.const_n, Fr);
+    
+            console.log("----------------------------------> ZK ctx.const_coefs");
+            printPol(ctx.const_coefs, Fr);
+    
+            console.log("----------------------------------> ctx.const_2ns");
+            printPol(ctx.const_2ns, Fr);
+    
         }
 
         //Compute extended evals
-        if(!fflonkInfo.mapSectionsN.cm1_n) {
-            if(logger) logger.debug("··· !!! No committed polynomials to compute...skipping round 1");
+        if (!fflonkInfo.mapSectionsN.cm1_n) {
+            if (logger) logger.debug("··· !!! No committed polynomials to compute...skipping round 1");
             return;
         }
 
-        await interpolate(ctx.cm1_n, fflonkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.cm1_coefs, ctx.cm1_2ns, ctx.nBitsExt, Fr, false);
 
+        console.log("----------------------------------> ZK ctx.cm1_n");
+        printPol(ctx.cm1_n, Fr);
+
+        await interpolate(ctx.cm1_n, fflonkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.cm1_coefs, ctx.cm1_2ns, ctx.nBitsExt, Fr, false);
+        
         for (let i = 0; i < cmPols.$$nPols; i++) {
-            let name = cmPols.$$defArray[i].name;
-            if (cmPols.$$defArray[i].idx >= 0)
-                name += cmPols.$$defArray[i].idx;
+            const name = cmPols.$$defArray[i].name;
+            if (cmPols.$$defArray[i].idx >= 0) name += cmPols.$$defArray[i].idx;
 
             if (logger) logger.debug(`··· Preparing '${name}' polynomial`);
 
             // Get coefs
-            const coefs = getPolBuffer(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], {coefs: true});
-        
+            const coefs = getPolBuffer(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], { coefs: true });
+
             // Define polynomial
             ctx[name] = new Polynomial(coefs, curve, logger);
         }    
+
+        console.log("----------------------------------> ZK ctx.cm1_coefs");
+        printPol(ctx.cm1_coefs, Fr);
+
+        console.log("----------------------------------> ctx.cm1_2ns");
+        printPol(ctx.cm1_2ns, Fr);
 
         const commits1 = await commit(1, zkey, ctx, PTau, curve, { multiExp: true, logger });
         for (let j = 0; j < commits1.length; ++j) {
@@ -472,8 +517,14 @@ module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflo
 
         await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, logger);
 
+        console.log("----------------------------------> ctx.q_2ns");
+        printPol(ctx.q_2ns, Fr);
         ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, curve, logger);
-        ctx["Q"].divZh(ctx.N, (1<<ctx.extendBits));
+        console.log("----------------------------------> ctx.Q");
+        printPol(ctx["Q"].coef, Fr);
+        ctx["Q"].divZh(ctx.N, 1<<ctx.extendBits);
+        console.log("----------------------------------> ctx.Q / Zh");
+        printPol(ctx["Q"].coef, Fr);
 
         const commits4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });
         for (let j = 0; j < commits4.length; ++j) {
@@ -644,7 +695,7 @@ function compileCode(ctx, code, dom, ret) {
         }
         setRef(code[j].dest, exp);
     }
-
+console.log(body.join("\n"));
     if (ret) {
         body.push(`  return ${getRef(code[code.length-1].dest)};`);
     }
@@ -855,12 +906,12 @@ function getPolBuffer(ctx, fflonkInfo, idPol, options = {constants: false, coefs
     return res;
 }
 
-function printPol(buffer, n8r) {
-    const len = buffer.byteLength / n8r;
+function printPol(buffer, Fr) {
+    const len = buffer.byteLength / Fr.n8;
 
     console.log("---------------------------");
     for(let i = 0; i < len; ++i) {
-        console.log(i, Fr.toString(buffer.slice(i * n8r, (i + 1) * n8r)));
+        console.log(i, Fr.toString(buffer.slice(i * Fr.n8, (i + 1) * Fr.n8)));
     }
     console.log("---------------------------");
 }
