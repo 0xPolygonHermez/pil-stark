@@ -2,14 +2,13 @@ const { getOrderedEvals } = require("shplonkjs");
 const {getCurveFromName, utils} = require("ffjavascript");
 const { readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 
-
-const { unstringifyBigInts } = utils;
+const {unstringifyBigInts} = utils;
 
 function i2hex(i) {
     return ("0" + i.toString(16)).slice(-2);
 }
 
-module.exports = async function exportFflonkCalldata(zkeyFilename, proof, options = {}) {
+module.exports = async function exportFflonkCalldata(zkeyFilename, proof, publicSignals, options = {}) {
 
     const logger = options.logger; 
 
@@ -21,6 +20,8 @@ module.exports = async function exportFflonkCalldata(zkeyFilename, proof, option
     const nonCommittedPols = ["Q"];
     
     proof = unstringifyBigInts(proof);
+
+    publicSignals = unstringifyBigInts(publicSignals);
 
     Object.keys(proof.polynomials).forEach(key => {
         proof.polynomials[key] = curve.G1.fromObject(proof.polynomials[key]);
@@ -92,9 +93,17 @@ module.exports = async function exportFflonkCalldata(zkeyFilename, proof, option
     for(let i = 0; i < proofSize; ++i) {
         proofHex.push(`0x${proofStringHex.slice(i*64, (i+1)*64).padStart(64, '0')}`);
     }
-    let inputs = [proofHex];
+     
+    const inputString = JSON.stringify(proofHex);
     
-    const inputString = JSON.stringify(inputs).substring(1, JSON.stringify(inputs).length - 1);
-    
-    return inputString;
+    let publicInputs = [];
+    for (let i = 0; i < publicSignals.length; i++) {
+       publicInputs.push(`0x${publicSignals[i].toString(16).padStart(64, '0')}`);
+    }
+
+    let publicInputsString = JSON.stringify(publicInputs);
+
+    let calldata = `${inputString}`;
+    if(publicSignals.length > 0) calldata += `,${publicInputsString}`;
+    return calldata;
 }

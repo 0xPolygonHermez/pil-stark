@@ -61,7 +61,7 @@ describe("Fflonk permutation sm", async function () {
 
         const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
     
-        const proofInputs = await exportFflonkCalldata(zkeyFilename, proof, {})
+        const proofInputs = await exportFflonkCalldata(zkeyFilename, proof, publicSignals, {})
         const verifierCode = await exportPilFflonkVerifier(zkeyFilename, fflonkInfo, {});
 
         fs.writeFileSync("./tmp/contracts/pilfflonk_verifier_simple_permutation.sol", verifierCode.verifierPilFflonkCode, "utf-8");
@@ -79,13 +79,15 @@ describe("Fflonk permutation sm", async function () {
 
         await pilFflonkVerifier.deployed();
 
-        const inputs = JSON.parse(proofInputs);
-
         if(publicSignals.length > 0) {
-            const publicInputs = publicSignals.map(p => ethers.utils.hexZeroPad(ethers.BigNumber.from(p).toHexString(), 32));
-            expect(await pilFflonkVerifier.verifyProof(inputs, publicInputs)).to.equal(true);
+            const inputs = proofInputs.split("],[")
+            .map((str, index) => (index === 0 ? str + ']' : '[' + str))
+            .map(str => JSON.parse(str));
+            expect(await pilFflonkVerifier.verifyProof(...inputs)).to.equal(true);
+    
         } else {
-            expect(await pilFflonkVerifier.verifyProof(inputs)).to.equal(true);
+            expect(await pilFflonkVerifier.verifyProof(JSON.parse(proofInputs))).to.equal(true);
+    
         }
     });
 

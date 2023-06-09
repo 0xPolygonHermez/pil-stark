@@ -25,7 +25,7 @@ async function run() {
 
     const verifierCode = await exportPilFflonkVerifier(zkeyFile, fflonkInfo, {});
     
-    await fs.promises.writeFile(pilFflonkVerifierFile, verifierCode.verifierShPlonkCode, "utf8");
+    await fs.promises.writeFile(pilFflonkVerifierFile, verifierCode.verifierPilFflonkCode, "utf8");
 
     await fs.promises.writeFile(shPloknVerifierFile, verifierCode.verifierShPlonkCode, "utf8");
     

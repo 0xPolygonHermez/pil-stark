@@ -20,7 +20,7 @@ async function run() {
     const proof = JSONbig.parse(await fs.promises.readFile(proofFile, "utf8"));
     const publicSignals = JSONbig.parse(await fs.promises.readFile(publicFile, "utf8"))
 
-    const fflonkCalldata = await exportFflonkCalldata(zkeyFile, proof, {});
+    const fflonkCalldata = await exportFflonkCalldata(zkeyFile, proof, publicSignals, {});
     
     console.log(fflonkCalldata);
    
