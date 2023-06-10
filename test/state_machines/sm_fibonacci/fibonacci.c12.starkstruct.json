@@ -1,10 +1,10 @@
 {
-    "nBits": 12,
-    "nBitsExt": 16,
+    "nBits": 13,
+    "nBitsExt": 19,
     "nQueries": 32,
     "verificationHashType": "BN128",
     "steps": [
-        {"nBits": 16},
+        {"nBits": 19},
         {"nBits": 15},
         {"nBits": 11},
         {"nBits": 7},

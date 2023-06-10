@@ -34,11 +34,13 @@ async function run() {
 
     let cols = argv.cols ? Number(argv.cols) : 12;
     
-    if(![12,18].includes(cols)) throw new Error("Invalid number of cols");
+    if(![12,18, 132].includes(cols)) throw new Error("Invalid number of cols");
 
     let res;
-    if(cols === 12) {
+    if(cols === 132) {
         res = await plonkSetupC132(F, r1cs, options);
+    } else if(cols === 12) {
+        res = await plonkSetupC12(F, r1cs, options);
     } else {
         res = await plonkSetupC18(F, r1cs, options);
     }
