@@ -18,7 +18,7 @@ const minNperThread = 1 << 12;
 
 const { stringifyBigInts } = utils;
 
-module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflonkInfo, ptauFile, options) {
+module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflonkInfo, options) {
     const logger = Logger.create("logger");
     
     if (logger) logger.info("PIL-FFLONK PROVER STARTED");
@@ -33,12 +33,12 @@ module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflo
 
     const curve = zkey.curve;
     
-    // let PTau;
-    // if(!zkey.pTau) {
-    //     PTau = await getPowersOfTau(zkey.f, ptauFile, zkey.power, logger);
-    // } else
-       PTau = zkey.pTau;
-    // }
+    let PTau;
+    if (options.pTauFilename) {
+        ({PTau: PTau} = await getPowersOfTau(zkey.f, options.pTauFilename, zkey.power, logger));
+    } else {
+        PTau = zkey.pTau;
+    }
 
     const Fr = curve.Fr;
 
