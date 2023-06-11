@@ -13,12 +13,13 @@ const {
     ZKEY_PF_F_COMMITMENTS_SECTION,
     ZKEY_PF_POLSMAP_SECTION,
     ZKEY_PF_OMEGAS_SECTION,
+    ZKEY_PF_PTAU_SECTION
 } = require("./zkey_pilfflonk_constants.js");
 const { HEADER_ZKEY_SECTION, PILFFLONK_PROTOCOL_ID } = require("./zkey_constants.js");
-const { Scalar, getCurveFromQ } = require("ffjavascript");
+const { BigBuffer, Scalar, getCurveFromQ } = require("ffjavascript");
 
 
-exports.writePilFflonkZkeyFile = async function (zkey, zkeyFilename, curve, options) {
+exports.writePilFflonkZkeyFile = async function (zkey, zkeyFilename, pTau, curve, options) {
     let logger = options.logger
 
     if (logger) logger.info("> Writing the Pil-Fflonk zkey file");
@@ -46,6 +47,10 @@ exports.writePilFflonkZkeyFile = async function (zkey, zkeyFilename, curve, opti
 
     if (logger) logger.info(`··· Writing Section ${ZKEY_PF_OMEGAS_SECTION}. Omegas Section`);
     await writeOmegasSection(fdZKey, zkey, curve);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Writing Section ${ZKEY_PF_PTAU_SECTION}. Ppowers of Tau Section`);
+    await writePTauSection(fdZKey, zkey, pTau, curve);
     if (globalThis.gc) globalThis.gc();
 
     if (logger) logger.info("> Writing the zkey file finished");
@@ -198,6 +203,14 @@ async function writeOmegasSection(fdZKey, zkey, curve) {
     await endWriteSection(fdZKey);
 }
 
+async function writePTauSection(fdZKey, zkey, pTau, curve) {
+    await startWriteSection(fdZKey, ZKEY_PF_PTAU_SECTION);
+
+    await fdZKey.write(pTau);
+
+    await endWriteSection(fdZKey);
+}
+
 exports.readPilFflonkZkeyFile = async function (zkeyFilename, options) {
     let logger;
     if (options && options.logger) logger = options.logger;
@@ -235,6 +248,10 @@ exports.readPilFflonkZkeyFile = async function (zkeyFilename, options) {
 
     if (logger) logger.info(`··· Reading Section ${ZKEY_PF_OMEGAS_SECTION}. Omegas Section`);
     await readOmegasSection(fdZKey, sections, zkey);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_PTAU_SECTION}. Powers of Tau Section`);
+    await readPTauSection(fdZKey, sections, zkey);
     if (globalThis.gc) globalThis.gc();
 
     if (logger) logger.info("> Reading the zkey file finished");
@@ -375,6 +392,24 @@ async function readOmegasSection(fdZKey, sections, zkey) {
 
     await endReadSection(fdZKey);
 }
+
+async function readPTauSection(fdZKey, sections, zkey) {
+    await startReadUniqueSection(fdZKey, sections, ZKEY_PF_PTAU_SECTION);
+
+    const len = sections[ZKEY_PF_PTAU_SECTION][0].size;
+    //await fdZKey.write(pTau);
+
+    // if (logger) logger.info(`> Reading Section ${ZKEY_FF_PTAU_SECTION}. Powers of Tau`);
+    zkey.pTau = new BigBuffer(len);
+    // domainSize * 9 + 18 = SRS length in the zkey saved in setup process.
+    // it corresponds to the maximum SRS length needed, specifically to commit C2
+    // notice that the reserved buffers size is zkey.domainSize * 16 * sG1 because a power of two buffer size is needed
+    // the remaining buffer not filled from SRS are set to 0
+    await fdZKey.readToBuffer(zkey.pTau, 0, len, sections[ZKEY_PF_PTAU_SECTION][0].p);
+
+    await endReadSection(fdZKey);
+}
+
 
 // TODO add this method to fastfile?
 async function writeStringToFile(fd, str) {
