@@ -186,7 +186,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     
     if(logger) logger.info("Fflonk setup finished");
 
-    await writePilFflonkZkeyFile(zkey, zkeyFilename, curve, {logger});
+    await writePilFflonkZkeyFile(zkey, zkeyFilename, PTau, curve, {logger});
 }
 
 function findPolynomialByTypeId(pil, type, id) {

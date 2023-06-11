@@ -8,7 +8,8 @@ const { open } = require("shplonkjs");
 const { readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 const {buildBn128} = require('ffjavascript');
 const Logger = require('logplease');
-const { interpolate, ifft, fft } = require("../../helpers/fft/fft_p.bn128");
+const { interpolate } = require("../../helpers/fft/fft_p.bn128");
+const { PILFFLONK_PROTOCOL_ID } = require("../zkey/zkey_constants");
 
 const parallelExec = false;
 const useThreads = false;
@@ -20,33 +21,46 @@ const { stringifyBigInts } = utils;
 module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflonkInfo, ptauFile, options) {
     const logger = Logger.create("logger");
     
+    if (logger) logger.info("PIL-FFLONK PROVER STARTED");
+
     // Load zkey file
+    if (logger) logger.info("> Reading zkey file");
     const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
+
+    if (zkey.protocolId !== PILFFLONK_PROTOCOL_ID) {
+        throw new Error("zkey file is not fflonk");
+    }
 
     const curve = zkey.curve;
     
-    const {PTau} = await getPowersOfTau(zkey.f, ptauFile, zkey.power, logger);
+    // let PTau;
+    // if(!zkey.pTau) {
+    //     PTau = await getPowersOfTau(zkey.f, ptauFile, zkey.power, logger);
+    // } else
+       PTau = zkey.pTau;
+    // }
 
     const Fr = curve.Fr;
 
     const ctx = {};
     ctx.fflonkInfo = fflonkInfo;
-    ctx.challenges = [];
     ctx.curve = curve;
     ctx.Fr = curve.Fr;
-    // Define the big buffers
+
     ctx.N = 1 << zkey.power;
     ctx.nBits = zkey.power;
     ctx.extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
     ctx.nBitsExt = zkey.power + ctx.extendBits;
     ctx.Next = (1 << ctx.nBitsExt);
 
+    ctx.challenges = [];
+
     const domainSize = ctx.N;
     const domainSizeExt = ctx.Next;
     const power = zkey.power;
     const n8r = Fr.n8;
     const sDomain = domainSize * n8r;
-    const sDomainNext = domainSizeExt * n8r;
+    const sDomainExt = domainSizeExt * n8r;
 
     if (logger) {
         logger.debug("-----------------------------");
@@ -90,12 +104,12 @@ module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflo
     ctx.cm3_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomain);
 
     // Reserve big buffers for the polynomial evaluations in the extended
-    ctx.const_2ns = new BigBuffer(fflonkInfo.nConstants * sDomainNext);
-    ctx.cm1_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainNext);
-    ctx.cm2_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainNext);
-    ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainNext);
-    ctx.q_2ns = new BigBuffer(fflonkInfo.qDim * sDomainNext);
-    ctx.x_2ns = new BigBuffer(sDomainNext); // Omegas a l'extès
+    ctx.const_2ns = new BigBuffer(fflonkInfo.nConstants * sDomainExt);
+    ctx.cm1_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainExt);
+    ctx.cm2_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainExt);
+    ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainExt);
+    ctx.q_2ns = new BigBuffer(fflonkInfo.qDim * sDomainExt);
+    ctx.x_2ns = new BigBuffer(sDomainExt); // Omegas a l'extès
 
 
     let w = Fr.one;
@@ -141,8 +155,7 @@ module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflo
 
     ctx.challenges.b = [];
     for (let i = 0; i < totalBlindings; i++) {
-        ctx.challenges.b[i] =Fr.zero; // Fr.random();
-        // ctx.challenges.b[i] = Fr.one;
+        ctx.challenges.b[i] = ctx.curve.Fr.random();
     }
 
     let bIndex = 0;
