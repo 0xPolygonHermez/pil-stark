@@ -65,7 +65,7 @@ describe("Fflonk All sm", async function () {
 
         await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 3});
 
-        const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
+        const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, {});
 
         const isValid = await fflonkVerify(zkeyFilename, publicSignals, proof, fflonkInfo, {});
         assert(isValid);
