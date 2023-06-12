@@ -1,13 +1,11 @@
 const {BigBuffer, utils} = require("ffjavascript");
-const { getPowersOfTau, Polynomial, commit, Keccak256Transcript, lcm } = require("shplonkjs");
+const { Polynomial, commit, Keccak256Transcript, lcm } = require("shplonkjs");
 const workerpool = require("workerpool");
 const { fflonkgen_execute } = require("./fflonk_prover_worker");
 const { calculateH1H2, calculateZ } = require("../../helpers/polutils");
 const { open } = require("shplonkjs");
 
 const { readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
-const {buildBn128} = require('ffjavascript');
-const Logger = require('logplease');
 const { interpolate } = require("../../helpers/fft/fft_p.bn128");
 const { PILFFLONK_PROTOCOL_ID } = require("../zkey/zkey_constants");
 
@@ -19,7 +17,7 @@ const minNperThread = 1 << 12;
 const { stringifyBigInts } = utils;
 
 module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflonkInfo, options) {
-    const logger = Logger.create("logger");
+    const logger = options.logger;
     
     if (logger) logger.info("PIL-FFLONK PROVER STARTED");
 
@@ -33,12 +31,7 @@ module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflo
 
     const curve = zkey.curve;
     
-    let PTau;
-    if (options.pTauFilename) {
-        ({PTau: PTau} = await getPowersOfTau(zkey.f, options.pTauFilename, zkey.power, logger));
-    } else {
-        PTau = zkey.pTau;
-    }
+    PTau = zkey.pTau;
 
     const Fr = curve.Fr;
 

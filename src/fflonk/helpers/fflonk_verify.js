@@ -3,11 +3,9 @@ const { readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 const {utils} = require("ffjavascript");
 const { unstringifyBigInts } = utils;
 
-const Logger = require('logplease');
 
 module.exports = async function fflonkVerify(zkeyFilename, publicSignals, proof, fflonkInfo, options) {
-//    const logger = options.logger;
-    const logger = Logger.create("logger");
+    const logger = options.logger;
 
     // Load zkey file
     const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});

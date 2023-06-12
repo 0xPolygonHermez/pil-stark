@@ -12,10 +12,15 @@ const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require
 const smGlobal = require("../state_machines/sm/sm_global.js");
 const smSimplePlookup = require("../state_machines/sm_simple_plookup/sm_simple_plookup.js");
 
+const Logger = require('logplease');
+
 describe("Fflonk plookup sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
+        const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+        Logger.setLogLevel("DEBUG");
+
         const F = new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
 
         const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple_plookup", "simple_plookup_main.pil"));
@@ -44,13 +49,11 @@ describe("Fflonk plookup sm", async function () {
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 4});
+        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 4, logger});
 
-        const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, {});
+        const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, {logger});
 
-        const isValid = await fflonkVerify(zkeyFilename, publicSignals, proof, fflonkInfo, {});
+        const isValid = await fflonkVerify(zkeyFilename, publicSignals, proof, fflonkInfo, {logger});
         assert(isValid);
-
     });
-
 });
