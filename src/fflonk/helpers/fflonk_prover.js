@@ -229,7 +229,9 @@ module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflo
             const buffer = cmPols.$$array[i];
             const nElements = buffer.length;
             for (let j = 0; j < nElements; j++) {
-                ctx.cm1_n.set(Fr.e(buffer[j]), (i + j * fflonkInfo.mapSectionsN.cm1_n) * n8r);
+                const offset = (i + j * 2 * fflonkInfo.mapSectionsN.cm1_n) * n8r;
+                ctx.cm1_n.set(Fr.e(buffer[j]), offset);
+                ctx.cm1_n.set(Fr.random(), offset + fflonkInfo.mapSectionsN.cm1_n * n8r);
             }
         }
 
@@ -238,16 +240,16 @@ module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflo
         // ctx.cm1_n = await Fr.batchToMontgomery(ctx.cm1_n);
 
         // Add ZK coefs to the end of the buffer
-        for (let i = 0; i < cmPols.$$nPols; i++) {
-            let polName = cmPols.$$defArray[i].name;
-            if (cmPols.$$defArray[i].idx >= 0) polName += cmPols.$$defArray[i].idx;
+        // for (let i = 0; i < cmPols.$$nPols; i++) {
+        //     let polName = cmPols.$$defArray[i].name;
+        //     if (cmPols.$$defArray[i].idx >= 0) polName += cmPols.$$defArray[i].idx;
 
-            // Add ZK evaluations to the two lasts positions of the buffer
-            for (let j = 0; j < randomBlinding[polName]; j++) {
-                const randomBlinding = ctx.challenges.b[bIndex++];
-                ctx.cm1_n.set(randomBlinding, ((domainSize - (j + 1)) * cmPols.$$nPols + i) * n8r);
-            }
-        }
+        //     // Add ZK evaluations to the two lasts positions of the buffer
+        //     for (let j = 0; j < randomBlinding[polName]; j++) {
+        //         const randomBlinding = ctx.challenges.b[bIndex++];
+        //         ctx.cm1_n.set(randomBlinding, ((domainSize - (j + 1)) * cmPols.$$nPols + i) * n8r);
+        //     }
+        // }
         
         ctx.publics = [];
         for (let i = 0; i < fflonkInfo.publics.length; i++) {
@@ -517,12 +519,23 @@ module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflo
 
         await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, logger);
 
+        printPol(ctx.q_2ns, Fr);
+        ////////////// TODO DEVELOPING PURPOSES ONLY
+        const len = ctx.q_2ns.byteLength / 2 / Fr.n8;
+        buffer = new BigBuffer(len * Fr.n8);
+        for (let i = 0; i < len; i++) {
+    //        buffer.set(ctx.q_2ns.slice(i * 2 * Fr.n8, i * 2 * Fr.n8 + Fr.n8), i * Fr.n8);
+            buffer.set(ctx.q_2ns.slice(i * 4 * Fr.n8, i * 4 * Fr.n8 + 2 * Fr.n8), i * Fr.n8 * 2);
+        }
+        ctx.q_2ns = buffer;
+
         console.log("----------------------------------> ctx.q_2ns");
         printPol(ctx.q_2ns, Fr);
         ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, curve, logger);
         console.log("----------------------------------> ctx.Q");
         printPol(ctx["Q"].coef, Fr);
-        ctx["Q"].divZh(ctx.N, 1<<ctx.extendBits);
+        ctx["Q"].divZh(ctx.N/2, 2);
+        //ctx["Q"].divByZerofier(16, Fr.one);
         console.log("----------------------------------> ctx.Q / Zh");
         printPol(ctx["Q"].coef, Fr);
 
