@@ -5,7 +5,7 @@ const {F1Field, getCurveFromName} = require("ffjavascript");
 const path = require("path");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
-const { fflonkSetup, fflonkProve, fflonkInfoGen, exportFflonkCalldata, exportPilFflonkVerifier} = require("pil-stark");
+const { fflonkSetup, fflonkProve, fflonkInfoGen, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey} = require("pil-stark");
 
 const smGlobal = require("../../test/state_machines/sm/sm_global.js");
 const smPermutation = require("../../test/state_machines/sm_permutation/sm_permutation.js");
@@ -61,8 +61,10 @@ describe("Fflonk permutation sm", async function () {
 
         const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
 
-        const proofInputs = await exportFflonkCalldata(zkeyFilename, proof, publicSignals, {})
-        const verifierCode = await exportPilFflonkVerifier(zkeyFilename, fflonkInfo, {});
+        const vk = await fflonkVerificationKey(zkeyFilename, {});
+
+        const proofInputs = await exportFflonkCalldata(vk, proof, publicSignals, {})
+        const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {});
 
         fs.writeFileSync("./tmp/contracts/pilfflonk_verifier_permutation.sol", verifierCode.verifierPilFflonkCode, "utf-8");
         fs.writeFileSync("./tmp/contracts/shplonk_verifier_permutation.sol", verifierCode.verifierShPlonkCode, "utf-8");

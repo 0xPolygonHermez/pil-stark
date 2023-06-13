@@ -1,27 +1,18 @@
 const { verifyOpenings, Keccak256Transcript, computeChallengeXiSeed, lcm } = require("shplonkjs");
-const { readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
-const {utils} = require("ffjavascript");
+const {utils, getCurveFromName } = require("ffjavascript");
+const { fromObjectVk, fromObjectProof } = require("./helpers");
 const { unstringifyBigInts } = utils;
 
 
-module.exports = async function fflonkVerify(zkeyFilename, publicSignals, proof, fflonkInfo, options) {
+module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInfo, options) {
     const logger = options.logger;
 
-    // Load zkey file
-    const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
-
-    const curve = zkey.curve;
+    const curve = await getCurveFromName(vk.curve);
     const Fr = curve.Fr;
 
-    proof = unstringifyBigInts(proof);
+    vk = fromObjectVk(curve, vk);
 
-    Object.keys(proof.polynomials).forEach(key => {
-        proof.polynomials[key] = curve.G1.fromObject(proof.polynomials[key]);
-    });
-
-    Object.keys(proof.evaluations).forEach(key => {
-        proof.evaluations[key] = curve.Fr.fromObject(proof.evaluations[key]);
-    });
+    proof = fromObjectProof(curve, proof);
 
     let publics = unstringifyBigInts(publicSignals).map(p => Fr.e(p));
 
@@ -30,11 +21,11 @@ module.exports = async function fflonkVerify(zkeyFilename, publicSignals, proof,
     ctx.publics = publics;
     ctx.challenges = [];
     ctx.curve = curve;
-    ctx.N = 1 << zkey.power;
-    ctx.nBits = zkey.power;
+    ctx.N = 1 << vk.power;
+    ctx.nBits = vk.power;
 
     const domainSize = ctx.N;
-    const power = zkey.power;
+    const power = vk.power;
 
     if (logger) {
         logger.debug("------------------------------");
@@ -52,9 +43,9 @@ module.exports = async function fflonkVerify(zkeyFilename, publicSignals, proof,
 
     const transcript = new Keccak256Transcript(curve);
 
-    const cnstCommitPols = Object.keys(zkey).filter(k => k.match(/^f\d/));
+    const cnstCommitPols = Object.keys(vk).filter(k => k.match(/^f\d/));
     for(let i = 0; i < cnstCommitPols.length; ++i) {
-        transcript.addPolCommitment(zkey[cnstCommitPols[i]]);
+        transcript.addPolCommitment(vk[cnstCommitPols[i]]);
     }
 
     for (let i=0; i<publics.length; i++) {
@@ -96,14 +87,14 @@ module.exports = async function fflonkVerify(zkeyFilename, publicSignals, proof,
     if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 
     // Store the polynomial commits to its corresponding fi
-    for(let i = 0; i < zkey.f.length; ++i) {
-        if(!proof.polynomials[`f${zkey.f[i].index}`]) throw new Error(`f${zkey.f[i].index} commit is missing`);
-        zkey.f[i].commit = proof.polynomials[`f${zkey.f[i].index}`];
+    for(let i = 0; i < vk.f.length; ++i) {
+        if(!proof.polynomials[`f${vk.f[i].index}`]) throw new Error(`f${vk.f[i].index} commit is missing`);
+        vk.f[i].commit = proof.polynomials[`f${vk.f[i].index}`];
     }
     
     for(let i = 0; i < fflonkInfo.evIdx.cm.length; ++i) {
         for(const polId in fflonkInfo.evIdx.cm[i]) {
-            let polName = i === 0 ? zkey.polsMap.cm[polId] : i === 1 ? zkey.polsMap.cm[polId] + "w" : zkey.polsMap.cm[polId] + `w${i}`;
+            let polName = i === 0 ? vk.polsMap.cm[polId] : i === 1 ? vk.polsMap.cm[polId] + "w" : vk.polsMap.cm[polId] + `w${i}`;
             const evalIndex = fflonkInfo.evIdx.cm[i][polId];
             ctx.evals[evalIndex] = proof.evaluations[polName];   
         }
@@ -111,15 +102,15 @@ module.exports = async function fflonkVerify(zkeyFilename, publicSignals, proof,
 
     for(let i = 0; i < fflonkInfo.evIdx.const.length; ++i) {
         for(const polId in fflonkInfo.evIdx.const[i]) {
-            let polName = i === 0 ? zkey.polsMap.const[polId] : i === 1 ? zkey.polsMap.const[polId] + "w" : zkey.polsMap.const[polId] + `w${i}`;
+            let polName = i === 0 ? vk.polsMap.const[polId] : i === 1 ? vk.polsMap.const[polId] + "w" : vk.polsMap.const[polId] + `w${i}`;
             const evalIndex = fflonkInfo.evIdx.const[i][polId];
             ctx.evals[evalIndex] = proof.evaluations[polName];                          
 
         }
     }
     
-    let xiSeed = computeChallengeXiSeed(zkey.f.sort((a,b) => a.index - b.index), curve, {logger, fflonkPreviousChallenge: ctx.challenges[4] });
-    const powerW = lcm(Object.keys(zkey).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
+    let xiSeed = computeChallengeXiSeed(vk.f.sort((a,b) => a.index - b.index), curve, {logger, fflonkPreviousChallenge: ctx.challenges[4] });
+    const powerW = lcm(Object.keys(vk).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
     let challengeXi = curve.Fr.exp(xiSeed, powerW);
     ctx.x = challengeXi;
 
@@ -137,7 +128,7 @@ module.exports = async function fflonkVerify(zkeyFilename, publicSignals, proof,
         return false;
     }
 
-    const res = verifyOpenings(zkey, proof.polynomials, proof.evaluations, curve, {logger, fflonkPreviousChallenge: ctx.challenges[4], nonCommittedPols: ["Q"]});
+    const res = verifyOpenings(vk, proof.polynomials, proof.evaluations, curve, {logger, fflonkPreviousChallenge: ctx.challenges[4], nonCommittedPols: ["Q"]});
     await curve.terminate();
 
     return res;

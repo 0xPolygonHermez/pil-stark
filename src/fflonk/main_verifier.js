@@ -6,24 +6,27 @@ const fflonkVerify = require("./helpers/fflonk_verify");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_verify.js -z <circuit.zkey> -f <fflonkinfo.json> -o <proof.json> -b <public.json>")
+    .usage("node main_verify.js -v <verificationkey.json> -f <fflonkinfo.json> -o <proof.json> -b <public.json>")
     .alias("f", "fflonkinfo")
-    .alias("z", "zkey")
+    .alias("v", "verificationkey")
     .alias("o", "proof")
     .alias("b", "public")
     .argv;
 
 async function run() {
     const fflonkInfoFile = typeof(argv.fflonkinfo) === "string" ?  argv.fflonkinfo.trim() : "mycircuit.fflonkInfo.json";
-    const zkeyFile = typeof(argv.zkey) === "string" ?  argv.zkey.trim() : "mycircuit.zkey";
+    const verificationKeyFile = typeof(argv.verificationkey) === "string" ?  argv.verificationkey.trim() : "verificationkey.json";
     const proofFile = typeof(argv.proof) === "string" ?  argv.proof.trim() : "mycircuit.proof.json";
     const publicFile = typeof(argv.public) === "string" ?  argv.public.trim() : "mycircuit.public.json";
 
+    console.log(verificationKeyFile);
     const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
+    const verificationKey = JSON.parse(await fs.promises.readFile(verificationKeyFile, "utf8"));
+
     const proof = JSONbig.parse(await fs.promises.readFile(proofFile, "utf8"));
     const publicSignals = JSONbig.parse(await fs.promises.readFile(publicFile, "utf8"))
 
-    const resV = await fflonkVerify(zkeyFile, publicSignals, proof, fflonkInfo, {});
+    const resV = await fflonkVerify(verificationKey, publicSignals, proof, fflonkInfo, {});
     
     if (resV === true) {
         console.log("Verification Ok!!")

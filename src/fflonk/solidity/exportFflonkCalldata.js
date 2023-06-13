@@ -1,6 +1,6 @@
 const { getOrderedEvals } = require("shplonkjs");
 const {getCurveFromName, utils} = require("ffjavascript");
-const { readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
+const { fromObjectVk, fromObjectProof } = require("../helpers/helpers");
 
 const {unstringifyBigInts} = utils;
 
@@ -8,47 +8,38 @@ function i2hex(i) {
     return ("0" + i.toString(16)).slice(-2);
 }
 
-module.exports = async function exportFflonkCalldata(zkeyFilename, proof, publicSignals, options = {}) {
+module.exports = async function exportFflonkCalldata(vk, proof, publicSignals, options = {}) {
 
     const logger = options.logger; 
 
-    // Load zkey file
-    const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
+    const curve = await getCurveFromName(vk.curve);
 
-    const curve = await getCurveFromName("bn128");
+    vk = fromObjectVk(curve, vk);
 
-    const nonCommittedPols = ["Q"];
-    
-    proof = unstringifyBigInts(proof);
+    proof = fromObjectProof(curve, proof);
 
     publicSignals = unstringifyBigInts(publicSignals);
 
-    Object.keys(proof.polynomials).forEach(key => {
-        proof.polynomials[key] = curve.G1.fromObject(proof.polynomials[key]);
-    });
-
-    Object.keys(proof.evaluations).forEach(key => {
-        proof.evaluations[key] = curve.Fr.fromObject(proof.evaluations[key]);
-    });
+    const nonCommittedPols = ["Q"];    
 
     // Sort f by index
-    zkey.f.sort((a, b) => a.index - b.index);
+    vk.f.sort((a, b) => a.index - b.index);
 
     const G1 = curve.G1;
     const Fr = curve.Fr;
 
     // Store the polynomial commits to its corresponding fi
-    for(let i = 0; i < zkey.f.length; ++i) {
-        if(!proof.polynomials[`f${zkey.f[i].index}`]) throw new Error(`f${zkey.f[i].index} commit is missing`);
-        zkey.f[i].commit = proof.polynomials[`f${zkey.f[i].index}`];
+    for(let i = 0; i < vk.f.length; ++i) {
+        if(!proof.polynomials[`f${vk.f[i].index}`]) throw new Error(`f${vk.f[i].index} commit is missing`);
+        vk.f[i].commit = proof.polynomials[`f${vk.f[i].index}`];
     }
 
     // Check which of the fi are committed into the proof and which ones are part of the setup. 
     // A committed polynomial fi will be considered part of the setup if all its polynomials composing it are from the stage 0
-    const fCommitted = zkey.f.filter(fi => fi.stages.length !== 1 || fi.stages[0].stage !== 0).sort((a, b) => a.index >= b.index ? 1 : -1);
+    const fCommitted = vk.f.filter(fi => fi.stages.length !== 1 || fi.stages[0].stage !== 0).sort((a, b) => a.index >= b.index ? 1 : -1);
 
     // Order the evaluations. It is important to keep this order to then be consistant with the solidity verifier
-    const  orderedEvals = getOrderedEvals(zkey.f, proof.evaluations);
+    const  orderedEvals = getOrderedEvals(vk.f, proof.evaluations);
 
     const orderedEvalsCommitted = orderedEvals.filter(e => !nonCommittedPols.includes(e.name));
 

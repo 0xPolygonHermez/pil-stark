@@ -6,6 +6,8 @@ const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
 const fflonkProve = require("../../src/fflonk/helpers/fflonk_prover.js");
 const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
 const fflonkVerify  = require("../../src/fflonk/helpers/fflonk_verify.js");
+const fflonkVerificationKey = require("../../src/fflonk/helpers/fflonk_verification_key.js");
+
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
@@ -51,7 +53,9 @@ describe("Fflonk permutation sm", async function () {
 
         const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, {logger});
 
-        const isValid = await fflonkVerify(zkeyFilename, publicSignals, proof, fflonkInfo, {logger});
+        const vk = await fflonkVerificationKey(zkeyFilename, {logger});
+
+        const isValid = await fflonkVerify(vk, publicSignals, proof, fflonkInfo, {logger});
         assert(isValid);
     });
 });

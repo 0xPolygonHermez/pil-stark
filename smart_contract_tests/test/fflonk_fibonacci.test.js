@@ -4,7 +4,7 @@ const expect = chai.expect;
 const {F1Field, getCurveFromName} = require("ffjavascript");
 const path = require("path");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
-const { fflonkSetup, fflonkProve, fflonkInfoGen, fflonkVerify, exportFflonkCalldata, exportPilFflonkVerifier} = require("pil-stark");
+const { fflonkSetup, fflonkProve, fflonkInfoGen, fflonkVerify, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey} = require("pil-stark");
 
 const smFibonacci = require("../../test/state_machines/sm_fibonacci/sm_fibonacci.js");
 
@@ -57,10 +57,11 @@ describe("Fflonk Fibonacci sm", async function () {
         await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 2});
 
         const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
-    
+        
+        const vk = await fflonkVerificationKey(zkeyFilename, {});
 
-        const proofInputs = await exportFflonkCalldata(zkeyFilename, proof, publicSignals, {})
-        const verifierCode = await exportPilFflonkVerifier(zkeyFilename, fflonkInfo, {});
+        const proofInputs = await exportFflonkCalldata(vk, proof, publicSignals, {})
+        const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {});
 
         
         fs.writeFileSync("./tmp/contracts/pilfflonk_verifier_fibonacci.sol", verifierCode.verifierPilFflonkCode, "utf-8");

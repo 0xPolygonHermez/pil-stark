@@ -1883,6 +1883,22 @@
             ]
         },
         {
+            "name": "fibonacci fflonk verification key",
+            "program": "${workspaceFolder}/src/fflonk/main_exportVerificationKey.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-z tmp/fibonacci.zkey",
+                "-v tmp/fibonacci.verificationkey.json",
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "fibonacci fflonk verify",
             "program": "${workspaceFolder}/src/fflonk/main_verifier.js",
             "request": "launch",
@@ -1892,7 +1908,7 @@
             "type": "pwa-node",
             "args": [
                 "-f tmp/fibonacci.fflonkinfo.json",
-                "-z tmp/fibonacci.zkey",
+                "-v tmp/fibonacci.verificationkey.json",
                 "-o tmp/fibonacci.fflonk.proof.json",
                 "-b tmp/fibonacci.fflonk.publics.json"
             ],
@@ -1909,9 +1925,10 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-z tmp/fibonacci.zkey",
+                "-v tmp/fibonacci.verificationkey.json",
                 "-o tmp/fibonacci.fflonk.proof.json",
-                "-b tmp/fibonacci.fflonk.publics.json"
+                "-b tmp/fibonacci.fflonk.publics.json",
+                "-c tmp/fibonacci.calldata.txt"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1926,7 +1943,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-z tmp/fibonacci.zkey",
+                "-v tmp/fibonacci.verificationkey.json",
                 "-f tmp/fibonacci.fflonkinfo.json",
                 "-p tmp/fibonacci_pilfflonk_verifier.sol",
                 "-s tmp/fibonacci_shplonk_verifier.sol"
