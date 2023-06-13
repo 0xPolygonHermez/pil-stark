@@ -1,5 +1,6 @@
 const fs = require("fs"); 
 const { fflonkVerificationKey } = require("../..");
+const { readPilFflonkZkeyFile } = require("./zkey/zkey_pilfflonk");
 const version = require("../../package").version;
 
 const argv = require("yargs")
@@ -13,7 +14,13 @@ async function run() {
     const zkeyFile = typeof(argv.zkey) === "string" ?  argv.zkey.trim() : "mycircuit.zkey";
     const verificationKeyFile = typeof(argv.verificationkey) === "string" ?  argv.verificationkey.trim() : "verificationkey.json";   
 
-    const verificationKey = await fflonkVerificationKey(zkeyFile, {});
+    const options = {logger: console};
+
+    // Load zkey file
+    if (options.logger) options.logger.info("> Reading zkey file");
+    const zkey = await readPilFflonkZkeyFile(zkeyFile, {logger: options.logger});
+
+    const verificationKey = await fflonkVerificationKey(zkey, options);
     
     await fs.promises.writeFile(verificationKeyFile, JSON.stringify(verificationKey, null, 1), "utf8");
     

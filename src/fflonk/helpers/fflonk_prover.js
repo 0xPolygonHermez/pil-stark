@@ -5,7 +5,6 @@ const { fflonkgen_execute } = require("./fflonk_prover_worker");
 const { calculateH1H2, calculateZ } = require("../../helpers/polutils");
 const { open } = require("shplonkjs");
 
-const { readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 const { interpolate } = require("../../helpers/fft/fft_p.bn128");
 const { PILFFLONK_PROTOCOL_ID } = require("../zkey/zkey_constants");
 
@@ -16,14 +15,10 @@ const minNperThread = 1 << 12;
 
 const { stringifyBigInts } = utils;
 
-module.exports = async function fflonkProve(zkeyFilename, cmPols, cnstPols, fflonkInfo, options) {
+module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, options) {
     const logger = options.logger;
     
     if (logger) logger.info("PIL-FFLONK PROVER STARTED");
-
-    // Load zkey file
-    if (logger) logger.info("> Reading zkey file");
-    const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 
     if (zkey.protocolId !== PILFFLONK_PROTOCOL_ID) {
         throw new Error("zkey file is not fflonk");

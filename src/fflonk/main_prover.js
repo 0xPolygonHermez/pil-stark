@@ -5,6 +5,7 @@ const { newConstantPolsArray, newCommitPolsArray, compile } = require("pilcom");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true, storeAsString: true });
 const { F1Field } = require("ffjavascript");
 const fflonkProve = require("./helpers/fflonk_prover");
+const { readPilFflonkZkeyFile } = require("./zkey/zkey_pilfflonk");
 
 const argv = require("yargs")
     .version(version)
@@ -22,8 +23,6 @@ const argv = require("yargs")
     .argv;
 
 async function run() {
-    const F = new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
-
     const ptauFile = typeof(argv.tau) === "string" ?  argv.tau.trim() : "mycircuit.ptau";
     const commitFile = typeof(argv.commit) === "string" ?  argv.commit.trim() : "mycircuit.commit";
     const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "mycircuit.const";
@@ -34,6 +33,14 @@ async function run() {
     const proofFile = typeof(argv.proof) === "string" ?  argv.proof.trim() : "mycircuit.proof.json";
     const publicFile = typeof(argv.public) === "string" ?  argv.public.trim() : "mycircuit.public.json";
 
+    const options = {logger: console};
+
+    // Load zkey file
+    if (options.logger) options.logger.info("> Reading zkey file");
+    const zkey = await readPilFflonkZkeyFile(zkeyFile, {logger: options.logger});
+
+    const F = new F1Field(zkey.r);
+
     const pil = await compile(F, pilFile, null, pilConfig);
     const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
 
@@ -43,8 +50,7 @@ async function run() {
     const cmPols =  newCommitPolsArray(pil, F);
     await cmPols.loadFromFile(commitFile);
 
-    const options = {F, logger: console};
-    const resP = await fflonkProve(zkeyFile, cmPols, constPols, fflonkInfo, ptauFile, options);
+    const resP = await fflonkProve(zkey, cmPols, constPols, fflonkInfo, ptauFile, options);
     
     await fs.promises.writeFile(proofFile, JSONbig.stringify(resP.proof, null, 1), "utf8");
 

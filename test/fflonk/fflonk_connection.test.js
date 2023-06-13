@@ -7,6 +7,7 @@ const fflonkProve = require("../../src/fflonk/helpers/fflonk_prover.js");
 const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
 const fflonkVerify  = require("../../src/fflonk/helpers/fflonk_verify.js");
 const fflonkVerificationKey = require("../../src/fflonk/helpers/fflonk_verification_key.js");
+const { readPilFflonkZkeyFile } = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
@@ -51,9 +52,11 @@ describe("Fflonk connection sm", async function () {
 
         await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 2, logger});
 
-        const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, {logger});
+        const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 
-        const vk = await fflonkVerificationKey(zkeyFilename, {logger});
+        const vk = await fflonkVerificationKey(zkey, {logger});
+
+        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, fflonkInfo, {logger});
 
         const isValid = await fflonkVerify(vk, publicSignals, proof, fflonkInfo, {logger});
         assert(isValid);

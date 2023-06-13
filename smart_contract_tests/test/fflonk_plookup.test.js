@@ -5,7 +5,7 @@ const {F1Field, getCurveFromName} = require("ffjavascript");
 const path = require("path");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
-const { fflonkSetup, fflonkProve, fflonkInfoGen, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey} = require("pil-stark");
+const { fflonkSetup, fflonkProve, fflonkInfoGen, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey, readPilFflonkZkeyFile} = require("pil-stark");
 
 const smGlobal = require("../../test/state_machines/sm/sm_global.js");
 const smPlookup = require("../../test/state_machines/sm_plookup/sm_plookup.js");
@@ -59,9 +59,11 @@ describe("Fflonk plookup sm", async function () {
 
         await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 3});
 
-        const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
-    
-        const vk = await fflonkVerificationKey(zkeyFilename, {});
+        const zkey = await readPilFflonkZkeyFile(zkeyFilename, {});
+
+        const vk = await fflonkVerificationKey(zkey, {});
+
+        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, fflonkInfo, {});
 
         const proofInputs = await exportFflonkCalldata(vk, proof, publicSignals, {})
         const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {});

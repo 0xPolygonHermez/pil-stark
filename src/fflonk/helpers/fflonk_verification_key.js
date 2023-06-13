@@ -4,11 +4,8 @@ const { readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 const {stringifyBigInts} = utils;
 
 
-module.exports = async function fflonkVerificationKey(zkeyFilename, options) {
+module.exports = async function fflonkVerificationKey(zkey, options) {
     const logger = options.logger;
-
-    // Load zkey file
-    const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 
     const curve = zkey.curve;
 

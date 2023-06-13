@@ -5,7 +5,7 @@ const {F1Field, getCurveFromName} = require("ffjavascript");
 const path = require("path");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
-const { fflonkSetup, fflonkProve, fflonkInfoGen, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey} = require("pil-stark");
+const { fflonkSetup, fflonkProve, fflonkInfoGen, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey, readPilFflonkZkeyFile} = require("pil-stark");
 
 const smSimple = require("../../test/state_machines/sm_simple/sm_simple.js");
 
@@ -41,9 +41,11 @@ async function runTest(pilFile, curve) {
 
     await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1});
 
-    const {proof, publicSignals} = await fflonkProve(zkeyFilename, cmPols, constPols, fflonkInfo, ptauFile, {});
+    const zkey = await readPilFflonkZkeyFile(zkeyFilename, {});
 
-    const vk = await fflonkVerificationKey(zkeyFilename, {});
+    const vk = await fflonkVerificationKey(zkey, {});
+
+    const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, fflonkInfo, {});
 
     const proofInputs = await exportFflonkCalldata(vk, proof, publicSignals, {})
     const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {});

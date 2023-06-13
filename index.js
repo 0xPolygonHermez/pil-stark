@@ -15,3 +15,4 @@ module.exports.fflonkVerify = require("./src/fflonk/helpers/fflonk_verify.js");
 module.exports.fflonkVerificationKey = require("./src/fflonk/helpers/fflonk_verification_key.js");
 module.exports.exportFflonkCalldata = require("./src/fflonk/solidity/exportFflonkCalldata.js");
 module.exports.exportPilFflonkVerifier = require("./src/fflonk/solidity/exportPilFflonkVerifier.js");
+module.exports.readPilFflonkZkeyFile = require("./src/fflonk/zkey/zkey_pilfflonk.js").readPilFflonkZkeyFile;
