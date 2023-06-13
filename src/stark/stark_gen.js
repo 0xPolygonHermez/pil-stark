@@ -223,6 +223,9 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     const qq2 = new BigBuffer(starkInfo.qDim*starkInfo.qDeg*ctx.Next);
     await ifft(ctx.q_2ns, starkInfo.qDim, ctx.nBitsExt, qq1);
 
+    console.log(starkInfo.qDeg, starkInfo.qDim, ctx.N);
+
+    console.log(qq1);
     let curS = 1n;
     const shiftIn = F.exp(F.inv(F.shift), N);
     for (let p =0; p<starkInfo.qDeg; p++) {
@@ -233,6 +236,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         }
         curS = F.mul(curS, shiftIn);
     }
+
+    console.log(qq2);
 
     await fft(qq2, starkInfo.qDim * starkInfo.qDeg, ctx.nBitsExt, ctx.cm4_2ns);
 
@@ -292,7 +297,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
                     p.buffer.getElement((k<<extendBits)*p.size + p.offset+1),
                     p.buffer.getElement((k<<extendBits)*p.size + p.offset+2)
                 ];
-            }
+            }            
             acc = F.add(acc, F.mul(v, l[k]));
         }
         ctx.evals[i] = acc;

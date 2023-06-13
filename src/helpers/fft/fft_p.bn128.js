@@ -262,10 +262,15 @@ async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsEx
         }
     }
 
+    let bCoefs = new BigBuffer((1<<nBits) * nPols * Fr.n8);
+    bCoefs.set(bIn.slice(0, (1<<nBits) * nPols * Fr.n8));
+
+    await interpolatePrepare(pool, bCoefs, nPols, nBits, Fr, false);
+
+    buffDstCoefs.set(bCoefs)
+
     console.log("Interpolating prepare....")
     await interpolatePrepare(pool, bIn, nPols, nBits, Fr, shift);
-
-    buffDstCoefs.set(bIn.slice(0, (1<<nBits) * nPols * Fr.n8))
 
     console.log("Bit reverse....")
     await bitReverse(bOut, bIn, nPols, nBitsExt, Fr);
