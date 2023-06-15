@@ -5,7 +5,7 @@ const { fflonkgen_execute } = require("./fflonk_prover_worker");
 const { calculateH1H2, calculateZ } = require("../../helpers/polutils");
 const { open } = require("shplonkjs");
 
-const { interpolate } = require("../../helpers/fft/fft_p.bn128");
+const { interpolate, ifft, fft } = require("../../helpers/fft/fft_p.bn128");
 const { PILFFLONK_PROTOCOL_ID } = require("../zkey/zkey_constants");
 
 const parallelExec = true;
@@ -86,10 +86,10 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
 
     // Reserve big buffers for the polynomial evaluations in the extended
     ctx.const_2ns = new BigBuffer(fflonkInfo.nConstants * sDomainExt);
-    ctx.cm1_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainExt);
+    ctx.cm1_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainExt * 2);
     ctx.cm2_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainExt);
     ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainExt);
-    ctx.q_2ns = new BigBuffer(fflonkInfo.qDim * sDomainExt);
+    ctx.q_2ns = new BigBuffer(fflonkInfo.qDim * sDomainExt * 2);
 
     ctx.cm1_2ns_z  = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainExt);
     ctx.cm2_2ns_z = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainExt);
@@ -281,7 +281,121 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
             return;
         }
 
-        await interpolate(ctx.cm1_n, fflonkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.cm1_coefs, ctx.cm1_2ns, ctx.nBitsExt, Fr, false);
+        let coefs = new BigBuffer(ctx.cm1_n.byteLength);
+        await ifft(ctx.cm1_n, cmPols.$$nPols, ctx.nBits, coefs, Fr);
+
+        let b1 = Fr.random();
+        let b2 = Fr.random();
+        
+        let coefsZ = new BigBuffer(ctx.cm1_n.byteLength * 2);
+        coefsZ.set(coefs, 0);
+
+        // a(x) := a(x) - b2 - b1X + b2X^n + b1X^{n+1}
+        blindBuffer(coefsZ, 0, 0, cmPols.$$nPols, Fr.neg(b2), Fr);
+        blindBuffer(coefsZ, 1, 0, cmPols.$$nPols, Fr.neg(b1), Fr);
+        blindBuffer(coefsZ, 8, 0, cmPols.$$nPols, b2, Fr);
+        blindBuffer(coefsZ, 9, 0, cmPols.$$nPols, b1, Fr);
+
+        // b(x) := b(x) - b2 - b1X + b2X^n + b1X^{n+1}
+        blindBuffer(coefsZ, 0, 1, cmPols.$$nPols, Fr.neg(b2), Fr);
+        blindBuffer(coefsZ, 1, 1, cmPols.$$nPols, Fr.neg(b1), Fr);
+        blindBuffer(coefsZ, 8, 1, cmPols.$$nPols, b2, Fr);
+        blindBuffer(coefsZ, 9, 1, cmPols.$$nPols, b1, Fr);
+        
+        console.log("----- coefsZ");
+        printPol(coefsZ, Fr);
+
+        await fft(coefsZ, cmPols.$$nPols, ctx.nBits + 2, ctx.cm1_2ns, Fr);
+
+        ctx.cm1_coefs = coefsZ;
+        // //await interpolate(ctx.cm1_n, fflonkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.cm1_coefs, ctx.cm1_2ns, ctx.nBitsExt, Fr, false);
+
+        console.log("----- cm1_2ns");
+        printPol(ctx.cm1_2ns, Fr);
+
+
+        // // Manual !!!!!
+        // let evalsA = new BigBuffer(8 * Fr.n8);
+        // for(let i=0; i<8; ++i) {
+        //     evalsA.set(Fr.e(i), i*Fr.n8);
+        // }
+
+        // let evalsB = new BigBuffer(8 * Fr.n8);
+        // for(let i=0; i<8; ++i) {
+        //     evalsB.set(Fr.e(i*i), i*Fr.n8);
+        // }
+
+        // console.log("!!!!!! evalsA");
+        // printPol(evalsA, Fr);
+        // console.log("!!!!!! evalsB");
+        // printPol(evalsB, Fr);
+
+        // let coefsA = await Fr.ifft(evalsA);
+        // let coefsB = await Fr.ifft(evalsB);
+
+        // console.log("!!!!!! coefsA");
+        // printPol(coefsA, Fr);
+        // console.log("!!!!!! coefsB");
+        // printPol(coefsB, Fr);
+
+        // let coefsAZ = new BigBuffer(8 * Fr.n8 * 2);
+        // coefsAZ.set(coefsA, 0);
+        // let coefsBZ = new BigBuffer(8 * Fr.n8 * 2);
+        // coefsBZ.set(coefsB, 0);
+
+        // // Add the ZK coefficients
+        // blindBuffer2(coefsAZ, 0, Fr.neg(b2), Fr);
+        // blindBuffer2(coefsAZ, 1, Fr.neg(b1), Fr);
+        // blindBuffer2(coefsAZ, 8, b2, Fr);
+        // blindBuffer2(coefsAZ, 9, b1, Fr);
+
+        // // b(x) := b(x) - b2 - b1X + b2X^n + b1X^{n+1}
+        // blindBuffer2(coefsBZ, 0, Fr.neg(b2), Fr);
+        // blindBuffer2(coefsBZ, 1, Fr.neg(b1), Fr);
+        // blindBuffer2(coefsBZ, 8, b2, Fr);
+        // blindBuffer2(coefsBZ, 9, b1, Fr);
+
+
+        // // END Add the ZK coefficients
+
+        // console.log("!!!!!! coefsAZ");
+        // printPol(coefsAZ, Fr);
+        // console.log("!!!!!! coefsBZ");
+        // printPol(coefsBZ, Fr);
+
+        // let evalsAZ = new BigBuffer(8 * Fr.n8 * 2 * 2);
+        // evalsAZ.set(coefsAZ, 0);
+        // evalsAZ = await Fr.fft(evalsAZ);
+
+        // let evalsBZ = new BigBuffer(8 * Fr.n8 * 2 * 2);
+        // evalsBZ.set(coefsBZ, 0);
+        // evalsBZ = await Fr.fft(evalsBZ);
+
+        // console.log("!!!!!! evalsAZ");
+        // printPol(evalsAZ, Fr);
+        // console.log("!!!!!! evalsBZ");
+        // printPol(evalsBZ, Fr);
+
+        // let evalsC = new BigBuffer(8 * Fr.n8 * 2 * 2);
+        // for(let i=0; i<32; ++i) {
+        //     const valA = Fr.square(evalsAZ.slice(i*Fr.n8, (i+1)*Fr.n8));
+        //     const valB = evalsBZ.slice(i*Fr.n8, (i+1)*Fr.n8);
+        //     const val = Fr.sub(valA, valB);
+        //     evalsC.set(val, i*Fr.n8);
+        // }
+
+        // console.log("!!!!!! evalsC");
+        // printPol(evalsC, Fr);
+
+        // let polQ = await Polynomial.fromEvaluations(evalsC, curve, logger);
+        // console.log("!!!!!! polQ");
+        // printPol(polQ.coef, Fr);
+        // polQ.divZh(8, 4);
+        // console.log("!!!!!! polQ / divZh");
+        // printPol(polQ.coef, Fr);
+
+
+        // throw new Error("STOP");
 
         for (let i = 0; i < cmPols.$$nPols; i++) {
             let name = cmPols.$$defArray[i].name;
@@ -291,33 +405,30 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
             if (logger) logger.debug(`··· Preparing '${name}' polynomial`);
 
             // Get coefs
-            const coefs = getPolBuffer(ctx, fflonkInfo, fflonkInfo.cm_n[nCm], {coefs: true});
+            const coefs = getPolBuffer(ctx, fflonkInfo, fflonkInfo.cm_n[nCm], {coefs: true, zk:true});
         
             // Define polynomial
             ctx[name] = new Polynomial(coefs, curve, logger);
 
-            const blindCoefs = [];
-            for(let i = 0; i < randomBlinding[name]; ++i) {
-                blindCoefs.push(ctx.challenges.b[bIndex++]);
-            }
+            // const blindCoefs = [];
+            // for(let i = 0; i < randomBlinding[name]; ++i) {
+            //     blindCoefs.push(ctx.challenges.b[bIndex++]);
+            // }
 
-            ctx[name].blindCoefficients(blindCoefs);
+            // ctx[name].blindCoefficients(blindCoefs);
 
-            let zkBuffer = new BigBuffer(sDomainExt);
-            let omega = Fr.one;
-            for(let i = 0; i < ctx.Next; ++i) {
-                let val = Fr.zero;
-                let w = Fr.one;
-                for(let j = 0; j < randomBlinding[name]; ++j) {
-                    val = Fr.add(val, Fr.mul(blindCoefs[j],w));
-                    w = Fr.mul(w, omega);
-                }
-                zkBuffer.set(val, i*n8r);
-                // Compute next omega
-                omega = Fr.mul(omega, Fr.w[zkey.power + (randomBlinding[name] - 1)]);
-            }
+            // let zkBuffer = new BigBuffer(sDomainExt);
+            // for(let i = 0; i < ctx.Next; ++i) {
+            //     let val = Fr.zero;
+            //     let w = Fr.one;
+            //     for(let j = 0; j < randomBlinding[name]; ++j) {
+            //         val = Fr.add(val, Fr.mul(blindCoefs[j],w));
+            //         w = Fr.mul(w, ctx.x_2ns.slice(i*n8r, (i+1)*n8r));
+            //     }
+            //     zkBuffer.set(val, i*n8r);
+            // }
 
-            setPolBuffer(ctx, fflonkInfo, fflonkInfo.cm_2ns_z[nCm], zkBuffer);
+            // setPolBuffer(ctx, fflonkInfo, fflonkInfo.cm_2ns_z[nCm], zkBuffer);
 
             nCm += 1;
         }    
@@ -509,17 +620,15 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
         ctx.challenges[4] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 
-        printPol(ctx.cm1_2ns_z, Fr);
-
-        await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, false, logger);
-        await callCalculateExps("step42ns", "2ns_z", pool, ctx, fflonkInfo, true, logger);
+        console.log("q_2ns");
+        await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, logger, true);
+//        await callCalculateExps("step42ns", "2ns_z", pool, ctx, fflonkInfo, logger);
+        printPol(ctx.q_2ns, Fr);
 
         ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, curve, logger);
-        ctx["Q"].divZh(ctx.N, (1<<ctx.extendBits));
-
-        // Add zk pol
-        const zkPol = await Polynomial.fromEvaluations(ctx.q_2ns_z, curve, logger);
-        ctx["Q"].add(zkPol);
+        printPol(ctx.Q.coef, Fr);
+        ctx["Q"].divZh(ctx.N, (1<<(ctx.extendBits+1)));
+        printPol(ctx["Q"].coef, Fr);
 
         const commits4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });
         for (let j = 0; j < commits4.length; ++j) {
@@ -527,22 +636,23 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
         }
     }
 
-    async function callCalculateExps(step, dom, pool, ctx, fflonkInfo, zk, logger) {
+    async function callCalculateExps(step, dom, pool, ctx, fflonkInfo, logger, zk) {
         if (parallelExec) {
             await calculateExpsParallel(pool, ctx, step, fflonkInfo, zk);
         } else {
-            calculateExps(ctx, fflonkInfo[step], dom, logger);
+            calculateExps(ctx, fflonkInfo[step], dom, logger, zk);
         }
     }
 }
 
 
-function calculateExps(ctx, code, dom, logger) {
+function calculateExps(ctx, code, dom, logger, zk) {
     ctx.tmp = new Array(code.tmpUsed);
 
     cFirst = new Function("ctx", "i", compileCode(ctx, code.first, dom));
 
-    const N = dom === "n" ? ctx.N : ctx.Next;
+    let N = dom === "n" ? ctx.N : ctx.Next;
+    if(zk) N = N * 2;
     const pCtx = ctxProxy(ctx);
 
     for (let i = 0; i < N; i++) {
@@ -913,12 +1023,14 @@ function getPol(ctx, fflonkInfo, idPol) {
     return res;
 }
 
-function getPolBuffer(ctx, fflonkInfo, idPol, options = {constants: false, coefs: false}) {
+function getPolBuffer(ctx, fflonkInfo, idPol, options = {constants: false, coefs: false, zk: false}) {
     const p = options.constants 
         ? {buffer: options.coefs ? ctx.const_coefs : ctx.const_n, deg: ctx.N, offset: idPol, size: fflonkInfo.nConstants} 
         : getPolRef(ctx, fflonkInfo, idPol, options.coefs);
-    const res = new BigBuffer(p.deg * ctx.Fr.n8);
-    for (let i=0; i<p.deg; i++) {
+    const zkFactor = options.zk ? 2 : 1;
+    const res = new BigBuffer(p.deg * zkFactor * ctx.Fr.n8);
+
+    for (let i=0; i<p.deg * zkFactor; i++) {
         res.set(p.buffer.slice((p.offset + i*p.size) * ctx.Fr.n8, (p.offset + i*p.size + 1) * ctx.Fr.n8), i*ctx.Fr.n8);
     }
     return res;
@@ -932,4 +1044,18 @@ function printPol(buffer, Fr) {
         console.log(i, Fr.toString(buffer.slice(i * Fr.n8, (i + 1) * Fr.n8)));
     }
     console.log("---------------------------");
+}
+
+function blindBuffer(buff, idx, idPol, nPols, blindingFactor, Fr) {
+    const offset = (idx * nPols + idPol) * Fr.n8;
+    const val = buff.slice(offset, offset + Fr.n8);
+
+    buff.set(Fr.add(val, blindingFactor), offset);
+}
+
+function blindBuffer2(buff, idx, blindingFactor, Fr) {
+    const offset = idx * Fr.n8;
+    const val = buff.slice(offset, offset + Fr.n8);
+
+    buff.set(Fr.add(val, blindingFactor), offset);
 }
