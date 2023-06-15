@@ -8,7 +8,7 @@ const { open } = require("shplonkjs");
 const { interpolate } = require("../../helpers/fft/fft_p.bn128");
 const { PILFFLONK_PROTOCOL_ID } = require("../zkey/zkey_constants");
 
-const parallelExec = false;
+const parallelExec = true;
 const useThreads = false;
 const maxNperThread = 1 << 18;
 const minNperThread = 1 << 12;
@@ -304,14 +304,17 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
             ctx[name].blindCoefficients(blindCoefs);
 
             let zkBuffer = new BigBuffer(sDomainExt);
+            let omega = Fr.one;
             for(let i = 0; i < ctx.Next; ++i) {
                 let val = Fr.zero;
                 let w = Fr.one;
                 for(let j = 0; j < randomBlinding[name]; ++j) {
                     val = Fr.add(val, Fr.mul(blindCoefs[j],w));
-                    w = Fr.mul(w, ctx.x_2ns.slice(i*n8r, (i+1)*n8r));
+                    w = Fr.mul(w, omega);
                 }
                 zkBuffer.set(val, i*n8r);
+                // Compute next omega
+                omega = Fr.mul(omega, Fr.w[zkey.power + (randomBlinding[name] - 1)]);
             }
 
             setPolBuffer(ctx, fflonkInfo, fflonkInfo.cm_2ns_z[nCm], zkBuffer);
@@ -358,7 +361,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
             return;
         }
 
-        await callCalculateExps("step2prev", "n", pool, ctx, fflonkInfo, logger);
+        await callCalculateExps("step2prev", "n", pool, ctx, fflonkInfo, false, logger);
 
         let nCm2 = nCm;
 
@@ -369,8 +372,10 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
             const tPol = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[puCtx.tExpId]);
 
             const [h1, h2] = calculateH1H2(Fr, fPol, tPol);
-            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], h1);
-            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], h2);
+            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm+1], h1);
+            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm+2], h2);
+
+            nCm += 2;
         }
 
         // Compute extended evals
@@ -417,7 +422,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
         const nPermutations = fflonkInfo.peCtx.length;
         const nConnections = fflonkInfo.ciCtx.length;
 
-        await callCalculateExps("step3prev", "n", pool, ctx, fflonkInfo, logger);
+        await callCalculateExps("step3prev", "n", pool, ctx, fflonkInfo, false, logger);
 
         let nCm3 = nCm;
 
@@ -429,7 +434,9 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
             const pDen = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[pu.denId]);
             const z = await calculateZ(Fr, pNum, pDen);
 
-            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], z);
+            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm], z);
+
+            nCm+=1;
         }
 
         for (let i = 0; i < nPermutations; i++) {
@@ -440,7 +447,8 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
             const pDen = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[pe.denId]);
             const z = await calculateZ(Fr, pNum, pDen);
 
-            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], z);
+            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm], z);
+            nCm+=1;
         }
 
         for (let i = 0; i < nConnections; i++) {
@@ -452,10 +460,11 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
             const pDen = getPol(ctx, fflonkInfo, fflonkInfo.exp2pol[ci.denId]);
             const z = await calculateZ(Fr, pNum, pDen);
 
-            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm++], z);
+            setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm], z);
+            nCm+=1;
         }
 
-        await callCalculateExps("step3", "n", pool, ctx, fflonkInfo, logger);
+        await callCalculateExps("step3", "n", pool, ctx, fflonkInfo, false, logger);
 
         await interpolate(ctx.cm3_n, fflonkInfo.mapSectionsN.cm3_n, ctx.nBits, ctx.cm3_coefs, ctx.cm3_2ns, ctx.nBitsExt, Fr, false);
 
@@ -502,14 +511,14 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
 
         printPol(ctx.cm1_2ns_z, Fr);
 
-        await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, logger);
-        await callCalculateExps("step42ns", "2ns_z", pool, ctx, fflonkInfo, logger);
+        await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, false, logger);
+        await callCalculateExps("step42ns", "2ns_z", pool, ctx, fflonkInfo, true, logger);
 
         ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, curve, logger);
         ctx["Q"].divZh(ctx.N, (1<<ctx.extendBits));
 
         // Add zk pol
-        const zkPol = new Polynomial(ctx.q_2ns_z, curve, logger);
+        const zkPol = await Polynomial.fromEvaluations(ctx.q_2ns_z, curve, logger);
         ctx["Q"].add(zkPol);
 
         const commits4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });
@@ -518,9 +527,9 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
         }
     }
 
-    async function callCalculateExps(step, dom, pool, ctx, fflonkInfo, logger) {
+    async function callCalculateExps(step, dom, pool, ctx, fflonkInfo, zk, logger) {
         if (parallelExec) {
-            await calculateExpsParallel(pool, ctx, step, fflonkInfo);
+            await calculateExpsParallel(pool, ctx, step, fflonkInfo, zk);
         } else {
             calculateExps(ctx, fflonkInfo[step], dom, logger);
         }
@@ -590,9 +599,10 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, zk) {
             execInfo.inputSections.push({ name: "cm1_2ns_z" });
             execInfo.inputSections.push({ name: "cm2_2ns_z" });
             execInfo.inputSections.push({ name: "cm3_2ns_z" });
-            execInfo.inputSections.push({ name: "const_2ns_z" });
-            execInfo.inputSections.push({ name: "x_2ns_z" });
+            execInfo.inputSections.push({ name: "const_2ns" });
+            execInfo.inputSections.push({ name: "x_2ns" });
             execInfo.outputSections.push({ name: "q_2ns_z" });
+            dom = "2ns_z";
         } else {
             execInfo.inputSections.push({ name: "cm1_2ns" });
             execInfo.inputSections.push({ name: "cm2_2ns" });
@@ -600,6 +610,8 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, zk) {
             execInfo.inputSections.push({ name: "const_2ns" });
             execInfo.inputSections.push({ name: "x_2ns" });
             execInfo.outputSections.push({ name: "q_2ns" });
+            dom = "2ns";
+
         }
     } else {
         throw new Error("Exec type not defined" + execPart);
