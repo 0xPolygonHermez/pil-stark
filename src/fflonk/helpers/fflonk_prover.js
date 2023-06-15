@@ -8,7 +8,7 @@ const { open } = require("shplonkjs");
 const { interpolate, ifft, fft } = require("../../helpers/fft/fft_p.bn128");
 const { PILFFLONK_PROTOCOL_ID } = require("../zkey/zkey_constants");
 
-const parallelExec = true;
+const parallelExec = false;
 const useThreads = false;
 const maxNperThread = 1 << 18;
 const minNperThread = 1 << 12;
@@ -511,6 +511,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
         if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 
         console.log("q_2ns");
+        printPol(ctx.q_2ns, Fr);
         await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, logger, true);
 //        await callCalculateExps("step42ns", "2ns_z", pool, ctx, fflonkInfo, logger);
         printPol(ctx.q_2ns, Fr);
