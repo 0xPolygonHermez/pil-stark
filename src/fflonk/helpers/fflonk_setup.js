@@ -188,7 +188,10 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     for(let j = 0; j < commits.length; ++j) {
         zkey[`${commits[j].index}`] = commits[j].commit;
     }
-     
+
+    zkey.polsOpenings = polsOpenings;
+    let maxCmPolsOpenings = 0;
+
     const polsMap = {cm: {}, const: {}};
     for(const polRef in pil.references) {
         if(pil.references[polRef].type === "constP") {
@@ -197,11 +200,19 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
 
         if(pil.references[polRef].type === "cmP") {
             polsMap.cm[pil.references[polRef].id] = polRef;
+
+            // Compute max openings on committed polynomials to set a common bound on adding
+            maxCmPolsOpenings = Math.max(maxCmPolsOpenings, polsOpenings[polRef]);
         }
     }
 
-    zkey.polsOpenings = polsOpenings;
+    
     zkey.polsMap = polsMap;
+
+    // Precompute ZK data
+    const domainSizeZK = domainSize + maxCmPolsOpenings;
+    zkey.powerZK = log2(domainSizeZK - 1) + 1;
+
     zkey.nPublics = fflonkInfo.nPublics;
     
     if(logger) logger.info("Fflonk setup finished");
