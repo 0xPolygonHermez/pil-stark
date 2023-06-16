@@ -86,13 +86,13 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
     ctx.x_n = new BigBuffer(sDomain); // Omegas de field extension
 
     // Reserve big buffers for the polynomial coefficients
-    ctx.const_coefs = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
+    ctx.const_coefs = new BigBuffer(fflonkInfo.nConstants * sDomain * factorZK); // Constant polynomials
     ctx.cm1_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomain * factorZK);
     ctx.cm2_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomain);
     ctx.cm3_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomain);
 
     // Reserve big buffers for the polynomial evaluations in the extended
-    ctx.const_2ns = new BigBuffer(fflonkInfo.nConstants * sDomainExt);
+    ctx.const_2ns = new BigBuffer(fflonkInfo.nConstants * sDomainExt * factorZK);
     ctx.cm1_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainExt * factorZK);
     ctx.cm2_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainExt);
     ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainExt);
@@ -211,7 +211,6 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
     async function round0() {
    
         for (let i = 0; i < cnstPols.$$nPols; i++) {
-
             const name = cnstPols.$$defArray[i].name;
             if (cnstPols.$$defArray[i].idx >= 0) name += cnstPols.$$defArray[i].idx;
 
@@ -219,21 +218,20 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
 
             const cnstPolBuffer = cnstPols.$$array[i];
             for (let j = 0; j < cnstPolBuffer.length; j++) {
-                ctx.const_n.set(Fr.e(cnstPolBuffer[j]), (i + fflonkInfo.nConstants * j) * n8r);
+                ctx.const_n.set(Fr.e(cnstPolBuffer[j]), (i + j * fflonkInfo.nConstants) * n8r);
             }
         }
 
         for (let i = 0; i < cmPols.$$nPols; i++) {
             let name = cmPols.$$defArray[i].name;
-            if (cmPols.$$defArray[i].idx >= 0)
-                name += cmPols.$$defArray[i].idx;
+            if (cmPols.$$defArray[i].idx >= 0) name += cmPols.$$defArray[i].idx;
 
             if (logger) logger.debug(`··· Preparing '${name}' polynomial`);
 
             // Compute polynomial evaluations
             const cmPolBuffer = cmPols.$$array[i];
             for (let j = 0; j < cmPolBuffer.length; j++) {
-                ctx.cm1_n.set(Fr.e(cmPolBuffer[j]), (i + j*fflonkInfo.mapSectionsN.cm1_n)*n8r);
+                ctx.cm1_n.set(Fr.e(cmPolBuffer[j]), (i + j * fflonkInfo.mapSectionsN.cm1_n) * n8r);
             }
         }   
         
@@ -259,16 +257,16 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
         
         //Compute extended evals
         if(fflonkInfo.nConstants > 0) {
-            await interpolate(ctx.const_n, fflonkInfo.nConstants, ctx.nBits, ctx.const_coefs, ctx.const_2ns, ctx.nBitsExt, Fr, false);
-            for (let i = 0; i < cnstPols.$$nPols; i++) {
+            await interpolate(ctx.const_n, fflonkInfo.nConstants, ctx.nBits, ctx.const_coefs, ctx.const_2ns, ctx.nBits + extendBitsTotal, Fr, false);
 
+            for (let i = 0; i < cnstPols.$$nPols; i++) {
                 const name = cnstPols.$$defArray[i].name;
                 if (cnstPols.$$defArray[i].idx >= 0) name += cnstPols.$$defArray[i].idx;
     
                 if (logger) logger.debug(`··· Preparing ${name} constant polynomial`);
                 
                  // Get coefs
-                const coefs = getPolBuffer(ctx, fflonkInfo, i, {constants: true, coefs: true});
+                const coefs = getPolBuffer(ctx, fflonkInfo, i, {constants: true, coefs: true, factorZK: factorZK});
             
                 // Define polynomial
                 ctx[name] = new Polynomial(coefs, curve, logger);
