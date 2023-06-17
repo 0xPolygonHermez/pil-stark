@@ -80,7 +80,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
     ctx.const_n = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
     ctx.cm1_n = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomain);
     ctx.cm2_n = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomain);
-    ctx.cm3_n = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomain * factorZK);
+    ctx.cm3_n = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomain);
     ctx.cm4_n = new BigBuffer(fflonkInfo.mapSectionsN.cm4_n * sDomain);
     ctx.tmpExp_n = new BigBuffer(fflonkInfo.mapSectionsN.tmpExp_n * sDomain); // Expression polynomials
     ctx.x_n = new BigBuffer(sDomain); // Omegas de field extension
@@ -235,8 +235,8 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
             }
         }   
         
-        printPol(ctx.const_n, Fr);
-        printPol(ctx.cm1_n, Fr);
+        // printPol(ctx.const_n, Fr);
+        // printPol(ctx.cm1_n, Fr);
 
         ctx.publics = [];
         for (let i = 0; i < fflonkInfo.publics.length; i++) {
@@ -294,12 +294,18 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
             let name = cmPols.$$defArray[i].name;
             if (cmPols.$$defArray[i].idx >= 0) name += cmPols.$$defArray[i].idx;
 
-            blindPolynomial(ctx.cm1_coefs, name, i);
+            blindPolynomial(ctx.cm1_coefs, domainSize, i, cmPols.$$nPols, zkey.polsOpenings[name], Fr);
         }
         
         await fft(ctx.cm1_coefs, cmPols.$$nPols, ctx.nBits + extendBitsTotal, ctx.cm1_2ns, Fr);
 
-        for (let i = 0; i < cmPols.$$nPols; i++) {
+        // TODO temp
+        // let buffer = new BigBuffer(ctx.cm1_n.byteLength * 2);
+        // await fft(ctx.cm1_coefs, cmPols.$$nPols, ctx.nBits + 1, buffer, Fr);
+        // ctx.cm1_n = buffer;
+
+
+    for (let i = 0; i < cmPols.$$nPols; i++) {
             let name = cmPols.$$defArray[i].name;
             if (cmPols.$$defArray[i].idx >= 0) name += cmPols.$$defArray[i].idx;
 
@@ -318,25 +324,6 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
         for (let j = 0; j < commits1.length; ++j) {
             committedPols[`${commits1[j].index}`] = { commit: commits1[j].commit, pol: commits1[j].pol };
         }
-
-        function blindPolynomial(buff, polName, idPol) {
-            const nPols = cmPols.$$nPols;
-            const nPolOpenings = zkey.polsOpenings[polName];
-
-            for(let i = 0; i < nPolOpenings; i++) {
-                const b = ctx.challenges.b[bIndex++];
-                blindBuffer(buff, i, idPol, nPols, Fr.neg(b), Fr);
-                blindBuffer(buff, domainSize + i, idPol, nPols, b, Fr);
-            }        
-        
-            function blindBuffer(buff, idx, idPol, nPols, blindingFactor, Fr) {
-                const offset = (idx * nPols + idPol) * Fr.n8;
-                const val = buff.slice(offset, offset + Fr.n8);
-        
-                buff.set(Fr.add(val, blindingFactor), offset);
-            }
-        }
-        
     }
 
     async function stage2() {
@@ -475,15 +462,19 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
             nCm+=1;
         }
 
-        await callCalculateExps("step3", "n", pool, ctx, fflonkInfo,  { factorZK, logger });
+        printPol(ctx.cm1_n, Fr);
+        await callCalculateExps("step3", "n", pool, ctx, fflonkInfo,  { logger });
+        printPol(ctx.cm3_n, Fr);
 
-        await interpolate(ctx.cm3_n, fflonkInfo.mapSectionsN.cm3_n, ctx.nBits, ctx.cm3_coefs, ctx.cm3_2ns, ctx.nBits + extendBitsTotal, Fr, false);
-// printPol(ctx.cm3_n, Fr);
+        await ifft(ctx.cm3_n, 1, ctx.nBits, ctx.cm3_coefs, Fr);
 
-// printPol(ctx.cm3_coefs, Fr);
+        // TODO parametrize polynomials
+        for (let i = 0; i < fflonkInfo.imExpsList.length; i++) {
+            blindPolynomial(ctx.cm3_coefs, domainSize, i, fflonkInfo.imExpsList.length, 2/*zkey.polsOpenings["Simple.a2"]*/, Fr);
+        }
+        
+        await fft(ctx.cm3_coefs, 1, ctx.nBits + extendBitsTotal, ctx.cm3_2ns, Fr);
 
-// printPol(ctx.cm3_2ns, Fr);
-// throw new Error("stop");
         for (let i = 0; i < nPlookups; i++) {
             // Compute polynomial coefficients
             const coefs = getPolBuffer(ctx, fflonkInfo, fflonkInfo.cm_n[nCm3++], {coefs:true});
@@ -550,11 +541,13 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
 
 
 function calculateExps(ctx, code, dom, options = { factorZK: 1}) {
+    const factorZK = options.factorZK || 1;
+
     ctx.tmp = new Array(code.tmpUsed);
 
-    cFirst = new Function("ctx", "i", compileCode(ctx, code.first, dom));
+    cFirst = new Function("ctx", "i", compileCode(ctx, code.first, dom, false, factorZK));
 
-    const N = (dom === "n" ? ctx.N : ctx.Next) * options.factorZK;
+    const N = (dom === "n" ? ctx.N : ctx.Next) * factorZK;
 
     const pCtx = ctxProxy(ctx);
 
@@ -692,11 +685,12 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo) {
 
 }
 
-function compileCode(ctx, code, dom, ret) {
+function compileCode(ctx, code, dom, ret, factorZK) {
     const body = [];
 
-    const Next = dom === "n" ? 1 : (1 << ctx.extendBits);
-    const N = dom === "n" ? ctx.N : ctx.Next;
+    const Next = dom === "n" ? 1 : (1 << ctx.extendBits) * factorZK;
+    const N = (dom === "n" ? ctx.N : ctx.Next) * factorZK;
+
 
     for (let j=0;j<code.length; j++) {
         const src = [];
@@ -817,7 +811,7 @@ function compileCode(ctx, code, dom, ret) {
         if(setValue) {
             return `ctx.${p.section}.set(${setValue},(${offset} + (${index}*${size}))*${ctx.Fr.n8})`;
         } else {
-            return `ctx.${p.section}.slice((${offset} + (${index}*${size}))*${ctx.Fr.n8},(${offset} + ${index}*${size} + 1)*${ctx.Fr.n8})`;
+            return `ctx.${p.section}.slice((${offset} + ${index}*${size})*${ctx.Fr.n8},(${offset} + ${index}*${size} + 1)*${ctx.Fr.n8})`;
         }
         
     }
@@ -953,4 +947,19 @@ function printPol(buffer, Fr) {
         console.log(i, Fr.toString(buffer.slice(i * Fr.n8, (i + 1) * Fr.n8)));
     }
     console.log("---------------------------");
+}
+
+function blindPolynomial(buff, domainSize, idPol, nPols, nPolOpenings, Fr) {
+    for(let i = 0; i < nPolOpenings; i++) {
+        const b = Fr.random(); //ctx.challenges.b[bIndex++];
+        blindBuffer(buff, i, idPol, nPols, Fr.neg(b), Fr);
+        blindBuffer(buff, domainSize + i, idPol, nPols, b, Fr);
+    }        
+
+    function blindBuffer(buff, idx, idPol, nPols, blindingFactor, Fr) {
+        const offset = (idx * nPols + idPol) * Fr.n8;
+        const val = buff.slice(offset, offset + Fr.n8);
+
+        buff.set(Fr.add(val, blindingFactor), offset);
+    }
 }
