@@ -130,6 +130,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
 
     polsXi.push({name: "Q", stage: 4, degree: (fflonkInfo.qDeg + 1) * domainSize});
 
+    console.log("QDEG", (fflonkInfo.qDeg + 1) * domainSize);
     const polsWXi = [];
     
     const primePols = fflonkInfo.evMap.filter(ev => ev.prime);
@@ -146,13 +147,11 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
         ++polsOpenings[name];
     }
     
-    // TODO: ZERO KNOWLEDGE
     polsXi.forEach(p => { if(p.name !== "Q") {p.degree += polsOpenings[p.name]} });
 
     const polDefs = [polsXi];
 
     if(polsWXi.length > 0) {
-        // TODO: ZERO KNOWLEDGE
         polsWXi.forEach(p => p.degree += polsOpenings[p.name]);
         polDefs.push(polsWXi);
     }
@@ -165,6 +164,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     }
 
     const {zkey, PTau, curve} = await setup(config, ptauFile, logger);
+
 
     const ctx = {};
     for (let i = 0; i < cnstPols.$$nPols; i++) {

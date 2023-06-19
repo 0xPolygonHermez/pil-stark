@@ -4,7 +4,7 @@
   "description": "Build a stark from a PIL",
   "main": "index.js",
   "scripts": {
-    "test": "npm run test:circuits && npm run test:helpers && npm run test:stark",
+    "test": "npm run test:circuits && npm run test:helpers && npm run test:stark && npm run test:fflonk",
     "test:circuits": "mocha test/circuits/**/*.test.js",
     "test:circuits:bn128": "mocha test/circuits/bn128/**/*.test.js",
     "test:circuits:bn128custom": "mocha test/circuits/bn128.custom/**/*.test.js",

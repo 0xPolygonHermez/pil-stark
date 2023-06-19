@@ -121,8 +121,6 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
    
     const Q = curve.Fr.div(execCode, ctx.Z);
 
-    console.log("Q", curve.Fr.toString(Q));
-    console.log("xiSeed", curve.Fr.toString(xiSeed));
     if(!curve.Fr.eq(Q, proof.evaluations["Q"])) {
         console.log("Verify evaluations failed");
         return false;

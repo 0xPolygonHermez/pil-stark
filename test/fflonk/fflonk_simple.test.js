@@ -24,7 +24,7 @@ describe("simple sm", async function () {
     it("Simple1", async () => {
         await runTest("simple1");
     });
-    it.only("Simple2", async () => {
+    it("Simple2", async () => {
         await runTest("simple2");
     });
     it("Simple2p", async () => {

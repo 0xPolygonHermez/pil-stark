@@ -93,6 +93,41 @@ jobs:
       - name: Stark prover tests
         run: npm run test:stark
 
+  fflonk-tests:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.17.0'
+          check-latest: true
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fflonk prover tests
+        run: npm run test:fflonk
+
+  fflonk-sc-tests:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.17.0'
+          check-latest: true
+          cache: "npm"
+
+      - name: Install dependencies
+        run: 
+          cd smart_contract_tests
+          npm ci
+          cd ..
+
+      - name: Fflonk prover tests
+        run: npm run test:fflonk:sc
+
   c15-test:
     runs-on: ubuntu-20.04
     steps:
