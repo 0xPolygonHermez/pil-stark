@@ -17,7 +17,7 @@ const {starkgen_execute} = require("./stark_gen_worker");
 const {BigBuffer} = require("pilcom");
 
 const parallelExec = true;
-const useThreads = false;
+const useThreads = true;
 const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
 

@@ -160,7 +160,8 @@ describe("test fft", async function () {
 
             console.log("Legacy interpolate");
             for (let i = 0; i < nPols; i++) {
-                evalsA[i] = await extendPolBuffer(Fr, coefsA[i], extBits, true);
+                const evalsABuffer = new BigBuffer(coefsA[i].byteLength << extBits);
+                evalsA[i] = await extendPolBuffer(Fr, coefsA[i], evalsABuffer, true);
             }
 
             console.log("Interpolate using a row major big array");
@@ -190,7 +191,8 @@ describe("test fft", async function () {
 
             console.log("Legacy interpolate");
             for (let i = 0; i < nPols; i++) {
-                evalsA[i] = await extendPolBuffer(Fr, coefsA[i], extBits, false);
+                const evalsABuffer = new BigBuffer(coefsA[i].byteLength << extBits);
+                evalsA[i] = await extendPolBuffer(Fr, coefsA[i], evalsABuffer, false);
             }
 
             console.log("Interpolate using a row major big array");

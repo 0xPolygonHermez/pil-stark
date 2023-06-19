@@ -1,5 +1,3 @@
-const { BigBuffer } = require("ffjavascript");
-
 module.exports.polMulAxi = function polMulAxi(F, p, init, acc) {
     let r = init;
     for (let i=0; i<p.length; i++) {
@@ -41,17 +39,14 @@ module.exports.extendPol = function extendPol(F, p, extendBits, shift = true) {
     return res;
 }
 
-module.exports.extendPolBuffer = async function extendPol(Fr, buffer, extendBits, shift = true) {
-    extendBits = extendBits || 1;
-    let res = new BigBuffer(buffer.byteLength << extendBits);
-
-    res.set(await Fr.ifft(buffer), 0);
+module.exports.extendPolBuffer = async function extendPol(Fr, buffSrc, buffDst, shift = true) {
+    buffDst.set(await Fr.ifft(buffSrc), 0);
     if (shift) {
-        module.exports.polMulAxiBuffer(Fr, res, Fr.one, Fr.shift);
+        module.exports.polMulAxiBuffer(Fr, buffDst, Fr.one, Fr.shift);
     }
-    res = await Fr.fft(res);
+    buffDst = await Fr.fft(buffDst);
 
-    return res;
+    return buffDst;
 }
 
 module.exports.buildZhInv = function buildZhInv(F, Nbits, extendBits, _offset) {

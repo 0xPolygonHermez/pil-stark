@@ -198,7 +198,7 @@ async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsEx
 
     let bIn, bOut;
 
-    const pool = workerpool.pool(__dirname + '/fft_worker.js');
+    const pool = workerpool.pool(__dirname + '/fft_worker.bn128.js');
 
     const idealNBlocks = pool.maxWorkers * blocksPerThread;
     let nTrasposes = 0;
@@ -266,11 +266,8 @@ async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsEx
     }
 
     if(shift) {
-        const bCoefs = new BigBuffer(bIn.byteLength);
-        bCoefs.set(bIn);
-        await interpolatePrepare(pool, bCoefs, nPols, nBits, Fr, false);
-
-        buffDstCoefs.set(bCoefs.slice(0, buffDstCoefs.byteLength));
+        buffDstCoefs.set(bIn.slice(0, buffDstCoefs.byteLength));
+        await interpolatePrepare(pool, buffDstCoefs, nPols, nBits, Fr, false);
 
         console.log("Interpolating prepare....")
         await interpolatePrepare(pool, bIn, nPols, nBits, Fr, true);
