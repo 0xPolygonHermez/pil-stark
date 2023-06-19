@@ -611,6 +611,14 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, options = 
             const sNext = si.width > 0 ? ctx[si.name].slice( (((i+curN)%n) *si.width)*ctx.Fr.n8, (((i+curN)%n) *si.width + si.width*next)*ctx.Fr.n8) : ctx[si.name];
             ctxIn[si.name].set(sNext, curN*si.width*ctx.Fr.n8);
         }
+
+        for (let s=0; s<execInfo.outputSections.length; s++) {
+            const si = execInfo.outputSections[s];
+            if (typeof ctxIn[si.name] == "undefined") {
+                ctxIn[si.name] = new BigBuffer(si.width*(n+next)*ctx.Fr.n8);
+            }
+        }
+
         if (useThreads) {
             promises.push(pool.exec("fflonkgen_execute", [ctxIn, cFirst, curN, execInfo, execPart, i ,n]));
         } else {
