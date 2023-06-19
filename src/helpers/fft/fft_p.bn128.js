@@ -187,7 +187,10 @@ async function ifft(buffSrc, nPols, nBits, buffDst, Fr) {
     await _fft(buffSrc, nPols, nBits, buffDst, true, Fr)
 }
 
-async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsExt, Fr, shift = true) {
+async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsExt, Fr, options={shift: true, zk: false, polsOpenings: {}, polsNamesMap: {}}) {
+    const shift = options.shift;
+    const zk = options.zk;
+
     const n = 1 << nBits;
     const nExt = 1 << nBitsExt;
     const tmpBuff = new BigBuffer(nExt * nPols * Fr.n8);
@@ -262,10 +265,32 @@ async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsEx
         }
     }
 
-    console.log("Interpolating prepare....")
-    await interpolatePrepare(pool, bIn, nPols, nBits, Fr, shift);
+    if(shift) {
+        const bCoefs = new BigBuffer(bIn.byteLength);
+        bCoefs.set(bIn);
+        await interpolatePrepare(pool, bCoefs, nPols, nBits, Fr, false);
 
-    buffDstCoefs.set(bIn.slice(0, (1<<nBits) * nPols * Fr.n8))
+        buffDstCoefs.set(bCoefs.slice(0, buffDstCoefs.byteLength));
+
+        console.log("Interpolating prepare....")
+        await interpolatePrepare(pool, bIn, nPols, nBits, Fr, true);
+    } else {
+        console.log("Interpolating prepare....")
+        await interpolatePrepare(pool, bIn, nPols, nBits, Fr, shift);
+    
+        if(zk) {
+            const polsOpenings = options.polsOpenings;
+            const polsNamesMap = options.polsNamesMap;
+            const blindPolynomial = options.blindPolynomial;
+
+            if(!Object.keys(polsOpenings).length || !Object.keys(polsNamesMap).length) throw new Error("Missing zk information");
+            for (let i = 0; i < nPols; i++) {
+                blindPolynomial(bIn, n, i, nPols, polsOpenings[polsNamesMap[i]], Fr);
+            }
+        }    
+
+        buffDstCoefs.set(bIn.slice(0, buffDstCoefs.byteLength));
+    }    
 
     console.log("Bit reverse....")
     await bitReverse(bOut, bIn, nPols, nBitsExt, Fr);

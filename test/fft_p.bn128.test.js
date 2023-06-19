@@ -164,7 +164,7 @@ describe("test fft", async function () {
             }
 
             console.log("Interpolate using a row major big array");
-            await interpolate(coefsB, nPols, nBits, coefs, evalsB, nBits + extBits, Fr, true);
+            await interpolate(coefsB, nPols, nBits, coefs, evalsB, nBits + extBits, Fr, {shift: true});
 
             console.log("Check equality of interpolations");
             checkEquivalence(evalsB, evalsA);
@@ -194,7 +194,7 @@ describe("test fft", async function () {
             }
 
             console.log("Interpolate using a row major big array");
-            await interpolate(coefsB, nPols, nBits, coefs, evalsB, nBits + extBits, Fr, false);
+            await interpolate(coefsB, nPols, nBits, coefs, evalsB, nBits + extBits, Fr, {shift: false});
 
             console.log("Check equality of interpolations");
             checkEquivalence(evalsB, evalsA);

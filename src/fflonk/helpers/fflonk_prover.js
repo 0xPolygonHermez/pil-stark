@@ -51,11 +51,10 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
     const sDomainExt = domainSizeExt * n8r;
 
     // ZK data
-    const powerZK = zkey.powerZK;
-    const domainSizeZK = (1 << powerZK);
-    const extendBitsZK = powerZK - power;
+    const extendBitsZK = zkey.powerZK - power;
     const factorZK = (1 << extendBitsZK);
     const extendBitsTotal = ctx.extendBits + extendBitsZK;
+    const nBitsExtZK = ctx.nBits + extendBitsTotal;
     
     if (logger) {
         logger.debug("-----------------------------");
@@ -109,7 +108,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
         const i_n8r = i * n8r;
 
         ctx.x_2ns.set(w, i_n8r);
-        w = Fr.mul(w, Fr.w[power + extendBitsTotal]);
+        w = Fr.mul(w, Fr.w[nBitsExtZK]);
     }
        
 
@@ -225,7 +224,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
         
         //Compute extended evals
         if(fflonkInfo.nConstants > 0) {
-            await interpolate(ctx.const_n, fflonkInfo.nConstants, ctx.nBits, ctx.const_coefs, ctx.const_2ns, ctx.nBits + extendBitsTotal, Fr, false);
+            await extend(ctx.const_n, ctx.const_2ns, ctx.const_coefs, ctx.nBits, nBitsExtZK, fflonkInfo.nConstants, Fr);
 
             for (let i = 0; i < cnstPols.$$nPols; i++) {
                 const name = cnstPols.$$defArray[i].name;
@@ -253,17 +252,16 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
             return;
         }
 
-        await ifft(ctx.cm1_n, cmPols.$$nPols, ctx.nBits, ctx.cm1_coefs, Fr);
-
-        for (let i = 0; i < cmPols.$$nPols; i++) {
+        const polsNamesMap = {};
+        
+        for(let i = 0; i < fflonkInfo.mapSectionsN.cm1_n; ++i) {
             let name = cmPols.$$defArray[i].name;
             if (cmPols.$$defArray[i].idx >= 0) name += cmPols.$$defArray[i].idx;
 
-            blindPolynomial(ctx.cm1_coefs, domainSize, i, cmPols.$$nPols, zkey.polsOpenings[name], Fr);
+            polsNamesMap[i] = name;
         }
         
-        await fft(ctx.cm1_coefs, cmPols.$$nPols, ctx.nBits + extendBitsTotal, ctx.cm1_2ns, Fr);
-
+        await extend(ctx.cm1_n, ctx.cm1_2ns, ctx.cm1_coefs, ctx.nBits, nBitsExtZK, fflonkInfo.mapSectionsN.cm1_n, Fr, {zk: true, polsNamesMap, polsOpenings: zkey.polsOpenings});
 
         for (let i = 0; i < cmPols.$$nPols; i++) {
             let name = cmPols.$$defArray[i].name;
@@ -338,13 +336,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
             polsNamesMap[2*i + 1] = `Plookup.H2_${i}`;
         }
 
-        await ifft(ctx.cm2_n, fflonkInfo.mapSectionsN.cm2_n, ctx.nBits, ctx.cm2_coefs, Fr);
-
-        for (let i = 0; i < fflonkInfo.mapSectionsN.cm2_n; i++) {
-            blindPolynomial(ctx.cm2_coefs, domainSize, i, fflonkInfo.mapSectionsN.cm2_n, zkey.polsOpenings[polsNamesMap[i]], Fr);
-        }
-        
-        await fft(ctx.cm2_coefs, fflonkInfo.mapSectionsN.cm2_n, ctx.nBits + extendBitsTotal, ctx.cm2_2ns, Fr);
+        await extend(ctx.cm2_n, ctx.cm2_2ns, ctx.cm2_coefs, ctx.nBits, nBitsExtZK, fflonkInfo.mapSectionsN.cm2_n, Fr, {zk: true, polsNamesMap, polsOpenings: zkey.polsOpenings});
 
         for (let i = 0; i < fflonkInfo.puCtx.length; i++) {
             // Compute polynomial coefficients
@@ -439,13 +431,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
 
         await callCalculateExps("step3", "n", pool, ctx, fflonkInfo,  { logger });
 
-        await ifft(ctx.cm3_n, fflonkInfo.mapSectionsN.cm3_n, ctx.nBits, ctx.cm3_coefs, Fr);
-
-        for (let i = 0; i < fflonkInfo.mapSectionsN.cm3_n; i++) {
-            blindPolynomial(ctx.cm3_coefs, domainSize, i, fflonkInfo.mapSectionsN.cm3_n, zkey.polsOpenings[polsNamesMap[i]], Fr);
-        }
-        
-        await fft(ctx.cm3_coefs, fflonkInfo.mapSectionsN.cm3_n, ctx.nBits + extendBitsTotal, ctx.cm3_2ns, Fr);
+        await extend(ctx.cm3_n, ctx.cm3_2ns, ctx.cm3_coefs, ctx.nBits, nBitsExtZK, fflonkInfo.mapSectionsN.cm3_n, Fr, {zk: true, polsNamesMap, polsOpenings: zkey.polsOpenings});
 
         for (let i = 0; i < nPlookups; i++) {
             // Compute polynomial coefficients
@@ -824,26 +810,11 @@ function ctxProxy(ctx) {
     }
 }
 
-async function extend(ctx, buffFrom, idPol, sDomainNext, constants) {
-    const Fr = ctx.Fr;
-    const coefficientsN = new BigBuffer(sDomainNext);
-    coefficientsN.set(buffFrom, 0);
-    const extendedEvals = await Fr.fft(coefficientsN);
-    setPolBuffer(ctx, ctx.fflonkInfo, idPol, extendedEvals, constants);
-}
 
 function setPol(ctx, fflonkInfo, idPol, pol) {
     const p = getPolRef(ctx, fflonkInfo, idPol);
     for (let i=0; i<p.deg; i++) {
         p.buffer.set(pol[i], (p.offset + i*p.size) * ctx.Fr.n8);
-    }
-}
-
-
-function setPolBuffer(ctx, fflonkInfo, idPol, pol, constants) {
-    const p = constants ? {buffer: ctx.const_2ns, deg: ctx.Next, offset: idPol, size: fflonkInfo.nConstants} : getPolRef(ctx, fflonkInfo, idPol);
-    for (let i=0; i<p.deg; i++) {
-        p.buffer.set(pol.slice(i*ctx.Fr.n8, (i + 1)*ctx.Fr.n8), (p.offset + i*p.size) * ctx.Fr.n8);
     }
 }
 
@@ -887,6 +858,25 @@ function getPolBuffer(ctx, fflonkInfo, idPol, options = { constants: false, coef
     }
     return res;
 }
+
+async function extend(buffFrom, buffTo, buffCoefs, nBits, nBitsExt, nPols, Fr, options = {zk: false, polsNamesMap: {}, polsOpenings:{}}) {
+    const zk = options.zk;
+    
+    await ifft(buffFrom, nPols, nBits, buffCoefs, Fr);
+
+    if(zk) {
+        const polsOpenings = options.polsOpenings;
+        const polsNamesMap = options.polsNamesMap;
+        for (let i = 0; i < nPols; i++) {
+            blindPolynomial(buffCoefs, 1<<nBits , i, nPols, polsOpenings[polsNamesMap[i]], Fr);
+        }
+    }
+    
+    await fft(buffCoefs, nPols, nBitsExt, buffTo, Fr);
+
+    // await interpolate(buffFrom, nPols, nBits, buffCoefs, buffTo, nBitsExt, Fr, {shift: false, blindPolynomial, options});
+}
+
 
 function printPol(buffer, Fr) {
     const len = buffer.byteLength / Fr.n8;
