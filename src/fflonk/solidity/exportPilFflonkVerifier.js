@@ -1,7 +1,7 @@
 const ejs = require("ejs");
 const path = require("path");
 const fs = require("fs");
-const { getOrderedEvals, lcm, exportSolidityShPlonkVerifier } = require("shplonkjs");
+const { getOrderedEvals, exportSolidityShPlonkVerifier } = require("shplonkjs");
 const {getCurveFromName} = require("ffjavascript");
 const {Keccak} = require("sha3");
 const { fromObjectVk } = require("../helpers/helpers");
@@ -38,10 +38,6 @@ module.exports = async function exportPilFflonkVerifier(vk, fflonkInfo, options 
 
 
     orderedEvals = orderedEvals.map(e => e.name.replace(".", "_"));
-
-    const powerW = lcm(Object.keys(vk).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
-
-    vk.powerW = powerW;
 
     const evNames = {};
     for(let i = 0; i < fflonkInfo.evIdx.cm.length; ++i) {

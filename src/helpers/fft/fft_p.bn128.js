@@ -187,10 +187,7 @@ async function ifft(buffSrc, nPols, nBits, buffDst, Fr) {
     await _fft(buffSrc, nPols, nBits, buffDst, true, Fr)
 }
 
-async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsExt, Fr, options={shift: true, zk: false, polsOpenings: {}, polsNamesMap: {}}) {
-    const shift = options.shift;
-    const zk = options.zk;
-
+async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsExt, Fr, shift = true) {
     const n = 1 << nBits;
     const nExt = 1 << nBitsExt;
     const tmpBuff = new BigBuffer(nExt * nPols * Fr.n8);
@@ -274,18 +271,6 @@ async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsEx
     } else {
         console.log("Interpolating prepare....")
         await interpolatePrepare(pool, bIn, nPols, nBits, Fr, shift);
-    
-        if(zk) {
-            const polsOpenings = options.polsOpenings;
-            const polsNamesMap = options.polsNamesMap;
-            const blindPolynomial = options.blindPolynomial;
-
-            if(!Object.keys(polsOpenings).length || !Object.keys(polsNamesMap).length) throw new Error("Missing zk information");
-            for (let i = 0; i < nPols; i++) {
-                blindPolynomial(bIn, n, i, nPols, polsOpenings[polsNamesMap[i]], Fr);
-            }
-        }    
-
         buffDstCoefs.set(bIn.slice(0, buffDstCoefs.byteLength));
     }    
 

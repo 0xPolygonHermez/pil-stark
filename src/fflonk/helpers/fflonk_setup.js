@@ -1,6 +1,6 @@
 const {BigBuffer} = require("ffjavascript");
 const {log2} = require("pilcom/src/utils");
-const {setup, Polynomial, commit} = require("shplonkjs");
+const {setup, Polynomial, commit, lcm} = require("shplonkjs");
 const { writePilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 
 module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFile, fflonkInfo, options) {
@@ -13,6 +13,13 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     const cnstPolsDefs = [];
     const cmPolsDefs = [];
     let maxPilPolDeg = 0;
+
+    let polsNames = {
+        0: [],
+        1: [],
+        2: [],
+        3: [],
+    };
 
     const polsOpenings = {};
     for (const polRef in pil.references) {
@@ -27,6 +34,8 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             } else {
                 cnstPolsDefs.push({name, stage: 0, degree: polInfo.polDeg})
             }
+            polsOpenings[name] = 0;
+            polsNames[0].push(name);
         } 
         
         if(polInfo.type === 'cmP') {
@@ -38,10 +47,9 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             } else {
                 cmPolsDefs.push({name, stage: 1, degree: polInfo.polDeg})
             }
+            polsOpenings[name] = 1;
+            polsNames[1].push(name);
         }
-
-        if(!polsOpenings[name]) polsOpenings[name] = 1;
-        ++polsOpenings[name];
 
         maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
     }
@@ -62,7 +70,8 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             id: fflonkInfo.puCtx[i].h1Id,
             stage: 2,
         }
-        polsOpenings[`Plookup.H1_${i}`] = 2;
+        polsOpenings[`Plookup.H1_${i}`] = 1;
+        polsNames[2].push(`Plookup.H1_${i}`);
 
         polsXi.push({name: `Plookup.H2_${i}`, stage: 2, degree: domainSize})
         pil.references[`Plookup.H2_${i}`] = {
@@ -73,7 +82,8 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             id: fflonkInfo.puCtx[i].h2Id,
             stage: 2,
         }
-        polsOpenings[`Plookup.H2_${i}`] = 2;
+        polsOpenings[`Plookup.H2_${i}`] = 1;
+        polsNames[2].push(`Plookup.H2_${i}`);
 
         polsXi.push({name: `Plookup.Z${i}`, stage: 3, degree: domainSize})
         pil.references[`Plookup.Z${i}`] = {
@@ -84,7 +94,8 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             id: fflonkInfo.puCtx[i].zId,
             stage:3,
         }
-        polsOpenings[`Plookup.Z${i}`] = 2;
+        polsOpenings[`Plookup.Z${i}`] = 1;
+        polsNames[3].push(`Plookup.Z${i}`);
     }
 
 
@@ -98,7 +109,8 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             id: fflonkInfo.peCtx[i].zId,
             stage:3,
         }
-        polsOpenings[`Permutation.Z${i}`] = 2;
+        polsOpenings[`Permutation.Z${i}`] = 1;
+        polsNames[3].push(`Permutation.Z${i}`);
     }
 
     for(let i = 0; i < fflonkInfo.ciCtx.length; ++i) {
@@ -111,7 +123,8 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             id: fflonkInfo.ciCtx[i].zId,
             stage:3,
         }
-        polsOpenings[`Connection.Z${i}`] = 2;
+        polsOpenings[`Connection.Z${i}`] = 1;
+        polsNames[3].push(`Connection.Z${i}`);
     }
 
 
@@ -125,16 +138,28 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             id: fflonkInfo.imExp2cm[fflonkInfo.imExpsList[i]],
             stage:3,
         }
-	polsOpenings[`Im${fflonkInfo.imExpsList[i]}`] = 2;
+	    polsOpenings[`Im${fflonkInfo.imExpsList[i]}`] = 1;
+        polsNames[3].push(`Im${fflonkInfo.imExpsList[i]}`);
     }
 
     polsXi.push({name: "Q", stage: 4, degree: (fflonkInfo.qDeg + 1) * domainSize});
 
     console.log("QDEG", (fflonkInfo.qDeg + 1) * domainSize);
-    const polsWXi = [];
     
-    const primePols = fflonkInfo.evMap.filter(ev => ev.prime);
+    const xiPols = fflonkInfo.evMap.filter(ev => !ev.prime);
+    for (let i = 0; i < xiPols.length; i++) {
+        if(xiPols[i].type === "const") continue;
+        const reference = findPolynomialByTypeId(pil, xiPols[i].type + "P", xiPols[i].id);
+        let name = reference;
+        if(pil.references[reference].isArray) {
+            name += (xiPols[i].id - pil.references[reference].id);
+        }
+        if(!polsOpenings[name]) throw new Error("Invalid polynomial name: " + name);
+        ++polsOpenings[name];
+    }
 
+    const polsWXi = [];
+    const primePols = fflonkInfo.evMap.filter(ev => ev.prime);
     for (let i = 0; i < primePols.length; i++) {
         const reference = findPolynomialByTypeId(pil,primePols[i].type + "P", primePols[i].id);
         let name = reference;
@@ -143,11 +168,12 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
         }
         const stage = pil.references[reference].stage;
         polsWXi.push({name, stage, degree: pil.references[reference].polDeg});
-        if(!polsOpenings[name]) polsOpenings[name] = 1;
+        if(primePols[i].type === "const") continue;
+        if(!polsOpenings[name]) throw new Error("Invalid polynomial name: " + name);
         ++polsOpenings[name];
     }
     
-    polsXi.forEach(p => { if(p.name !== "Q") {p.degree += polsOpenings[p.name]} });
+    polsXi.forEach(p => { if(p.name !== "Q" && polsOpenings[p.name]) {p.degree += polsOpenings[p.name]} });
 
     const polDefs = [polsXi];
 
@@ -189,6 +215,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
         zkey[`${commits[j].index}`] = commits[j].commit;
     }
 
+    zkey.polsNamesStage = polsNames;
     zkey.polsOpenings = polsOpenings;
     let maxCmPolsOpenings = 0;
 
@@ -205,13 +232,14 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             maxCmPolsOpenings = Math.max(maxCmPolsOpenings, polsOpenings[polRef]);
         }
     }
-
     
     zkey.polsMap = polsMap;
 
     // Precompute ZK data
     const domainSizeZK = domainSize + maxCmPolsOpenings;
     zkey.powerZK = log2(domainSizeZK - 1) + 1;
+    zkey.powerW = lcm(Object.keys(zkey).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
+
 
     zkey.nPublics = fflonkInfo.nPublics;
     

@@ -1,4 +1,4 @@
-const { verifyOpenings, Keccak256Transcript, computeChallengeXiSeed, lcm } = require("shplonkjs");
+const { verifyOpenings, Keccak256Transcript, computeChallengeXiSeed } = require("shplonkjs");
 const {utils, getCurveFromName } = require("ffjavascript");
 const { fromObjectVk, fromObjectProof } = require("./helpers");
 const { unstringifyBigInts } = utils;
@@ -110,8 +110,7 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     }
     
     let xiSeed = computeChallengeXiSeed(vk.f.sort((a,b) => a.index - b.index), curve, {logger, fflonkPreviousChallenge: ctx.challenges[4] });
-    const powerW = lcm(Object.keys(vk).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
-    let challengeXi = curve.Fr.exp(xiSeed, powerW);
+    let challengeXi = curve.Fr.exp(xiSeed, vk.powerW);
     ctx.x = challengeXi;
 
     const execCode = executeCode(curve.Fr, ctx, fflonkInfo.verifierCode.first);

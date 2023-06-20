@@ -183,22 +183,6 @@ module.exports = function map(res, pil, stark) {
 
 
     res.qDim = getExpDim(pil, res.cExp, stark);
-    for (let i=0; i<res.qDeg; i++) {
-        const ppz_n = addPol({
-            section: "cm4_n",
-            dim:res.qDim
-        });
-        const ppz_2ns = addPol({
-            section: "cm4_2ns",
-            dim:res.qDim
-        });
-        res.cm_n.push(ppz_n);
-        res.cm_2ns.push(ppz_2ns);
-        res.mapSections.cm4_n.push(ppz_n);
-        res.mapSections.cm4_2ns.push(ppz_2ns);
-        pil.cmDims[res.nCm1 + res.nCm2 + res.nCm3 + i] = res.qDim;
-    }
-
     const ppq_2ns = addPol({
         section: "q_2ns",
         dim:res.qDim
@@ -206,6 +190,21 @@ module.exports = function map(res, pil, stark) {
     res.q_2ns.push(ppq_2ns);
 
     if(stark) {
+        for (let i=0; i<res.qDeg; i++) {
+            const ppz_n = addPol({
+                section: "cm4_n",
+                dim:res.qDim
+            });
+            const ppz_2ns = addPol({
+                section: "cm4_2ns",
+                dim:res.qDim
+            });
+            res.cm_n.push(ppz_n);
+            res.cm_2ns.push(ppz_2ns);
+            res.mapSections.cm4_n.push(ppz_n);
+            res.mapSections.cm4_2ns.push(ppz_2ns);
+            pil.cmDims[res.nCm1 + res.nCm2 + res.nCm3 + i] = res.qDim;
+        }
         const ppf_2ns = addPol({
             section: "f_2ns",
             dim:3
@@ -218,14 +217,14 @@ module.exports = function map(res, pil, stark) {
     res.mapOffsets.cm1_n = 0;
     res.mapOffsets.cm2_n = res.mapOffsets.cm1_n +  N * res.mapSectionsN.cm1_n;
     res.mapOffsets.cm3_n = res.mapOffsets.cm2_n +  N * res.mapSectionsN.cm2_n;
-    res.mapOffsets.cm4_n = res.mapOffsets.cm3_n +  N * res.mapSectionsN.cm3_n;
-    res.mapOffsets.tmpExp_n = res.mapOffsets.cm4_n +  N * res.mapSectionsN.cm4_n;
+    res.mapOffsets.tmpExp_n = res.mapOffsets.cm3_n +  N * res.mapSectionsN.cm3_n;
     res.mapOffsets.cm1_2ns = res.mapOffsets.tmpExp_n +  N * res.mapSectionsN.tmpExp_n;
     res.mapOffsets.cm2_2ns = res.mapOffsets.cm1_2ns +  Next * res.mapSectionsN.cm1_2ns;
     res.mapOffsets.cm3_2ns = res.mapOffsets.cm2_2ns +  Next * res.mapSectionsN.cm2_2ns;
     res.mapOffsets.q_2ns = res.mapOffsets.cm3_2ns +  Next * res.mapSectionsN.cm3_2ns;
     if(stark) {
-        res.mapOffsets.cm4_2ns = res.mapOffsets.q_2ns +  Next * res.mapSectionsN.q_2ns;
+        res.mapOffsets.cm4_n = res.mapOffsets.q_2ns +  N * res.mapSectionsN.q_2ns;
+        res.mapOffsets.cm4_2ns = res.mapOffsets.cm4_n +  Next * res.mapSectionsN.cm4_n;
         res.mapOffsets.f_2ns = res.mapOffsets.cm4_2ns +  Next * res.mapSectionsN.cm4_2ns;
         res.mapTotalN = res.mapOffsets.f_2ns +  Next * res.mapSectionsN.f_2ns;
     } else {
@@ -237,13 +236,13 @@ module.exports = function map(res, pil, stark) {
     res.mapDeg.cm1_n = N;
     res.mapDeg.cm2_n = N;
     res.mapDeg.cm3_n = N;
-    res.mapDeg.cm4_n = N;
     res.mapDeg.tmpExp_n = N;
     res.mapDeg.cm1_2ns = Next;
     res.mapDeg.cm2_2ns = Next;
     res.mapDeg.cm3_2ns = Next;
     res.mapDeg.q_2ns = Next;
     if(stark) {
+        res.mapDeg.cm4_n = N;
         res.mapDeg.cm4_2ns = Next;
         res.mapDeg.f_2ns = Next;
     }

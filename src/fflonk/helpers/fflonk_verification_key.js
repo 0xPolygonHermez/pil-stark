@@ -14,6 +14,7 @@ module.exports = async function fflonkVerificationKey(zkey, options) {
         curve: curve.name,
         nPublics: zkey.nPublics,
         power: zkey.power,
+        powerW: zkey.powerW,
         polsMap: zkey.polsMap,
         f: zkey.f,
         k1: curve.Fr.toObject(zkey.k1),
