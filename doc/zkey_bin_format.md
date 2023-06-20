@@ -2,127 +2,56 @@ TODO
 
 ## zkey format
 
-zkey: {
-    power: number (bytes)
-    nPublics: number
-    X_2: 128 bytes
-
-    f: [
-        {
-            index: number (32),
-            degree: number (32),
-            openingPoints: [number (bytes)],
-            pols: [strings],
-            stages: [
-                {
-                    stage: number (bytes),
-                    pols: [ {
-                        name: string,
-                        degree: number (32),
-                    }
-                    ]
-                },
-                ...
-            ],
-        },
-        ...
-    ]
-
-    fX_Y: 64 bytes
-
-    polsMap: {
-        !!!!!
-    }
-
-    wX_YdZ: 32 bytes
-}
-
-S1: PF HEADER
-    power
-    nPublics
-    X_2
-S2: F SECTION
-S3: FCOMMITMENTS SECTION
-S4: POLSMAP SECTION
-S5: OMEGAS_SECTION
-
 # Binary format for PIL-FFLONK zkey file
 
-## Simple Summary
+## Summary
 
-This standard defines a standard format for a binery representation of a r1cs constraint system.
-
-## Abstract
-
-
-## Motivation
-
-The zero knowledge primitives, requires the definition of a statment that wants to be proved. This statment can be expressed as a deterministric program or an algebraic circuit. Lots of primitives like zkSnarks, bulletProofs or aurora, requires to convert this statment to a rank-one constraint system.
-
-This standard specifies a format for a r1cs and allows the to connect a set of tools that compiles a program or a circuit to r1cs that can be used for the zksnarks or bulletproofs primitives.
-
-## Specification
+This file describes the content of a binary zkey file representing a PIL-FFLONK zkey data.
 
 ### General considerations
 
-The standard extension is `.r1cs`
-
-
-A deterministic program (or circuit) is a program that generates a set of deterministic values given an input. All those values are labeled from l_{0} to l_{n_labels}
-
-This file defines a map beween l_{i} -> w_{j}  and defines a series a R1CS of the form
-
-$$
-\left\{  \begin{array}{rclclcl}
-(a_{0,0}w_0 + a_{0,1}w_1 + ... + a_{0,n}w_{n}) &\cdot& (b_{0,0} w_0 + b_{0,1} w_1 + ... + b_{0,n} w_{n}) &-& (c_{0,0} w_0 + c_{0,1} w_1 + ... + c_{0,n}w_{n}) &=& 0 \\
-(a_{1,0}w_0 + a_{1,1}w_1 + ... + a_{1,n}w_{n}) &\cdot& (b_{1,0} w_0 + b_{1,1} w_1 + ... + b_{1,n} w_{n}) &-& (c_{1,0} w_0 + c_{1,1}w_1 + ... + c_{1,n}w_{n}) &=& 0 \\
-...\\
-(a_{m-1,0}w_0 + a_{m-1,1}w_1 + ... + a_{m-1,n}w_{n}) &\cdot& (b_{m-1,0} w_0 + b_{m-1,1} w_1 + ... + b_{m-1,n} w_{n}) &-& (c_{m-1,0} w_0 + c_{m-1,1}w_1 + ... + c_{m-1,n}w_{n}) &=& 0
-\end{array} \right.
-$$
-
-Wire 0 must be always mapped to label 0 and it's an input forced to value "1" implicitly
-
+The standard extension is `.zkey`
 
 ### Format of the file
 
 ````
 
      ┏━━━━┳━━━━━━━━━━━━━━━━━┓
-     ┃ 4  │   72 31 63 73   ┃     Magic  "r1cs"
+     ┃ 4  │   7A 6B 65 79   ┃     Magic  "zkey"
      ┗━━━━┻━━━━━━━━━━━━━━━━━┛
      ┏━━━━┳━━━━━━━━━━━━━━━━━┓
      ┃ 4  │   01 00 00 00   ┃       Version 1
      ┗━━━━┻━━━━━━━━━━━━━━━━━┛
      ┏━━━━┳━━━━━━━━━━━━━━━━━┓
-     ┃ 4  │   03 00 00 00   ┃       Number of Sections
+     ┃ 4  │   07 00 00 00   ┃       Number of Sections
      ┗━━━━┻━━━━━━━━━━━━━━━━━┛
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
-     ┃ 4  │ sectionType     ┃  8  │   SectionSize          ┃
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛
-     ┏━━━━━━━━━━━━━━━━━━━━━┓
-     ┃                     ┃
-     ┃                     ┃
-     ┃                     ┃
-     ┃  Section Content    ┃
-     ┃                     ┃
-     ┃                     ┃
-     ┃                     ┃
-     ┗━━━━━━━━━━━━━━━━━━━━━┛
-
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
-     ┃ 4  │ sectionType     ┃  8  │   SectionSize          ┃
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛
-     ┏━━━━━━━━━━━━━━━━━━━━━┓
-     ┃                     ┃
-     ┃                     ┃
-     ┃                     ┃
-     ┃  Section Content    ┃
-     ┃                     ┃
-     ┃                     ┃
-     ┃                     ┃
-     ┗━━━━━━━━━━━━━━━━━━━━━┛
-
+     ┏━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓   \
+     ┃ 4  │ SectionId       ┃  8  │   SectionSize          ┃    \
+     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛     \
+                                                                  |
+     ┏━━━━━━━━━━━━━━━━━━━━━┓                                      |
+     ┃                     ┃                                      |
+     ┃                     ┃                                      | Section 1
+     ┃                     ┃                                      |
+     ┃  Section Content    ┃                                      |
+     ┃                     ┃                                      |
+     ┃                     ┃                                     /
+     ┃                     ┃                                    /
+     ┗━━━━━━━━━━━━━━━━━━━━━┛                                   /
+     
+     ┏━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓   \
+     ┃ 4  │ SectionId       ┃  8  │   SectionSize          ┃    \
+     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛     \
+                                                                  |
+     ┏━━━━━━━━━━━━━━━━━━━━━┓                                      |
+     ┃                     ┃                                      |
+     ┃                     ┃                                      | Section 2
+     ┃                     ┃                                      |
+     ┃  Section Content    ┃                                      |
+     ┃                     ┃                                      |
+     ┃                     ┃                                     /
+     ┃                     ┃                                    /
+     ┗━━━━━━━━━━━━━━━━━━━━━┛                                   /
      ...
      ...
      ...
@@ -131,10 +60,10 @@ Wire 0 must be always mapped to label 0 and it's an input forced to value "1" im
 #### Magic Number
 
 Size: 4 bytes
-The file start with a constant 4 bytes (magic number) "r1cs"
+The file start with a constant 4 bytes (magic number) "zkey"
 
 ```
-0x72 0x31 0x63 0x73
+0x7A 0x6B 0x65 0x79
 ```
 
 #### Version
@@ -153,9 +82,9 @@ For this standard it's fixed to
 Size: 4 bytes
 Format: Little-Endian
 
-Number of sections contained in the file
+Number of sections contained in the file, must be 10
 
-#### SectionType
+#### Section Id
 
 Size: 4 bytes
 Format: Little-Endian
@@ -165,401 +94,79 @@ Type of the section.
 Currently there are 5 types of sections defined:
 
 * 0x00000001 : Header Section
-* 0x00000002 : Constraint Section
-* 0x00000003 : Wire2LabelId Map Section
-* 0x00000004 : Custom gates List Section [UltraPlonk]
-* 0x00000005 : Custom gates Application Section [UltraPlonk]
+* 0x00000002 : PIL-FFLONK Header Section
+* 0x00000003 : F Section
+* 0x00000004 : F Commitments Section
+* 0x00000005 : Polynomials Map Section
+* 0x00000006 : Polynomials Openings Section
+* 0x00000007 : Polynomials Names Stage Section
+* 0x00000008 : Omegas Section
+* 0x00000009 : Powers of Tau Section
 
 If the file contain other types, the format is valid, but they MUST be ignored.
 
-Any order of the section must be accepted.
+Any order of the sections must be accepted.
 
-Example:
-```
-0x01 0x00 0x00 0x00
-```
-
-#### SectionSize
+#### Section Size
 
 Size: `ws` bytes
 Format: Little-Endian
 
 Size in bytes of the section
 
-### Header Section
+### Section 1: Header Section
 
-Section Type: 0x01
+Section Id: 0x01
+
 ````
      ┏━━━━┳━━━━━━━━━━━━━━━━━┓
-     ┃ 4  │   20 00 00 00   ┃               Field Size in bytes (fs)
+     ┃ 4  │   0C 00 00 00   ┃               Protocol Id: PIL-FFLONK
+     ┗━━━━┻━━━━━━━━━━━━━━━━━┛
+````
+
+### Section 2: PIL_FFLONK Header Section
+
+Section Id: 0x01
+````
+     ┏━━━━┳━━━━━━━━━━━━━━━━━┓
+     ┃ 4  │   20 00 00 00   ┃               Field $F_q$ Size in bytes (fs)
      ┗━━━━┻━━━━━━━━━━━━━━━━━┛
      ┏━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-     ┃ fs │   010000f0 93f5e143 9170b979 48e83328 5d588181 b64550b8 29a031e1 724e6430 ┃  Prime size
+     ┃ fs │   010000f0 93f5e143 9170b979 48e83328 5d588181 b64550b8 29a031e1 724e6430 ┃  Q prime
      ┗━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
      ┏━━━━┳━━━━━━━━━━━━━━━━━┓
-     ┃ 32 │   01 00 00 00   ┃               nWires
+     ┃ 4  │   20 00 00 00   ┃               Field $F_r$ Size in bytes (fs)
+     ┗━━━━┻━━━━━━━━━━━━━━━━━┛
+     ┏━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+     ┃ fs │   010000f0 93f5e143 9170b979 48e83328 5d588181 b64550b8 29a031e1 724e6430 ┃  R prime
+     ┗━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+     ┏━━━━┳━━━━━━━━━━━━━━━━━┓
+     ┃ 32 │   01 00 00 00   ┃               Circuit Power
      ┗━━━━┻━━━━━━━━━━━━━━━━━┛
      ┏━━━━┳━━━━━━━━━━━━━━━━━┓
-     ┃ 32 │   01 00 00 00   ┃               nPubOut
+     ┃ 32 │   01 00 00 00   ┃               Circuit Power with Zero Knowledge
      ┗━━━━┻━━━━━━━━━━━━━━━━━┛
      ┏━━━━┳━━━━━━━━━━━━━━━━━┓
-     ┃ 32 │   01 00 00 00   ┃               nPubIn
+     ┃ 32 │   01 00 00 00   ┃               W Power
      ┗━━━━┻━━━━━━━━━━━━━━━━━┛
      ┏━━━━┳━━━━━━━━━━━━━━━━━┓
-     ┃ 32 │   01 00 00 00   ┃               nPrvIn
+     ┃ 32 │   01 00 00 00   ┃               number of public inputs
      ┗━━━━┻━━━━━━━━━━━━━━━━━┛
      ┏━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-     ┃ 64 │   01 00 00 00 00 00 00 00   ┃   nLabels
+     ┃ 128│   01 00 00 00 00 00 00 00   ┃   X_2
      ┗━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┓
-     ┃ 32 │   01 00 00 00   ┃               mConstraints
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┛
-
 
 ````
 
-#### field Size (fs)
-
-Size: 4 bytes
-Format: Little-Endian
-
-Size in bytes of a field element. Must be a multiple of 8.
-
-Example:
-```
-0x00 0x0 0x00 0x00
-```
-
-#### Prime
-
-Prime Number of the field
-
-Example:
-```
-0x010000f0_93f5e143_9170b979_48e83328_5d588181_b64550b8_29a031e1_724e6430
-```
-
-#### Number of wires
-
-Size: 4 bytes
-Format: Little-Endian
-
-Total Number of wires including ONE signal (Index 0).
-
-#### Number of public outputs
-
-Size: 4 bytes
-Format: Little-Endian
-
-Total Number of wires public output wires. They should be starting at idx 1
-
-#### Number of public inputs
-
-Size: 4 bytes
-Format: Little-Endian
-
-Total Number of wires public input wires. They should be starting just after the public output
-
-#### Number of private inputs
-
-Size: 4 bytes
-Format: Little-Endian
-
-Total Number of wires private input wires. They should be starting just after the public inputs
-
-#### Number of Labels
-
-Size: 8 bytes
-Format: Little-Endian
-
-Total Number of wires private input wires. They should be starting just after the public inputs
-
-#### Number of constraints (m)
-
-Size: 4 bytes
-Format: Little-Endian
-
-Total Number of constraints
-
-### Constraints section
-
-Section Type: 0x02
-
-````
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┓                                    ╲
-     ┃ 32 │       nA        ┃                                     ╲
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓        ╲
-     ┃ 32 │     wireId_1    ┃ fs │     a_{0,wireId_1}     ┃         │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━┫         │
-     ┃ 32 │     wireId_2    ┃ fs │     a_{0,wireId_2}     ┃         │
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛         │
-                ...                         ...                     │
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┳━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_nA   ┃ fs │     a_{0,wireId_nA}    ┃         │
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛         │
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┓                                       │
-     ┃ 32 │       nB        ┃                                       │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_1    ┃ fs │     b_{0,wireId_1}     ┃         │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━┫         ╲
-     ┃ 32 │     wireId_2    ┃ fs │     b_{0,wireId_2}     ┃          ╲
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛          ╱  Constraint_0
-                ...                         ...                     ╱
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┳━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_nB   ┃ fs │     b_{0,wireId_nB}    ┃         │
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛         │
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┓                                       │
-     ┃ 32 │       nC        ┃                                       │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_1    ┃ fs │     c_{0,wireId_1}     ┃         │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━┫         │
-     ┃ 32 │     wireId_2    ┃ fs │     c_{0,wireId_2}     ┃         │
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛         │
-                ...                         ...                     │
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┳━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_nC   ┃ fs │     c_{0,wireId_nC}    ┃        ╱
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛       ╱
-                                                                 ╱
-
-
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┓                                    ╲
-     ┃ 32 │       nA        ┃                                     ╲
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓        ╲
-     ┃ 32 │     wireId_1    ┃ fs │     a_{1,wireId_1}     ┃         │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━┫         │
-     ┃ 32 │     wireId_2    ┃ fs │     a_{1,wireId_2}     ┃         │
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛         │
-                ...                         ...                     │
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┳━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_nA   ┃ fs │     a_{1,wireId_nA}    ┃         │
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛         │
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┓                                       │
-     ┃ 32 │       nB        ┃                                       │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_1    ┃ fs │     b_{1,wireId_1}     ┃         │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━┫         ╲
-     ┃ 32 │     wireId_2    ┃ fs │     b_{1,wireId_2}     ┃          ╲
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛          ╱  Constraint_1
-                ...                         ...                     ╱
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┳━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_nB   ┃ fs │     b_{1,wireId_nB}    ┃         │
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛         │
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┓                                       │
-     ┃ 32 │       nC        ┃                                       │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_1    ┃ fs │     c_{1,wireId_1}     ┃         │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━┫         │
-     ┃ 32 │     wireId_2    ┃ fs │     c_{1,wireId_2}     ┃         │
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛         │
-                ...                         ...                     │
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┳━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_nC   ┃ fs │     c_{1,wireId_nC}    ┃        ╱
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛       ╱
-                                                                 ╱
-
-                         ...
-                         ...
-                         ...
-
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┓                                    ╲
-     ┃ 32 │       nA        ┃                                     ╲
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓        ╲
-     ┃ 32 │     wireId_1    ┃ fs │    a_{m-1,wireId_1}    ┃         │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━┫         │
-     ┃ 32 │     wireId_2    ┃ fs │    a_{m-1,wireId_2}    ┃         │
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛         │
-                ...                         ...                     │
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┳━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_nA   ┃ fs │    a_{m-1,wireId_nA}   ┃         │
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛         │
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┓                                       │
-     ┃ 32 │       nB        ┃                                       │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_1    ┃ fs │    b_{m-1,wireId_1}    ┃         │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━┫         ╲
-     ┃ 32 │     wireId_2    ┃ fs │    b_{m-1,wireId_2}    ┃          ╲
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛          ╱  Constraint_{m-1}
-                ...                         ...                     ╱
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┳━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_nB   ┃ fs │    b_{m-1,wireId_nB}   ┃         │
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛         │
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┓                                       │
-     ┃ 32 │       nC        ┃                                       │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_1    ┃ fs │    c_{m-1,wireId_1}    ┃         │
-     ┣━━━━╋━━━━━━━━━━━━━━━━━╋━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━┫         │
-     ┃ 32 │     wireId_2    ┃ fs │    c_{m-1,wireId_2}    ┃         │
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛         │
-                ...                         ...                     │
-     ┏━━━━┳━━━━━━━━━━━━━━━━━┳━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓         │
-     ┃ 32 │     wireId_nC   ┃ fs │    c_{m-1,wireId_nC}   ┃        ╱
-     ┗━━━━┻━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┛       ╱
-                                                                 ╱
-````
-
-
-
-#### Constraints
-
-Each constraint contains 3 linear combinations A, B, C.
-
-The constraint is such that:
-```
-A*B-C = 0
-```
-
-#### Linear combination
-
-Each linear combination is of the form:
-
-$$
-a_{j,0}w_0 + a_{j,1}w_1 + ... + a_{j,n}w_{n}
-$$
-
-#### Number of nonZero Factors
-
-Size: 4 bytes
-Format: Little-Endian
-
-Total number of non Zero factors in the linear combination.
-
-The factors MUST be sorted in ascending order.
-
-#### Factor
-
-For each factor we have the index of the factor and the value of the factor.
-
-#### WireId of the factor
-
-Size: 4 bytes
-Format: Little-Endian
-
-WireId of the nonZero Factor
-
-#### Value of the factor
-
-This is the factor that multiplies the associated wire in the linear combination.
-
-For example, to represent the linear combination:
-
-$$
-5w_4 +8w_5 + 260w_{886}
-$$
-
-The linear combination would be represented as:
-
-````
-    ┏━━━━━━━━━━━━━━━━━┓
-    ┃   03 00 00 00   ┃
-    ┣━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-    ┃   04 00 00 00   ┃ 05000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ┃
-    ┣━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-    ┃   05 00 00 00   ┃ 08000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ┃
-    ┣━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-    ┃   76 03 00 00   ┃ 04010000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ┃
-    ┗━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-````
-
-
-### WireId2LabelId Map Section
-
-Section Type: 0x03
-
-````
-┏━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━┳━━━━━━━━━━━━━━━━━━━┓     ┏━━━━┳━━━━━━━━━━━━━━━━━━━┓
-┃ 64 │ labelId of Wire_0 ┃ 64 │ labelId of Wire_1 ┃ ... ┃ 64 │ labelId of Wire_n ┃
-┗━━━━┻━━━━━━━━━━━━━━━━━━━┻━━━━┻━━━━━━━━━━━━━━━━━━━┛     ┗━━━━┻━━━━━━━━━━━━━━━━━━━┛
-````
-
-
-### Custom gates List Section [Plonk]
-
-Section Type: 0x04
-
-````
-     ┏━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-     ┃ 32 ┃ Number of custom gates M                    ┃
-     ┗━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-
-     Custom gate 0
-     ┏━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-     ┃    ┃ Custom gate template name                   ┃ Sequence of N 1-byte char ending with 0x0
-     ┣━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-     ┃ 32 ┃ Number of template parameters N0            ┃
-     ┣━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-     ┃ fs ┃ Parameter 0                                 ┃
-     ┃ fs ┃ Parameter 2                                 ┃
-     ┃ ...                                              ┃
-     ┃ fs ┃ Parameter N0-1                              ┃
-     ┗━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-     ...
-     ...
-     ...
-     Custom gate M-1
-     ┏━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-     ┃    ┃ Custom gate template name                   ┃ Sequence of N 1-byte char ending with 0x0
-     ┣━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-     ┃ 32 ┃ Number of template parameters Nm            ┃
-     ┣━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-     ┃ fs ┃ Parameter 0                                 ┃
-     ┃ fs ┃ Parameter 2                                 ┃
-     ┃ ...                                              ┃
-     ┃ fs ┃ Parameter Nm-1                              ┃
-     ┗━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-````
-
-Custom gates are identified by the position in the list starting at index 0.
-
-### Custom gates Application Section [Plonk]
-
-Section Type: 0x05
-
-````
-     ┏━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-     ┃ 32 ┃ Number of Custom gates applications N ┃
-     ┗━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-
-     Application 0
-     ┏━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-     ┃ 32 ┃ Custom gate identifier                ┃
-     ┣━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-     ┃ 32 ┃ Number of signals S                   ┃
-     ┣━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-     ┃ 32 ┃ Signal 0                              ┃
-     ┃ 32 ┃ Signal 1                              ┃
-       ...
-     ┃ 32 ┃ Signal S-1                            ┃
-     ┗━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-     ...
-     ...
-     ...
-     Application N-1
-     ┏━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-     ┃ 32 ┃ Custom gate identifier                ┃
-     ┣━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-     ┃ 32 ┃ Number of signals S                   ┃
-     ┣━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-     ┃ 32 ┃ Signal 0                              ┃
-     ┃ 32 ┃ Signal 1                              ┃
-       ...
-     ┃ 32 ┃ Signal S-1                            ┃
-     ┗━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-````
-
-List of signals are inputs and outputs of the custom gate in the order they appear in the `CIRCOM` definition of the custom gate.
-
-## Rationale
-
-Variable size for field elements allows to shrink the size of the file and allows to work with any field.
-
-Version allows to update the format.
-
-Have a very good comprasion ratio for sparse r1cs as it's the normal case.
-
-The motivation of having a map between l and w is that this allows optimizers to calculate equivalent r1cs systems but keeping the original values geneated by the circuit.
-
-
-## Backward Compatibility
+### F Section TODO
+### F Commitments Section TODO
+### Polynomials Map Section TODO
+### Polynomials Openings Section TODO
+### Polynomials Names Stage Section TODO
+### Omegas Section TODO
+### Powers of Tau Section TODO
+
+<!-- ## Backward Compatibility
 
 N.A.
 
@@ -600,7 +207,7 @@ The format will be:
      ┃ 03000000 ┃       nSections
      ┗━━━━━━━━━━┛
      ┏━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
-     ┃ 01000000 ┃ 40000000 00000000 ┃      SectionType: Header
+     ┃ 01000000 ┃ 40000000 00000000 ┃      SectionId: Header
      ┗━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━┛
         ┏━━━━━━━━━━┓
         ┃ 20000000 ┃    Field Size
@@ -620,7 +227,7 @@ The format will be:
         ┃ 03000000 ┃    # Constraints
         ┗━━━━━━━━━━┛
      ┏━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
-     ┃ 02000000 ┃ 88020000 00000000 ┃      SectionType: Constraints
+     ┃ 02000000 ┃ 88020000 00000000 ┃      SectionId: Constraints
      ┗━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━┛
         ┏━━━━━━━━━━┓   Constraint 0: (3w_5 + 8w_6) * (2w_0 + 20w_2 + 12w_3) - (5w_0 + 7w_2) = 0
         ┃ 02000000 ┃
@@ -757,11 +364,7 @@ e8030000 00000000
 0f000000 00000000
 44010000 00000000
 
-````
-
-## Implementation
-
-circom will output this format.
+```` -->
 
 ## Copyright
 
