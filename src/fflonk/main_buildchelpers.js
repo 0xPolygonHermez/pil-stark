@@ -1,13 +1,15 @@
 const fs = require("fs");
 const path = require("path");
-const version = require("../package").version;
+const version = require("../../package").version;
+const { readPilFflonkZkeyFile } = require("./zkey/zkey_pilfflonk");
 
 const buildCHelpers = require("./chelpers/fflonk_chelpers.js");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_buildchelpers.js -s <fflonkinfo.json> -c <chelpers.cpp> [-C <classname>]")
+    .usage("node main_buildchelpers.js -s <fflonkinfo.json> -z <circuit.zkey> -c <chelpers.cpp> [-C <classname>]")
     .alias("f", "fflonkinfo")
+    .alias("z", "zkey")
     .alias("c", "chelpers")
     .alias("C", "cls")
     .alias("m", "multiple")
@@ -16,14 +18,23 @@ const argv = require("yargs")
 
 async function run() {
     const cls = typeof (argv.cls) === "string" ? argv.cls.trim() : "Fflonk";
-    const fflonkInfoFile = typeof (argv.fflonkInfo) === "string" ? argv.fflonkInfo.trim() : "mycircuit.fflonkinfo.json";
+    const fflonkInfoFile = typeof (argv.fflonkinfo) === "string" ? argv.fflonkinfo.trim() : "mycircuit.fflonkinfo.json";
+    const zkeyFile = typeof(argv.zkey) === "string" ?  argv.zkey.trim() : "mycircuit.zkey";
     const chelpersFile = typeof (argv.chelpers) === "string" ? argv.chelpers.trim() : "mycircuit.chelpers.cpp";
     const multipleCodeFiles = argv.multiple;
     const optcodes = argv.optcodes;
 
     const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
+    
+    const options = {logger: console};
 
-    const cCode = await buildCHelpers(fflonkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes: optcodes } : {});
+    // Load zkey file
+    if (options.logger) options.logger.info("> Reading zkey file");
+    const zkey = await readPilFflonkZkeyFile(zkeyFile, {logger: options.logger});
+
+    const cCode = buildCHelpers(zkey, fflonkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes: optcodes } : {});
+
+    console.log("CCODE", cCode);
 
     if (multipleCodeFiles) {
         const baseDir = path.dirname(chelpersFile);
@@ -35,18 +46,22 @@ async function run() {
         const ext = dotPos < 0 ? '.cpp' : chelpersFile.substr(dotPos);
         const classInclude = cls.charAt(0).toLowerCase() + cls.slice(1) + ".hpp";
         for (cpart in cCode) {
+            console.log(cpart);
             let code, ext2;
             if (!cpart.includes("parser")) {
-                code = `#include "goldilocks_cubic_extension.hpp"\n#include "zhInv.hpp"\n#include "fflonk.hpp"\n#include "constant_pols_fflonk.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
+                code = `#include "fflonk.hpp"\n#include "constant_pols_fflonk.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
                 ext2 = ext;
             } else {
                 code = cCode[cpart];
                 cpart = cpart.replace(/_/g, ".");
                 ext2 = ".hpp";
             }
+            console.log("ADEU", leftFilename + '.' + cpart + ext2);
             await fs.promises.writeFile(leftFilename + '.' + cpart + ext2, code, "utf8");
         }
     } else {
+        console.log("HOLA", chelpersFile);
+
         await fs.promises.writeFile(chelpersFile, cCode, "utf8");
     }
 

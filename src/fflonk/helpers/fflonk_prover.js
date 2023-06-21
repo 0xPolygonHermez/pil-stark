@@ -645,13 +645,13 @@ function compileCode(ctx, code, dom, ret, factorZK) {
         }
     }
 
-    function evalMap(polId, prime, setValue) {
+    function evalMap(polId, prime, val) {
         let p = ctx.fflonkInfo.varPolMap[polId];
         offset = p.sectionPos;
         let index = prime ? `((i + ${Next})%${N})` : "i";
         let size = ctx.fflonkInfo.mapSectionsN[p.section];
-        if (setValue) {
-            return `ctx.${p.section}.set(${setValue},(${offset} + (${index}*${size}))*${ctx.Fr.n8})`;
+        if (val) {
+            return `ctx.${p.section}.set(${val},(${offset} + (${index}*${size}))*${ctx.Fr.n8})`;
         } else {
             return `ctx.${p.section}.slice((${offset} + ${index}*${size})*${ctx.Fr.n8},(${offset} + ${index}*${size} + 1)*${ctx.Fr.n8})`;
         }

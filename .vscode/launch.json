@@ -1861,6 +1861,25 @@
             ]
         },
         {
+            "name": "fibonacci fflonk build CHelpers",
+            "program": "${workspaceFolder}/src/fflonk/main_buildchelpers.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-f tmp/fibonacci.fflonkinfo.json",
+                "-c tmp/fibonacci.fflonk.chelpers.cpp",
+                "-z tmp/fibonacci.zkey",
+                "-C Fflonk",
+                "-m"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "fibonacci fflonk prove",
             "program": "${workspaceFolder}/src/fflonk/main_prover.js",
             "request": "launch",

@@ -1,7 +1,15 @@
 const compileCode_parser = require("./compileCode_parser.js")
 const compileCode_42ns = require("./compileCode_42ns.js")
 
-module.exports = async function buildCHelpers(zkey, fflonkInfo, config = {}) {
+module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
+
+    const nBits = zkey.power;
+    const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
+    const nBitsExt = zkey.power + extendBits;
+    
+    // ZK data
+    const extendBitsZK = zkey.powerZK - zkey.power;
+    const factorZK = (1 << extendBitsZK);
 
     const code = [];
     const multipleCodeFiles = config && config.multipleCodeFiles;
@@ -37,7 +45,7 @@ module.exports = async function buildCHelpers(zkey, fflonkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(fflonkInfo, config, "step2prev_first", fflonkInfo.step2prev.first, "n"));
+        code.push(compileCode_parser(fflonkInfo, nBits, factorZK, "step2prev_first", fflonkInfo.step2prev.first, "n"));
         result.step2prev_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
@@ -52,7 +60,7 @@ module.exports = async function buildCHelpers(zkey, fflonkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(fflonkInfo, config, "step3prev_first", fflonkInfo.step3prev.first, "n"));
+        code.push(compileCode_parser(fflonkInfo, nBits, factorZK, "step3prev_first", fflonkInfo.step3prev.first, "n"));
         result.step3prev_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
@@ -67,7 +75,7 @@ module.exports = async function buildCHelpers(zkey, fflonkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(fflonkInfo, config, "step3_first", fflonkInfo.step3.first, "n"));
+        code.push(compileCode_parser(fflonkInfo, nBits, factorZK, "step3_first", fflonkInfo.step3.first, "n"));
         result.step3_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
@@ -92,7 +100,7 @@ module.exports = async function buildCHelpers(zkey, fflonkInfo, config = {}) {
 
     if (multipleCodeFiles) {
         result.step42ns = code.join("\n\n") + "\n";
-        code.length = 0;
+        return result;
     }
 
     return code.join("\n\n");
@@ -120,22 +128,21 @@ module.exports = async function buildCHelpers(zkey, fflonkInfo, config = {}) {
                 src.push(getRef(r.src[k]));
             }
             let lexp = getLRef(r);
-            //TODO: OPERATIONS ARE NOT GOLDILOCKS !!!
             switch (r.op) {
                 case 'add': {
-                    body.push(`     Goldilocks::add(${lexp}, ${src[0]}, ${src[1]});`)
+                    body.push(`     ${lexp} = E.fr.add(${src[0]}, ${src[1]});`)
                     break;
                 }
                 case 'sub': {
-                    body.push(`     Goldilocks::sub(${lexp}, ${src[0]}, ${src[1]});`)
+                    body.push(`     ${lexp} = E.fr.sub(${src[0]}, ${src[1]});`)
                     break;
                 }
                 case 'mul': {
-                    body.push(`     Goldilocks::mul(${lexp}, ${src[0]}, ${src[1]});`)
+                    body.push(`     ${lexp} = E.fr.mul(${src[0]}, ${src[1]});`)
                     break;
                 }
                 case 'copy': {
-                    body.push(`     Goldilocks::copy(${lexp}, ${src[0]});`)
+                    body.push(`     E.fr.copy(${lexp}, ${src[0]});`)
                     break;
                 }
                 default: throw new Error("Invalid op:" + c[j].op);
@@ -151,7 +158,7 @@ module.exports = async function buildCHelpers(zkey, fflonkInfo, config = {}) {
         let res;
         if (ret) {
             res = [
-                `Goldilocks::Element ${config.className}::${functionName}(StepsParams &params, uint64_t i) {`,
+                `FrElement ${config.className}::${functionName}(StepsParams &params, uint64_t i) {`,
                 ...body,
                 `}`
             ].join("\n");
@@ -163,9 +170,9 @@ module.exports = async function buildCHelpers(zkey, fflonkInfo, config = {}) {
             ].join("\n");
         }
 
+        
         return res;
 
-        // TODO: FIX
         function getRef(r) {
             switch (r.type) {
                 case "tmp": return `tmp_${r.id}`;
@@ -203,20 +210,19 @@ module.exports = async function buildCHelpers(zkey, fflonkInfo, config = {}) {
                     }
                 }
                
-                case "number": return `Goldilocks::fromU64(${BigInt(r.value).toString()}ULL)`;
+                case "number": return `E.fr.set(${BigInt(r.value).toString()})`;
                 case "public": return `params.publicInputs[${r.id}]`;
                 case "challenge": return `params.challenges[${r.id}]`;
                 case "eval": return `params.evals[${r.id}]`;
                 case "x": {
                     if (dom == "n") {
-                        return `(Goldilocks::Element &)*params.x_n[i]`;
+                        return `(FrElement &)*params.x_n[i]`;
                     } else if (dom == "2ns") {
-                        return `(Goldilocks::Element &)*params.x_2ns[i]`;
+                        return `(FrElement &)*params.x_2ns[i]`;
                     } else {
                         throw new Error("Invalid dom");
                     }
                 }
-                case "Zi": return `params.zi.zhInv(i)`;
                 default: throw new Error("Invalid reference type get: " + r.type);
             }
         }
@@ -225,15 +231,24 @@ module.exports = async function buildCHelpers(zkey, fflonkInfo, config = {}) {
             let eDst;
             switch (r.dest.type) {
                 case "tmp": {
-                    body.push(`     Goldilocks::Element tmp_${r.dest.id};`);
-                    eDst = `tmp_${r.dest.id}`;
+                    eDst = `FrElement tmp_${r.dest.id}`;
+                    break;
+                }
+                case "q": {
+                    if (dom == "n") {
+                        throw new Error("Accessing q in domain n");
+                    } else if (dom == "2ns") {
+                        eDst = `(FrElement &)(params.q_2ns[i])`
+                    } else {
+                        throw new Error("Invalid dom");
+                    }
                     break;
                 }
                 case "cm": {
                     if (dom == "n") {
-                        eDst = evalMap(starkInfo.cm_n[r.dest.id], r.dest.prime)
+                        eDst = evalMap(fflonkInfo.cm_n[r.dest.id], r.dest.prime)
                     } else if (dom == "2ns") {
-                        eDst = evalMap(starkInfo.cm_2ns[r.dest.id], r.dest.prime)
+                        eDst = evalMap(fflonkInfo.cm_2ns[r.dest.id], r.dest.prime)
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -241,7 +256,7 @@ module.exports = async function buildCHelpers(zkey, fflonkInfo, config = {}) {
                 }
                 case "tmpExp": {
                     if (dom == "n") {
-                        eDst = evalMap(starkInfo.tmpExp_n[r.dest.id], r.dest.prime)
+                        eDst = evalMap(fflonkInfo.tmpExp_n[r.dest.id], r.dest.prime)
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -264,11 +279,9 @@ module.exports = async function buildCHelpers(zkey, fflonkInfo, config = {}) {
             let offset = fflonkInfo.mapOffsets[p.section];
             offset += p.sectionPos;
             let index = prime ? `((i + ${next})%${N})` : "i";
-            let size = ctx.fflonkInfo.mapSectionsN[p.section];
-            //TODO: FIX
-            return `params.pols.slice((${offset} + ${index}*${size})*${ctx.Fr.n8},(${offset} + ${index}*${size} + 1)*${ctx.Fr.n8})`;
+            let size = fflonkInfo.mapSectionsN[p.section];
+            return `params.pols[${offset} + ${index}*${size}]`;
         }
-
     }
 
 }
