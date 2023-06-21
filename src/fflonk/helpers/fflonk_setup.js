@@ -238,8 +238,6 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     // Precompute ZK data
     const domainSizeZK = domainSize + maxCmPolsOpenings;
     zkey.powerZK = log2(domainSizeZK - 1) + 1;
-    zkey.powerW = lcm(Object.keys(zkey).filter(k => k.match(/^w\d+$/)).map(wi => wi.slice(1)));
-
 
     zkey.nPublics = fflonkInfo.nPublics;
     
