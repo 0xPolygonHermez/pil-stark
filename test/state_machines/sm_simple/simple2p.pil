@@ -2,14 +2,13 @@ constant %N = 2**3;
 
 namespace Simple(%N);
 
-    pol constant LAST;
-    pol constant LLAST;
-    pol commit a, b;
+    pol constant LAST[2];
+    pol commit a[2], b;
 
     public out = b(%N-1);
     public out2 = b(%N-2);
 
-    a*a = b;
+    a[0]*a[1] = b;
 
-    LAST * (b - :out) = 0;
-    LLAST * (b - :out2) = 0;
+    LAST[0] * (b - :out) = 0;
+    LAST[1] * (b - :out2) = 0;

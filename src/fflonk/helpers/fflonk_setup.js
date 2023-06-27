@@ -29,26 +29,33 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             polInfo.stage = 0;
             if(polInfo.isArray) {
                 for(let i = 0; i < polInfo.len; ++i) {
-                    cnstPolsDefs.push({name: name + i, stage: 0, degree: polInfo.polDeg})
+                    const namePol = name + i;
+                    cnstPolsDefs.push({name: namePol, stage: 0, degree: polInfo.polDeg})
+                    polsOpenings[namePol] = 0;
+                    polsNames[0].push(namePol);
                 }
             } else {
                 cnstPolsDefs.push({name, stage: 0, degree: polInfo.polDeg})
+                polsOpenings[name] = 0;
+                polsNames[0].push(name);
             }
-            polsOpenings[name] = 0;
-            polsNames[0].push(name);
         } 
         
         if(polInfo.type === 'cmP') {
             polInfo.stage = 1;
             if(polInfo.isArray) {
                 for(let i = 0; i < polInfo.len; ++i) {
-                    cmPolsDefs.push({name: name + i, stage: 1, degree: polInfo.polDeg})
+                    const namePol = name + i;
+                    cmPolsDefs.push({name: namePol, stage: 1, degree: polInfo.polDeg})
+                    polsOpenings[namePol] = 1;
+                    polsNames[1].push(namePol);
                 }
             } else {
                 cmPolsDefs.push({name, stage: 1, degree: polInfo.polDeg})
+                polsOpenings[name] = 1;
+                polsNames[1].push(name);
             }
-            polsOpenings[name] = 1;
-            polsNames[1].push(name);
+           
         }
 
         maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
@@ -221,15 +228,33 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
 
     const polsMap = {cm: {}, const: {}};
     for(const polRef in pil.references) {
-        if(pil.references[polRef].type === "constP") {
-            polsMap.const[pil.references[polRef].id] = polRef;
+        const polInfo = pil.references[polRef];
+        if(polInfo.type === "constP") {
+            if(polInfo.isArray) {
+                for(let i = 0; i < polInfo.len; ++i) {
+                    polsMap.const[pil.references[polRef].id + i] = polRef + i;
+                }
+            } else {
+                polsMap.const[pil.references[polRef].id] = polRef;
+            }
         }
 
-        if(pil.references[polRef].type === "cmP") {
-            polsMap.cm[pil.references[polRef].id] = polRef;
+        if(polInfo.type === "cmP") {
+            if(polInfo.isArray) {
+                for(let i = 0; i < polInfo.len; ++i) {
+                    polsMap.cm[pil.references[polRef].id + i] = polRef + i;  
 
-            // Compute max openings on committed polynomials to set a common bound on adding
-            maxCmPolsOpenings = Math.max(maxCmPolsOpenings, polsOpenings[polRef]);
+                    // Compute max openings on committed polynomials to set a common bound on adding
+                    maxCmPolsOpenings = Math.max(maxCmPolsOpenings, polsOpenings[polRef + i]);
+                }
+            } else {
+                polsMap.cm[pil.references[polRef].id] = polRef;
+
+                // Compute max openings on committed polynomials to set a common bound on adding
+                maxCmPolsOpenings = Math.max(maxCmPolsOpenings, polsOpenings[polRef]);
+            }
+
+          
         }
     }
     
