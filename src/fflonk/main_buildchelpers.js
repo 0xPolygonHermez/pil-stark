@@ -7,7 +7,7 @@ const buildCHelpers = require("./chelpers/fflonk_chelpers.js");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_buildchelpers.js -s <fflonkinfo.json> -z <circuit.zkey> -c <chelpers.cpp> [-C <classname>]")
+    .usage("node main_buildchelpers.js -f <fflonkinfo.json> -z <circuit.zkey> -c <chelpers.cpp> [-C <classname>]")
     .alias("f", "fflonkinfo")
     .alias("z", "zkey")
     .alias("c", "chelpers")
@@ -34,8 +34,6 @@ async function run() {
 
     const cCode = buildCHelpers(zkey, fflonkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes: optcodes } : {});
 
-    console.log("CCODE", cCode);
-
     if (multipleCodeFiles) {
         const baseDir = path.dirname(chelpersFile);
         if (!fs.existsSync(baseDir)) {
@@ -49,7 +47,7 @@ async function run() {
             console.log(cpart);
             let code, ext2;
             if (!cpart.includes("parser")) {
-                code = `#include "fflonk.hpp"\n#include "constant_pols_fflonk.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
+                code = `#include <alt_bn128.hpp>\n#include "constant_pols_fflonk.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
                 ext2 = ext;
             } else {
                 code = cCode[cpart];

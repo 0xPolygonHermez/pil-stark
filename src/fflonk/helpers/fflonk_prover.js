@@ -743,38 +743,39 @@ function getPol(ctx, fflonkInfo, idPol) {
 }
 
 async function extend(stage, ctx, zkey, buffFrom, buffTo, buffCoefs, nBits, nBitsExt, nPols, factorZK, Fr, logger) {
-    const n = 1 << nBits;
-
-    const polsNamesMap = zkey.polsNamesStage[stage];
 
     await ifft(buffFrom, nPols, nBits, buffCoefs, Fr);
 
-    if (stage !== 0) {
-        const polsOpenings = zkey.polsOpenings;
+    const n = 1 << nBits;
 
+    if (stage !== 0) {
         for (let i = 0; i < nPols; i++) {
-            const name = polsNamesMap[i];
-            let coefs = new BigBuffer(n * factorZK * Fr.n8);
-            for (let j = 0; j < n * factorZK; j++) {
-                coefs.set(buffCoefs.slice((i + j * nPols) * Fr.n8, (i + j * nPols + 1) * Fr.n8), j * Fr.n8);
+            for(let j = 0; j < zkey.polsOpenings[zkey.polsNamesStage[stage][i]]; ++j) {
+                const b = Fr.random();                
+                let offset1 = (j * nPols + i) * Fr.n8; 
+                let offsetN = ((j + n) * nPols + i) * Fr.n8; 
+                buffCoefs.set(Fr.add(buffCoefs.slice(offset1,offset1 + Fr.n8), Fr.neg(b)), offset1);
+                buffCoefs.set(Fr.add(buffCoefs.slice(offsetN, offsetN + Fr.n8), b), offsetN);
             }
-            blindPolynomial(buffCoefs, n, i, nPols, polsOpenings[name], Fr);
         }
     }
 
     // Store coefs to context
     for (let i = 0; i < nPols; i++) {
-        const name = polsNamesMap[i];
-        let coefs = new BigBuffer(n * factorZK * Fr.n8);
-        for (let j = 0; j < n * factorZK; j++) {
-            coefs.set(buffCoefs.slice((i + j * nPols) * Fr.n8, (i + j * nPols + 1) * Fr.n8), j * Fr.n8);
-        }
-        ctx[name] = new Polynomial(coefs, ctx.curve, logger);
+        const coefs = getPolFromBuffer(buffCoefs, nPols, n * factorZK, i, Fr);
+        ctx[zkey.polsNamesStage[stage][i]] = new Polynomial(coefs, ctx.curve, logger);
     }
 
     await fft(buffCoefs, nPols, nBitsExt, buffTo, Fr);
 }
 
+function getPolFromBuffer(buff, nPols, N, id, Fr) {
+    let polBuffer = new BigBuffer(N * Fr.n8);
+    for (let j = 0; j < N; j++) {
+        polBuffer.set(buff.slice((id + j * nPols) * Fr.n8, (id + j * nPols + 1) * Fr.n8), j * Fr.n8);
+    }
+    return polBuffer
+}
 
 function printPol(buffer, Fr) {
     const len = buffer.byteLength / Fr.n8;
@@ -786,29 +787,4 @@ function printPol(buffer, Fr) {
     console.log("---------------------------");
 }
 
-function blindPolynomial(buff, domainSize, idPol, nPols, nPolOpenings, Fr) {
-    for (let i = 0; i < nPolOpenings; i++) {
-        const b = Fr.random();
-        blindBuffer(buff, i, idPol, nPols, Fr.neg(b), Fr);
-        blindBuffer(buff, domainSize + i, idPol, nPols, b, Fr);
-    }
 
-    function blindBuffer(buff, idx, idPol, nPols, blindingFactor, Fr) {
-        const offset = (idx * nPols + idPol) * Fr.n8;
-        const val = buff.slice(offset, offset + Fr.n8);
-
-        buff.set(Fr.add(val, blindingFactor), offset);
-    }
-}
-
-function polDegree(buffer, Fr, logger) {
-    const len = buffer.byteLength / Fr.n8;
-    for (let i = len - 1; i > 0; i--) {
-        const i_n8 = i * Fr.n8;
-        if (!Fr.eq(Fr.zero, buffer.slice(i_n8, i_n8 + Fr.n8))) {
-            return i;
-        }
-    }
-
-    return 0;
-}

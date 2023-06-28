@@ -142,7 +142,11 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
                     break;
                 }
                 case 'copy': {
-                    body.push(`     E.fr.copy(${lexp}, ${src[0]});`)
+                    if(r.dest.type === "tmp") {
+                        body.push(`     ${lexp} = ${src[0]};`);
+                    } else {
+                        body.push(`     E.fr.copy(${lexp}, ${src[0]});`)
+                    }
                     break;
                 }
                 default: throw new Error("Invalid op:" + c[j].op);
@@ -158,13 +162,13 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
         let res;
         if (ret) {
             res = [
-                `FrElement ${config.className}::${functionName}(StepsParams &params, uint64_t i) {`,
+                `FrElement ${config.className}::${functionName}(AltBn128::Engine &E, StepsParams &params, uint64_t i) {`,
                 ...body,
                 `}`
             ].join("\n");
         } else {
             res = [
-                `void ${config.className}::${functionName}(StepsParams &params, uint64_t i) {`,
+                `void ${config.className}::${functionName}(AltBn128::Engine &E, StepsParams &params, uint64_t i) {`,
                 ...body,
                 `}`
             ].join("\n");
