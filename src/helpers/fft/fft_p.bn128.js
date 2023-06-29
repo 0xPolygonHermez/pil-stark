@@ -71,7 +71,7 @@ async function invBitReverse(buffDst, buffSrc, nPols, nBits, Fr) {
 }
 
 const maxNperThread = 1 << 18;
-async function interpolatePrepare(pool, buff, nPols, nBits, Fr, shift = true) {
+async function interpolatePrepare(pool, buff, nPols, nBits, Fr) {
     const n = 1 << nBits;
     const invN = Fr.inv(Fr.e(n));
     const promisesLH = [];
@@ -91,12 +91,11 @@ async function interpolatePrepare(pool, buff, nPols, nBits, Fr, shift = true) {
     for (let i = 0; i < n; i += nPerThreadF) {
         const curN = Math.min(nPerThreadF, n - i);
         const bb = buff.slice(i * nPols * Fr.n8, (i + curN) * nPols * Fr.n8);
-        const inc = shift ? Fr.shift : Fr.one;
-        let start = shift ? Fr.mul(invN, Fr.exp(inc, i)) : invN;
+        let start = invN;
         if (useThreads) {
-            promisesLH.push(pool.exec("interpolatePrepareBlock", [bb, nPols, start, inc, i / nPerThreadF, Math.floor(n / nPerThreadF)]));
+            promisesLH.push(pool.exec("interpolatePrepareBlock", [bb, nPols, start, i / nPerThreadF, Math.floor(n / nPerThreadF)]));
         } else {
-            res.push(await interpolatePrepareBlock(bb, nPols, start, inc, i / nPerThreadF, Math.floor(n / nPerThreadF)));
+            res.push(await interpolatePrepareBlock(bb, nPols, start, i / nPerThreadF, Math.floor(n / nPerThreadF)));
         }
     }
     if (useThreads) {
@@ -187,7 +186,7 @@ async function ifft(buffSrc, nPols, nBits, buffDst, Fr) {
     await _fft(buffSrc, nPols, nBits, buffDst, true, Fr)
 }
 
-async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsExt, Fr, shift = true) {
+async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsExt, Fr) {
     const n = 1 << nBits;
     const nExt = 1 << nBitsExt;
     const tmpBuff = new BigBuffer(nExt * nPols * Fr.n8);
@@ -262,17 +261,9 @@ async function interpolate(buffSrc, nPols, nBits, buffDstCoefs, buffDst, nBitsEx
         }
     }
 
-    if(shift) {
-        buffDstCoefs.set(bIn.slice(0, buffDstCoefs.byteLength));
-        await interpolatePrepare(pool, buffDstCoefs, nPols, nBits, Fr, false);
-
-        console.log("Interpolating prepare....")
-        await interpolatePrepare(pool, bIn, nPols, nBits, Fr, true);
-    } else {
-        console.log("Interpolating prepare....")
-        await interpolatePrepare(pool, bIn, nPols, nBits, Fr, shift);
-        buffDstCoefs.set(bIn.slice(0, buffDstCoefs.byteLength));
-    }    
+    console.log("Interpolating prepare....")
+    await interpolatePrepare(pool, bIn, nPols, nBits, Fr);
+    buffDstCoefs.set(bIn.slice(0, buffDstCoefs.byteLength));
 
     console.log("Bit reverse....")
     await bitReverse(bOut, bIn, nPols, nBitsExt, Fr);

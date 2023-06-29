@@ -6,7 +6,7 @@ async function buildFr() {
     return curve.Fr;
 }
 
-async function interpolatePrepareBlock(buff, width, start, inc, st_i, st_n) {
+async function interpolatePrepareBlock(buff, width, start, st_i, st_n) {
     const Fr = await buildFr();
     console.log(`linear interpolatePrepare start.... ${st_i}/${st_n}`);
 
@@ -20,7 +20,6 @@ async function interpolatePrepareBlock(buff, width, start, inc, st_i, st_n) {
 
             buff.set(val, offset);
         }
-        w = Fr.mul(w, inc);
     }
 
     console.log(`linear interpolatePrepare end.... ${st_i}/${st_n}`);

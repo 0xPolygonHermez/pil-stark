@@ -141,38 +141,7 @@ describe("test fft", async function () {
         }
     });
 
-    it("It checks interpolate with shift", async () => {
-        await _testInterpolate(3, 2, 1);
-        await _testInterpolate(15, 3, 2);
-
-        async function _testInterpolate(nBits, nPols, extBits) {
-            const degree = 1 << nBits;
-            const degreeExt = 1 << (nBits + extBits);
-
-            // Coefficients and evaluations using legacy fft from Fr. As an array of coefficients
-            const coefsA = getArrayInitialized(nPols, degree)
-            const evalsA = [];
-
-            // Coefficients and evaluations using fft_p. As a buffer with all the polynomial coefficients in row major order
-            const coefsB = getBufferInitialized(nPols, degree);
-            const coefs = new BigBuffer(degree * nPols * Fr.n8);
-            const evalsB = new BigBuffer(degreeExt * nPols * Fr.n8);
-
-            console.log("Legacy interpolate");
-            for (let i = 0; i < nPols; i++) {
-                const evalsABuffer = new BigBuffer(coefsA[i].byteLength << extBits);
-                evalsA[i] = await extendPolBuffer(Fr, coefsA[i], evalsABuffer, true);
-            }
-
-            console.log("Interpolate using a row major big array");
-            await interpolate(coefsB, nPols, nBits, coefs, evalsB, nBits + extBits, Fr, true);
-
-            console.log("Check equality of interpolations");
-            checkEquivalence(evalsB, evalsA);
-        }
-    });
-
-    it("It checks interpolate without shift", async () => {
+    it("It checks interpolate ", async () => {
         await _testInterpolate(3, 1, 1);
         await _testInterpolate(15, 3, 2);
 
@@ -192,11 +161,11 @@ describe("test fft", async function () {
             console.log("Legacy interpolate");
             for (let i = 0; i < nPols; i++) {
                 const evalsABuffer = new BigBuffer(coefsA[i].byteLength << extBits);
-                evalsA[i] = await extendPolBuffer(Fr, coefsA[i], evalsABuffer, false);
+                evalsA[i] = await extendPolBuffer(Fr, coefsA[i], evalsABuffer);
             }
 
             console.log("Interpolate using a row major big array");
-            await interpolate(coefsB, nPols, nBits, coefs, evalsB, nBits + extBits, Fr, false);
+            await interpolate(coefsB, nPols, nBits, coefs, evalsB, nBits + extBits, Fr);
 
             console.log("Check equality of interpolations");
             checkEquivalence(evalsB, evalsA);

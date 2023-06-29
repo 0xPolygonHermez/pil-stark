@@ -39,11 +39,8 @@ module.exports.extendPol = function extendPol(F, p, extendBits, shift = true) {
     return res;
 }
 
-module.exports.extendPolBuffer = async function extendPol(Fr, buffSrc, buffDst, shift = true) {
+module.exports.extendPolBuffer = async function extendPolBuffer(Fr, buffSrc, buffDst) {
     buffDst.set(await Fr.ifft(buffSrc), 0);
-    if (shift) {
-        module.exports.polMulAxiBuffer(Fr, buffDst, Fr.one, Fr.shift);
-    }
     buffDst = await Fr.fft(buffDst);
 
     return buffDst;
