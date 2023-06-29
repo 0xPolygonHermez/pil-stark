@@ -173,11 +173,6 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
     async function stage0() {
         // STEP 0.1 - Prepare constant polynomial evaluations
         for (let i = 0; i < cnstPols.$$nPols; i++) {
-            let name = cnstPols.$$defArray[i].name;
-            if (cnstPols.$$defArray[i].idx >= 0) name += cnstPols.$$defArray[i].idx;
-
-            if (logger) logger.debug(`··· Preparing '${name}' constant polynomial`);
-
             // Prepare constant polynomial evaluations
             const cnstPolBuffer = cnstPols.$$array[i];
             for (let j = 0; j < cnstPolBuffer.length; j++) {
@@ -187,11 +182,6 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
 
         // STEP 0.2 - Prepare committed polynomial evaluations
         for (let i = 0; i < cmPols.$$nPols; i++) {
-            let name = cmPols.$$defArray[i].name;
-            if (cmPols.$$defArray[i].idx >= 0) name += cmPols.$$defArray[i].idx;
-
-            if (logger) logger.debug(`··· Preparing '${name}' polynomial`);
-
             // Prepare committed polynomial evaluations
             const cmPolBuffer = cmPols.$$array[i];
             for (let j = 0; j < cmPolBuffer.length; j++) {
