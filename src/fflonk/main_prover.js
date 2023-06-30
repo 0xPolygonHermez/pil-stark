@@ -45,10 +45,10 @@ async function run() {
     const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
 
     const constPols =  newConstantPolsArray(pil, F);
-    await constPols.loadFromFile(constFile);
+    await constPols.loadFromFileFr(constFile);
 
     const cmPols =  newCommitPolsArray(pil, F);
-    await cmPols.loadFromFile(commitFile);
+    await cmPols.loadFromFileFr(commitFile);
 
     const resP = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsExtended, fflonkInfo, ptauFile, options);
     

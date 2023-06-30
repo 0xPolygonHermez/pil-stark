@@ -60,7 +60,7 @@ async function run() {
         }
     }
 
-    await cmPols.saveToFile(commitFile);
+    await cmPols.saveToFileFr(commitFile);
 
     console.log("files Generated Correctly");
 

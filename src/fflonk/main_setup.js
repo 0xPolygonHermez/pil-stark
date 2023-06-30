@@ -33,7 +33,7 @@ async function run() {
 
     // Load preprocessed polynomials
     const cnstPols = newConstantPolsArray(pil, F);
-    await cnstPols.loadFromFile(constFile);
+    await cnstPols.loadFromFileFr(constFile);
 
     const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
 

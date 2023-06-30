@@ -36,7 +36,11 @@ async function run() {
     const result = await smFibonacci.execute(F, cmPols.Fibonacci, input);
     console.log("Result: " + result);
 
-    await cmPols.saveToFile(outputFile);
+    if(curveName === "gl"){
+        await cmPols.saveToFile(outputFile);
+    } else {
+        await cmPols.saveToFileFr(outputFile);
+    }
 
     console.log("file Generated Correctly");
 }

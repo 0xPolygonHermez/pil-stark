@@ -255,7 +255,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     let constPolsCoefs = new BigBuffer(fflonkInfo.nConstants * domainSize * factorZK * curve.Fr.n8); // Constant polynomials
     let constPolsExtended = new BigBuffer(fflonkInfo.nConstants * domainSizeExt * factorZK * curve.Fr.n8); // Constant polynomials
 
-    cnstPols.writeToBigBuffer(constPols, curve.Fr);
+    cnstPols.writeToBigBufferFr(constPols, curve.Fr);
 
     if(fflonkInfo.nConstants > 0) {
         await ifft(constPols, fflonkInfo.nConstants, zkey.power, constPolsCoefs, curve.Fr);

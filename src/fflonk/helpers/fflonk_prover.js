@@ -93,10 +93,10 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
     ctx.x_2ns = new BigBuffer(sDomainExt * factorZK); // Omegas a l'extès
 
     // Read constant polynomials
-    cnstPols.writeToBigBuffer(ctx.const_n, Fr);
+    cnstPols.writeToBigBufferFr(ctx.const_n, Fr);
 
     // Read committed polynomials
-    cmPols.writeToBigBuffer(ctx.cm1_n, Fr);
+    cmPols.writeToBigBufferFr(ctx.cm1_n, Fr);
 
     // Read const coefs and extended evals
     ctx.const_coefs.set(cnstPolsCoefs);
@@ -725,8 +725,7 @@ async function extend(stage, ctx, zkey, buffFrom, buffTo, buffCoefs, nBits, nBit
 
     for (let i = 0; i < nPols; i++) {
         for(let j = 0; j < zkey.polsOpenings[zkey.polsNamesStage[stage][i]]; ++j) {
-            // const b = Fr.random();  
-            const b = Fr.one;              
+            const b = Fr.random();                
             let offset1 = (j * nPols + i) * Fr.n8; 
             let offsetN = ((j + n) * nPols + i) * Fr.n8; 
             buffCoefs.set(Fr.add(buffCoefs.slice(offset1,offset1 + Fr.n8), Fr.neg(b)), offset1);

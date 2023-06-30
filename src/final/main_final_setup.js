@@ -33,7 +33,7 @@ async function run() {
 
     await fs.promises.writeFile(pilFile, res.pilStr, "utf8");
 
-    await res.constPols.saveToFile(constFile);
+    await res.constPols.saveToFileFr(constFile);
 
     await writeExecFile(F, execFile, res.plonkAdditions,  res.sMap);
 

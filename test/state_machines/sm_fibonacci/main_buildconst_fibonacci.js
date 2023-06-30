@@ -29,7 +29,11 @@ async function run() {
 
     await smFibonacci.buildConstants(constPols.Fibonacci);
 
-    await constPols.saveToFile(outputFile);
+    if(curveName === "gl"){
+        await constPols.saveToFile(outputFile);
+    } else {
+        await constPols.saveToFileFr(outputFile);
+    }
 
     console.log("file Generated Correctly");
 }

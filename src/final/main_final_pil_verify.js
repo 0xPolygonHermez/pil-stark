@@ -33,8 +33,8 @@ async function run() {
     const constPols = newConstantPolsArray(pil, F);
     const cmPols =  newCommitPolsArray(pil, F);
 
-    await constPols.loadFromFile(constantFile);
-    await cmPols.loadFromFile(commitFile);
+    await constPols.loadFromFileFr(constantFile);
+    await cmPols.loadFromFileFr(commitFile);
 
     const res = await verifyPil(F, pil, cmPols, constPols, {publics});
 
