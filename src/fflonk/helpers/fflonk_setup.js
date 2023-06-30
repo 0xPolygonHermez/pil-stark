@@ -266,7 +266,8 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
 
         // Store coefs to context
         for (let i = 0; i < fflonkInfo.nConstants; i++) {
-            const coefs = getPolFromBuffer(constPolsCoefs, fflonkInfo.nConstants, domainSize * factorZK, i, curve.Fr);
+            const degree = getDegree(zkey.polsNamesStage[0][i]);
+            const coefs = getPolFromBuffer(constPolsCoefs, fflonkInfo.nConstants, degree + 1, i, curve.Fr);
             ctx[zkey.polsNamesStage[0][i]] = new Polynomial(coefs, curve, logger);
         }
 
@@ -275,8 +276,20 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
         for(let j = 0; j < commits.length; ++j) {
             zkey[`${commits[j].index}`] = commits[j].commit;
         }
+
+        function getDegree(name) {
+            for (const fi of zkey.f) {
+                for (const stage of fi.stages) {
+                    for (const pol of stage.pols) {
+                        if (pol.name === name) {
+                            return pol.degree;
+                        }
+                    }
+                }
+            }
+        }
     }
-    
+        
     if(logger) logger.info("Fflonk setup finished");
 
     await writePilFflonkZkeyFile(zkey, zkeyFilename, PTau, curve, {logger}); 

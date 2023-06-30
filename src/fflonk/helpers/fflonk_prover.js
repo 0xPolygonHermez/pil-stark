@@ -211,6 +211,9 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         // STEP 1.4 - Commit stage 1 polynomials
         const commitsStage1 = await commit(1, zkey, ctx, PTau, curve, { multiExp: true, logger });
         commitsStage1.forEach((com) => committedPols[`${com.index}`] = { commit: com.commit, pol: com.pol });
+
+        commitsStage1.forEach((com) => console.log(ctx.curve.G1.toString(com.commit)));
+
     }
 
     async function stage2() {
@@ -725,7 +728,8 @@ async function extend(stage, ctx, zkey, buffFrom, buffTo, buffCoefs, nBits, nBit
 
     for (let i = 0; i < nPols; i++) {
         for(let j = 0; j < zkey.polsOpenings[zkey.polsNamesStage[stage][i]]; ++j) {
-            const b = Fr.random();                
+            // const b = Fr.random();
+            const b = Fr.one;                
             let offset1 = (j * nPols + i) * Fr.n8; 
             let offsetN = ((j + n) * nPols + i) * Fr.n8; 
             buffCoefs.set(Fr.add(buffCoefs.slice(offset1,offset1 + Fr.n8), Fr.neg(b)), offset1);
@@ -735,11 +739,24 @@ async function extend(stage, ctx, zkey, buffFrom, buffTo, buffCoefs, nBits, nBit
 
     // Store coefs to context
     for (let i = 0; i < nPols; i++) {
-        const coefs = getPolFromBuffer(buffCoefs, nPols, n * factorZK, i, Fr);
+        const degree = getDegree(zkey, zkey.polsNamesStage[stage][i]);
+        const coefs = getPolFromBuffer(buffCoefs, nPols, degree, i, Fr);
         ctx[zkey.polsNamesStage[stage][i]] = new Polynomial(coefs, ctx.curve, logger);
     }
 
     await fft(buffCoefs, nPols, nBitsExt, buffTo, Fr);
+}
+
+function getDegree(zkey, name) {
+    for (const fi of zkey.f) {
+        for (const stage of fi.stages) {
+            for (const pol of stage.pols) {
+                if (pol.name === name) {
+                    return pol.degree;
+                }
+            }
+        }
+    }
 }
 
 function getPolFromBuffer(buff, nPols, N, id, Fr) {
