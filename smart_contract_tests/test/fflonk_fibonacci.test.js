@@ -54,13 +54,13 @@ describe("Fflonk Fibonacci sm", async function () {
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 2});
+        const {constPolsCoefs, constPolsExtended} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 2});
 
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {});
 
         const vk = await fflonkVerificationKey(zkey, {});
 
-        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, fflonkInfo, {});
+        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsExtended, fflonkInfo, {});
         const proofInputs = await exportFflonkCalldata(vk, proof, publicSignals, {})
         const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {});
 

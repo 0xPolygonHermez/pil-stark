@@ -40,7 +40,7 @@ async function run() {
     let options = {};
     options.extraMuls = argv.extraMuls || 2;
         
-    await fflonkSetup(pil, cnstPols, zkeyFile, ptauFile, fflonkInfo, options);
+    const {constPolsCoefs, constPolsExtended} = await fflonkSetup(pil, cnstPols, zkeyFile, ptauFile, fflonkInfo, options);
 
     console.log("Setup done correctly");
 }

@@ -22,7 +22,8 @@ async function runTest(pilFile, curve) {
 
     const cmPols = newCommitPolsArray(pil, F);
 
-    await smSimple.execute(F, cmPols.Simple);
+    const isArray = pilFile === "simple2p" ? true : false;
+    await smSimple.execute(F, cmPols.Simple, isArray);
 
     const res = await verifyPil(F, pil, cmPols , constPols);
 
@@ -39,13 +40,13 @@ async function runTest(pilFile, curve) {
 
     const fflonkInfo = fflonkInfoGen(F, pil);
 
-    await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1});
+    const {constPolsCoefs, constPolsExtended} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1});
 
     const zkey = await readPilFflonkZkeyFile(zkeyFilename, {});
 
     const vk = await fflonkVerificationKey(zkey, {});
 
-    const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, fflonkInfo, {});
+    const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsExtended, fflonkInfo, {});
 
     const proofInputs = await exportFflonkCalldata(vk, proof, publicSignals, {})
     const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {});
@@ -74,7 +75,6 @@ async function runTest(pilFile, curve) {
 
     } else {
         expect(await pilFflonkVerifier.verifyProof(JSON.parse(proofInputs))).to.equal(true);
-
     }
 }
 

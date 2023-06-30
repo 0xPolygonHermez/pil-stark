@@ -2,7 +2,8 @@
   "name": "smart_contract_tests",
   "private": true,
   "scripts": {
-    "test": "npx hardhat test"
+    "test": "npx hardhat test",
+    "test:simple": "mocha test/fflonk_simple.test.js"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.3",

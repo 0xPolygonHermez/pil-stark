@@ -14,7 +14,7 @@ const minNperThread = 1 << 12;
 
 const { stringifyBigInts } = utils;
 
-module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, options) {
+module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoefs, cnstPolsE, fflonkInfo, options) {
     const logger = options.logger;
 
     if (logger) logger.info("PIL-FFLONK PROVER STARTED");
@@ -72,7 +72,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
 
     // Reserve big buffers for the polynomial evaluations
     ctx.const_n = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
-    ctx.cm1_n = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomain);
+    ctx.cm1_n = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomain);    
     ctx.cm2_n = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomain);
     ctx.cm3_n = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomain);
     ctx.tmpExp_n = new BigBuffer(fflonkInfo.mapSectionsN.tmpExp_n * sDomain); // Expression polynomials
@@ -91,6 +91,16 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
     ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainExt * factorZK);
     ctx.q_2ns = new BigBuffer(fflonkInfo.qDim * sDomainExt * factorZK);
     ctx.x_2ns = new BigBuffer(sDomainExt * factorZK); // Omegas a l'extès
+
+    // Read constant polynomials
+    cnstPols.writeToBigBuffer(ctx.const_n, Fr);
+
+    // Read committed polynomials
+    cmPols.writeToBigBuffer(ctx.cm1_n, Fr);
+
+    // Read const coefs and extended evals
+    ctx.const_coefs.set(cnstPolsCoefs);
+    ctx.const_2ns.set(cnstPolsE);
 
     let w = Fr.one;
     for (let i = 0; i < domainSize; i++) {
@@ -117,9 +127,20 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
 
     const pool = workerpool.pool(__dirname + '/fflonk_prover_worker.js');
 
+    // Calculate publics
+    ctx.publics = [];
+    for (let i = 0; i < fflonkInfo.publics.length; i++) {
+        const publicPol = fflonkInfo.publics[i];
 
-    // STAGE 0. Store constants and committed values. Calculate publics
-    await stage0();
+        if ("cmP" === publicPol.polType) {
+            const offset = (fflonkInfo.publics[i].idx * fflonkInfo.mapSectionsN.cm1_n + fflonkInfo.publics[i].polId) * n8r;
+            ctx.publics[i] = ctx.cm1_n.slice(offset, offset + n8r);
+        } else if ("imP" === publicPol.polType) {
+            ctx.publics[i] = calculateExpAtPoint(ctx, fflonkInfo.publicsCode[i], publicPol.idx);
+        } else {
+            throw new Error(`Invalid public type: ${polType.type}`);
+        }
+    }
 
     // STAGE 1. Compute Trace Column Polynomials
     if (logger) logger.debug("> STAGE 1. Compute Trace Column Polynomials");
@@ -170,49 +191,13 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, fflonkInfo, 
         publicSignals,
     };
 
-    async function stage0() {
-        // STEP 0.1 - Prepare constant polynomial evaluations
-        for (let i = 0; i < cnstPols.$$nPols; i++) {
-            // Prepare constant polynomial evaluations
-            const cnstPolBuffer = cnstPols.$$array[i];
-            for (let j = 0; j < cnstPolBuffer.length; j++) {
-                ctx.const_n.set(Fr.e(cnstPolBuffer[j]), (i + j * fflonkInfo.nConstants) * n8r);
-            }
-        }
-
-        // STEP 0.2 - Prepare committed polynomial evaluations
-        for (let i = 0; i < cmPols.$$nPols; i++) {
-            // Prepare committed polynomial evaluations
-            const cmPolBuffer = cmPols.$$array[i];
-            for (let j = 0; j < cmPolBuffer.length; j++) {
-                ctx.cm1_n.set(Fr.e(cmPolBuffer[j]), (i + j * fflonkInfo.mapSectionsN.cm1_n) * n8r);
-            }
-        }
-
-        // STEP 0.3 - Prepare public inputs
-        ctx.publics = [];
-        for (let i = 0; i < fflonkInfo.publics.length; i++) {
-            const publicPol = fflonkInfo.publics[i];
-
-            if ("cmP" === publicPol.polType) {
-                //const offset = publicPol.polId * sDomain + publicPol.idx * n8r;
-                const offset = (fflonkInfo.publics[i].idx * fflonkInfo.mapSectionsN.cm1_n + fflonkInfo.publics[i].polId) * n8r;
-                ctx.publics[i] = ctx.cm1_n.slice(offset, offset + n8r);
-            } else if ("imP" === publicPol.polType) {
-                ctx.publics[i] = calculateExpAtPoint(ctx, fflonkInfo.publicsCode[i], publicPol.idx);
-            } else {
-                throw new Error(`Invalid public type: ${polType.type}`);
-            }
-        }
-    }
-
     async function stage1() {
-        // STEP 1.1 - Compute random challenge
-        // TODO Add preprocessed polynomials to the transcript ????
-
         // STEP 1.2 - Compute constant polynomials (coefficients + evaluations) and commit them
         if (fflonkInfo.nConstants > 0) {
-            await extend(0, ctx, zkey, ctx.const_n, ctx.const_2ns, ctx.const_coefs, ctx.nBits, nBitsExtZK, fflonkInfo.nConstants, factorZK, Fr, logger);
+            for (let i = 0; i < fflonkInfo.nConstants; i++) {
+                const coefs = getPolFromBuffer(ctx.const_coefs, fflonkInfo.nConstants, ctx.N * factorZK, i, Fr);
+                ctx[zkey.polsNamesStage[0][i]] = new Polynomial(coefs, ctx.curve, logger);
+            }
 
             const commitsConstants = await commit(0, zkey, ctx, PTau, curve, { multiExp: false, logger });
             commitsConstants.forEach((com) => committedPols[`${com.index}`] = { pol: com.pol });
@@ -738,15 +723,14 @@ async function extend(stage, ctx, zkey, buffFrom, buffTo, buffCoefs, nBits, nBit
 
     const n = 1 << nBits;
 
-    if (stage !== 0) {
-        for (let i = 0; i < nPols; i++) {
-            for(let j = 0; j < zkey.polsOpenings[zkey.polsNamesStage[stage][i]]; ++j) {
-                const b = Fr.random();                
-                let offset1 = (j * nPols + i) * Fr.n8; 
-                let offsetN = ((j + n) * nPols + i) * Fr.n8; 
-                buffCoefs.set(Fr.add(buffCoefs.slice(offset1,offset1 + Fr.n8), Fr.neg(b)), offset1);
-                buffCoefs.set(Fr.add(buffCoefs.slice(offsetN, offsetN + Fr.n8), b), offsetN);
-            }
+    for (let i = 0; i < nPols; i++) {
+        for(let j = 0; j < zkey.polsOpenings[zkey.polsNamesStage[stage][i]]; ++j) {
+            // const b = Fr.random();  
+            const b = Fr.one;              
+            let offset1 = (j * nPols + i) * Fr.n8; 
+            let offsetN = ((j + n) * nPols + i) * Fr.n8; 
+            buffCoefs.set(Fr.add(buffCoefs.slice(offset1,offset1 + Fr.n8), Fr.neg(b)), offset1);
+            buffCoefs.set(Fr.add(buffCoefs.slice(offsetN, offsetN + Fr.n8), b), offsetN);
         }
     }
 

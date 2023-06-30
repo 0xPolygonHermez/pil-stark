@@ -1,6 +1,7 @@
 const {BigBuffer} = require("ffjavascript");
 const {log2} = require("pilcom/src/utils");
-const {setup, Polynomial, commit, lcm} = require("shplonkjs");
+const {setup, Polynomial, commit} = require("shplonkjs");
+const { ifft, fft } = require("../../helpers/fft/fft_p.bn128");
 const { writePilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 
 module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFile, fflonkInfo, options) {
@@ -198,30 +199,6 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
 
     const {zkey, PTau, curve} = await setup(config, ptauFile, logger);
 
-
-    const ctx = {};
-    for (let i = 0; i < cnstPols.$$nPols; i++) {
-        let name = cnstPols.$$defArray[i].name;
-        if(cnstPols.$$defArray[i].idx >= 0) name += cnstPols.$$defArray[i].idx;
-        const cnstPolBuffer = cnstPols.$$array[i];
-
-        if (logger) {
-            logger.info(`Preparing ${name} polynomial`);
-        }
-
-        let polEvalBuff = new BigBuffer(cnstPolBuffer.length * curve.Fr.n8);
-        for (let j = 0; j < cnstPolBuffer.length; j++) {
-            polEvalBuff.set(curve.Fr.e(cnstPolBuffer[j]), j * curve.Fr.n8);
-        }
-        ctx[name] = await Polynomial.fromEvaluations(polEvalBuff, curve, logger);
-    }
-
-    const commits = await commit(0, zkey, ctx, PTau, curve, {multiExp: true, logger});
-
-    for(let j = 0; j < commits.length; ++j) {
-        zkey[`${commits[j].index}`] = commits[j].commit;
-    }
-
     zkey.polsNamesStage = polsNames;
     zkey.polsOpenings = polsOpenings;
     let maxCmPolsOpenings = 0;
@@ -266,9 +243,53 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
 
     zkey.nPublics = fflonkInfo.nPublics;
     
+    const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
+    const nBitsExt = zkey.power + extendBits;
+
+    const domainSizeExt = 1 << nBitsExt;
+
+    const extendBitsZK = zkey.powerZK - zkey.power;
+    const factorZK = (1 << extendBitsZK);
+
+    let constPols = new BigBuffer(fflonkInfo.nConstants * domainSize * curve.Fr.n8); // Constant polynomials
+    let constPolsCoefs = new BigBuffer(fflonkInfo.nConstants * domainSize * factorZK * curve.Fr.n8); // Constant polynomials
+    let constPolsExtended = new BigBuffer(fflonkInfo.nConstants * domainSizeExt * factorZK * curve.Fr.n8); // Constant polynomials
+
+    cnstPols.writeToBigBuffer(constPols, curve.Fr);
+
+    if(fflonkInfo.nConstants > 0) {
+        await ifft(constPols, fflonkInfo.nConstants, zkey.power, constPolsCoefs, curve.Fr);
+
+        await fft(constPolsCoefs, fflonkInfo.nConstants, nBitsExt + extendBitsZK, constPolsExtended, curve.Fr);
+    
+        const ctx = {};
+
+        // Store coefs to context
+        for (let i = 0; i < fflonkInfo.nConstants; i++) {
+            const coefs = getPolFromBuffer(constPolsCoefs, fflonkInfo.nConstants, domainSize * factorZK, i, curve.Fr);
+            ctx[zkey.polsNamesStage[0][i]] = new Polynomial(coefs, curve, logger);
+        }
+
+        const commits = await commit(0, zkey, ctx, PTau, curve, {multiExp: true, logger});
+
+        for(let j = 0; j < commits.length; ++j) {
+            zkey[`${commits[j].index}`] = commits[j].commit;
+        }
+    }
+    
     if(logger) logger.info("Fflonk setup finished");
 
-    await writePilFflonkZkeyFile(zkey, zkeyFilename, PTau, curve, {logger});
+    await writePilFflonkZkeyFile(zkey, zkeyFilename, PTau, curve, {logger}); 
+    
+    return {constPolsCoefs, constPolsExtended};
+}
+
+function getPolFromBuffer(buff, nPols, N, id, Fr) {
+    let polBuffer = new BigBuffer(N * Fr.n8);
+    for (let j = 0; j < N; j++) {
+        polBuffer.set(buff.slice((id + j * nPols) * Fr.n8, (id + j * nPols + 1) * Fr.n8), j * Fr.n8);
+    }
+    return polBuffer;
 }
 
 function findPolynomialByTypeId(pil, type, id) {

@@ -50,7 +50,7 @@ async function run() {
     const cmPols =  newCommitPolsArray(pil, F);
     await cmPols.loadFromFile(commitFile);
 
-    const resP = await fflonkProve(zkey, cmPols, constPols, fflonkInfo, ptauFile, options);
+    const resP = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsExtended, fflonkInfo, ptauFile, options);
     
     await fs.promises.writeFile(proofFile, JSONbig.stringify(resP.proof, null, 1), "utf8");
 

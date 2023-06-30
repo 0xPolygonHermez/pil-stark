@@ -70,7 +70,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     let nCm = starkInfo.nCm1;
 
     ctx.cm1_n = new BigBuffer(starkInfo.mapSectionsN.cm1_n*ctx.N);
-    cmPols.writeToBigBuffer(ctx.cm1_n, 0);
+    cmPols.writeToBigBufferGL(ctx.cm1_n);
     ctx.cm2_n = new BigBuffer(starkInfo.mapSectionsN.cm2_n*ctx.N);
     ctx.cm3_n = new BigBuffer(starkInfo.mapSectionsN.cm3_n*ctx.N);
     ctx.tmpExp_n = new BigBuffer(starkInfo.mapSectionsN.tmpExp_n*ctx.N);
@@ -102,7 +102,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
 
     ctx.const_n = new BigBuffer(starkInfo.nConstants*ctx.N);
-    constPols.writeToBigBuffer(ctx.const_n, 0);
+    constPols.writeToBigBufferGL(ctx.const_n);
 
     ctx.const_2ns = constTree.elements;
 
