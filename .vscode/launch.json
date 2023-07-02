@@ -1872,7 +1872,7 @@
                 "-f tmp/fibonacci.fflonkinfo.json",
                 "-c tmp/fibonacci.fflonk.chelpers.cpp",
                 "-z tmp/fibonacci.zkey",
-                "-C Fflonk",
+                "-C PilFflonkSteps",
                 "-m"
             ],
             "runtimeArgs": [

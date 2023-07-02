@@ -15,13 +15,36 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
     const multipleCodeFiles = config && config.multipleCodeFiles;
     const optcodes = config && config.optcodes;
 
+    const codePublics = [];
     for (let i = 0; i < fflonkInfo.nPublics; i++) {
         if (fflonkInfo.publicsCode[i]) {
-            code.push(compileCode("publics_" + i + "_first", fflonkInfo.publicsCode[i].first, "n", true));
-            code.push(compileCode("publics_" + i + "_i", fflonkInfo.publicsCode[i].first, "n", true));
-            code.push(compileCode("publics_" + i + "_last", fflonkInfo.publicsCode[i].first, "n", true));
+            codePublics.push(compileCode(i, fflonkInfo.publicsCode[i].first, "n", true));
         }
     }
+
+    code.push(
+        [
+        `AltBn128::FrElement ${config.className}::publics_first(AltBn128::Engine &E, StepsParams &params, uint64_t i, uint64_t pub) {`,
+        ...codePublics,
+        `}`
+        ].join("\n")
+    );
+
+    code.push(
+        [
+        `AltBn128::FrElement ${config.className}::publics_i(AltBn128::Engine &E, StepsParams &params, uint64_t i, uint64_t pub) {`,
+        ...codePublics,
+        `}`
+        ].join("\n")
+    );
+
+    code.push(
+        [
+        `AltBn128::FrElement ${config.className}::publics_last(AltBn128::Engine &E, StepsParams &params, uint64_t i, uint64_t pub) {`,
+        ...codePublics,
+        `}`
+        ].join("\n")
+    );
 
     const pubTable = [];
     pubTable.push("publics = (")
@@ -38,11 +61,10 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
     let result = {};
 
     if (multipleCodeFiles) {
-        result.public = pubTable.join("\n") + "\n";
+        result.publics = code.join("\n\n") + "\n";
+        code.length = 0;
     }
-    else {
-        code.push(pubTable.join("\n"));
-    }
+
 
     if (optcodes && multipleCodeFiles) {
         code.push(compileCode_parser(fflonkInfo, nBits, factorZK, "step2prev_first", fflonkInfo.step2prev.first, "n"));
@@ -162,9 +184,9 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
         let res;
         if (ret) {
             res = [
-                `FrElement ${config.className}::${functionName}(AltBn128::Engine &E, StepsParams &params, uint64_t i) {`,
-                ...body,
-                `}`
+                `   if (pub == ${functionName}) {`,
+                        ...body,
+                `   }`
             ].join("\n");
         } else {
             res = [
@@ -220,9 +242,9 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
                 case "eval": return `params.evals[${r.id}]`;
                 case "x": {
                     if (dom == "n") {
-                        return `(FrElement &)*params.x_n[i]`;
+                        return `(AltBn128::FrElement &)*params.x_n[i]`;
                     } else if (dom == "2ns") {
-                        return `(FrElement &)*params.x_2ns[i]`;
+                        return `(AltBn128::FrElement &)*params.x_2ns[i]`;
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -235,14 +257,14 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
             let eDst;
             switch (r.dest.type) {
                 case "tmp": {
-                    eDst = `FrElement tmp_${r.dest.id}`;
+                    eDst = `AltBn128::FrElement tmp_${r.dest.id}`;
                     break;
                 }
                 case "q": {
                     if (dom == "n") {
                         throw new Error("Accessing q in domain n");
                     } else if (dom == "2ns") {
-                        eDst = `(FrElement &)(params.q_2ns[i])`
+                        eDst = `(AltBn128::FrElement &)(params.q_2ns[i])`
                     } else {
                         throw new Error("Invalid dom");
                     }

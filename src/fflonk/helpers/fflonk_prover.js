@@ -739,24 +739,11 @@ async function extend(stage, ctx, zkey, buffFrom, buffTo, buffCoefs, nBits, nBit
 
     // Store coefs to context
     for (let i = 0; i < nPols; i++) {
-        const degree = getDegree(zkey, zkey.polsNamesStage[stage][i]);
-        const coefs = getPolFromBuffer(buffCoefs, nPols, degree, i, Fr);
+        const coefs = getPolFromBuffer(buffCoefs, nPols, n*factorZK, i, Fr);
         ctx[zkey.polsNamesStage[stage][i]] = new Polynomial(coefs, ctx.curve, logger);
     }
 
     await fft(buffCoefs, nPols, nBitsExt, buffTo, Fr);
-}
-
-function getDegree(zkey, name) {
-    for (const fi of zkey.f) {
-        for (const stage of fi.stages) {
-            for (const pol of stage.pols) {
-                if (pol.name === name) {
-                    return pol.degree;
-                }
-            }
-        }
-    }
 }
 
 function getPolFromBuffer(buff, nPols, N, id, Fr) {

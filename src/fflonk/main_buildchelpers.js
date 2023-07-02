@@ -47,19 +47,16 @@ async function run() {
             console.log(cpart);
             let code, ext2;
             if (!cpart.includes("parser")) {
-                code = `#include <alt_bn128.hpp>\n#include "constant_pols_fflonk.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
+                code = `#include <alt_bn128.hpp>\n#include "../constant_pols_fflonk.hpp"\n#include "pilfflonk_steps.hpp"\n\n` + cCode[cpart];
                 ext2 = ext;
             } else {
                 code = cCode[cpart];
                 cpart = cpart.replace(/_/g, ".");
                 ext2 = ".hpp";
             }
-            console.log("ADEU", leftFilename + '.' + cpart + ext2);
             await fs.promises.writeFile(leftFilename + '.' + cpart + ext2, code, "utf8");
         }
     } else {
-        console.log("HOLA", chelpersFile);
-
         await fs.promises.writeFile(chelpersFile, cCode, "utf8");
     }
 

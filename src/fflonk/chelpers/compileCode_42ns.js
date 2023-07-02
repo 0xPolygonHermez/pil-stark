@@ -716,19 +716,19 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, factorZK, function
                 ++refchall;
                 if (r.id < range_chall[0] || range_chall[0] === -1) range_chall[0] = r.id;
                 if (r.id > range_chall[1] || range_chall[1] === -1) range_chall[1] = r.id;
-                return `(FrElement &)*params.challenges[${r.id}]`;
+                return `(AltBn128::FrElement &)*params.challenges[${r.id}]`;
             }
             case "eval": {
                 ++refevals;
                 if (r.id < range_evals[0] || range_evals[0] === -1) range_evals[0] = r.id;
                 if (r.id > range_evals[1] || range_evals[1] === -1) range_evals[1] = r.id;
-                return `(FrElement &)*params.evals[${r.id}]`;
+                return `(AltBn128::FrElement &)*params.evals[${r.id}]`;
             }
             case "x": {
                 if (dom == "n") {
-                    return `(FrElement &)*params.x_n[i]`;
+                    return `(AltBn128::FrElement &)*params.x_n[i]`;
                 } else if (dom == "2ns") {
-                    return `(FrElement &)*params.x_2ns[i]`;
+                    return `(AltBn128::FrElement &)*params.x_2ns[i]`;
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -774,7 +774,7 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, factorZK, function
                 if (dom == "n") {
                     throw new Error("Accessing q in domain n");
                 } else if (dom == "2ns") {
-                    eDst = `(FrElement &)(params.q_2ns[i]))`
+                    eDst = `(AltBn128::FrElement &)(params.q_2ns[i]))`
                 } else {
                     throw new Error("Invalid dom");
                 }

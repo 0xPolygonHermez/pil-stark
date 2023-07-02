@@ -1245,19 +1245,19 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, factorZK, functi
                 ++refchall;
                 if (r.id < range_chall[0] || range_chall[0] === -1) range_chall[0] = r.id;
                 if (r.id > range_chall[1] || range_chall[1] === -1) range_chall[1] = r.id;
-                return `(FrElement &)*params.challenges[${r.id}]`;
+                return `(AltBn128::FrElement &)*params.challenges[${r.id}]`;
             }
             case "eval": {
                 ++refevals;
                 if (r.id < range_evals[0] || range_evals[0] === -1) range_evals[0] = r.id;
                 if (r.id > range_evals[1] || range_evals[1] === -1) range_evals[1] = r.id;
-                return `(FrElement &)*params.evals[${r.id}]`;
+                return `(AltBn128::FrElement &)*params.evals[${r.id}]`;
             }
             case "x": {
                 if (dom == "n") {
-                    return `(FrElement &)*params.x_n[i]`;
+                    return `(AltBn128::FrElement &)*params.x_n[i]`;
                 } else if (dom == "2ns") {
-                    return `(FrElement &)*params.x_2ns[i]`;
+                    return `(AltBn128::FrElement &)*params.x_2ns[i]`;
                 } else {
                     throw new Error("Invalid dom");
                 }
