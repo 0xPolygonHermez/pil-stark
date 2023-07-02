@@ -1793,6 +1793,57 @@
             ]
         },
         {
+            "name": "simple buildconst bn128",
+            "program": "test/state_machines/sm_simple/main_buildconst_simple.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-o tmp/simple.const",
+                "--curve=bn128"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "simple exec bn128",
+            "program": "test/state_machines/sm_simple/main_exec_simple.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-o tmp/simple.commit",
+                "--curve=bn128"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "simple fflonk build CHelpers",
+            "program": "${workspaceFolder}/src/fflonk/main_buildchelpers.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-f tmp/simple2.fflonkinfo.json",
+                "-c tmp/simple.fflonk.chelpers.cpp",
+                "-z tmp/fflonk_simple2.zkey",
+                "-C PilFflonkSteps",
+                "-m"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "fibonacci buildconst bn128",
             "program": "test/state_machines/sm_fibonacci/main_buildconst_fibonacci.js",
             "request": "launch",
