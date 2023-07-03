@@ -281,7 +281,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
 
     await writePilFflonkZkeyFile(zkey, zkeyFilename, PTau, curve, {logger}); 
     
-    return {constPolsCoefs, constPolsExtended};
+    return {constPols, constPolsCoefs, constPolsExtended};
 }
 
 function getPolFromBuffer(buff, nPols, N, id, Fr) {
