@@ -1,6 +1,6 @@
 const chai = require("chai");
 const assert = chai.assert;
-const {F1Field, buildBn128} = require("ffjavascript");
+const { F1Field } = require("ffjavascript");
 const path = require("path");
 const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
 const fflonkProve = require("../../src/fflonk/helpers/fflonk_prover.js");
@@ -14,9 +14,6 @@ const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require
 const smSimple = require("../state_machines/sm_simple/sm_simple.js");
 
 const Logger = require("logplease");
-const { writeConstPolsFile, readConstPolsFile } = require("../../src/fflonk/const_pols_serializer.js");
-
-const logger = Logger.create("pil-fflonk", {showTimestamp: false});
 Logger.setLogLevel("DEBUG");
 
 describe("simple sm", async function () {
@@ -74,18 +71,10 @@ describe("simple sm", async function () {
 
         const {constPolsCoefs, constPolsEvals, constPolsEvalsExt} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1, logger});
     
-        // // TODO remove
-        // curve = await buildBn128();
-        // const constPolsFilename =  path.join(__dirname, "../../", "tmp", "simple_pols.const");
-        // await writeConstPolsFile(constPolsFilename, constPolsCoefs, constPolsEvals, constPolsEvalsExt, curve.Fr, {logger});
-
-        // const xxx = await readConstPolsFile(constPolsFilename, curve.Fr, {logger});
-
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 
         const vk = await fflonkVerificationKey(zkey, {logger});
 
-        //const {proof, publicSignals} = await fflonkProve(zkey, cmPols, xxx.evals, xxx.coefs, xxx.evalsExt, fflonkInfo, {logger});
         const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPolsEvals, constPolsCoefs, constPolsEvalsExt, fflonkInfo, {logger});
 
         const isValid = await fflonkVerify(vk, publicSignals, proof, fflonkInfo, {logger});
