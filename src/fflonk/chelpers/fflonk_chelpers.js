@@ -7,9 +7,24 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
     const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
     const nBitsExt = zkey.power + extendBits;
     
+    const N = 1 << nBits;
+    const Next = 1 << nBitsExt;
+
+
     // ZK data
     const extendBitsZK = zkey.powerZK - zkey.power;
     const factorZK = (1 << extendBitsZK);
+
+    fflonkInfo.mapOffsets = {};
+    fflonkInfo.mapOffsets.cm1_n = 0;
+    fflonkInfo.mapOffsets.cm2_n = fflonkInfo.mapOffsets.cm1_n +  N * factorZK * fflonkInfo.mapSectionsN.cm1_n;
+    fflonkInfo.mapOffsets.cm3_n = fflonkInfo.mapOffsets.cm2_n +  N * factorZK * fflonkInfo.mapSectionsN.cm2_n;
+    fflonkInfo.mapOffsets.tmpExp_n = fflonkInfo.mapOffsets.cm3_n +  N * factorZK * fflonkInfo.mapSectionsN.cm3_n;
+    fflonkInfo.mapOffsets.cm1_2ns = fflonkInfo.mapOffsets.tmpExp_n +  N * factorZK * fflonkInfo.mapSectionsN.tmpExp_n;
+    fflonkInfo.mapOffsets.cm2_2ns = fflonkInfo.mapOffsets.cm1_2ns +  Next * factorZK * fflonkInfo.mapSectionsN.cm1_2ns;
+    fflonkInfo.mapOffsets.cm3_2ns = fflonkInfo.mapOffsets.cm2_2ns +  Next * factorZK * fflonkInfo.mapSectionsN.cm2_2ns;
+    fflonkInfo.mapOffsets.q_2ns = fflonkInfo.mapOffsets.cm3_2ns +  Next * factorZK * fflonkInfo.mapSectionsN.cm3_2ns;
+    fflonkInfo.mapTotalN = fflonkInfo.mapOffsets.q_2ns +  Next * factorZK * fflonkInfo.mapSectionsN.q_2ns;
 
     const code = [];
     const multipleCodeFiles = config && config.multipleCodeFiles;
@@ -138,7 +153,6 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
         const extendBitsZK = zkey.powerZK - zkey.power;
         const factorZK = (1 << extendBitsZK);
     
-
 
         const next = (dom == "n" ? 1 : (1 << extendBits) * factorZK).toString();
         const N = ((dom == "n" ? (1 << nBits) : (1 << nBitsExt)) * factorZK).toString();
@@ -294,9 +308,6 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
         }
 
         function evalMap(polId, prime) {
-
-            const next = (dom == "n" ? 1 : (1 << extendBits) * factorZK).toString();
-            const N = ((dom == "n" ? (1 << nBits) : (1 << nBitsExt)) * factorZK).toString();
 
             let p = fflonkInfo.varPolMap[polId];
             if (!p) {

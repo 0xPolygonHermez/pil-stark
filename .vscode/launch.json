@@ -1802,7 +1802,8 @@
             "type": "pwa-node",
             "args": [
                 "-o tmp/simple.const",
-                "--curve=bn128"
+                "--curve=bn128",
+                "--simple=4"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1818,7 +1819,43 @@
             "type": "pwa-node",
             "args": [
                 "-o tmp/simple.commit",
-                "--curve=bn128"
+                "--curve=bn128",
+                "--simple=4"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "simple gen FflonkInfo",
+            "program": "${workspaceFolder}/src/fflonk/main_fflonkinfo.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p test/state_machines/sm_simple/simple4.pil",
+                "-i tmp/simple.fflonkinfo.json"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "simple fflonk setup",
+            "program": "${workspaceFolder}/src/fflonk/main_setup.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p test/state_machines/sm_simple/simple4.pil",
+                "-t tmp/powersOfTau28_hez_final_19.ptau",
+                "-f tmp/simple.fflonkinfo.json",
+                "-c tmp/simple.const",
+                "-z tmp/simple.zkey"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1833,9 +1870,9 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-f tmp/simple2.fflonkinfo.json",
+                "-f tmp/simple.fflonkinfo.json",
                 "-c tmp/simple.fflonk.chelpers.cpp",
-                "-z tmp/fflonk_simple2.zkey",
+                "-z tmp/simple.zkey",
                 "-C PilFflonkSteps",
                 "-m"
             ],

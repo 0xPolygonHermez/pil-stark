@@ -165,7 +165,6 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
 
     const xN = curve.Fr.exp(challengeXi, ctx.N);
     const Z = curve.Fr.sub(xN, curve.Fr.one);
-
     evaluations.invZh = curve.Fr.inv(Z);
 
     await pool.terminate();
@@ -268,6 +267,9 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         // STEP 2.3 - Commit stage 2 polynomials
         const commitsStage2 = await commit(2, zkey, ctx, PTau, curve, { multiExp: true, logger });
         commitsStage2.forEach((com) => committedPols[`${com.index}`] = { commit: com.commit, pol: com.pol });
+
+        commitsStage2.forEach((com) => console.log(ctx.curve.G1.toString(com.commit)));
+
     }
 
     async function stage3() {
@@ -340,6 +342,9 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         // STEP 3.3 - Commit stage 3 polynomials
         const commitsStage3 = await commit(3, zkey, ctx, PTau, curve, { multiExp: true, logger });
         commitsStage3.forEach((com) => committedPols[`${com.index}`] = { commit: com.commit, pol: com.pol });
+
+        commitsStage3.forEach((com) => console.log(ctx.curve.G1.toString(com.commit)));
+
     }
 
     async function stage4() {
@@ -363,6 +368,9 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         // STEP 4.3 - Commit stage 4 polynomials
         const commitsStage4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });
         commitsStage4.forEach((com) => committedPols[`${com.index}`] = { commit: com.commit, pol: com.pol });
+
+        commitsStage4.forEach((com) => console.log(ctx.curve.G1.toString(com.commit)));
+
     }
 
     async function callCalculateExps(step, dom, pool, ctx, fflonkInfo, options) {
@@ -721,7 +729,7 @@ function getPol(ctx, fflonkInfo, idPol) {
 }
 
 async function extend(stage, ctx, zkey, buffFrom, buffTo, buffCoefs, nBits, nBitsExt, nPols, factorZK, Fr, logger) {
-
+    
     await ifft(buffFrom, nPols, nBits, buffCoefs, Fr);
 
     const n = 1 << nBits;

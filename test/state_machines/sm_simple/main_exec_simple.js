@@ -24,7 +24,9 @@ async function run() {
     const curveName = argv.curve || "gl";
     const F = curveName === "gl" ? new F3g : new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
 
-    const pil = await compile(F, path.join(__dirname, "simple2.pil"));
+    if(argv.simple && !["1","2","2p","3","4","4p"].includes(argv.simple.toString())) throw new Error("Simple " + argv.simple.toString() + " does not exist" );
+    const simple = argv.simple.toString() || "2";
+    const pil = await compile(F, path.join(__dirname, "simple" + simple + ".pil"));
 
     const cmPols =  newCommitPolsArray(pil, F);
 
