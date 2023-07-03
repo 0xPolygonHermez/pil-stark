@@ -2245,7 +2245,7 @@
                 "-e ${workspaceFolder}/tmp/plonktest.exec",
                 "-w ${workspaceFolder}/tmp/plonktest.wtns",
                 "-p ${workspaceFolder}/tmp/plonktest.pil",
-                "-m ${workspaceFolder}/tmp/plonktest.commit"]
+                "-m ${workspaceFolder}/tmp/plonktest.commit"],
             "skipFiles": [
                 "<node_internals>/**"
             ],
