@@ -3,33 +3,36 @@ const assert = chai.assert;
 const {F1Field, buildBn128} = require("ffjavascript");
 const path = require("path");
 const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
-const fflonkProve = require("../../src/fflonk/helpers/fflonk_prover.js");
 const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
-const fflonkVerify  = require("../../src/fflonk/helpers/fflonk_verify.js");
-const fflonkVerificationKey = require("../../src/fflonk/helpers/fflonk_verification_key.js");
-const { readPilFflonkZkeyFile } = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
 const fs = require("fs");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
 const smSimple = require("../state_machines/sm_simple/sm_simple.js");
 
-const Logger = require("logplease");
-const { writeConstPolsFile, readConstPolsFile } = require("../../src/fflonk/const_pols_serializer.js");
+const { writeConstPolsFile } = require("../../src/fflonk/const_pols_serializer.js");
 
+const Logger = require("logplease");
 const logger = Logger.create("pil-fflonk", {showTimestamp: false});
 Logger.setLogLevel("DEBUG");
 
 describe("simple sm", async function () {
     this.timeout(10000000);
 
-    it("Simple2", async () => {
-        await runTest("simple2", "simple2");
+    let curve;
+
+    before(async () => {
+        curve = await buildBn128();
+    })
+
+    after(async () => {
+        await curve.terminate();
+    })
+
+    it("Creates all files needed to generate a pilfflonk proof", async () => {
+        await runTest("simple4", "simple4");
     });
 
     async function runTest(pilFilename, outputFilename) {
-        const logger = Logger.create("pil-fflonk", {showTimestamp: false});
-        Logger.setLogLevel("DEBUG");
-
         const F = new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
     
         const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple", `${pilFilename}.pil`));
@@ -73,7 +76,6 @@ describe("simple sm", async function () {
         await committedPols.saveToFileFr(committedPolsFilename);
 
         // Create & constant polynomial coefficients and extended evaluations file
-        curve = await buildBn128();
         const constPolsZkeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}_zkey.const`);
         await writeConstPolsFile(constPolsZkeyFilename, constPolsCoefs, constPolsEvals, constPolsEvalsExt, curve.Fr, {logger});
     }
