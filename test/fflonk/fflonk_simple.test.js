@@ -34,7 +34,7 @@ describe("simple sm", async function () {
     it("Simple3", async () => {
         await runTest("simple3");
     });
-    it.only("Simple4", async () => {
+    it("Simple4", async () => {
         await runTest("simple4");
     });
     it("Simple4p", async () => {
@@ -74,12 +74,12 @@ describe("simple sm", async function () {
 
         const {constPolsCoefs, constPolsEvals, constPolsEvalsExt} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1, logger});
     
-        // TODO remove
-        curve = await buildBn128();
-        const constPolsFilename =  path.join(__dirname, "../../", "tmp", "simple_pols.const");
-        await writeConstPolsFile(constPolsFilename, constPolsCoefs, constPolsEvals, constPolsEvalsExt, curve.Fr, {logger});
+        // // TODO remove
+        // curve = await buildBn128();
+        // const constPolsFilename =  path.join(__dirname, "../../", "tmp", "simple_pols.const");
+        // await writeConstPolsFile(constPolsFilename, constPolsCoefs, constPolsEvals, constPolsEvalsExt, curve.Fr, {logger});
 
-        const xxx = await readConstPolsFile(constPolsFilename, curve.Fr, {logger});
+        // const xxx = await readConstPolsFile(constPolsFilename, curve.Fr, {logger});
 
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 
