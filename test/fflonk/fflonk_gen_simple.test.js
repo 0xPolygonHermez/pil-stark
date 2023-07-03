@@ -28,21 +28,42 @@ describe("simple sm", async function () {
         await curve.terminate();
     })
 
-    it("Creates all files needed to generate a pilfflonk proof", async () => {
-        await runTest("simple2p", "simple2p");
+    it("Creates all files needed to generate a pilfflonk proof for simple2", async () => {
+        await runTest("simple1");
     });
 
-    async function runTest(pilFilename, outputFilename) {
+    it("Creates all files needed to generate a pilfflonk proof for simple2", async () => {
+        await runTest("simple2");
+    });
+
+    it("Creates all files needed to generate a pilfflonk proof for simple2", async () => {
+        await runTest("simple2p");
+    });
+
+    it("Creates all files needed to generate a pilfflonk proof for simple2", async () => {
+        await runTest("simple3");
+    });
+
+    it("Creates all files needed to generate a pilfflonk proof for simple2", async () => {
+        await runTest("simple4");
+    });
+
+    it("Creates all files needed to generate a pilfflonk proof for simple2", async () => {
+        await runTest("simple4p");
+    });
+
+
+    async function runTest(filename) {
         const F = new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
     
-        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple", `${pilFilename}.pil`));
+        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple", `${filename}.pil`));
         const constPols =  newConstantPolsArray(pil, F);
     
         await smSimple.buildConstants(constPols.Simple);
     
         const committedPols = newCommitPolsArray(pil, F);
     
-        const isArray = pilFilename === "simple2p" ? true : false;
+        const isArray = filename === "simple2p" ? true : false;
         await smSimple.execute(F, committedPols.Simple, isArray);
     
         const res = await verifyPil(F, pil, committedPols , constPols);
@@ -58,25 +79,25 @@ describe("simple sm", async function () {
         // Create & save fflonkInfo
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        const fflonkInfoFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.fflonkinfo.json`);
+        const fflonkInfoFilename =  path.join(__dirname, "../../", "tmp", `${filename}.fflonkinfo.json`);
         await fs.promises.writeFile(fflonkInfoFilename, JSON.stringify(fflonkInfo, null, 1), "utf8");
 
         // Create & save zkey file
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
-        const zkeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.zkey`);
+        const zkeyFilename =  path.join(__dirname, "../../", "tmp", `${filename}.zkey`);
 
         const {constPolsCoefs, constPolsEvals, constPolsEvalsExt} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1, logger});
     
         // Save constant polynomial evaluations file
-        const constPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.const`);
+        const constPolsFilename =  path.join(__dirname, "../../", "tmp", `${filename}.cnst`);
         await constPols.saveToFileFr(constPolsFilename);
 
         // Save committed polynomial evaluations file
-        const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.comt`);
+        const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `${filename}.cmmt`);
         await committedPols.saveToFileFr(committedPolsFilename);
 
         // Create & constant polynomial coefficients and extended evaluations file
-        const constPolsZkeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}_zkey.const`);
+        const constPolsZkeyFilename =  path.join(__dirname, "../../", "tmp", `${filename}.ext.cnst`);
         await writeConstPolsFile(constPolsZkeyFilename, constPolsCoefs, constPolsEvalsExt, curve.Fr, {logger});
     }
 });
