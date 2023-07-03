@@ -8,15 +8,14 @@ const { createBinFile,
     endReadSection } = require("@iden3/binfileutils");
 
 
-const CONST_POLS_NSECTIONS = 4;
+const CONST_POLS_NSECTIONS = 3;
 const CONST_POLS_FILE_COEFS_SECTION = 1;
-const CONST_POLS_FILE_EVALS_SECTION = 2;
-const CONST_POLS_FILE_EVALS_EXT_SECTION = 3;
+const CONST_POLS_FILE_EVALS_EXT_SECTION = 2;
 
 const { BigBuffer, Scalar, getCurveFromQ } = require("ffjavascript");
 
 
-exports.writeConstPolsFile = async function (constPolsFilename, constPolsCoefs, constPolsEvals, constPolsEvalsExt, Fr, options) {
+exports.writeConstPolsFile = async function (constPolsFilename, constPolsCoefs, constPolsEvalsExt, Fr, options) {
     let logger = options.logger
 
     if (logger) logger.info("> Writing const pols file");
@@ -24,10 +23,6 @@ exports.writeConstPolsFile = async function (constPolsFilename, constPolsCoefs, 
 
     if (logger) logger.info(`··· Writing Section ${CONST_POLS_FILE_COEFS_SECTION}. Const Pols Coefs`);
     await writeConstPolsCoefsSection(constPolsCoefs, fd, Fr, options);
-    if (globalThis.gc) globalThis.gc();
-
-    if (logger) logger.info(`··· Writing Section ${CONST_POLS_FILE_EVALS_SECTION}. Const Pols Evaluations`);
-    await writeConstPolsEvalsSection(constPolsEvals, fd, Fr, options);
     if (globalThis.gc) globalThis.gc();
 
     if (logger) logger.info(`··· Writing Section ${CONST_POLS_FILE_EVALS_EXT_SECTION}. Const Pols Extended Evaluations`);
@@ -42,11 +37,6 @@ exports.writeConstPolsFile = async function (constPolsFilename, constPolsCoefs, 
 async function writeConstPolsCoefsSection(constPolsCoefs, fd, Fr, options) {
     await startWriteSection(fd, CONST_POLS_FILE_COEFS_SECTION);
     await writeBuffer(constPolsCoefs, fd, Fr, options);
-    await endWriteSection(fd);
-}
-async function writeConstPolsEvalsSection(constPolsEvals, fd, Fr, options) {
-    await startWriteSection(fd, CONST_POLS_FILE_EVALS_SECTION);
-    await writeBuffer(constPolsEvals, fd, Fr, options);
     await endWriteSection(fd);
 }
 
@@ -98,10 +88,6 @@ exports.readConstPolsFile = async function (constPolsFilename, Fr, options) {
     await readConstPolsCoefsSection(fd, sections, pols, Fr, options);
     if (globalThis.gc) globalThis.gc();
 
-    if (logger) logger.info(`··· Reading Section ${CONST_POLS_FILE_EVALS_SECTION}. Const Pols Evaluations`);
-    await readConstPolsEvalsSection(fd, sections, pols, Fr, options);
-    if (globalThis.gc) globalThis.gc();
-
     if (logger) logger.info(`··· Reading Section ${CONST_POLS_FILE_EVALS_EXT_SECTION}. Const Pols Extended Evaluations`);
     await readConstPolsEvalsExtSection(fd, sections, pols, Fr, options);
     if (globalThis.gc) globalThis.gc();
@@ -113,25 +99,13 @@ exports.readConstPolsFile = async function (constPolsFilename, Fr, options) {
 
 async function readConstPolsCoefsSection(fd, sections, pols, Fr, options) {
     await startReadUniqueSection(fd, sections, CONST_POLS_FILE_COEFS_SECTION);
-
     pols.coefs = await readBuffer(fd, sections[CONST_POLS_FILE_COEFS_SECTION], Fr);
-
-    await endReadSection(fd);
-}
-
-async function readConstPolsEvalsSection(fd, sections, pols, Fr, options) {
-    await startReadUniqueSection(fd, sections, CONST_POLS_FILE_EVALS_SECTION);
-
-    pols.evals = await readBuffer(fd, sections[CONST_POLS_FILE_EVALS_SECTION], Fr);
-
     await endReadSection(fd);
 }
 
 async function readConstPolsEvalsExtSection(fd, sections, pols, Fr, options) {
     await startReadUniqueSection(fd, sections, CONST_POLS_FILE_EVALS_EXT_SECTION);
-
     pols.evalsExt = await readBuffer(fd, sections[CONST_POLS_FILE_EVALS_EXT_SECTION], Fr);
-
     await endReadSection(fd);
 }
 
