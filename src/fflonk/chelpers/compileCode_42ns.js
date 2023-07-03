@@ -718,17 +718,11 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, factorZK, function
                 if (r.id > range_chall[1] || range_chall[1] === -1) range_chall[1] = r.id;
                 return `(AltBn128::FrElement &)*params.challenges[${r.id}]`;
             }
-            case "eval": {
-                ++refevals;
-                if (r.id < range_evals[0] || range_evals[0] === -1) range_evals[0] = r.id;
-                if (r.id > range_evals[1] || range_evals[1] === -1) range_evals[1] = r.id;
-                return `(AltBn128::FrElement &)*params.evals[${r.id}]`;
-            }
             case "x": {
                 if (dom == "n") {
-                    return `(AltBn128::FrElement &)*params.x_n[i]`;
+                    return `params.x_n[i]`;
                 } else if (dom == "2ns") {
-                    return `(AltBn128::FrElement &)*params.x_2ns[i]`;
+                    return `params.x_2ns[i]`;
                 } else {
                     throw new Error("Invalid dom");
                 }

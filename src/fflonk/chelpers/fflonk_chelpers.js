@@ -239,9 +239,9 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
                 case "eval": return `params.evals[${r.id}]`;
                 case "x": {
                     if (dom == "n") {
-                        return `(AltBn128::FrElement &)*params.x_n[i]`;
+                        return `params.x_n[i]`;
                     } else if (dom == "2ns") {
-                        return `(AltBn128::FrElement &)*params.x_2ns[i]`;
+                        return `params.x_2ns[i]`;
                     } else {
                         throw new Error("Invalid dom");
                     }
