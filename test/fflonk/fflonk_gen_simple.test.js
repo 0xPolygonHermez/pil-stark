@@ -29,7 +29,7 @@ describe("simple sm", async function () {
     })
 
     it("Creates all files needed to generate a pilfflonk proof", async () => {
-        await runTest("simple4", "simple4");
+        await runTest("simple2p", "simple2p");
     });
 
     async function runTest(pilFilename, outputFilename) {
@@ -77,6 +77,6 @@ describe("simple sm", async function () {
 
         // Create & constant polynomial coefficients and extended evaluations file
         const constPolsZkeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}_zkey.const`);
-        await writeConstPolsFile(constPolsZkeyFilename, constPolsCoefs, constPolsEvals, constPolsEvalsExt, curve.Fr, {logger});
+        await writeConstPolsFile(constPolsZkeyFilename, constPolsCoefs, constPolsEvalsExt, curve.Fr, {logger});
     }
 });
