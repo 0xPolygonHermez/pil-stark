@@ -1870,7 +1870,8 @@
                 "-t tmp/powersOfTau28_hez_final_19.ptau",
                 "-f tmp/simple.fflonkinfo.json",
                 "-c tmp/simple.const",
-                "-z tmp/simple.zkey"
+                "-z tmp/simple.zkey",
+                "--extraMuls=1"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"

@@ -38,7 +38,7 @@ async function run() {
     const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
 
     let options = {};
-    options.extraMuls = argv.extraMuls || 2;
+    options.extraMuls = Number(argv.extraMuls) || 2;
         
     const {constPols, constPolsCoefs, constPolsExtended} = await fflonkSetup(pil, cnstPols, zkeyFile, ptauFile, fflonkInfo, options);
 

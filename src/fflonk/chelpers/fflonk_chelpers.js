@@ -15,17 +15,6 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
     const extendBitsZK = zkey.powerZK - zkey.power;
     const factorZK = (1 << extendBitsZK);
 
-    fflonkInfo.mapOffsets = {};
-    fflonkInfo.mapOffsets.cm1_n = 0;
-    fflonkInfo.mapOffsets.cm2_n = fflonkInfo.mapOffsets.cm1_n +  N * factorZK * fflonkInfo.mapSectionsN.cm1_n;
-    fflonkInfo.mapOffsets.cm3_n = fflonkInfo.mapOffsets.cm2_n +  N * factorZK * fflonkInfo.mapSectionsN.cm2_n;
-    fflonkInfo.mapOffsets.tmpExp_n = fflonkInfo.mapOffsets.cm3_n +  N * factorZK * fflonkInfo.mapSectionsN.cm3_n;
-    fflonkInfo.mapOffsets.cm1_2ns = fflonkInfo.mapOffsets.tmpExp_n +  N * factorZK * fflonkInfo.mapSectionsN.tmpExp_n;
-    fflonkInfo.mapOffsets.cm2_2ns = fflonkInfo.mapOffsets.cm1_2ns +  Next * factorZK * fflonkInfo.mapSectionsN.cm1_2ns;
-    fflonkInfo.mapOffsets.cm3_2ns = fflonkInfo.mapOffsets.cm2_2ns +  Next * factorZK * fflonkInfo.mapSectionsN.cm2_2ns;
-    fflonkInfo.mapOffsets.q_2ns = fflonkInfo.mapOffsets.cm3_2ns +  Next * factorZK * fflonkInfo.mapSectionsN.cm3_2ns;
-    fflonkInfo.mapTotalN = fflonkInfo.mapOffsets.q_2ns +  Next * factorZK * fflonkInfo.mapSectionsN.q_2ns;
-
     const code = [];
     const multipleCodeFiles = config && config.multipleCodeFiles;
     const optcodes = config && config.optcodes;
@@ -313,11 +302,10 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
             if (!p) {
                 console.log("xx");
             }
-            let offset = fflonkInfo.mapOffsets[p.section];
-            offset += p.sectionPos;
+            let offset = p.sectionPos;
             let index = prime ? `((i + ${next})%${N})` : "i";
             let size = fflonkInfo.mapSectionsN[p.section];
-            return `params.pols[${offset} + ${index}*${size}]`;
+            return `params.${p.section}[${offset} + ${index}*${size}]`;
         }
     }
 
