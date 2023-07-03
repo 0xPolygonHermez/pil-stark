@@ -251,16 +251,16 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     const extendBitsZK = zkey.powerZK - zkey.power;
     const factorZK = (1 << extendBitsZK);
 
-    let constPols = new BigBuffer(fflonkInfo.nConstants * domainSize * curve.Fr.n8); // Constant polynomials
     let constPolsCoefs = new BigBuffer(fflonkInfo.nConstants * domainSize * factorZK * curve.Fr.n8); // Constant polynomials
-    let constPolsExtended = new BigBuffer(fflonkInfo.nConstants * domainSizeExt * factorZK * curve.Fr.n8); // Constant polynomials
+    let constPolsEvals = new BigBuffer(fflonkInfo.nConstants * domainSize * curve.Fr.n8); // Constant polynomials
+    let constPolsEvalsExt = new BigBuffer(fflonkInfo.nConstants * domainSizeExt * factorZK * curve.Fr.n8); // Constant polynomials
 
-    cnstPols.writeToBigBufferFr(constPols, curve.Fr);
+    cnstPols.writeToBigBufferFr(constPolsEvals, curve.Fr);
 
     if(fflonkInfo.nConstants > 0) {
-        await ifft(constPols, fflonkInfo.nConstants, zkey.power, constPolsCoefs, curve.Fr);
+        await ifft(constPolsEvals, fflonkInfo.nConstants, zkey.power, constPolsCoefs, curve.Fr);
 
-        await fft(constPolsCoefs, fflonkInfo.nConstants, nBitsExt + extendBitsZK, constPolsExtended, curve.Fr);
+        await fft(constPolsCoefs, fflonkInfo.nConstants, nBitsExt + extendBitsZK, constPolsEvalsExt, curve.Fr);
     
         const ctx = {};
 
@@ -280,8 +280,8 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     if(logger) logger.info("Fflonk setup finished");
 
     await writePilFflonkZkeyFile(zkey, zkeyFilename, PTau, curve, {logger}); 
-    
-    return {constPols, constPolsCoefs, constPolsExtended};
+        
+    return {constPolsCoefs, constPolsEvals, constPolsEvalsExt};
 }
 
 function getPolFromBuffer(buff, nPols, N, id, Fr) {

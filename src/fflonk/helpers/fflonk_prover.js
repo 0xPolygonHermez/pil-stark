@@ -93,7 +93,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
     ctx.x_2ns = new BigBuffer(sDomainExt * factorZK); // Omegas a l'extès
 
     // Read constant polynomials
-    cnstPols.writeToBigBufferFr(ctx.const_n, Fr);
+    ctx.const_n = cnstPols;
 
     // Read committed polynomials
     cmPols.writeToBigBufferFr(ctx.cm1_n, Fr);
