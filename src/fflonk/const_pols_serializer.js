@@ -53,12 +53,10 @@ async function writeBuffer(buffer, fd, Fr, options) {
     const partialBuffer = new Uint8Array(Math.min(totalSize, MaxBuffSize));
 
     const nElements = totalSize / Fr.n8;
-
     let p = 0;
     for (let i = 0; i < nElements; i++) {
         const element = buffer.slice(i * Fr.n8, (i + 1) * Fr.n8);
-        //partialBuffer.set(Fr.toRprLE(element), p);
-        Fr.toRprLE(partialBuffer, p, element);
+        Fr.toRprBE(partialBuffer, p, element);
         p += Fr.n8;
 
         if (p == partialBuffer.length) {
@@ -120,7 +118,7 @@ async function readBuffer(fd, section, Fr) {
     for (let i = 0; i < nElements; i++) {
         const element = partialBuffer.slice(i * Fr.n8, (i + 1) * Fr.n8);
         
-        partialBuffer.set(Fr.fromRprLE(element), i * Fr.n8);
+        partialBuffer.set(Fr.fromRprBE(element), i * Fr.n8);
         p += Fr.n8;
     }
 
