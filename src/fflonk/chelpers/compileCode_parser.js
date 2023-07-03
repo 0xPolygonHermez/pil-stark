@@ -1186,22 +1186,22 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, factorZK, functi
                     if (r.prime) {
                         if (r.id < range_const[0] || range_const[0] === -1) range_const[0] = r.id;
                         if (r.id > range_const[1] || range_const[1] === -1) range_const[1] = r.id;
-                        return ` params.pConstPols->getElement(${r.id},(i+1)%${N})`;
-
+                        return ` params.const_n[${r.id} + ((i+1)%${N}) * ${fflonkInfo.nConstants}]`;
                     } else {
                         if (r.id < range_const[2] || range_const[2] === -1) range_const[2] = r.id;
                         if (r.id > range_const[3] || range_const[3] === -1) range_const[3] = r.id;
-                        return ` params.pConstPols->getElement(${r.id},i)`;
+                        return ` params.const_n[${r.id} + i * ${fflonkInfo.nConstants}]`;
                     }
                 } else if (dom == "2ns") {
                     if (r.prime) {
                         if (r.id < range_const[4] || range_const[4] === -1) range_const[4] = r.id;
                         if (r.id > range_const[5] || range_const[5] === -1) range_const[5] = r.id;
-                        return `params.pConstPols2ns->getElement(${r.id},(i+${next})%${N})`;
+                        return ` params.const_2ns[${r.id} + ((i+${next})%${N}) * ${fflonkInfo.nConstants}]`;
+
                     } else {
                         if (r.id < range_const[6] || range_const[6] === -1) range_const[6] = r.id;
                         if (r.id > range_const[7] || range_const[7] === -1) range_const[7] = r.id;
-                        return `params.pConstPols2ns->getElement(${r.id},i)`;
+                        return ` params.const_2ns[${r.id} + i * ${fflonkInfo.nConstants}]`;
                     }
                 } else {
                     throw new Error("Invalid dom");

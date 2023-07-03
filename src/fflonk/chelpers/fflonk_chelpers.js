@@ -206,18 +206,12 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
             switch (r.type) {
                 case "tmp": return `tmp_${r.id}`;
                 case "const": {
+                    const next = dom === "n" ? 1 : (1 << extendBits) * factorZK;
+                    const index = r.prime ? `((i + ${next})%${N})` : "i"
                     if (dom == "n") {
-                        if (r.prime) {
-                            return ` params.pConstPols->getElement(${r.id},(i+1)%${N})`;
-                        } else {
-                            return ` params.pConstPols->getElement(${r.id},i)`;
-                        }
+                        return `params.const_n[${r.id} + ${index} * ${fflonkInfo.nConstants}]`;
                     } else if (dom == "2ns") {
-                        if (r.prime) {
-                            return `params.pConstPols2ns->getElement(${r.id},(i+${next})%${N})`;
-                        } else {
-                            return `params.pConstPols2ns->getElement(${r.id},i)`;
-                        }
+                        return `params.const_2ns[${r.id} + ${index} * ${fflonkInfo.nConstants}]`;
                     } else {
                         throw new Error("Invalid dom");
                     }
