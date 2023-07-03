@@ -8,7 +8,7 @@ const fs = require("fs");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
-const smSimpleConnection = require("../state_machines/sm_simple_connection/sm_simple_connection.js");
+const smPermutation = require("../state_machines/sm_simple_permutation/sm_simple_permutation.js");
 
 const { writeConstPolsFile } = require("../../src/fflonk/const_pols_serializer.js");
 
@@ -30,24 +30,24 @@ describe("simple sm", async function () {
     })
 
     it("Creates all files needed to generate a pilfflonk proof", async () => {
-        await runTest("simple_connection");
+        await runTest("simple_permutation");
     });
 
     async function runTest(outputFilename) {
         const F = new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
     
-        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple_connection", "simple_connection_main.pil"));
+        const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple_permutation", "simple_permutation_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
         await smGlobal.buildConstants(constPols.Global);
-        await smSimpleConnection.buildConstants(F, constPols.SimpleConnection);
+        await smPermutation.buildConstants(constPols.SimplePermutation);
     
         const committedPols = newCommitPolsArray(pil, F);
-        await smSimpleConnection.execute(committedPols.SimpleConnection);
 
-    
+        await smPermutation.execute(committedPols.SimplePermutation);
+
         const res = await verifyPil(F, pil, committedPols , constPols);
-    
+
         if (res.length != 0) {
             console.log("Pil does not pass");
             for (let i=0; i<res.length; i++) {
