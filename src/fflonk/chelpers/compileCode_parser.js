@@ -64,6 +64,8 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, factorZK, functi
     
     const next = (dom == "n" ? 1 : (1 << extendBits) * factorZK).toString();
     const N = ((dom == "n" ? (1 << nBits) : (1 << nBitsExt)) * factorZK).toString();
+    
+    let vIndex = 0; 
 
     count_ops0 = 0;
     count_args0 = 0;
@@ -1236,7 +1238,13 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, factorZK, functi
             }
             case "number": {
                 ++refnum;
-                return `E.fr.set(${BigInt(r.value).toString()})`;
+                if(BigInt(r.value) > BigInt(Number.MAX_SAFE_INTEGER)) {
+                    body.push(`     AltBn128::FrElement v${vIndex};`);
+                    body.push(`     E.fr.toString(v${vIndex}, "${BigInt(r.value).toString()}");`);
+                    return `v${vIndex++}`;
+                } else {
+                    return `E.fr.set(${BigInt(r.value).toString()})`;
+                }
             }
             case "public": {
                 return `params.publicInputs[${r.id}]`;

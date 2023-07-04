@@ -137,6 +137,8 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
         const nBits = zkey.power;
         const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
         const nBitsExt = zkey.power + extendBits;
+
+        let vIndex = 0;
         
         // ZK data
         const extendBitsZK = zkey.powerZK - zkey.power;
@@ -233,7 +235,15 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
                     }
                 }
                
-                case "number": return `E.fr.set(${BigInt(r.value).toString()})`;
+                case "number": {
+                    if(BigInt(r.value) > BigInt(Number.MAX_SAFE_INTEGER)) {
+                        body.push(`     AltBn128::FrElement v${vIndex};`);
+                        body.push(`     E.fr.toString(v${vIndex}, "${BigInt(r.value).toString()}");`);
+                        return `v${vIndex++}`;
+                    } else {
+                        return `E.fr.set(${BigInt(r.value).toString()})`;
+                    }
+                }
                 case "public": return `params.publicInputs[${r.id}]`;
                 case "challenge": return `params.challenges[${r.id}]`;
                 case "eval": return `params.evals[${r.id}]`;

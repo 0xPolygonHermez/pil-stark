@@ -65,6 +65,8 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, factorZK, function
     const next = (dom == "n" ? 1 : (1 << extendBits) * factorZK).toString();
     const N = ((dom == "n" ? (1 << nBits) : (1 << nBitsExt)) * factorZK).toString();
 
+    let vIndex = 0; 
+
     //Evaluate max and min temporal variable for tmp_ and tmp3_
     let maxid = 100000;
     let ID1D = new Array(maxid).fill(-1);
@@ -707,7 +709,13 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, factorZK, function
             }
             case "number": {
                 ++refnum;
-                return `E.fr.set(${BigInt(r.value).toString()})`;
+                if(BigInt(r.value) > BigInt(Number.MAX_SAFE_INTEGER)) {
+                    body.push(`     AltBn128::FrElement v${vIndex};`);
+                    body.push(`     E.fr.toString(v${vIndex}, "${BigInt(r.value).toString()}");`);
+                    return `v${vIndex++}`;
+                } else {
+                    return `E.fr.set(${BigInt(r.value).toString()})`;
+                }
             }
             case "public": {
                 return `params.publicInputs[${r.id}]`;
