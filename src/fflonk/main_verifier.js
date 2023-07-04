@@ -25,7 +25,7 @@ async function run() {
 
     const proof = JSONbig.parse(await fs.promises.readFile(proofFile, "utf8"));
     const publicSignalsRaw = await fs.promises.readFile(publicFile, "utf8");
-    const publicSignals = "";
+    let publicSignals = "";
     if(publicSignalsRaw !== "") {
         publicSignals = JSONbig.parse(publicSignalsRaw);
     }
