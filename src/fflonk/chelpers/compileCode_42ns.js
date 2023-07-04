@@ -524,7 +524,7 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, factorZK, function
                     if (r.src[0].dim != 1) {
                         throw new Error("Invalid dimension")
                     }
-                    body.push(`     E.fr.copy(${lexp}, ${src[0]});`)
+                    body.push(`     ${lexp} = ${src[0]};`);
                     pushSrcArg(r.src[0]);
                     assert(r.dest.type == 'tmp')
                     if (r.src[0].type == 'tmp') {
@@ -711,7 +711,7 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, factorZK, function
                 ++refnum;
                 if(BigInt(r.value) > BigInt(Number.MAX_SAFE_INTEGER)) {
                     body.push(`     AltBn128::FrElement v${vIndex};`);
-                    body.push(`     E.fr.toString(v${vIndex}, "${BigInt(r.value).toString()}");`);
+                    body.push(`     E.fr.fromString(v${vIndex}, "${BigInt(r.value).toString()}");`);
                     return `v${vIndex++}`;
                 } else {
                     return `E.fr.set(${BigInt(r.value).toString()})`;
@@ -724,7 +724,7 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, factorZK, function
                 ++refchall;
                 if (r.id < range_chall[0] || range_chall[0] === -1) range_chall[0] = r.id;
                 if (r.id > range_chall[1] || range_chall[1] === -1) range_chall[1] = r.id;
-                return `(AltBn128::FrElement &)*params.challenges[${r.id}]`;
+                return `params.challenges[${r.id}]`;
             }
             case "x": {
                 if (dom == "n") {
@@ -776,7 +776,7 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, factorZK, function
                 if (dom == "n") {
                     throw new Error("Accessing q in domain n");
                 } else if (dom == "2ns") {
-                    eDst = `(AltBn128::FrElement &)(params.q_2ns[i]))`
+                    eDst = `params.q_2ns[i]`
                 } else {
                     throw new Error("Invalid dom");
                 }

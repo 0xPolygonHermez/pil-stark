@@ -1240,7 +1240,7 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, factorZK, functi
                 ++refnum;
                 if(BigInt(r.value) > BigInt(Number.MAX_SAFE_INTEGER)) {
                     body.push(`     AltBn128::FrElement v${vIndex};`);
-                    body.push(`     E.fr.toString(v${vIndex}, "${BigInt(r.value).toString()}");`);
+                    body.push(`     E.fr.fromString(v${vIndex}, "${BigInt(r.value).toString()}");`);
                     return `v${vIndex++}`;
                 } else {
                     return `E.fr.set(${BigInt(r.value).toString()})`;
@@ -1253,13 +1253,7 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, factorZK, functi
                 ++refchall;
                 if (r.id < range_chall[0] || range_chall[0] === -1) range_chall[0] = r.id;
                 if (r.id > range_chall[1] || range_chall[1] === -1) range_chall[1] = r.id;
-                return `(AltBn128::FrElement &)*params.challenges[${r.id}]`;
-            }
-            case "eval": {
-                ++refevals;
-                if (r.id < range_evals[0] || range_evals[0] === -1) range_evals[0] = r.id;
-                if (r.id > range_evals[1] || range_evals[1] === -1) range_evals[1] = r.id;
-                return `(AltBn128::FrElement &)*params.evals[${r.id}]`;
+                return `params.challenges[${r.id}]`;
             }
             case "x": {
                 if (dom == "n") {
