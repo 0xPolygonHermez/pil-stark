@@ -52,7 +52,7 @@ describe("simple sm", async function () {
         const cmPols = newCommitPolsArray(pil, F);
     
         const isArray = pilFile === "simple2p" ? true : false;
-        await smSimple.execute(F, cmPols.Simple, isArray);
+        await smSimple.execute(cmPols.Simple, isArray, F);
     
         const res = await verifyPil(F, pil, cmPols , constPols);
     

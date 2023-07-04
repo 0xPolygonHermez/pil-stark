@@ -10,7 +10,7 @@ module.exports.buildConstants = async function (pols) {
 }
 
 
-module.exports.execute = async function (F, pols, input) {
+module.exports.execute = async function (pols, input, F) {
 
     const N = pols.l1.length;
 

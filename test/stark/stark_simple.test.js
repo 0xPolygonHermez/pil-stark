@@ -33,7 +33,7 @@ async function runTest(pilFile) {
     const cmPols = newCommitPolsArray(pil, F);
 
     const isArray = pilFile === "simple2p.pil" ? true : false;
-    const result = await smSimple.execute(F, cmPols.Simple, isArray);
+    const result = await smSimple.execute(cmPols.Simple, isArray, F);
     console.log("Result: " + result);
 
     const res = await verifyPil(F, pil, cmPols , constPols);

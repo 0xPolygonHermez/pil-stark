@@ -33,7 +33,7 @@ describe("test fibonacci sm", async function () {
 
         const cmPols = newCommitPolsArray(pil, F);
 
-        const result = await smFibonacci.execute(F, cmPols.Fibonacci, [1,2]);
+        const result = await smFibonacci.execute(cmPols.Fibonacci, [1,2], F);
         console.log("Result: " + result);
 
         const res = await verifyPil(F, pil, cmPols , constPols);

@@ -30,7 +30,7 @@ describe("test simple connection sm", async function () {
         const constPols =  newConstantPolsArray(pil, F);
 
         await smGlobal.buildConstants(constPols.Global);
-        await smSimpleConnection.buildConstants(F, constPols.SimpleConnection);
+        await smSimpleConnection.buildConstants(constPols.SimpleConnection, F);
 
         const cmPols = newCommitPolsArray(pil, F);
 

@@ -1,6 +1,6 @@
 const { log2, getKs } = require("pilcom/src/utils.js");
 
-module.exports.buildConstants = async function (F, pols) {
+module.exports.buildConstants = async function (pols, F) {
 
     const N = pols.S1.length;
 

@@ -26,7 +26,7 @@ async function run() {
     const cmPols =  newCommitPolsArray(pil, F);
 
     await smPlookup.execute(cmPols.Plookup);
-    await smFibonacci.execute(F, cmPols.Fibonacci, [1,2]);
+    await smFibonacci.execute(cmPols.Fibonacci, [1,2], F);
     await smPermutation.execute(cmPols.Permutation);
     await smConnection.execute(cmPols.Connection);
 

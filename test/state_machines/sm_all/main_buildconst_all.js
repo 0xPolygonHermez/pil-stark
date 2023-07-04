@@ -30,7 +30,7 @@ async function run() {
     await smPlookup.buildConstants(constPols.Plookup);
     await smFibonacci.buildConstants(constPols.Fibonacci);
     await smPermutation.buildConstants(constPols.Permutation);
-    await smConnection.buildConstants(F, constPols.Connection);
+    await smConnection.buildConstants(constPols.Connection, F);
 
     await constPols.saveToFile(outputFile);
 

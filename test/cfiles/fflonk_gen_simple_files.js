@@ -30,7 +30,7 @@ describe("simple sm", async function () {
         await curve.terminate();
     })
 
-    it("Creates all files needed to generate a pilfflonk proof for simple2", async () => {
+    it("Creates all files needed to generate a pilfflonk proof for simple1", async () => {
         await runTest("simple1");
     });
 
@@ -38,19 +38,19 @@ describe("simple sm", async function () {
         await runTest("simple2");
     });
 
-    it("Creates all files needed to generate a pilfflonk proof for simple2", async () => {
+    it("Creates all files needed to generate a pilfflonk proof for simple2p", async () => {
         await runTest("simple2p");
     });
 
-    it("Creates all files needed to generate a pilfflonk proof for simple2", async () => {
+    it("Creates all files needed to generate a pilfflonk proof for simple3", async () => {
         await runTest("simple3");
     });
 
-    it("Creates all files needed to generate a pilfflonk proof for simple2", async () => {
+    it("Creates all files needed to generate a pilfflonk proof for simple4", async () => {
         await runTest("simple4");
     });
 
-    it("Creates all files needed to generate a pilfflonk proof for simple2", async () => {
+    it("Creates all files needed to generate a pilfflonk proof for simple4p", async () => {
         await runTest("simple4p");
     });
 
@@ -66,7 +66,7 @@ describe("simple sm", async function () {
         const committedPols = newCommitPolsArray(pil, F);
     
         const isArray = filename === "simple2p" ? true : false;
-        await smSimple.execute(F, committedPols.Simple, isArray);
+        await smSimple.execute(committedPols.Simple, isArray, F);
     
         const res = await verifyPil(F, pil, committedPols , constPols);
     
