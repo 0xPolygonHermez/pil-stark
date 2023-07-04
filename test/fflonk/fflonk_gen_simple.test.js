@@ -6,6 +6,8 @@ const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
 const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
 const fs = require("fs");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
+const fflonkVerificationKey = require("../../src/fflonk/helpers/fflonk_verification_key.js");
+const {readPilFflonkZkeyFile} = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
 
 const smSimple = require("../state_machines/sm_simple/sm_simple.js");
 
@@ -85,9 +87,15 @@ describe("simple sm", async function () {
         // Create & save zkey file
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", `${filename}.zkey`);
-
-        const {constPolsCoefs, constPolsEvals, constPolsEvalsExt} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1, logger});
     
+        const {constPolsCoefs, constPolsEvals, constPolsEvalsExt} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1, logger});
+
+        // Save verification key file
+        const VkeyFilename = path.join(__dirname, "../../", "tmp", `${filename}.vkey`);
+        const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
+        const verificationKey = await fflonkVerificationKey(zkey, {logger});
+        await fs.promises.writeFile(VkeyFilename, JSON.stringify(verificationKey, null, 1), "utf8");
+        
         // Save constant polynomial evaluations file
         const constPolsFilename =  path.join(__dirname, "../../", "tmp", `${filename}.cnst`);
         await constPols.saveToFileFr(constPolsFilename);
