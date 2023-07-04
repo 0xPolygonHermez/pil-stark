@@ -24,7 +24,11 @@ async function run() {
     const verificationKey = JSON.parse(await fs.promises.readFile(verificationKeyFile, "utf8"));
 
     const proof = JSONbig.parse(await fs.promises.readFile(proofFile, "utf8"));
-    const publicSignals = JSONbig.parse(await fs.promises.readFile(publicFile, "utf8"))
+    const publicSignalsRaw = await fs.promises.readFile(publicFile, "utf8");
+    const publicSignals = "";
+    if(publicSignalsRaw !== "") {
+        publicSignals = JSONbig.parse(publicSignalsRaw);
+    }
 
     const resV = await fflonkVerify(verificationKey, publicSignals, proof, fflonkInfo, {});
     

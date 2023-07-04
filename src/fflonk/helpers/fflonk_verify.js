@@ -14,7 +14,10 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
 
     proof = fromObjectProof(curve, proof);
 
-    let publics = unstringifyBigInts(publicSignals).map(p => Fr.e(p));
+    let publics = [];
+    if (publicSignals !== "") {
+        publics = unstringifyBigInts(publicSignals).map(p => Fr.e(p));
+    }
 
     const ctx = {};
     ctx.evals = [];
