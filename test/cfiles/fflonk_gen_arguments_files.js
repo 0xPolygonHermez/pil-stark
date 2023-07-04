@@ -102,7 +102,7 @@ describe("sm", async function () {
             options.extraMuls = 3;
         }
 
-        const {constPolsCoefs, constPolsEvalsExt} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, options);
+        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, options);
     
         // Save constant polynomial evaluations file
         const constPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.cnst`);
@@ -114,6 +114,6 @@ describe("sm", async function () {
 
         // Create & constant polynomial coefficients and extended evaluations file
         const constPolsZkeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.ext.cnst`);
-        await writeConstPolsFile(constPolsZkeyFilename, constPolsCoefs, constPolsEvalsExt, curve.Fr, {logger});
+        await writeConstPolsFile(constPolsZkeyFilename, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, curve.Fr, {logger});
     }
 });

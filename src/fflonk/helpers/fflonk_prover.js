@@ -14,7 +14,7 @@ const minNperThread = 1 << 12;
 
 const { stringifyBigInts } = utils;
 
-module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoefs, cnstPolsE, fflonkInfo, options) {
+module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoefs, cnstPolsE, x_n, x_2ns, fflonkInfo, options) {
     const logger = options.logger;
 
     if (logger) logger.info("PIL-FFLONK PROVER STARTED");
@@ -93,7 +93,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
     ctx.x_2ns = new BigBuffer(sDomainExt * factorZK); // Omegas a l'extès
 
     // Read constant polynomials
-    ctx.const_n = cnstPols;
+    cnstPols.writeToBigBufferFr(ctx.const_n, Fr);
 
     // Read committed polynomials
     cmPols.writeToBigBufferFr(ctx.cm1_n, Fr);
@@ -102,22 +102,9 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
     ctx.const_coefs.set(cnstPolsCoefs);
     ctx.const_2ns.set(cnstPolsE);
 
-    let w = Fr.one;
-    for (let i = 0; i < domainSize; i++) {
-        const i_n8r = i * n8r;
-
-        ctx.x_n.set(w, i_n8r);
-        w = Fr.mul(w, Fr.w[power])
-    }
-
-    w = Fr.one;
-    for (let i = 0; i < domainSizeExt * factorZK; i++) {
-        const i_n8r = i * n8r;
-
-        ctx.x_2ns.set(w, i_n8r);
-        w = Fr.mul(w, Fr.w[nBitsExtZK]);
-    }
-
+    // Read x_n and x_2ns
+    ctx.x_n.set(x_n);
+    ctx.x_2ns.set(x_2ns);
 
     const committedPols = {};
 

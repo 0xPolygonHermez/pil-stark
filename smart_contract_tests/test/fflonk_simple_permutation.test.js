@@ -57,13 +57,13 @@ describe("Fflonk permutation sm", async function () {
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        const {constPolsCoefs, constPolsExtended} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 2});
+        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 2});
 
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {});
 
         const vk = await fflonkVerificationKey(zkey, {});
 
-        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsExtended, fflonkInfo, {});
+        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, fflonkInfo, {});
 
         const proofInputs = await exportFflonkCalldata(vk, proof, publicSignals, {})
         const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {});

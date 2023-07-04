@@ -70,13 +70,13 @@ describe("Fflonk All sm", async function () {
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        const {constPolsCoefs, constPolsEvals, constPolsEvalsExt} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 3, logger});
+        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 3, logger});
 
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 
         const vk = await fflonkVerificationKey(zkey, {logger});
 
-        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPolsEvals, constPolsCoefs, constPolsEvalsExt, fflonkInfo, {logger});
+        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, fflonkInfo, {logger});
 
         const isValid = await fflonkVerify(vk, publicSignals, proof, fflonkInfo, {logger});
 

@@ -2,20 +2,21 @@ const { createBinFile,
     endWriteSection,
     readBinFile,
     startWriteSection,
-    writeBigInt,
-    readBigInt,
     startReadUniqueSection,
     endReadSection } = require("@iden3/binfileutils");
 
 
-const CONST_POLS_NSECTIONS = 3;
+const CONST_POLS_NSECTIONS = 5;
 const CONST_POLS_FILE_COEFS_SECTION = 1;
 const CONST_POLS_FILE_EVALS_EXT_SECTION = 2;
+const X_N_SECTION = 3;
+const X_2NS_SECTION = 4;
 
-const { BigBuffer, Scalar, getCurveFromQ } = require("ffjavascript");
+
+const { BigBuffer, } = require("ffjavascript");
 
 
-exports.writeConstPolsFile = async function (constPolsFilename, constPolsCoefs, constPolsEvalsExt, Fr, options) {
+exports.writeConstPolsFile = async function (constPolsFilename, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, Fr, options) {
     let logger = options.logger
 
     if (logger) logger.info("> Writing const pols file");
@@ -27,6 +28,14 @@ exports.writeConstPolsFile = async function (constPolsFilename, constPolsCoefs, 
 
     if (logger) logger.info(`··· Writing Section ${CONST_POLS_FILE_EVALS_EXT_SECTION}. Const Pols Extended Evaluations`);
     await writeConstPolsEvalsExtSection(constPolsEvalsExt, fd, Fr, options);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Writing Section ${X_N_SECTION}. X_n evaluations`);
+    await writeXnSection(x_n, fd, Fr, options);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Writing Section ${X_2NS_SECTION}. X_2ns evaluations`);
+    await writeX2nsSection(x_2ns, fd, Fr, options);
     if (globalThis.gc) globalThis.gc();
 
     if (logger) logger.info("> Writing const pols finished");
@@ -45,6 +54,20 @@ async function writeConstPolsEvalsExtSection(constPolsEvalsExt, fd, Fr, options)
     await writeBuffer(constPolsEvalsExt, fd, Fr, options);
     await endWriteSection(fd);
 }
+
+async function writeXnSection(x_n, fd, Fr, options) {
+    await startWriteSection(fd, X_N_SECTION);
+    await writeBuffer(x_n, fd, Fr, options);
+    await endWriteSection(fd);
+}
+
+async function writeX2nsSection(x_2ns, fd, Fr, options) {
+    await startWriteSection(fd, X_2NS_SECTION);
+    await writeBuffer(x_2ns, fd, Fr, options);
+    await endWriteSection(fd);
+}
+
+
 
 async function writeBuffer(buffer, fd, Fr, options) {
     const MaxBuffSize = 1024 * 1024 * 256;  //  256Mb
@@ -86,8 +109,12 @@ exports.readConstPolsFile = async function (constPolsFilename, Fr, options) {
     await readConstPolsCoefsSection(fd, sections, pols, Fr, options);
     if (globalThis.gc) globalThis.gc();
 
-    if (logger) logger.info(`··· Reading Section ${CONST_POLS_FILE_EVALS_EXT_SECTION}. Const Pols Extended Evaluations`);
-    await readConstPolsEvalsExtSection(fd, sections, pols, Fr, options);
+    if (logger) logger.info(`··· Reading Section ${X_N_SECTION}. X_n Evaluations`);
+    await readXnSection(fd, sections, pols, Fr, options);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Reading Section ${X_2NS_SECTION}.  X_2ns Evaluations`);
+    await readX2nsSection(fd, sections, pols, Fr, options);
     if (globalThis.gc) globalThis.gc();
 
     await fd.close();
@@ -104,6 +131,18 @@ async function readConstPolsCoefsSection(fd, sections, pols, Fr, options) {
 async function readConstPolsEvalsExtSection(fd, sections, pols, Fr, options) {
     await startReadUniqueSection(fd, sections, CONST_POLS_FILE_EVALS_EXT_SECTION);
     pols.evalsExt = await readBuffer(fd, sections[CONST_POLS_FILE_EVALS_EXT_SECTION], Fr);
+    await endReadSection(fd);
+}
+
+async function readXnSection(fd, sections, pols, Fr, options) {
+    await startReadUniqueSection(fd, sections, X_N_SECTION);
+    pols.x_n = await readBuffer(fd, sections[X_N_SECTION], Fr);
+    await endReadSection(fd);
+}
+
+async function readX2nsSection(fd, sections, pols, Fr, options) {
+    await startReadUniqueSection(fd, sections, X_2NS_SECTION);
+    pols.x_2ns = await readBuffer(fd, sections[X_2NS_SECTION], Fr);
     await endReadSection(fd);
 }
 
