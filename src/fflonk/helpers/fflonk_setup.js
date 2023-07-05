@@ -2,9 +2,10 @@ const {BigBuffer} = require("ffjavascript");
 const {log2} = require("pilcom/src/utils");
 const {setup, Polynomial, commit} = require("shplonkjs");
 const { ifft, fft } = require("../../helpers/fft/fft_p.bn128");
+const { writeConstPolsFile } = require("../const_pols_serializer");
 const { writePilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 
-module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFile, fflonkInfo, options) {
+module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constExtFile, ptauFile, fflonkInfo, options) {
     const logger = options.logger;
 
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
@@ -33,12 +34,12 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
                     const namePol = name + i;
                     cnstPolsDefs.push({name: namePol, stage: 0, degree: polInfo.polDeg})
                     polsOpenings[namePol] = 0;
-                    polsNames[0].push(namePol);
+                    polsNames[0].push({name:namePol});
                 }
             } else {
                 cnstPolsDefs.push({name, stage: 0, degree: polInfo.polDeg})
                 polsOpenings[name] = 0;
-                polsNames[0].push(name);
+                polsNames[0].push({name});
             }
         } 
         
@@ -49,12 +50,12 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
                     const namePol = name + i;
                     cmPolsDefs.push({name: namePol, stage: 1, degree: polInfo.polDeg})
                     polsOpenings[namePol] = 1;
-                    polsNames[1].push(namePol);
+                    polsNames[1].push({name: namePol});
                 }
             } else {
                 cmPolsDefs.push({name, stage: 1, degree: polInfo.polDeg})
                 polsOpenings[name] = 1;
-                polsNames[1].push(name);
+                polsNames[1].push({name});
             }
            
         }
@@ -79,7 +80,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             stage: 2,
         }
         polsOpenings[`Plookup.H1_${i}`] = 1;
-        polsNames[2].push(`Plookup.H1_${i}`);
+        polsNames[2].push({name:`Plookup.H1_${i}`});
 
         polsXi.push({name: `Plookup.H2_${i}`, stage: 2, degree: domainSize})
         pil.references[`Plookup.H2_${i}`] = {
@@ -91,7 +92,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             stage: 2,
         }
         polsOpenings[`Plookup.H2_${i}`] = 1;
-        polsNames[2].push(`Plookup.H2_${i}`);
+        polsNames[2].push({name:`Plookup.H2_${i}`});
 
         polsXi.push({name: `Plookup.Z${i}`, stage: 3, degree: domainSize})
         pil.references[`Plookup.Z${i}`] = {
@@ -103,7 +104,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             stage:3,
         }
         polsOpenings[`Plookup.Z${i}`] = 1;
-        polsNames[3].push(`Plookup.Z${i}`);
+        polsNames[3].push({name:`Plookup.Z${i}`});
     }
 
 
@@ -118,7 +119,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             stage:3,
         }
         polsOpenings[`Permutation.Z${i}`] = 1;
-        polsNames[3].push(`Permutation.Z${i}`);
+        polsNames[3].push({name:`Permutation.Z${i}`});
     }
 
     for(let i = 0; i < fflonkInfo.ciCtx.length; ++i) {
@@ -132,7 +133,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             stage:3,
         }
         polsOpenings[`Connection.Z${i}`] = 1;
-        polsNames[3].push(`Connection.Z${i}`);
+        polsNames[3].push({name:`Connection.Z${i}`});
     }
 
 
@@ -147,7 +148,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             stage:3,
         }
 	    polsOpenings[`Im${fflonkInfo.imExpsList[i]}`] = 1;
-        polsNames[3].push(`Im${fflonkInfo.imExpsList[i]}`);
+        polsNames[3].push({name:`Im${fflonkInfo.imExpsList[i]}`});
     }
 
     polsXi.push({name: "Q", stage: 4, degree: (fflonkInfo.qDeg + 1) * domainSize});
@@ -198,9 +199,6 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     }
 
     const {zkey, PTau, curve} = await setup(config, ptauFile, logger);
-
-    zkey.polsNamesStage = polsNames;
-    zkey.polsOpenings = polsOpenings;
     
     // Compute maxCmPolsOpenings
     let maxCmPolsOpenings = 0;
@@ -215,12 +213,18 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
             } else {
                 // Compute max openings on committed polynomials to set a common bound on adding
                 maxCmPolsOpenings = Math.max(maxCmPolsOpenings, polsOpenings[polRef]);
-            }
-
-          
+            }          
         }
     }
-    
+
+    for(let i = 0; i < 4; i++) {
+        for(let j = 0; j < polsNames[i].length; j++) {
+            polsNames[i][j].openings = polsOpenings[polsNames[i][j].name];
+        }
+    }
+
+    zkey.polsNamesStage = polsNames;
+
     // Precompute ZK data
     const domainSizeZK = domainSize + maxCmPolsOpenings;
     zkey.powerZK = log2(domainSizeZK - 1) + 1;
@@ -253,7 +257,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
         // Store coefs to context
         for (let i = 0; i < fflonkInfo.nConstants; i++) {
             const coefs = getPolFromBuffer(constPolsCoefs, fflonkInfo.nConstants, (1<<zkey.power)*factorZK, i, curve.Fr);
-            ctx[zkey.polsNamesStage[0][i]] = new Polynomial(coefs, curve, logger);
+            ctx[zkey.polsNamesStage[0][i].name] = new Polynomial(coefs, curve, logger);
         }
 
         const commits = await commit(0, zkey, ctx, PTau, curve, {multiExp: true, logger});
@@ -286,7 +290,8 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     if(logger) logger.info("Fflonk setup finished");
 
     await writePilFflonkZkeyFile(zkey, zkeyFilename, PTau, curve, {logger}); 
-        
+
+    await writeConstPolsFile(constExtFile, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, curve.Fr, {});
 
     return {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns};
 }

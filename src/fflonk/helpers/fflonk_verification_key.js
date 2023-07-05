@@ -40,9 +40,9 @@ module.exports = async function fflonkVerificationKey(zkey, options) {
     for(let i = 0; i < nStages; ++i) {
         for(let j = 0; j < zkey.polsNamesStage[i].length; ++j) {
             if(i === 0) {
-                polsMap.const[j] = zkey.polsNamesStage[i][j];
+                polsMap.const[j] = zkey.polsNamesStage[i][j].name;
             } else {
-                polsMap.cm[index++] = zkey.polsNamesStage[i][j];
+                polsMap.cm[index++] = zkey.polsNamesStage[i][j].name;
             }
         }
     }

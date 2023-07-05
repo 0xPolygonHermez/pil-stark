@@ -9,8 +9,6 @@ const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
 
-const { writeConstPolsFile } = require("../../src/fflonk/const_pols_serializer.js");
-
 const Logger = require("logplease");
 const logger = Logger.create("pil-fflonk", {showTimestamp: false});
 Logger.setLogLevel("DEBUG");
@@ -102,7 +100,10 @@ describe("sm", async function () {
             options.extraMuls = 3;
         }
 
-        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, options);
+        // Create & constant polynomial coefficients and extended evaluations file
+        const constPolsZkeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.ext.cnst`);
+
+        await fflonkSetup(pil, constPols, zkeyFilename, constPolsZkeyFilename, ptauFile, fflonkInfo, options);
     
         // Save constant polynomial evaluations file
         const constPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.cnst`);
@@ -111,9 +112,5 @@ describe("sm", async function () {
         // Save committed polynomial evaluations file
         const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.cmmt`);
         await committedPols.saveToFileFr(committedPolsFilename);
-
-        // Create & constant polynomial coefficients and extended evaluations file
-        const constPolsZkeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.ext.cnst`);
-        await writeConstPolsFile(constPolsZkeyFilename, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, curve.Fr, {logger});
     }
 });

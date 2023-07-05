@@ -54,10 +54,11 @@ describe("Fflonk plookup sm", async function () {
 
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", "fflonk_simple_plookup.zkey");
+        const constExtFilename =  path.join(__dirname, "../../", "tmp", "fflonk_simple_plookup.ext.const");
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 4});
+        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename, constExtFilename, ptauFile, fflonkInfo, {extraMuls: 4});
 
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {});
 

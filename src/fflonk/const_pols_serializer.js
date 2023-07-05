@@ -79,7 +79,7 @@ async function writeBuffer(buffer, fd, Fr, options) {
     let p = 0;
     for (let i = 0; i < nElements; i++) {
         const element = buffer.slice(i * Fr.n8, (i + 1) * Fr.n8);
-        Fr.toRprBE(partialBuffer, p, element);
+        Fr.toRprLE(partialBuffer, p, element);
         p += Fr.n8;
 
         if (p == partialBuffer.length) {
@@ -107,6 +107,10 @@ exports.readConstPolsFile = async function (constPolsFilename, Fr, options) {
 
     if (logger) logger.info(`··· Reading Section ${CONST_POLS_FILE_COEFS_SECTION}. Const Pols Coefs`);
     await readConstPolsCoefsSection(fd, sections, pols, Fr, options);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Reading Section ${CONST_POLS_FILE_EVALS_EXT_SECTION}. Const Pols Evals Ext`);
+    await readConstPolsEvalsExtSection(fd, sections, pols, Fr, options);
     if (globalThis.gc) globalThis.gc();
 
     if (logger) logger.info(`··· Reading Section ${X_N_SECTION}. X_n Evaluations`);
@@ -157,7 +161,7 @@ async function readBuffer(fd, section, Fr) {
     for (let i = 0; i < nElements; i++) {
         const element = partialBuffer.slice(i * Fr.n8, (i + 1) * Fr.n8);
         
-        partialBuffer.set(Fr.fromRprBE(element), i * Fr.n8);
+        partialBuffer.set(Fr.fromRprLE(element), i * Fr.n8);
         p += Fr.n8;
     }
 

@@ -16,8 +16,6 @@ const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
 const fflonkVerificationKey = require("../../src/fflonk/helpers/fflonk_verification_key.js");
 const {readPilFflonkZkeyFile} = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
 
-const { writeConstPolsFile } = require("../../src/fflonk/const_pols_serializer.js");
-
 const Logger = require("logplease");
 const logger = Logger.create("pil-fflonk", {showTimestamp: false});
 Logger.setLogLevel("DEBUG");
@@ -76,7 +74,10 @@ describe("simple sm", async function () {
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", `all.zkey`);
     
-        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 3, logger});
+        // Create & constant polynomial coefficients and extended evaluations file
+        const constPolsZkeyFilename =  path.join(__dirname, "../../", "tmp", `all.ext.cnst`);
+
+        await fflonkSetup(pil, constPols, zkeyFilename, constPolsZkeyFilename, ptauFile, fflonkInfo, {extraMuls: 3, logger});
 
         // Save verification key file
         const VkeyFilename = path.join(__dirname, "../../", "tmp", `all.vkey`);
@@ -91,10 +92,5 @@ describe("simple sm", async function () {
         // Save committed polynomial evaluations file
         const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `all.cmmt`);
         await cmPols.saveToFileFr(committedPolsFilename);
-
-        // Create & constant polynomial coefficients and extended evaluations file
-        const constPolsZkeyFilename =  path.join(__dirname, "../../", "tmp", `all.ext.cnst`);
-        await writeConstPolsFile(constPolsZkeyFilename, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, curve.Fr, {logger});
     });
-
 });

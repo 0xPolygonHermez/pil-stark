@@ -1990,6 +1990,7 @@
                 "-t tmp/powersOfTau28_hez_final_19.ptau",
                 "-f tmp/fibonacci.fflonkinfo.json",
                 "-c tmp/fibonacci.const",
+                "-e tmp/fibonacci.ext.const",
                 "-z tmp/fibonacci.zkey"
             ],
             "runtimeArgs": [
@@ -2030,6 +2031,7 @@
                 "-t tmp/powersOfTau28_hez_final_19.ptau",
                 "-f tmp/fibonacci.fflonkinfo.json",
                 "-z tmp/fibonacci.zkey",
+                "-e tmp/fibonacci.ext.const",
                 "-o tmp/fibonacci.fflonk.proof.json",
                 "-b tmp/fibonacci.fflonk.publics.json"
             ],

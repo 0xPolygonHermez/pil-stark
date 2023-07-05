@@ -182,7 +182,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         if (fflonkInfo.nConstants > 0) {
             for (let i = 0; i < fflonkInfo.nConstants; i++) {
                 const coefs = getPolFromBuffer(ctx.const_coefs, fflonkInfo.nConstants, ctx.N * factorZK, i, Fr);
-                ctx[zkey.polsNamesStage[0][i]] = new Polynomial(coefs, ctx.curve, logger);
+                ctx[zkey.polsNamesStage[0][i].name] = new Polynomial(coefs, ctx.curve, logger);
             }
 
             const commitsConstants = await commit(0, zkey, ctx, PTau, curve, { multiExp: false, logger });
@@ -722,7 +722,7 @@ async function extend(stage, ctx, zkey, buffFrom, buffTo, buffCoefs, nBits, nBit
     const n = 1 << nBits;
 
     for (let i = 0; i < nPols; i++) {
-        for(let j = 0; j < zkey.polsOpenings[zkey.polsNamesStage[stage][i]]; ++j) {
+        for(let j = 0; j < zkey.polsNamesStage[stage][i].openings; ++j) {
             // const b = Fr.random();
             const b = Fr.one;                
             let offset1 = (j * nPols + i) * Fr.n8; 
@@ -735,7 +735,7 @@ async function extend(stage, ctx, zkey, buffFrom, buffTo, buffCoefs, nBits, nBit
     // Store coefs to context
     for (let i = 0; i < nPols; i++) {
         const coefs = getPolFromBuffer(buffCoefs, nPols, n*factorZK, i, Fr);
-        ctx[zkey.polsNamesStage[stage][i]] = new Polynomial(coefs, ctx.curve, logger);
+        ctx[zkey.polsNamesStage[stage][i].name] = new Polynomial(coefs, ctx.curve, logger);
     }
 
     await fft(buffCoefs, nPols, nBitsExt, buffTo, Fr);

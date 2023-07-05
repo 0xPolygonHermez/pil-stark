@@ -63,19 +63,19 @@ module.exports = async function exportFflonkCalldata(vk, proof, publicSignals, o
 
     // Add committed evaluations into the proof buffer
     for(let i = 0; i < orderedEvalsCommitted.length; ++i) {
-        Fr.toRprBE(proofBuff, G1.F.n8 * 2 * nG1 + Fr.n8 * i, orderedEvalsCommitted[i].evaluation);
+        Fr.toRprLE(proofBuff, G1.F.n8 * 2 * nG1 + Fr.n8 * i, orderedEvalsCommitted[i].evaluation);
     }
 
     // Add the montgomery batched inverse evaluation at the end of the buffer
-    Fr.toRprBE(proofBuff, G1.F.n8 * 2 * nG1 + Fr.n8 * (nFr - 2), proof.evaluations.inv);
+    Fr.toRprLE(proofBuff, G1.F.n8 * 2 * nG1 + Fr.n8 * (nFr - 2), proof.evaluations.inv);
 
     // Add the montgomery batched inverse evaluation of zH at the end of the buffer
-    Fr.toRprBE(proofBuff, G1.F.n8 * 2 * nG1 + Fr.n8 * (nFr - 1), proof.evaluations.invZh);
+    Fr.toRprLE(proofBuff, G1.F.n8 * 2 * nG1 + Fr.n8 * (nFr - 1), proof.evaluations.invZh);
 
 
     // Add non committed evaluations into the proof buffer
     for(let i = 0; i < nonCommittedPols.length; ++i) {
-        Fr.toRprBE(nonCommittedEvalsBuff, Fr.n8 * i, orderedEvals.find(e => e.name === nonCommittedPols[i]).evaluation);
+        Fr.toRprLE(nonCommittedEvalsBuff, Fr.n8 * i, orderedEvals.find(e => e.name === nonCommittedPols[i]).evaluation);
     }
     
     const proofStringHex = Array.from(proofBuff).map(i2hex).join("");

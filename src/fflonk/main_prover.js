@@ -3,16 +3,18 @@ const version = require("../../package").version;
 
 const { newConstantPolsArray, newCommitPolsArray, compile } = require("pilcom");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true, storeAsString: true });
-const { F1Field } = require("ffjavascript");
+const { F1Field, buildBn128 } = require("ffjavascript");
 const fflonkProve = require("./helpers/fflonk_prover");
 const { readPilFflonkZkeyFile } = require("./zkey/zkey_pilfflonk");
+const { readConstPolsFile } = require("./const_pols_serializer");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_prover.js -m commit.bin -c <const.bin> -p <pil.json> [-P <pilconfig.json>] -t <ptau> -z <circuit.zkey> -f <fflonkinfo.json> -o <proof.json> -b <public.json>")
+    .usage("node main_prover.js -m commit.bin -c <const.bin> -e <ext.const.bin> -p <pil.json> [-P <pilconfig.json>] -t <ptau> -z <circuit.zkey> -f <fflonkinfo.json> -o <proof.json> -b <public.json>")
     .alias("t", "tau")
     .alias("m", "commit")
     .alias("c", "const")
+    .alias("e", "extconst")
     .alias("p", "pil")
     .alias("P", "pilconfig")
     .alias("f", "fflonkinfo")
@@ -26,6 +28,7 @@ async function run() {
     const ptauFile = typeof(argv.tau) === "string" ?  argv.tau.trim() : "mycircuit.ptau";
     const commitFile = typeof(argv.commit) === "string" ?  argv.commit.trim() : "mycircuit.commit";
     const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "mycircuit.const";
+    const extConstFile = typeof(argv.extconst) === "string" ?  argv.extconst.trim() : "mycircuit.ext.const";
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
     const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
     const fflonkInfoFile = typeof(argv.fflonkinfo) === "string" ?  argv.fflonkinfo.trim() : "mycircuit.fflonkInfo.json";
@@ -50,7 +53,9 @@ async function run() {
     const cmPols =  newCommitPolsArray(pil, F);
     await cmPols.loadFromFileFr(commitFile);
 
-    const resP = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsEvalsExt, fflonkInfo, ptauFile, options);
+    const pols = await readConstPolsFile(extConstFile, zkey.curve.Fr, {});
+
+    const resP = await fflonkProve(zkey, cmPols, constPols, pols.coefs, pols.evalsExt,pols.x_n, pols.x_2ns, fflonkInfo, ptauFile, options);
     
     await fs.promises.writeFile(proofFile, JSONbig.stringify(resP.proof, null, 1), "utf8");
 

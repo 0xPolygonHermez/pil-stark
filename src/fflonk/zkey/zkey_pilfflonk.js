@@ -13,7 +13,6 @@ const {
     ZKEY_PF_F_COMMITMENTS_SECTION,
     ZKEY_PF_OMEGAS_SECTION,
     ZKEY_PF_PTAU_SECTION,
-    ZKEY_PF_POLSOPENINGS_SECTION,
     ZKEY_PF_POLSNAMESSTAGE_SECTION
 } = require("./zkey_pilfflonk_constants.js");
 const { HEADER_ZKEY_SECTION, PILFFLONK_PROTOCOL_ID } = require("./zkey_constants.js");
@@ -40,10 +39,6 @@ exports.writePilFflonkZkeyFile = async function (zkey, zkeyFilename, pTau, curve
 
     if (logger) logger.info(`··· Writing Section ${ZKEY_PF_F_COMMITMENTS_SECTION}. F commitments Section`);
     await writeFCommitmentsSection(fdZKey, zkey, curve);
-    if (globalThis.gc) globalThis.gc();
-
-    if (logger) logger.info(`··· Writing Section ${ZKEY_PF_POLSOPENINGS_SECTION}. Pols openings Section`);
-    await writePolsOpeningsSection(fdZKey, zkey, pTau, curve);
     if (globalThis.gc) globalThis.gc();
 
     if (logger) logger.info(`··· Writing Section ${ZKEY_PF_POLSNAMESSTAGE_SECTION}. Pols names stage Section`);
@@ -166,24 +161,6 @@ async function writeFCommitmentsSection(fdZKey, zkey, curve) {
     await endWriteSection(fdZKey);
 }
 
-async function writePolsOpeningsSection(fdZKey, zkey, curve) {
-    await startWriteSection(fdZKey, ZKEY_PF_POLSOPENINGS_SECTION);
-
-    const keys = Object.keys(zkey.polsOpenings);
-
-    const len = keys.length;
-
-    //Write the length of the array
-    await fdZKey.writeULE32(len);
-
-    for (let i = 0; i < len; i++) {
-        await writeStringToFile(fdZKey, keys[i]);
-        await fdZKey.writeULE32(zkey.polsOpenings[keys[i]]);
-    }
-
-    await endWriteSection(fdZKey);
-}
-
 async function writePolsNamesStageSection(fdZKey, zkey, curve) {
     await startWriteSection(fdZKey, ZKEY_PF_POLSNAMESSTAGE_SECTION);
 
@@ -202,7 +179,8 @@ async function writePolsNamesStageSection(fdZKey, zkey, curve) {
         await fdZKey.writeULE32(lenSubkeys);
 
         for(let j = 0; j < lenSubkeys; j++) {
-            await writeStringToFile(fdZKey, zkey.polsNamesStage[keys[i]][j]);
+            await writeStringToFile(fdZKey, zkey.polsNamesStage[keys[i]][j].name);
+            await fdZKey.writeULE32(zkey.polsNamesStage[keys[i]][j].openings);
         }
     }
 
@@ -263,10 +241,6 @@ exports.readPilFflonkZkeyFile = async function (zkeyFilename, options) {
 
     if (logger) logger.info(`··· Reading Section ${ZKEY_PF_F_COMMITMENTS_SECTION}. F commitments Section`);
     await readFCommitmentsSection(fdZKey, sections, zkey);
-    if (globalThis.gc) globalThis.gc();
-
-    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_POLSOPENINGS_SECTION}. Polynomials openings Section`);
-    await readPolsOpeningsSection(fdZKey, sections, zkey);
     if (globalThis.gc) globalThis.gc();
 
     if (logger) logger.info(`··· Reading Section ${ZKEY_PF_POLSNAMESSTAGE_SECTION}. Polynomials names stage Section`);
@@ -386,23 +360,6 @@ async function readFCommitmentsSection(fdZKey, sections, zkey) {
     await endReadSection(fdZKey);
 }
 
-async function readPolsOpeningsSection(fdZKey, sections, zkey) {
-    await startReadUniqueSection(fdZKey, sections, ZKEY_PF_POLSOPENINGS_SECTION);
-
-    const len = await fdZKey.readULE32();
-
-    if (len > 0) zkey.polsOpenings = {};
-
-    for (let i = 0; i < len; i++) {
-        const name = await fdZKey.readString();
-        const open = await fdZKey.readULE32();
-        
-        zkey.polsOpenings[name] = open;
-    }
-
-    await endReadSection(fdZKey);
-}
-
 async function readPolsNamesStageSection(fdZKey, sections, zkey) {
     await startReadUniqueSection(fdZKey, sections, ZKEY_PF_POLSNAMESSTAGE_SECTION);
 
@@ -417,8 +374,9 @@ async function readPolsNamesStageSection(fdZKey, sections, zkey) {
 
         const lenPolsStage = await fdZKey.readULE32();
         for(let j = 0; j < lenPolsStage; j++) {
-            zkey.polsNamesStage[stage][j] = await fdZKey.readString();
-
+            zkey.polsNamesStage[stage][j] = {};
+            zkey.polsNamesStage[stage][j].name = await fdZKey.readString();
+            zkey.polsNamesStage[stage][j].openings = await fdZKey.readULE32();
         }
     }
 
