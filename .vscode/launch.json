@@ -471,6 +471,22 @@
             ]
         },
         {
+            "name": "test gen files all fflonk",
+            "console":"integratedTerminal",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "${workspaceFolder}/test/cfiles/fflonk_gen_all_files.js"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "test simple fflonk",
             "console":"integratedTerminal",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",

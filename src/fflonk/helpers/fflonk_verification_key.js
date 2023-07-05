@@ -15,7 +15,6 @@ module.exports = async function fflonkVerificationKey(zkey, options) {
         nPublics: zkey.nPublics,
         power: zkey.power,
         powerW: zkey.powerW,
-        polsMap: zkey.polsMap,
         f: zkey.f,
         k1: curve.Fr.toObject(zkey.k1),
         k2: curve.Fr.toObject(zkey.k2),
@@ -32,6 +31,23 @@ module.exports = async function fflonkVerificationKey(zkey, options) {
     for(let i = 0; i < fs.length; ++i) {
         vKey[fs[i]] = curve.G1.toObject(zkey[fs[i]]);
     }
+
+    let index = 0;
+
+    const nStages = Object.keys(zkey.polsNamesStage).length;
+    let polsMap = { cm: {}, const: {} };
+
+    for(let i = 0; i < nStages; ++i) {
+        for(let j = 0; j < zkey.polsNamesStage[i].length; ++j) {
+            if(i === 0) {
+                polsMap.const[j] = zkey.polsNamesStage[i][j];
+            } else {
+                polsMap.cm[index++] = zkey.polsNamesStage[i][j];
+            }
+        }
+    }
+
+    vKey.polsMap = polsMap;
     
     return stringifyBigInts(vKey);
 }

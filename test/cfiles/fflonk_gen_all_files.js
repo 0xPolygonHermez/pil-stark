@@ -1,7 +1,8 @@
 const chai = require("chai");
 const assert = chai.assert;
-const {F1Field, getCurveFromName} = require("ffjavascript");
+const {F1Field, buildBn128} = require("ffjavascript");
 const path = require("path");
+const fs = require("fs");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
@@ -11,32 +12,32 @@ const smFibonacci = require("../state_machines/sm_fibonacci/sm_fibonacci.js");
 const smPermutation = require("../state_machines/sm_permutation/sm_permutation.js");
 const smConnection = require("../state_machines/sm_connection/sm_connection.js");
 const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
-const fflonkProve = require("../../src/fflonk/helpers/fflonk_prover.js");
 const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
-const fflonkVerify  = require("../../src/fflonk/helpers/fflonk_verify.js");
 const fflonkVerificationKey = require("../../src/fflonk/helpers/fflonk_verification_key.js");
-const { readPilFflonkZkeyFile } = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
+const {readPilFflonkZkeyFile} = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
 
-const Logger = require('logplease');
+const { writeConstPolsFile } = require("../../src/fflonk/const_pols_serializer.js");
 
+const Logger = require("logplease");
+const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+Logger.setLogLevel("DEBUG");
 
-describe("Fflonk All sm", async function () {
+describe("simple sm", async function () {
+    this.timeout(10000000);
+
     let curve;
 
     before(async () => {
-        curve = await getCurveFromName("bn128");
+        curve = await buildBn128();
     })
 
     after(async () => {
         await curve.terminate();
-    })
+    });
 
-    this.timeout(10000000);
+    
 
-    it("It should create the pols main", async () => {
-        const logger = Logger.create("pil-fflonk", {showTimestamp: false});
-        Logger.setLogLevel("DEBUG");
-        
+    it("Creates all files needed to generate a pilfflonk proof for simple4p", async () => {
         const F = new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
 
         const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_all", "all_main.pil"));
@@ -65,22 +66,35 @@ describe("Fflonk All sm", async function () {
             assert(0);
         }
 
-        const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
-        const zkeyFilename =  path.join(__dirname, "../../", "tmp", "fflonk_all.zkey");
-
+        // Create & save fflonkInfo
         const fflonkInfo = fflonkInfoGen(F, pil);
 
+        const fflonkInfoFilename =  path.join(__dirname, "../../", "tmp", `all.fflonkinfo.json`);
+        await fs.promises.writeFile(fflonkInfoFilename, JSON.stringify(fflonkInfo, null, 1), "utf8");
+
+        // Create & save zkey file
+        const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
+        const zkeyFilename =  path.join(__dirname, "../../", "tmp", `all.zkey`);
+    
         const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 3, logger});
 
+        // Save verification key file
+        const VkeyFilename = path.join(__dirname, "../../", "tmp", `all.vkey`);
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
+        const verificationKey = await fflonkVerificationKey(zkey, {logger});
+        await fs.promises.writeFile(VkeyFilename, JSON.stringify(verificationKey, null, 1), "utf8");
+        
+        // Save constant polynomial evaluations file
+        const constPolsFilename =  path.join(__dirname, "../../", "tmp", `all.cnst`);
+        await constPols.saveToFileFr(constPolsFilename);
 
-        const vk = await fflonkVerificationKey(zkey, {logger});
+        // Save committed polynomial evaluations file
+        const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `all.cmmt`);
+        await cmPols.saveToFileFr(committedPolsFilename);
 
-        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, fflonkInfo, {logger});
-
-        const isValid = await fflonkVerify(vk, publicSignals, proof, fflonkInfo, {logger});
-
-        assert(isValid);
+        // Create & constant polynomial coefficients and extended evaluations file
+        const constPolsZkeyFilename =  path.join(__dirname, "../../", "tmp", `all.ext.cnst`);
+        await writeConstPolsFile(constPolsZkeyFilename, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, curve.Fr, {logger});
     });
 
 });

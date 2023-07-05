@@ -201,32 +201,18 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
 
     zkey.polsNamesStage = polsNames;
     zkey.polsOpenings = polsOpenings;
+    
+    // Compute maxCmPolsOpenings
     let maxCmPolsOpenings = 0;
-
-    const polsMap = {cm: {}, const: {}};
     for(const polRef in pil.references) {
         const polInfo = pil.references[polRef];
-        if(polInfo.type === "constP") {
-            if(polInfo.isArray) {
-                for(let i = 0; i < polInfo.len; ++i) {
-                    polsMap.const[pil.references[polRef].id + i] = polRef + i;
-                }
-            } else {
-                polsMap.const[pil.references[polRef].id] = polRef;
-            }
-        }
-
         if(polInfo.type === "cmP") {
             if(polInfo.isArray) {
                 for(let i = 0; i < polInfo.len; ++i) {
-                    polsMap.cm[pil.references[polRef].id + i] = polRef + i;  
-
                     // Compute max openings on committed polynomials to set a common bound on adding
                     maxCmPolsOpenings = Math.max(maxCmPolsOpenings, polsOpenings[polRef + i]);
                 }
             } else {
-                polsMap.cm[pil.references[polRef].id] = polRef;
-
                 // Compute max openings on committed polynomials to set a common bound on adding
                 maxCmPolsOpenings = Math.max(maxCmPolsOpenings, polsOpenings[polRef]);
             }
@@ -235,8 +221,6 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
         }
     }
     
-    zkey.polsMap = polsMap;
-
     // Precompute ZK data
     const domainSizeZK = domainSize + maxCmPolsOpenings;
     zkey.powerZK = log2(domainSizeZK - 1) + 1;
