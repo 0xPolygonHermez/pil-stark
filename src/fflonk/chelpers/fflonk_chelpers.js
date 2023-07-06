@@ -19,6 +19,10 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
     const multipleCodeFiles = config && config.multipleCodeFiles;
     const optcodes = config && config.optcodes;
 
+    const bigIntsCode = [];
+    const bigIntsFound = [];
+    let vIndex = 0;
+
     const codePublics = [];
     for (let i = 0; i < fflonkInfo.nPublics; i++) {
         if (fflonkInfo.publicsCode[i]) {
@@ -49,18 +53,6 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
         `}`
         ].join("\n")
     );
-
-    const pubTable = [];
-    pubTable.push("publics = (")
-    for (let i = 0; i < fflonkInfo.nPublics; i++) {
-        const comma = i == 0 ? "     " : "     ,";
-        if (fflonkInfo.publicsCode[i]) {
-            pubTable.push(`${comma}(publics_${i}_first, publics_${i}_i,  publics_${i}_last)`);
-        } else {
-            pubTable.push(`${comma}(NULL,NULL,NULL)`);
-        }
-    }
-    pubTable.push(");");
 
     let result = {};
 
@@ -126,6 +118,23 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
 
     if (multipleCodeFiles) {
         result.step42ns = code.join("\n\n") + "\n";
+        if(vIndex > 0) {
+            result.constValues =  [
+                `AltBn128::FrElement* ${config.className}::setConstValues(AltBn128::Engine &E) {`,
+                `     AltBn128::FrElement * constValues = new AltBn128::FrElement[${vIndex}];`,
+                ...bigIntsCode,
+                `     return constValues;`,
+                `}`
+            ].join("\n");
+        } else {
+            result.constValues =  [
+                `AltBn128::FrElement* ${config.className}::setConstValues(AltBn128::Engine &E) {`,
+                `}`
+            ].join("\n");
+        }
+
+       
+
         return result;
     }
 
@@ -137,8 +146,6 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
         const nBits = zkey.power;
         const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
         const nBitsExt = zkey.power + extendBits;
-
-        let vIndex = 0;
         
         // ZK data
         const extendBitsZK = zkey.powerZK - zkey.power;
@@ -233,9 +240,15 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
                
                 case "number": {
                     if(BigInt(r.value) > BigInt(Number.MAX_SAFE_INTEGER)) {
-                        body.push(`     AltBn128::FrElement v${vIndex};`);
-                        body.push(`     E.fr.fromString(v${vIndex}, "${BigInt(r.value).toString()}");`);
-                        return `v${vIndex++}`;
+                        if(!bigIntsFound.find(v => v === BigInt(r.value))) {
+                            bigIntsFound.push(BigInt(r.value));
+                            bigIntsCode.push(`     AltBn128::FrElement v${vIndex};`);
+                            bigIntsCode.push(`     E.fr.fromString(v${vIndex}, "${BigInt(r.value).toString()}");`);
+                            bigIntsCode.push(`     constValues[${vIndex}] = v${vIndex};`);
+                            return `params.constValues[${vIndex++}]`;
+                        } else {
+                            return `params.constValues[${bigIntsFound.indexOf(BigInt(r.value))}]`;
+                        }
                     } else {
                         return `E.fr.set(${BigInt(r.value).toString()})`;
                     }

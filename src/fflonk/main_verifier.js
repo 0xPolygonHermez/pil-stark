@@ -19,7 +19,6 @@ async function run() {
     const proofFile = typeof(argv.proof) === "string" ?  argv.proof.trim() : "mycircuit.proof.json";
     const publicFile = typeof(argv.public) === "string" ?  argv.public.trim() : "mycircuit.public.json";
 
-    console.log(verificationKeyFile);
     const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
     const verificationKey = JSON.parse(await fs.promises.readFile(verificationKeyFile, "utf8"));
 

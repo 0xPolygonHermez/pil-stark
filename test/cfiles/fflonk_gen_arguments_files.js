@@ -10,6 +10,8 @@ const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require
 const smGlobal = require("../state_machines/sm/sm_global.js");
 
 const Logger = require("logplease");
+const { readPilFflonkZkeyFile } = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
+const { fflonkVerificationKey } = require("../../index.js");
 const logger = Logger.create("pil-fflonk", {showTimestamp: false});
 Logger.setLogLevel("DEBUG");
 
@@ -112,5 +114,12 @@ describe("sm", async function () {
         // Save committed polynomial evaluations file
         const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.cmmt`);
         await committedPols.saveToFileFr(committedPolsFilename);
+
+        // Generate verification key
+        const verificationKeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.vkey`);
+        const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger: options.logger});
+        const verificationKey = await fflonkVerificationKey(zkey, options);
+    
+        await fs.promises.writeFile(verificationKeyFilename, JSON.stringify(verificationKey, null, 1), "utf8");
     }
 });

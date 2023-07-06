@@ -198,7 +198,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         const commitsStage1 = await commit(1, zkey, ctx, PTau, curve, { multiExp: true, logger });
         commitsStage1.forEach((com) => committedPols[`${com.index}`] = { commit: com.commit, pol: com.pol });
 
-        commitsStage1.forEach((com) => console.log(ctx.curve.G1.toString(com.commit)));
+        commitsStage1.forEach((com) => console.log(com.index, ctx.curve.G1.toString(com.commit)));
 
     }
 
@@ -255,7 +255,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         const commitsStage2 = await commit(2, zkey, ctx, PTau, curve, { multiExp: true, logger });
         commitsStage2.forEach((com) => committedPols[`${com.index}`] = { commit: com.commit, pol: com.pol });
 
-        commitsStage2.forEach((com) => console.log(ctx.curve.G1.toString(com.commit)));
+        commitsStage2.forEach((com) => console.log(com.index, ctx.curve.G1.toString(com.commit)));
 
     }
 
@@ -330,7 +330,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         const commitsStage3 = await commit(3, zkey, ctx, PTau, curve, { multiExp: true, logger });
         commitsStage3.forEach((com) => committedPols[`${com.index}`] = { commit: com.commit, pol: com.pol });
 
-        commitsStage3.forEach((com) => console.log(ctx.curve.G1.toString(com.commit)));
+        commitsStage3.forEach((com) => console.log(com.index, ctx.curve.G1.toString(com.commit)));
 
     }
 
@@ -356,7 +356,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         const commitsStage4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });
         commitsStage4.forEach((com) => committedPols[`${com.index}`] = { commit: com.commit, pol: com.pol });
 
-        commitsStage4.forEach((com) => console.log(ctx.curve.G1.toString(com.commit)));
+        commitsStage4.forEach((com) => console.log(com.index, ctx.curve.G1.toString(com.commit)));
 
     }
 
