@@ -18,7 +18,6 @@ const argv = require("yargs")
     .alias("t", "consttree")
     .alias("v", "verkey")
     .string("arity")
-    .string("custom")
     .argv;
 
 async function run() {
@@ -51,7 +50,7 @@ async function run() {
     if (starkStruct.verificationHashType == "GL") {
         MH = await buildMerkleHashGL(starkStruct.splitLinearHash);
     } else if (starkStruct.verificationHashType == "BN128") {
-        let arity = argv.arity || 16;
+        let arity = Number(argv.arity) || 16;
         let custom = argv.custom || false;
         console.log(`Arity: ${arity}, Custom: ${custom}`);
         MH = await buildMerkleHashBN128(arity, custom);

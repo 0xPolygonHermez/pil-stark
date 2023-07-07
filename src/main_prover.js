@@ -27,7 +27,6 @@ const argv = require("yargs")
     .alias("b", "public")
     .string("proverAddr")
     .string("arity")
-    .string("custom")
     .argv;
 
 async function run() {
@@ -58,7 +57,7 @@ async function run() {
     if (starkInfo.starkStruct.verificationHashType == "GL") {
         MH = await buildMerklehashGL();
     } else if (starkInfo.starkStruct.verificationHashType == "BN128") {
-        let arity = argv.arity || 16;
+        let arity = Number(argv.arity) || 16;
         let custom = argv.custom || false;
 
         options = {arity, custom};

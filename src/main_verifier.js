@@ -11,7 +11,6 @@ const argv = require("yargs")
     .alias("o", "proof")
     .alias("b", "public")
     .string("arity")
-    .string("custom")
     .argv;
 
 async function run() {
@@ -31,7 +30,7 @@ async function run() {
 
     let options = {};
     if (starkInfo.starkStruct.verificationHashType === "BN128") {
-        options.arity = argv.arity || 16;
+        options.arity = Number(argv.arity) || 16;
         options.custom = argv.custom || false;
         console.log(`Arity: ${options.arity}, Custom: ${options.custom}`);
 
