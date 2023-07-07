@@ -284,7 +284,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         const nPermutations = fflonkInfo.peCtx.length;
         const nConnections = fflonkInfo.ciCtx.length;
 
-        await callCalculateExps("step3prev", "n", pool, ctx, fflonkInfo, false, logger);
+        await callCalculateExps("step3prev", "n", pool, ctx, fflonkInfo, false, {logger});
 
         let nCm3 = fflonkInfo.mapSectionsN.cm1_n + fflonkInfo.mapSectionsN.cm2_n;
 
@@ -534,7 +534,6 @@ function compileCode(ctx, code, dom, ret, factorZK) {
         body.push(`  return ${getRef(code[code.length - 1].dest)};`);
     }
 
-    // console.log(body);
     return body.join("\n");
 
     function getRef(r) {

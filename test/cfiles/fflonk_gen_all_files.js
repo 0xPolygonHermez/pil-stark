@@ -42,14 +42,14 @@ describe("simple sm", async function () {
         const constPols =  newConstantPolsArray(pil, F);
 
         await smGlobal.buildConstants(constPols.Global);
-        // await smPlookup.buildConstants(constPols.Plookup);
+        await smPlookup.buildConstants(constPols.Plookup);
         await smFibonacci.buildConstants(constPols.Fibonacci);
         await smPermutation.buildConstants(constPols.Permutation);
         await smConnection.buildConstants(constPols.Connection, F);
 
         const cmPols = newCommitPolsArray(pil, F);
 
-        // await smPlookup.execute(cmPols.Plookup);
+        await smPlookup.execute(cmPols.Plookup);
         await smFibonacci.execute(cmPols.Fibonacci, [1,2], F);
         await smPermutation.execute(cmPols.Permutation);
         await smConnection.execute(cmPols.Connection);

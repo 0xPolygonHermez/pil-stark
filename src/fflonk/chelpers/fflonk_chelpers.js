@@ -7,7 +7,7 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
     const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
     const nBitsExt = zkey.power + extendBits;
     
-    const N = 1 << nBits;
+    const domainSize = 1 << nBits;
     const Next = 1 << nBitsExt;
 
 
@@ -112,9 +112,9 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
         result.step42ns_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
-    code.push(compileCode("step42ns_first", fflonkInfo.step42ns.first, "2ns"));
-    code.push(compileCode("step42ns_i", fflonkInfo.step42ns.first, "2ns"));
-    code.push(compileCode("step42ns_last", fflonkInfo.step42ns.first, "2ns"));
+    code.push(compileCode("step42ns_first", fflonkInfo.step42ns.first, "2ns", false, factorZK));
+    code.push(compileCode("step42ns_i", fflonkInfo.step42ns.first, "2ns", false, factorZK));
+    code.push(compileCode("step42ns_last", fflonkInfo.step42ns.first, "2ns", false, factorZK));
 
     if (multipleCodeFiles) {
         result.step42ns = code.join("\n\n") + "\n";
@@ -140,20 +140,11 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
 
     return code.join("\n\n");
 
-    function compileCode(functionName, code, dom, ret) {
-        const body = [];
+    function compileCode(functionName, code, dom, ret = false, zkFactor = 1) {
+        const body = [];    
 
-        const nBits = zkey.power;
-        const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
-        const nBitsExt = zkey.power + extendBits;
-        
-        // ZK data
-        const extendBitsZK = zkey.powerZK - zkey.power;
-        const factorZK = (1 << extendBitsZK);
-    
-
-        const next = (dom == "n" ? 1 : (1 << extendBits) * factorZK).toString();
-        const N = ((dom == "n" ? (1 << nBits) : (1 << nBitsExt)) * factorZK).toString();
+        const next = (dom == "n" ? 1 : (1 << extendBits) * zkFactor).toString();
+        const N = ((dom == "n" ? domainSize : Next) * zkFactor).toString();
 
         for (let j = 0; j < code.length; j++) {
             const src = [];

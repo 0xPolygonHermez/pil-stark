@@ -152,8 +152,6 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
     }
 
     polsXi.push({name: "Q", stage: 4, degree: (fflonkInfo.qDeg + 1) * domainSize});
-
-    console.log("QDEG", (fflonkInfo.qDeg + 1) * domainSize);
     
     const xiPols = fflonkInfo.evMap.filter(ev => !ev.prime);
     for (let i = 0; i < xiPols.length; i++) {
