@@ -118,22 +118,12 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
 
     if (multipleCodeFiles) {
         result.step42ns = code.join("\n\n") + "\n";
-        if(vIndex > 0) {
-            result.constValues =  [
-                `AltBn128::FrElement* ${config.className}::setConstValues(AltBn128::Engine &E) {`,
-                `     AltBn128::FrElement * constValues = new AltBn128::FrElement[${vIndex}];`,
-                ...bigIntsCode,
-                `     return constValues;`,
-                `}`
-            ].join("\n");
-        } else {
-            result.constValues =  [
-                `AltBn128::FrElement* ${config.className}::setConstValues(AltBn128::Engine &E) {`,
-                `}`
-            ].join("\n");
-        }
-
-       
+        result.constValues =  [
+            `u_int64_t ${config.className}::getNumConstValues() { return ${vIndex}; }\n`,
+            `void ${config.className}::setConstValues(AltBn128::Engine &E, StepsParams &params) {`,
+            ...bigIntsCode,
+            `}`
+        ].join("\n");
 
         return result;
     }
@@ -235,7 +225,7 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
                             bigIntsFound.push(BigInt(r.value));
                             bigIntsCode.push(`     AltBn128::FrElement v${vIndex};`);
                             bigIntsCode.push(`     E.fr.fromString(v${vIndex}, "${BigInt(r.value).toString()}");`);
-                            bigIntsCode.push(`     constValues[${vIndex}] = v${vIndex};`);
+                            bigIntsCode.push(`     params.constValues[${vIndex}] = v${vIndex};`);
                             return `params.constValues[${vIndex++}]`;
                         } else {
                             return `params.constValues[${bigIntsFound.indexOf(BigInt(r.value))}]`;
