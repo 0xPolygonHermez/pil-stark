@@ -32,7 +32,7 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
 
     code.push(
         [
-        `AltBn128::FrElement ${config.className}::publics_first(AltBn128::Engine &E, StepsParams &params, uint64_t i, uint64_t pub) {`,
+        `void ${config.className}::publics_first(AltBn128::Engine &E, StepsParams &params, uint64_t i, uint64_t pub) {`,
         ...codePublics,
         `}`
         ].join("\n")
@@ -40,7 +40,7 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
 
     code.push(
         [
-        `AltBn128::FrElement ${config.className}::publics_i(AltBn128::Engine &E, StepsParams &params, uint64_t i, uint64_t pub) {`,
+        `void ${config.className}::publics_i(AltBn128::Engine &E, StepsParams &params, uint64_t i, uint64_t pub) {`,
         ...codePublics,
         `}`
         ].join("\n")
@@ -48,7 +48,7 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
 
     code.push(
         [
-        `AltBn128::FrElement ${config.className}::publics_last(AltBn128::Engine &E, StepsParams &params, uint64_t i, uint64_t pub) {`,
+        `void ${config.className}::publics_last(AltBn128::Engine &E, StepsParams &params, uint64_t i, uint64_t pub) {`,
         ...codePublics,
         `}`
         ].join("\n")
@@ -177,7 +177,7 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
         }
 
         if (ret) {
-            body.push(`     return ${getRef(code[code.length - 1].dest)};`);
+            body.push(`     params.publicInputs[i] = ${getRef(code[code.length - 1].dest)};`);
         }
 
         let res;
