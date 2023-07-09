@@ -194,7 +194,7 @@ function getExpDim(pil, exp) {
         case "mul":
             return getExpDim(pil, exp.values[0]) + getExpDim(pil, exp.values[1])
         case "muladd":
-            return Math.max(getExpDim(pil, exp.values[0]) + getExpDim(pil, exp.values[1]), getExpDim(pil, exp.values[2]));
+            return Math.max(getExpDim(pil, exp.values[0]), getExpDim(pil, exp.values[1]), getExpDim(pil, exp.values[2]));
         case "cm": return 1;
         case "const": return 1;
         case "exp": return getExpDim(pil, pil.expressions[exp.id]);
