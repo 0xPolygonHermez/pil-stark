@@ -35,7 +35,7 @@ module.exports ={
         // Store the different types of custom gates that are being used and how many times each
         const res = {
             PoseidonT: 0,
-            RangeCheck: 0,
+            RangeCheckNBits: {},
             nPoseidonT: 0,
             nRangeCheck:0,
             nPoseidonInputs: -1,
@@ -48,8 +48,8 @@ module.exports ={
                     res.PoseidonT = i; 
                     res.nPoseidonInputs = r1cs.customGates[i].parameters;
                     break;
-                case "RangeCheck":
-                    res.RangeCheck = i; 
+                case "Num2Bytes":
+                    res.RangeCheckNBits[i] = r1cs.customGates[i].parameters; 
                     break;
                 default:
                     throw new Error("Invalid custom gate: " + r1cs.customGates[i].templateName);
@@ -60,7 +60,7 @@ module.exports ={
         for (let i=0; i< r1cs.customGatesUses.length; i++) {
             if (r1cs.customGatesUses[i].id == res.PoseidonT) {
                 ++res.nPoseidonT;
-            }else if (r1cs.customGatesUses[i].id == res.RangeCheck) {
+            } else if (typeof res.RangeCheckNBits[r1cs.customGatesUses[i].id] !== "undefined") {
                 ++res.nRangeCheck; 
             } else {
                 throw new Error("Custom gate not defined" + r1cs.customGatesUses[i].id);

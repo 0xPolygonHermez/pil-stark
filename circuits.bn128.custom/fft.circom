@@ -124,8 +124,8 @@ template FFT(nBits, inv) {
 
             k[i][e]*p + out[i][e] === sum[i][e];
 
-            _ <== CustomNum2Bits(64)(out[i][e]);
-            _ <== CustomNum2Bits(64 + nBits + 1)(k[i][e]);
+            _ <== Num2Bytes(64)(out[i][e]);
+            _ <== Num2Bytes(64 + nBits + 1)(k[i][e]);
         }
     }
 }

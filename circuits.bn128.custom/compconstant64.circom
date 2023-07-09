@@ -1,7 +1,4 @@
 pragma circom 2.1.0;
-pragma custom_templates;
-
-include "rangecheck.circom";
 
 template CompConstant64(ct) {
     signal input in[64];
@@ -44,7 +41,7 @@ template CompConstant64(ct) {
         e = e*2;
     }
 
-    signal num2bits[33] <== CustomNum2Bits(33)(sum[31]);
+    signal num2bits[33] <== Num2Bits(33)(sum[31]);
     
     _ <== num2bits;
 

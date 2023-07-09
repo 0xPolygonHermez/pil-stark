@@ -1,36 +1,32 @@
 pragma circom 2.1.0;
 pragma custom_templates;
 
-include "aliascheck.circom";
-
-template custom RangeCheck() {
-    signal input b;
-    
-    assert(b * (b - 1) == 0);
-}
-
-template CustomNum2Bits(nBits) {
+template custom Num2Bytes(nBits) {
+    var nBytes = (nBits + 15)\16;
     signal input in;
-    signal output out[nBits];
+    signal output out[nBytes];
 
     var lc1=0;
     var e2=1;
     
+    var b = 0;
+    var e = 1;
     for(var i =0; i < nBits; i++) {
-        out[i] <-- (in >> i) & 1;
-        RangeCheck()(out[i]);
-        lc1 += out[i] * e2;
-        e2 += e2;
+        b += ((in >> i) & 1) * e;
+        e = e+e;
+        if(i%16 == 15) {
+            out[i\16] <-- b; 
+            lc1 += b * e2;
+            e2 = e2*65536;
+            b = 0;
+            e = 1;
+        }
+    }
+
+    if(nBits%16 != 0) {
+        out[nBytes - 1] <-- b;
+        lc1 += b; 
     }
     
     assert(lc1 == in);
-}
-
-template CustomNum2Bits_strict() {
-    signal input in;
-    signal output out[254];
-
-    out <== CustomNum2Bits(254)(in);
-    AliasCheck()(out);
-    
 }

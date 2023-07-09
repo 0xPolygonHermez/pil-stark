@@ -110,7 +110,7 @@ class Transcript {
         for (let i=0; i<NFields; i++) {
             const f = this.getFields253();
             n2b[i] = `transcriptN2b_${this.n2bCnt++}`;
-            this.code.push(`signal ${n2b[i]}[254] <== CustomNum2Bits_strict()(${f});`);
+            this.code.push(`signal ${n2b[i]}[254] <== Num2Bits_strict()(${f});`);
         }
         if(this.hiCnt < arity + 1) {
             this.code.push(`for(var i = ${this.hiCnt}; i < ${arity + 1}; i++){
@@ -890,7 +890,7 @@ template Main() {
     //////
 
     component publicsHasher = Sha256(<%- 160 + 64*pil.publics.length %>);
-    component n2bProverAddr = CustomNum2Bits(160);
+    component n2bProverAddr = Num2Bits(160);
     component n2bPublics[<%- pil.publics.length %> ];
     component cmpPublics[<%- pil.publics.length %> ];
 
@@ -902,7 +902,7 @@ template Main() {
     var offset = 160;
 
     for (var i=0; i<<%- pil.publics.length %>; i++) {
-        n2bPublics[i] = CustomNum2Bits(64);
+        n2bPublics[i] = Num2Bits(64);
         cmpPublics[i] = CompConstant64(0xFFFFFFFF00000000);
         n2bPublics[i].in <== publics[i];
         for (var j=0; j<64; j++) {

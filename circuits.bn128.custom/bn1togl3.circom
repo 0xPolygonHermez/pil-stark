@@ -1,15 +1,13 @@
 
 pragma circom 2.1.0;
-pragma custom_templates;
 
 include "bitify.circom";
-include "rangecheck.circom";
 
 template BN1toGL3() {
     signal input in;
     signal output out[3];
 
-    signal n2b[254] <== CustomNum2Bits_strict()(in);
+    signal n2b[254] <== Num2Bits_strict()(in);
     
     component b2n[3];
 

@@ -12,8 +12,8 @@ template GLNorm() {
     signal k <-- (in + 16*p)\p;
     out <== (in+16*p) - k*p;
 
-    _ <== CustomNum2Bits(10)(k);
-    _ <== CustomNum2Bits(64)(out);
+    _ <== Num2Bits(10)(k);
+    _ <== Num2Bytes(64)(out);
 
 }
 
@@ -44,8 +44,8 @@ template GLMulAdd() {
     k <-- m\p;
     out <== m-k*p;
 
-    _ <== CustomNum2Bits(80)(k);
-    _ <== CustomNum2Bits(64)(out);
+    _ <== Num2Bytes(80)(k);
+    _ <== Num2Bytes(64)(out);
 }
 
 template GLMul() {
@@ -89,8 +89,8 @@ template GLCMulAdd() {
     out[2] <== m[2] -k[2]*p;
 
     for (var i = 0; i<3; i++) {
-        _ <== CustomNum2Bits(80)(k[i]);
-        _ <== CustomNum2Bits(64)(out[i]);
+        _ <== Num2Bytes(80)(k[i]);
+        _ <== Num2Bytes(64)(out[i]);
     }
 }
 
@@ -134,7 +134,7 @@ template GLInv() {
     signal check <== GLMul()(in, out);
     check === 1;
 
-    _ <== CustomNum2Bits(64)(out);
+    _ <== Num2Bytes(64)(out);
 }
 
 
@@ -184,8 +184,8 @@ template GLCInv() {
     signal check[3] <== GLCMul()(in, out);
     check === [1,0,0];
 
-    _ <== CustomNum2Bits(64)(out[0]);
-    _ <== CustomNum2Bits(64)(out[1]);
-    _ <== CustomNum2Bits(64)(out[2]);
+    _ <== Num2Bytes(64)(out[0]);
+    _ <== Num2Bytes(64)(out[1]);
+    _ <== Num2Bytes(64)(out[2]);
 
 }

@@ -534,9 +534,9 @@ template Transcript() {
     }
     
     signal transcriptHash_93[5] <== CustomPoseidon(4)([finalPol[14][2],finalPol[15][0],finalPol[15][1],finalPol[15][2]], transcriptHash_92[0]);
-    signal transcriptN2b_0[254] <== CustomNum2Bits_strict()(transcriptHash_93[0]);
-    signal transcriptN2b_1[254] <== CustomNum2Bits_strict()(transcriptHash_93[1]);
-    signal transcriptN2b_2[254] <== CustomNum2Bits_strict()(transcriptHash_93[2]);
+    signal transcriptN2b_0[254] <== Num2Bits_strict()(transcriptHash_93[0]);
+    signal transcriptN2b_1[254] <== Num2Bits_strict()(transcriptHash_93[1]);
+    signal transcriptN2b_2[254] <== Num2Bits_strict()(transcriptHash_93[2]);
     for(var i = 3; i < 5; i++){
         _ <== transcriptHash_93[i]; // Unused transcript values           
     }
@@ -4179,7 +4179,7 @@ template Main() {
     //////
 
     component publicsHasher = Sha256(352);
-    component n2bProverAddr = CustomNum2Bits(160);
+    component n2bProverAddr = Num2Bits(160);
     component n2bPublics[3 ];
     component cmpPublics[3 ];
 
@@ -4191,7 +4191,7 @@ template Main() {
     var offset = 160;
 
     for (var i=0; i<3; i++) {
-        n2bPublics[i] = CustomNum2Bits(64);
+        n2bPublics[i] = Num2Bits(64);
         cmpPublics[i] = CompConstant64(0xFFFFFFFF00000000);
         n2bPublics[i].in <== publics[i];
         for (var j=0; j<64; j++) {

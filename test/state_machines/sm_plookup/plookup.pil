@@ -6,5 +6,5 @@ namespace Plookup(%N);
 
     pol constant SEL, A, B;
 
-    sel {a, b', a*b'} in SEL { A, B, cc};
+    sel {a, b', a*b'} in SEL {A, B, cc};
 

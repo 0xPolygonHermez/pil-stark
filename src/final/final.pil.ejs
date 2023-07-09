@@ -6,8 +6,8 @@ constant %N = 2**<%- nBits %>; // Upper bound for the number of rows to be used 
 namespace Global(%N);
     pol constant L1; // Lagrange polynomial for the first public
 
-<% for (let i=nCommittedPols; i<nPublics; i+=nCommittedPols) { -%>
-    pol constant L<%- Math.floor(i/nCommittedPols) +1 %>; // Lagrange polynomial for the 12 publics corresponding to the i^th row
+<% for (let i=6; i<nPublics; i+=6) { -%>
+    pol constant L<%- Math.floor(i/6) +1 %>; // Lagrange polynomial for the 12 publics corresponding to the i^th row
 <% } -%>
     
 <% for (let i=1; i<nPublics; i++) { -%>
@@ -15,13 +15,14 @@ namespace Global(%N);
 <% } -%>
 
 namespace Final(%N);
-    pol constant S[<%- nCommittedPols %>];
+    pol constant S[6];
     pol constant C[5];
     pol constant PARTIAL;
     pol constant POSEIDON_T;
     pol constant RANGE_CHECK;
+    pol constant RANGE;
     pol constant GATE;
-    pol commit a[<%- nCommittedPols %>];
+    pol commit a[6];
 
     // Set all the publics. They are stored in the following order -> a[0](0), ....  , a[11](0), a[0](1), .... , a[11](1) ... 
 <% for (let i=0; i<nPublics; i++) { -%>
@@ -41,20 +42,13 @@ namespace Final(%N);
     // C[3] -> Qo
     // C[4] -> Qc
     
-<% for(let i=0; i < nPlonk; ++i) {  -%>
-    pol a<%- `${3*i}${3*i + 1}` %> = a[<%- 3*i %>]*a[<%- 3*i + 1 %>];
-    pol g<%- i %> = C[0]*a<%- `${3*i}${3*i + 1}` %> + C[1]*a[<%- 3*i %>] + C[2]*a[<%- 3*i + 1 %>] + C[3]*a[<%- 3*i + 2 %>] + C[4];
-    GATE * g<%- i %> = 0;
+    pol a01 = a[0]*a[1];
+    pol g012 = C[0]*a01 + C[1]*a[0] + C[2]*a[1] + C[3]*a[2] + C[4];
+    g012*GATE = 0;
 
-<% } -%>
-
-<% if(addRangeChecks) {  -%>
-<% for(let i=nPlonk*3; i < nCommittedPols; ++i) {  -%>
-    pol rc<%- i %>_plonk = (a[<%- i %>] - 1)*a[<%- i %>];
-    GATE * rc<%- i %>_plonk = 0;
-    
-<% } -%>
-<% } -%>
+    pol a34 = a[3]*a[4];
+    pol g345 = C[0]*a34 + C[1]*a[3] + C[2]*a[4] + C[3]*a[5] + C[4];
+    g345*GATE = 0;
 
     // POSEIDON GATE - Check that a BN128 Poseidon round is valid
 
@@ -90,27 +84,30 @@ for(let i = 0; i < nInPoseidon; ++i) {
 <% for(let i = 0; i < nInPoseidon; ++i) { -%>
     POSEIDON_T * (a[<%- i %>]' - poseidon<%- i %>_M) = 0;
 <% } -%>
-
-<% if(addRangeChecks) {  -%>
-<% for(let i=5; i < nCommittedPols; ++i) {  -%>
-    pol rc<%- i %>_poseidon = (a[<%- i %>] - 1)*a[<%- i %>];
-    POSEIDON_T * rc<%- i %>_poseidon = 0;
-    
-<% } -%>
-<% } -%>
   
-    // Range Checks
-<%  for(let i = 0; i < nCommittedPols; ++i) { -%>
-    pol rc<%- i %> = (a[<%- i %>] - 1)*a[<%- i %>];
-    RANGE_CHECK * rc<%- i %> = 0;
+    // Range Check
 
-<%  } -%>
+    pol lc1 = a[2] + 256*a[1];
+    pol lc2 = a[3] + 256*lc1;
+    pol lc3 = a[4] + 256*lc2;
+    pol lc4 = a[5] + 256*lc3;
+    pol lc5 = a[1]' + 256*lc4;
+    pol lc6 = a[2]' + 256*lc5;
+    pol lc7 = a[3]' + 256*lc6;
+    pol lc8 = a[4]' + 256*lc7;
+    
+    pol inpVal = a[5]' + 256*lc8;
+    
+    RANGE_CHECK * (a[0] - inpVal) = 0;
+
+    RANGE_CHECK { a[1], a[2], a[3], a[4], a[5] } in { RANGE, RANGE, RANGE, RANGE, RANGE };
+
     
     // Connection equations
 <% 
     let a = [];
     let S = [];
-    for(let i = 0; i < nCommittedPols; ++i) {
+    for(let i = 0; i < 6; ++i) {
         a.push(`a[${i}]`);
         S.push(`S[${i}]`);
     }
