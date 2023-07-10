@@ -79,7 +79,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
     ctx.x_n = new BigBuffer(sDomain); // Omegas de field extension
 
     // Reserve big buffers for the polynomial coefficients
-    ctx.const_coefs = new BigBuffer(fflonkInfo.nConstants * sDomain * factorZK); // Constant polynomials
+    ctx.const_coefs = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
     ctx.cm1_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomain * factorZK);
     ctx.cm2_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomain * factorZK);
     ctx.cm3_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomain * factorZK);

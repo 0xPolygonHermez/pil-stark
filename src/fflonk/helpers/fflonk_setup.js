@@ -1,7 +1,7 @@
 const {BigBuffer} = require("ffjavascript");
 const {log2} = require("pilcom/src/utils");
 const {setup, Polynomial, commit} = require("shplonkjs");
-const { ifft, fft } = require("../../helpers/fft/fft_p.bn128");
+const { ifft, fft, interpolate } = require("../../helpers/fft/fft_p.bn128");
 const { writeConstPolsFile } = require("../const_pols_serializer");
 const { writePilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 
@@ -231,6 +231,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
 
     zkey.nPublics = fflonkInfo.nPublics;
     
+    const nBits = zkey.power;
     const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
     const nBitsExt = zkey.power + extendBits;
 
@@ -239,18 +240,19 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
     const extendBitsZK = zkey.powerZK - zkey.power;
     const factorZK = (1 << extendBitsZK);
     const extendBitsTotal = extendBits + extendBitsZK;
-    const nBitsExtZK = zkey.power + extendBitsTotal;
+    const nBitsExtZK = nBits + extendBitsTotal;
 
-    let constPolsCoefs = new BigBuffer(fflonkInfo.nConstants * domainSize * factorZK * curve.Fr.n8); // Constant polynomials
-    let constPolsEvals = new BigBuffer(fflonkInfo.nConstants * domainSize * curve.Fr.n8); // Constant polynomials
-    let constPolsEvalsExt = new BigBuffer(fflonkInfo.nConstants * domainSizeExt * factorZK * curve.Fr.n8); // Constant polynomials
+    const sDomain = domainSize * curve.Fr.n8;
+    const sDomainExt = domainSizeExt * curve.Fr.n8;
+
+    let constPolsCoefs = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
+    let constPolsEvals = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
+    let constPolsEvalsExt = new BigBuffer(fflonkInfo.nConstants * sDomainExt * factorZK); // Constant polynomials
 
     cnstPols.writeToBigBufferFr(constPolsEvals, curve.Fr);
 
     if(fflonkInfo.nConstants > 0) {
-        await ifft(constPolsEvals, fflonkInfo.nConstants, zkey.power, constPolsCoefs, curve.Fr);
-
-        await fft(constPolsCoefs, fflonkInfo.nConstants, nBitsExt + extendBitsZK, constPolsEvalsExt, curve.Fr);
+        await interpolate(constPolsEvals, fflonkInfo.nConstants, nBits, constPolsCoefs, constPolsEvalsExt, nBitsExtZK, curve.Fr);
     
         const ctx = {};
 
