@@ -95,6 +95,8 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
             }
             ]
         });
+    	res.nCm4 = res.qDeg;
+
     } else {
         code.push({
             op: "copy",
@@ -105,8 +107,6 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
             src: [code[code.length-1].dest],
         });
     }
-    
-    res.nCm4 = res.qDeg;
 
     res.step42ns = buildCode(ctx2ns);
 }
@@ -121,7 +121,7 @@ function calculateImPols(pil, _exp, maxDeg) {
 
     console.log(`maxDeg: ${maxDeg}, nIm: ${Object.keys(re).length}, d: ${rd}`);
 
-    return [re, Math.max(rd, absMaxD) - 1];  // We divide the exp polynomial by 1.   
+    return [re, Math.max(rd, absMaxD) - 1];  // We divide the exp polynomial by 1.
 
     function _calculateImPols(pil, exp, imExpressions, maxDeg) {
         if (imExpressions === false) {
