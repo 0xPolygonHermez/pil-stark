@@ -3,11 +3,10 @@ const { log2 } = require("pilcom/src/utils");
 
 module.exports ={
 
-    calculatePlonkConstraints: function(plonkConstraints, n) {
-
-        // Each constraint is defined by the following five polynomial gates [qM, qL, qR, qO, qC].
-        // Store all the different combinations (and how many times each) appears in the plonkConstraints
-        const constraints = {};
+    calculatePlonkConstraints: function(plonkConstraints, extraRows) {
+        
+        let partialRows = {};
+        let r = 0;
         for (let i=0; i<plonkConstraints.length; i++) {
             if ((i%10000) == 0) {
                 console.log(`Point Check -> Plonk info constraint processing... ${i}/${plonkConstraints.length}`);
@@ -15,16 +14,19 @@ module.exports ={
             //Each plonkConstraint has the following form: [a,b,c, qM, qL, qR, qO, qC]
             const c = plonkConstraints[i]; 
             const k= c.slice(3, 8).map( a=> a.toString(16)).join(","); //Calculate
-            constraints[k] ||=  0; //If k is not in uses, initialize it
-            constraints[k]++; // Update the counter of the constraint
+            if(extraRows > 0) {
+                --extraRows;
+                continue;
+            } else if(partialRows[k]) {
+                ++partialRows[k];
+                if(partialRows[k] === 3) delete partialRows[k];
+            } else {
+                partialRows[k] = 1;
+                r++;
+            }
         };
 
-        // For each different combination of constraints, calculate how many packs of two are needed to fit all of the constraints
-        // So, if for example a set of polynomial gates values [qM, qL, qR, qO, qC] appears 21 times, those will fit in 11 groups of 2 elements 
-        // Store the sumatory in this variable
-        const N = Object.values(constraints).reduce((acc, curr) => acc + Math.floor((curr - 1) / n) + 1, 0);
-    
-        return N;
+        return r;
     },
 
     /*

@@ -13,15 +13,20 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     // Calculate the number plonk Additions and plonk constraints from the R1CS
     const [plonkConstraints, plonkAdditions] = r1cs2plonk(F, r1cs);
     
-    // Calculate how many C12 constraints are needed 
-    const CPlonkConstraints = calculatePlonkConstraints(plonkConstraints, 2);
-
     // Get information about the custom gates from the R1CS
     const customGatesInfo = getCustomGatesInfo(r1cs);
+    
+    let rangeCheckRows = customGatesInfo.nRangeCheck;
+    let nGLCMulAddRows = customGatesInfo.nGLCMulAdd * 2;
+
+    let totalExtraRowsPlonk = rangeCheckRows + nGLCMulAddRows;
+
+    // Calculate how many C12 constraints are needed 
+    const CPlonkConstraints = calculatePlonkConstraints(plonkConstraints, totalExtraRowsPlonk);
 
     // Calculate the total number of publics used in PIL and how many rows are needed to store all of them
     let nPublics = r1cs.nOutputs + r1cs.nPubInputs;
-    const nPublicRows = Math.floor((nPublics - 1)/6) + 1; 
+    const nPublicRows = Math.floor((nPublics - 1)/9) + 1; 
 
     const N_ROUNDS_P = [56, 57, 56, 60, 60, 63, 64, 63, 60, 66, 60, 65, 70, 60, 64, 68];
 
@@ -31,9 +36,6 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     const nRoundsPoseidon = nRoundsF + nRoundsP;
 
     const poseidonRows = customGatesInfo.nPoseidonT*(nRoundsPoseidon + 1);
-
-    let rangeCheckRows = customGatesInfo.nRangeCheck;
-    let nGLCMulAddRows = customGatesInfo.nGLCMulAdd * 2;
 
     console.log(`Number of Plonk constraints: ${plonkConstraints.length} -> Number of plonk per row: 2 -> Constraints:  ${CPlonkConstraints}`);
     console.log(`Number of Plonk additions: ${plonkAdditions.length}`);
@@ -77,9 +79,9 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     fs.promises.unlink(pilFile);
 
     // Stores the positions of all the values that each of the committed polynomials takes in each row 
-    // Remember that there are 5 committed polynomials and the number of rows is stored in NUsed
+    // Remember that there are 9 committed polynomials and the number of rows is stored in NUsed
     const sMap = [];
-    for (let i=0;i<6; i++) {
+    for (let i=0;i<9; i++) {
         sMap[i] = new Uint32Array(N);
     }
 
@@ -96,68 +98,21 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     }
 
     // Store the public inputs position in the mapping sMap
-    for (let i=0; i<nPublicRows*6; i++) {
-        // Since each row contains 6 public inputs, it is possible that
+    for (let i=0; i<nPublicRows*9; i++) {
+        // Since each row contains 9 public inputs, it is possible that
         // the last row is partially empty. Therefore, fulfill that last row
         // with 0.
         if(i < nPublics) {
-            sMap[i%6][Math.floor(i/6)] = 1+i;
+            sMap[i%9][Math.floor(i/9)] = 1+i;
         } else {
-            sMap[i%6][Math.floor(i/6)] = 0;
+            sMap[i%9][Math.floor(i/9)] = 0;
         }
     }
 
     let r = nPublicRows;
 
-    // Paste plonk constraints. 
-    const partialRows = {}; // Stores a row that is partially completed, which means that a we only have one set of wires (a_i, b_i, c_i) that fulfill a given constraint
-    for (let i=0; i<plonkConstraints.length; i++) {
-        if ((i%10000) == 0) console.log(`Point check -> Processing constraint... ${i}/${plonkConstraints.length}`);
-        const c = plonkConstraints[i];
-        const k= c.slice(3, 8).map( a=> a.toString(16)).join(",");
-        // Once a new constraint is read, check if there's some partial row with that constraint. If that's the case, add the wire (which is stored in [c0, c1, c2]) to 
-        // the corresponding row
-
-        if (partialRows[k]) {
-            const pr = partialRows[k];
-            sMap[pr.nUsed*3][pr.row] = c[0];
-            sMap[pr.nUsed*3+1][pr.row] = c[1];
-            sMap[pr.nUsed*3+2][pr.row] = c[2];
-            pr.nUsed ++;
-            // If nUsed is equal to 2, it means the first set of constraints values is being fulfilled and the second half needs still to be added.
-            // Otherwise the C12 row is full
-            if (pr.nUsed == 2) {
-                delete partialRows[k];
-            } 
-        // If the constraint is not stored in partialRows (which means that there is no other row that is using this very same set of constraints and is not full)
-        // check if there's any half row. If that's the case, attach the new set of constraints values to that row 
-        } else {
-            constPols.Final.GATE[r] = 1n;
-            constPols.Final.GLCMULADD[r] = 0n;
-            constPols.Final.PARTIAL[r] = 0n;
-            constPols.Final.POSEIDON_T[r] = 0n;
-            constPols.Final.RANGE_CHECK[r] = 0n;
-            sMap[0][r] = c[0];
-            sMap[1][r] = c[1];
-            sMap[2][r] = c[2];
-
-            sMap[3][r] = c[0];
-            sMap[4][r] = c[1];
-            sMap[5][r] = c[2];
-
-            constPols.Final.C[0][r] = c[3];
-            constPols.Final.C[1][r] = c[4];
-            constPols.Final.C[2][r] = c[5];
-            constPols.Final.C[3][r] = c[6];
-            constPols.Final.C[4][r] = c[7];
-            partialRows[k] = {
-                row: r,
-                nUsed: 1
-            };
-            r++;
-        }
-    }
-
+    const extraRowsPlonk = [];
+    
     // Generate Custom Gates
     
     for(let i = 0; i < r1cs.customGatesUses.length; i++) {
@@ -200,7 +155,9 @@ module.exports = async function plonkSetup(F, r1cs, options) {
                 if(k - 1 > nBytes) break;
                 sMap[k][r] = cgu.signals[k];
             }
-           r += 1;
+
+            extraRowsPlonk.push(r);
+            r += 1;
         } else if(cgu.id == customGatesInfo.GLCMulAdd) {
             assert(cgu.signals.length == 12);
             constPols.Final.GATE[r] = 0n;
@@ -224,7 +181,9 @@ module.exports = async function plonkSetup(F, r1cs, options) {
                 sMap[k][r] = cgu.signals[k];
                 sMap[k][r+1] = cgu.signals[k+6];
             }
-
+            
+            extraRowsPlonk.push(r);
+            extraRowsPlonk.push(r+1);
             r += 2;
         } else {
             throw new Error("Custom gate not defined", cgu.id);
@@ -235,12 +194,77 @@ module.exports = async function plonkSetup(F, r1cs, options) {
         constPols.Final.RANGE[i] = BigInt(i%256);
     }
 
-    const ks = getKs(F, 5);
+    // Paste plonk constraints. 
+    const partialRows = {}; // Stores a row that is partially completed, which means that a we only have one set of wires (a_i, b_i, c_i) that fulfill a given constraint
+    for (let i=0; i<plonkConstraints.length; i++) {
+        if ((i%10000) == 0) console.log(`Point check -> Processing constraint... ${i}/${plonkConstraints.length}`);
+        const c = plonkConstraints[i];
+        const k= c.slice(3, 8).map( a=> a.toString(16)).join(",");
+        // Once a new constraint is read, check if there's some partial row with that constraint. If that's the case, add the wire (which is stored in [c0, c1, c2]) to 
+        // the corresponding row
+
+        if (extraRowsPlonk.length > 0) {
+            const row = extraRowsPlonk.shift();
+            constPols.Final.C[0][row] = c[3];
+            constPols.Final.C[1][row] = c[4];
+            constPols.Final.C[2][row] = c[5];
+            constPols.Final.C[3][row] = c[6];
+            constPols.Final.C[4][row] = c[7];
+            
+            sMap[6][row] = c[0];
+            sMap[7][row] = c[1];
+            sMap[8][row] = c[2];
+
+        } else if (partialRows[k]) {
+            const pr = partialRows[k];
+            sMap[pr.nUsed*3][pr.row] = c[0];
+            sMap[pr.nUsed*3+1][pr.row] = c[1];
+            sMap[pr.nUsed*3+2][pr.row] = c[2];
+            pr.nUsed ++;
+            // If nUsed is equal to 2, it means the first set of constraints values is being fulfilled and the second half needs still to be added.
+            // Otherwise the C12 row is full
+            if (pr.nUsed == 3) {
+                delete partialRows[k];
+            } 
+        // If the constraint is not stored in partialRows (which means that there is no other row that is using this very same set of constraints and is not full)
+        // check if there's any half row. If that's the case, attach the new set of constraints values to that row 
+        } else {
+            constPols.Final.GATE[r] = 1n;
+            constPols.Final.GLCMULADD[r] = 0n;
+            constPols.Final.PARTIAL[r] = 0n;
+            constPols.Final.POSEIDON_T[r] = 0n;
+            constPols.Final.RANGE_CHECK[r] = 0n;
+            sMap[0][r] = c[0];
+            sMap[1][r] = c[1];
+            sMap[2][r] = c[2];
+
+            sMap[3][r] = c[0];
+            sMap[4][r] = c[1];
+            sMap[5][r] = c[2];
+
+            sMap[6][r] = c[0];
+            sMap[7][r] = c[1];
+            sMap[8][r] = c[2];
+
+            constPols.Final.C[0][r] = c[3];
+            constPols.Final.C[1][r] = c[4];
+            constPols.Final.C[2][r] = c[5];
+            constPols.Final.C[3][r] = c[6];
+            constPols.Final.C[4][r] = c[7];
+            partialRows[k] = {
+                row: r,
+                nUsed: 1
+            };
+            r++;
+        }
+    }
+
+    const ks = getKs(F, 8);
     let w = F.one;
     for (let i=0; i<N; i++) {
         if ((i%10000) == 0) console.log(`Point check -> Preparing S... ${i}/${N}`);
         constPols.Final.S[0][i] = w;
-        for (let j=1; j<6; j++) {
+        for (let j=1; j<9; j++) {
             constPols.Final.S[j][i] = F.mul(w, ks[j-1]);
         }
         w = F.mul(w, F.w[nBits]);
@@ -249,7 +273,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     const lastSignal = {}
     for (let i=0; i<r; i++) {
         if ((i%10000) == 0) console.log(`Point check -> Connection S... ${i}/${r}`);
-        for (let j=0; j<6; j++) {
+        for (let j=0; j<9; j++) {
             if (sMap[j][i]) {
                 if (typeof lastSignal[sMap[j][i]] !== "undefined") {
                     const ls = lastSignal[sMap[j][i]];
