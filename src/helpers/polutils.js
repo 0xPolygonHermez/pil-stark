@@ -32,7 +32,7 @@ module.exports.extendPol = function extendPol(F, p, extendBits, shift = true) {
         res[i] = F.e(p[i]);
     }
     res = F.ifft(res);
-    let acc = shift ? Fr.shift : Fr.w[extendBits];
+    let acc = shift ? F.shift : F.w[extendBits];
     module.exports.polMulAxi(F, res, F.one, acc);
     for (let i=p.length; i<(p.length<<extendBits); i++) res[i] = F.zero;
     res = F.fft(res);

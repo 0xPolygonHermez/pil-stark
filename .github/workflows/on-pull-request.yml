@@ -43,6 +43,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Create tmp directory
+        run: mkdir tmp
+
+      - name: Download powers of tau
+        run: cd tmp && wget https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_19.ptau && cd ..
+
       - name: Helpers tests
         run: npm run test:helpers
 
