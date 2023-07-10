@@ -1379,6 +1379,44 @@
             ]
         },
         {
+            "name": "fibonacci final fflonkinfo",
+            "program": "src/fflonk/main_fflonkinfo.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p tmp/fibonacci.final.pil",
+                "-i tmp/fibonacci.final.fflonkinfo.json"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "fibonacci final fflonk setup",
+            "program": "src/fflonk/main_setup.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p tmp/fibonacci.final.pil",
+                "-f tmp/fibonacci.final.fflonkinfo.json",
+                "-t tmp/powersOfTau28_hez_final_19.ptau",
+                "-c tmp/fibonacci.final.const",
+                "-e tmp/fibonacci.final.ext.cnst",
+                "-z tmp/fibonacci.final.zkey",
+                "--extraMuls=5",
+
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        }
+        {
             "name": "all buildconst",
             "program": "test/state_machines/sm_all/main_buildconst_all.js",
             "request": "launch",

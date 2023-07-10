@@ -19,7 +19,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     let rangeCheckRows = customGatesInfo.nRangeCheck;
     let nGLCMulAddRows = customGatesInfo.nGLCMulAdd * 2;
 
-    let totalExtraRowsPlonk = rangeCheckRows + nGLCMulAddRows;
+    let totalExtraRowsPlonk = rangeCheckRows;
 
     // Calculate how many C12 constraints are needed 
     const CPlonkConstraints = calculatePlonkConstraints(plonkConstraints, totalExtraRowsPlonk);
@@ -177,13 +177,14 @@ module.exports = async function plonkSetup(F, r1cs, options) {
                 constPols.Final.C[k][r+1] = 0n;
             }
             
-            for(let k = 0; k < 6; k++) {
+            for(let k = 0; k < 9; k++) {
                 sMap[k][r] = cgu.signals[k];
-                sMap[k][r+1] = cgu.signals[k+6];
             }
+
+            sMap[0][r+1] = cgu.signals[9];
+            sMap[1][r+1] = cgu.signals[10];
+            sMap[2][r+1] = cgu.signals[11];
             
-            extraRowsPlonk.push(r);
-            extraRowsPlonk.push(r+1);
             r += 2;
         } else {
             throw new Error("Custom gate not defined", cgu.id);

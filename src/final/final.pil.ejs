@@ -94,8 +94,8 @@ for(let i = 0; i < nInPoseidon; ++i) {
     // In this particular case, 
     // a = [a[0], a[1], a[2]]
     // b = [a[3], a[4], a[5]]
-    // c = [a[0]', a[1]', a[2]']
-    // and this must be equal to [ a[3]', a[4]', a[5]' ]
+    // c = [a[6], a[7], a[8]]
+    // and this must be equal to [ a[0]', a[1]', a[2]' ]
     
     // Since the modulo is known (X³ - X - 1) we can calculate the coefficients in general form by calculating 
     // (a0 + a1*x + a2*x²)*(b0 + b1*x + b2*x²) and then using long division to get the residue when dividing by the modulo
@@ -107,9 +107,9 @@ for(let i = 0; i < nInPoseidon; ++i) {
     pol b0 = a[3]  + 16*0xFFFFFFFF00000001;
     pol b1 = a[4]  + 16*0xFFFFFFFF00000001;
     pol b2 = a[5]  + 16*0xFFFFFFFF00000001;
-    pol c0 = a[0]' + 16*0xFFFFFFFF00000001;
-    pol c1 = a[1]' + 16*0xFFFFFFFF00000001;
-    pol c2 = a[2]' + 16*0xFFFFFFFF00000001;
+    pol c0 = a[6] + 16*0xFFFFFFFF00000001;
+    pol c1 = a[7] + 16*0xFFFFFFFF00000001;
+    pol c2 = a[8] + 16*0xFFFFFFFF00000001;
 
     pol A1 = (a0 + a1) * (b0 + b1);
     pol B1 = (a0 + a2) * (b0 + b2);
@@ -119,12 +119,9 @@ for(let i = 0; i < nInPoseidon; ++i) {
     pol F1 = a2 * b2;
 
     // Whenever CMUL = 1, check that the CMul result matches with the values stored in a[3]', a[4]' and a[5]' respectively
-    GLCMULADD * (a[3]' - (C1 + D1 - E1 - F1 + c0)) = 0;
-    GLCMULADD * (a[4]' - (A1 + C1 - 2*E1 - D1 + c1)) = 0;
-    GLCMULADD * (a[5]' - (B1 - D1 + E1 + c2)) = 0;
-
-    g678*GLCMULADD = 0;
-
+    GLCMULADD * (a[0]' - (C1 + D1 - E1 - F1 + c0)) = 0;
+    GLCMULADD * (a[1]' - (A1 + C1 - 2*E1 - D1 + c1)) = 0;
+    GLCMULADD * (a[2]' - (B1 - D1 + E1 + c2)) = 0;
 
     // Range Check
 

@@ -196,6 +196,8 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
         openBy: "openingPoints",
     }
 
+    console.log(config);
+    
     const {zkey, PTau, curve} = await setup(config, ptauFile, logger);
     
     // Compute maxCmPolsOpenings
