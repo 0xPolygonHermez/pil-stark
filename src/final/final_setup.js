@@ -192,7 +192,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     }
 
     for(let i=0; i<N; i++) {
-        constPols.Final.RANGE[i] = BigInt(i%256);
+        constPols.Final.RANGE[i] = BigInt(i%65536);
     }
 
     // Paste plonk constraints. 
