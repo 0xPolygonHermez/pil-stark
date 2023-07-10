@@ -220,18 +220,14 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
                 }
                
                 case "number": {
-                    if(BigInt(r.value) > BigInt(Number.MAX_SAFE_INTEGER)) {
-                        if(!bigIntsFound.find(v => v === BigInt(r.value))) {
-                            bigIntsFound.push(BigInt(r.value));
-                            bigIntsCode.push(`     AltBn128::FrElement v${vIndex};`);
-                            bigIntsCode.push(`     E.fr.fromString(v${vIndex}, "${BigInt(r.value).toString()}");`);
-                            bigIntsCode.push(`     params.constValues[${vIndex}] = v${vIndex};`);
-                            return `params.constValues[${vIndex++}]`;
-                        } else {
-                            return `params.constValues[${bigIntsFound.indexOf(BigInt(r.value))}]`;
-                        }
+                    if(!bigIntsFound.find(v => v === BigInt(r.value))) {
+                        bigIntsFound.push(BigInt(r.value));
+                        bigIntsCode.push(`     AltBn128::FrElement v${vIndex};`);
+                        bigIntsCode.push(`     E.fr.fromString(v${vIndex}, "${BigInt(r.value).toString()}");`);
+                        bigIntsCode.push(`     params.constValues[${vIndex}] = v${vIndex};`);
+                        return `params.constValues[${vIndex++}]`;
                     } else {
-                        return `E.fr.set(${BigInt(r.value).toString()})`;
+                        return `params.constValues[${bigIntsFound.indexOf(BigInt(r.value))}]`;
                     }
                 }
                 case "public": return `params.publicInputs[${r.id}]`;

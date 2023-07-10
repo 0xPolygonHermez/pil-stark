@@ -709,13 +709,9 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, factorZK, function
             }
             case "number": {
                 ++refnum;
-                if(BigInt(r.value) > BigInt(Number.MAX_SAFE_INTEGER)) {
-                    body.push(`     AltBn128::FrElement v${vIndex};`);
-                    body.push(`     E.fr.fromString(v${vIndex}, "${BigInt(r.value).toString()}");`);
-                    return `v${vIndex++}`;
-                } else {
-                    return `E.fr.set(${BigInt(r.value).toString()})`;
-                }
+                body.push(`     AltBn128::FrElement v${vIndex};`);
+                body.push(`     E.fr.fromString(v${vIndex}, "${BigInt(r.value).toString()}");`);
+                return `v${vIndex++}`;
             }
             case "public": {
                 return `params.publicInputs[${r.id}]`;
