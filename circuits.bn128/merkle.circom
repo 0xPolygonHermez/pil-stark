@@ -2,7 +2,6 @@ pragma circom 2.1.0;
 
 include "bitify.circom";
 include "comparators.circom";
-include "mux1.circom";
 include "poseidon.circom";
 
 template Merkle(keyBits, arity) {
@@ -40,13 +39,13 @@ template Merkle(keyBits, arity) {
        
         signal s[arity];
         for(var i = 0; i < arity; i++) {
-            s[i] <== Mux1()(s <== IsEqual()([keyNum.out, i]), c <== [0,1]);
+            s[i] <== IsEqual()([keyNum.out, i]);
         }
 
         hash = Poseidon(arity);
 
         for (var i=0; i<arity; i++) {
-            hash.inputs[i] <== s[i] * (value - siblings[0][i] ) + siblings[0][i];
+            hash.inputs[i] <== s[i] * (value - siblings[0][i]) + siblings[0][i];
         }
 
         var nextNBits = keyBits - nBits;

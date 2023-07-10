@@ -209,7 +209,7 @@ class Transcript {
 <%          } else throw new Error("Invalid src dimensions");                          -%>
 <%      } else if (inst.op == "mul") {                                                  -%>
 <%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
-    signal <%- ref(inst.dest) %> <== GLMul1()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>);
+    signal <%- ref(inst.dest) %> <== GLMul()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>);
 <%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
     signal <%- ref(inst.dest) %>[3] <== GLCMul()([<%- ref(inst.src[0]) %>, 0, 0], <%- ref(inst.src[1]) %>);
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>

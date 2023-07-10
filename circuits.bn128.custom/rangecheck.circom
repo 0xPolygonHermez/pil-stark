@@ -2,6 +2,7 @@ pragma circom 2.1.0;
 pragma custom_templates;
 
 template custom Num2Bytes(nBits) {
+    assert(nBits <= 80);
     var nBytes = (nBits + 15)\16;
     signal input in;
     signal output out[nBytes];
@@ -25,7 +26,7 @@ template custom Num2Bytes(nBits) {
 
     if(nBits%16 != 0) {
         out[nBytes - 1] <-- b;
-        lc1 += b; 
+        lc1 += b * e2; 
     }
     
     assert(lc1 == in);

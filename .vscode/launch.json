@@ -1351,7 +1351,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-i ${workspaceFolder}/tmp/fibonacci.c12.custom.proof.zkin.json",
+                "-i ${workspaceFolder}/tmp/fibonacci.c12.proof.zkin.json",
                 "-w ${workspaceFolder}/tmp/fibonacci.c12.custom.verifier_js/fibonacci.c12.custom.verifier.wasm",
                 "-p ${workspaceFolder}/tmp/fibonacci.final.pil",
                 "-e ${workspaceFolder}/tmp/fibonacci.final.exec",

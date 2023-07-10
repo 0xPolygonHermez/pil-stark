@@ -3,7 +3,6 @@ pragma custom_templates;
 
 include "bitify.circom";
 include "comparators.circom";
-include "mux1.circom";
 include "poseidon.circom";
 
 
@@ -42,7 +41,7 @@ template Merkle(keyBits, arity) {
        
         signal s[arity];
         for(var i = 0; i < arity; i++) {
-            s[i] <== Mux1()(s <== IsEqual()([keyNum.out, i]), c <== [0,1]);
+            s[i] <== IsEqual()([keyNum.out, i]);
         }
 
         hash = CustomPoseidon(arity);

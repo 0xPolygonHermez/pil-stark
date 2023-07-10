@@ -36,7 +36,9 @@ module.exports ={
         const res = {
             PoseidonT: 0,
             RangeCheckNBits: {},
+            GLCMulAdd: 0,
             nPoseidonT: 0,
+            nGLCMulAdd: 0,
             nRangeCheck:0,
             nPoseidonInputs: -1,
         }
@@ -51,6 +53,9 @@ module.exports ={
                 case "Num2Bytes":
                     res.RangeCheckNBits[i] = r1cs.customGates[i].parameters; 
                     break;
+                case "CustomGLCMulAdd":
+                    res.GLCMulAdd = i;
+                    break;
                 default:
                     throw new Error("Invalid custom gate: " + r1cs.customGates[i].templateName);
             }
@@ -62,6 +67,8 @@ module.exports ={
                 ++res.nPoseidonT;
             } else if (typeof res.RangeCheckNBits[r1cs.customGatesUses[i].id] !== "undefined") {
                 ++res.nRangeCheck; 
+            } else if (r1cs.customGatesUses[i].id == res.GLCMulAdd) {
+                ++res.nGLCMulAdd; 
             } else {
                 throw new Error("Custom gate not defined" + r1cs.customGatesUses[i].id);
             }

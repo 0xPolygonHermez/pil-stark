@@ -32,15 +32,17 @@ module.exports = async function plonkSetup(F, r1cs, options) {
 
     const poseidonRows = customGatesInfo.nPoseidonT*(nRoundsPoseidon + 1);
 
-    let rangeCheckRows = customGatesInfo.nRangeCheck * 2;
+    let rangeCheckRows = customGatesInfo.nRangeCheck;
+    let nGLCMulAddRows = customGatesInfo.nGLCMulAdd * 2;
 
     console.log(`Number of Plonk constraints: ${plonkConstraints.length} -> Number of plonk per row: 2 -> Constraints:  ${CPlonkConstraints}`);
     console.log(`Number of Plonk additions: ${plonkAdditions.length}`);
     console.log(`Number of publics: ${nPublics} -> Constraints: ${nPublicRows}`);
     console.log(`Number of PoseidonT with ${customGatesInfo.nPoseidonInputs}: ${customGatesInfo.nPoseidonT} -> Number of rows: ${poseidonRows}`);
     console.log(`Number of RangeChecks: ${customGatesInfo.nRangeCheck} -> Number of rows: ${rangeCheckRows}`);
+    console.log(`Number of GLCMulAdd: ${customGatesInfo.nGLCMulAdd} -> Number of rows: ${nGLCMulAddRows}`);
 
-    const NUsed = nPublicRows + CPlonkConstraints + poseidonRows + rangeCheckRows;
+    const NUsed = nPublicRows + CPlonkConstraints + poseidonRows + rangeCheckRows + nGLCMulAddRows;
     
     //Calculate the first power of 2 that's bigger than the number of constraints
     let nBits = log2(NUsed - 1) + 1;
@@ -87,6 +89,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
         constPols.Final.POSEIDON_T[i] = 0n;
         constPols.Final.PARTIAL[i] = 0n;
         constPols.Final.RANGE_CHECK[i] = 0n;
+        constPols.Final.GLCMULADD[i] = 0n;
         for (let k=0; k<5; k++) {
             constPols.Final.C[k][i] = 0n;
         }
@@ -130,6 +133,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
         // check if there's any half row. If that's the case, attach the new set of constraints values to that row 
         } else {
             constPols.Final.GATE[r] = 1n;
+            constPols.Final.GLCMULADD[r] = 0n;
             constPols.Final.PARTIAL[r] = 0n;
             constPols.Final.POSEIDON_T[r] = 0n;
             constPols.Final.RANGE_CHECK[r] = 0n;
@@ -172,40 +176,59 @@ module.exports = async function plonkSetup(F, r1cs, options) {
                 }
             
                 constPols.Final.GATE[r+k] = 0n;
+                constPols.Final.GLCMULADD[r + k] = 0n;
                 constPols.Final.POSEIDON_T[r+k] = k < nRoundsPoseidon ? 1n: 0n;
                 constPols.Final.PARTIAL[r+k] = k < nRoundsPoseidon ? ((k<4)||(k>=nRoundsP + 4) ? 0n : 1n) : 0n;
                 constPols.Final.RANGE_CHECK[r+k] = 0n;
             }
             r+=nRoundsPoseidon + 1;
         } else if(typeof customGatesInfo.RangeCheckNBits[cgu.id] !== "undefined") {
-            const nBytes = Math.ceil(Number(customGatesInfo.RangeCheckNBits[cgu.id][0]) / 8);
-            assert(cgu.signals.length == 1 + nBytes)
+            const nBytes = Math.ceil(Number(customGatesInfo.RangeCheckNBits[cgu.id][0]) / 16);
+            assert(cgu.signals.length == 1 + nBytes);
             constPols.Final.GATE[r] = 0n;
+            constPols.Final.GLCMULADD[r] = 0n;
             constPols.Final.POSEIDON_T[r] = 0n;
             constPols.Final.PARTIAL[r] = 0n;
             constPols.Final.RANGE_CHECK[r] = 1n;
     
-            constPols.Final.GATE[r + 1] = 0n;
-            constPols.Final.POSEIDON_T[r + 1] = 0n;
-            constPols.Final.PARTIAL[r + 1] = 0n;
-            constPols.Final.RANGE_CHECK[r + 1] = 0n;
+            for (let k=0; k<5; k++) {
+                constPols.Final.C[k][r] = 0n;
+            }
+
+            sMap[0][r] = cgu.signals[0];
+            for(let k = 1; k < 6; k++) {
+                if(k - 1 > nBytes) break;
+                sMap[k][r] = cgu.signals[k];
+            }
+           r += 1;
+        } else if(cgu.id == customGatesInfo.GLCMulAdd) {
+            assert(cgu.signals.length == 12);
+            constPols.Final.GATE[r] = 0n;
+            constPols.Final.GLCMULADD[r] = 1n;
+            constPols.Final.POSEIDON_T[r] = 0n;
+            constPols.Final.PARTIAL[r] = 0n;
+            constPols.Final.RANGE_CHECK[r] = 0n;
+    
+            constPols.Final.GATE[r+1] = 0n;
+            constPols.Final.GLCMULADD[r+1] = 0n;
+            constPols.Final.POSEIDON_T[r+1] = 0n;
+            constPols.Final.PARTIAL[r+1] = 0n;
+            constPols.Final.RANGE_CHECK[r+1] = 0n;
 
             for (let k=0; k<5; k++) {
                 constPols.Final.C[k][r] = 0n;
                 constPols.Final.C[k][r+1] = 0n;
             }
+            
+            for(let k = 0; k < 6; k++) {
+                sMap[k][r] = cgu.signals[k];
+                sMap[k][r+1] = cgu.signals[k+6];
+            }
 
-            // sMap[0][r] = cgu.signals[0];
-            // for(let k = 1; k < 6; k++) {
-            //     if(k - 1 > nBytes) break;
-            //     sMap[k][r] = cgu.signals[k];
-            // }
-            // for(let k = 0; k < 5; k++) {
-            //     if(k + 5 > nBytes) break;
-            //     sMap[k + 1][r+1] = cgu.signals[k + 6];
-            // }
-           r += 2;
-        } 
+            r += 2;
+        } else {
+            throw new Error("Custom gate not defined", cgu.id);
+        }
     }
 
     for(let i=0; i<N; i++) {
@@ -245,6 +268,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     while (r < N) {
         if ((r%100000) == 0) console.log(`Point check -> Empty gates... ${r}/${N}`);
         constPols.Final.GATE[r] = 0n;
+        constPols.Final.GLCMULADD[r] = 0n;
         constPols.Final.POSEIDON_T[r] = 0n;
         constPols.Final.PARTIAL[r] = 0n;
         constPols.Final.RANGE_CHECK[r] = 0n;
