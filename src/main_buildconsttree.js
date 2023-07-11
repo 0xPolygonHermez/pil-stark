@@ -17,6 +17,7 @@ const argv = require("yargs")
     .alias("s", "starkstruct")
     .alias("t", "consttree")
     .alias("v", "verkey")
+    .string("arity")
     .argv;
 
 async function run() {
@@ -49,7 +50,9 @@ async function run() {
     if (starkStruct.verificationHashType == "GL") {
         MH = await buildMerkleHashGL(starkStruct.splitLinearHash);
     } else if (starkStruct.verificationHashType == "BN128") {
-        MH = await buildMerkleHashBN128();
+        let arity = Number(argv.arity) || 16;
+        console.log(`Arity: ${arity}`);
+        MH = await buildMerkleHashBN128(arity);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }

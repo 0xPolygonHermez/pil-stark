@@ -9,7 +9,7 @@ describe("CMulAdd GL custom template", function () {
     this.timeout(10000000);
 
     before( async() => {
-        circuitMulAdd = await wasm_tester(path.join(__dirname, "circom", "cmuladd.test.circom"), {O:1, prime: "goldilocks"});
+        circuitMulAdd = await wasm_tester(path.join(__dirname, "circom", "cmul.test.circom"), {O:1, prime: "goldilocks"});
     });
     it("Should check a basefield multiplication addition", async () => {
         const F = new F3g();

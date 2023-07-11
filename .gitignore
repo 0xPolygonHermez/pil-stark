@@ -2,3 +2,6 @@ node_modules
 .vscode
 dist
 tmp/*
+
+test/compressor/verifier.r1cs
+test/final/verifier.r1cs

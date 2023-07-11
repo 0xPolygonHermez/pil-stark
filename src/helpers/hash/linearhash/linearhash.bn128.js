@@ -3,9 +3,10 @@
 
 module.exports = class LinearHashBN {
 
-    constructor(poseidon) {
+    constructor(poseidon, arity) {
         this.H = poseidon;
         this.F = poseidon.F;
+        this.arity = arity;
     }
 
     hash(vals) {
@@ -47,13 +48,12 @@ module.exports = class LinearHashBN {
         let inHash = [];
         for (let i=0; i<vals3.length;i++) {
             inHash.push(vals3[i]);
-            if (inHash.length == 16) {
+            if (inHash.length == this.arity) {
                 st = this.H(inHash, st);
                 inHash.length = 0;
             }
         }
         if (inHash.length>0) {
-//            while (inHash.length<16) inHash.push(this.F.zero);
             st = this.H(inHash, st);
         }
         return st;

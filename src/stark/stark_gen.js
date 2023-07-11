@@ -1,7 +1,7 @@
 
 const assert = require("assert");
 const buildMerklehashGL = require("../helpers/hash/merklehash/merklehash_p.js");
-const buildMerklehashBN128 = require("../helpers/hash/merklehash/merklehash_bn128_p.js");
+const buildMerkleHashBN128 = require("../helpers/hash/merklehash/merklehash_bn128_p.js");
 const Transcript = require("../helpers/transcript/transcript");
 const TranscriptBN128 = require("../helpers/transcript/transcript.bn128");
 const F3g = require("../helpers/f3g.js");
@@ -22,7 +22,7 @@ const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
 
 
-module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo) {
+module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo, options) {
     const starkStruct = starkInfo.starkStruct;
     const N = 1 << starkStruct.nBits;
     const extendBits = starkStruct.nBitsExt - starkStruct.nBits;
@@ -40,8 +40,10 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         transcript = new Transcript(poseidon);
     } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
-        MH = await buildMerklehashBN128();
-        transcript = new TranscriptBN128(poseidonBN128);
+        let arity = options.arity || 16;
+        console.log(`Arity: ${arity}`);
+        MH = await buildMerkleHashBN128(arity);
+        transcript = new TranscriptBN128(poseidonBN128, 16);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
@@ -67,7 +69,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     let nCm = starkInfo.nCm1;
 
     ctx.cm1_n = new BigBuffer(starkInfo.mapSectionsN.cm1_n*ctx.N);
-    cmPols.writeToBigBuffer(ctx.cm1_n, 0);
+    cmPols.writeToBigBuffer(ctx.cm1_n);
     ctx.cm2_n = new BigBuffer(starkInfo.mapSectionsN.cm2_n*ctx.N);
     ctx.cm3_n = new BigBuffer(starkInfo.mapSectionsN.cm3_n*ctx.N);
     ctx.tmpExp_n = new BigBuffer(starkInfo.mapSectionsN.tmpExp_n*ctx.N);
@@ -99,7 +101,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
 
     ctx.const_n = new BigBuffer(starkInfo.nConstants*ctx.N);
-    constPols.writeToBigBuffer(ctx.const_n, 0);
+    constPols.writeToBigBuffer(ctx.const_n);
 
     ctx.const_2ns = constTree.elements;
 
@@ -174,7 +176,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         const pu = starkInfo.puCtx[i];
         const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[pu.numId]);
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[pu.denId]);
-        const z = calculateZ(F,pNum, pDen);
+        const z = await calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
     for (let i=0; i<starkInfo.peCtx.length; i++) {
@@ -182,7 +184,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         const pe = starkInfo.peCtx[i];
         const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[pe.numId]);
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[pe.denId]);
-        const z = calculateZ(F,pNum, pDen);
+        const z = await calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
     for (let i=0; i<starkInfo.ciCtx.length; i++) {
@@ -190,7 +192,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         const ci = starkInfo.ciCtx[i];
         const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[ci.numId]);
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[ci.denId]);
-        const z = calculateZ(F,pNum, pDen);
+        const z = await calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
 
@@ -235,7 +237,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     console.log("Merkelizing 4....");
     if (global.gc) {global.gc();}
-    tree4 = await merkelize(MH, ctx.cm4_2ns , starkInfo.mapSectionsN.cm4_2ns, ctx.nBitsExt);
+    const tree4 = await merkelize(MH, ctx.cm4_2ns , starkInfo.mapSectionsN.cm4_2ns, ctx.nBitsExt);
     transcript.put(MH.root(tree4));
 
 

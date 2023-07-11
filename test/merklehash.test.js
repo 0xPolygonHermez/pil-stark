@@ -13,6 +13,7 @@ describe("merkle hash", async function () {
         poseidon = await buildPoseidon();
         MH = new MerkleHash(poseidon, false);
         MH_gpu = new MerkleHash(poseidon, true);
+
     });
 
     describe("Using regular Linear Hash", async function () {

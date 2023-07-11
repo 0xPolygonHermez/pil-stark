@@ -8,12 +8,10 @@ template GLNorm() {
 
     var p=0xFFFFFFFF00000001;
     signal k <-- (in + 16*p)\p;
-    out <-- (in+16*p) - k*p;
+    out <== (in+16*p) - k*p;
 
     _ <== Num2Bits(10)(k);
     _ <== Num2Bits(64)(out);
-
-    (in+16*p) === k*p + out;
 }
 
 template GLCNorm() {
@@ -41,12 +39,10 @@ template GLMulAdd() {
     m <== (ina + 16*p)*(inb + 16*p) + inc;
 
     k <-- m\p;
-    out <-- m-k*p;
+    out <== m-k*p;
 
     _ <== Num2Bits(80)(k);
     _ <== Num2Bits(64)(out);
-
-    m === k*p + out;
 }
 
 template GLMul() {
@@ -85,18 +81,15 @@ template GLCMulAdd() {
     k[1] <-- m[1] \ p;
     k[2] <-- m[2] \ p;
 
-    out[0] <-- m[0] -k[0]*p;
-    out[1] <-- m[1] -k[1]*p;
-    out[2] <-- m[2] -k[2]*p;
+    out[0] <== m[0] -k[0]*p;
+    out[1] <== m[1] -k[1]*p;
+    out[2] <== m[2] -k[2]*p;
 
     for (var i = 0; i<3; i++) {
         _ <== Num2Bits(80)(k[i]);
         _ <== Num2Bits(64)(out[i]);
     }
 
-    m[0]  === k[0]*p + out[0];
-    m[1]  === k[1]*p + out[1];
-    m[2]  === k[2]*p + out[2];
 
 }
 

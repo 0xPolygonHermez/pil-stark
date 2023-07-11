@@ -10,8 +10,9 @@ template CMulAdd() {
 
     signal output out[3];
 
-    signal cmul[3] <== CMul()(ina, inb);
-    out <== [inc[0] + cmul[0], inc[1] + cmul[1], inc[2] + cmul[2]];
+    signal mul[3] <== CMul()(ina, inb);
+
+    out <== [mul[0] + inc[0], mul[1] + inc[1], mul[2] + inc[2]];
 }
 
 component main = CMulAdd();
