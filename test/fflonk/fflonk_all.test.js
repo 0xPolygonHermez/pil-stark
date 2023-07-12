@@ -21,16 +21,6 @@ const Logger = require('logplease');
 
 
 describe("Fflonk All sm", async function () {
-    let curve;
-
-    before(async () => {
-        curve = await getCurveFromName("bn128");
-    })
-
-    after(async () => {
-        await curve.terminate();
-    })
-
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {

@@ -20,7 +20,7 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
     if(stark) {
         maxDeg = (1 << (res.starkStruct.nBitsExt- res.starkStruct.nBits)) + 1;
     } else {
-        maxDeg = Math.pow(2,2) + 1;
+        maxDeg = Math.pow(2,3) + 1;
     }
     let d = 2;
     let [imExps, qDeg] = calculateImPols(pil, cExp, d++);

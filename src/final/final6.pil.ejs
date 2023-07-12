@@ -6,8 +6,8 @@ constant %N = 2**<%- nBits %>; // Upper bound for the number of rows to be used 
 namespace Global(%N);
     pol constant L1; // Lagrange polynomial for the first public
 
-<% for (let i=9; i<nPublics; i+=9) { -%>
-    pol constant L<%- Math.floor(i/9) +1 %>; // Lagrange polynomial for the 12 publics corresponding to the i^th row
+<% for (let i=6; i<nPublics; i+=6) { -%>
+    pol constant L<%- Math.floor(i/6) +1 %>; // Lagrange polynomial for the 12 publics corresponding to the i^th row
 <% } -%>
     
 <% for (let i=1; i<nPublics; i++) { -%>
@@ -15,15 +15,15 @@ namespace Global(%N);
 <% } -%>
 
 namespace Final(%N);
-    pol constant S[9];
+    pol constant S[6];
     pol constant C[5];
     pol constant PARTIAL;
     pol constant POSEIDON_T;
     pol constant RANGE_CHECK;
+    pol constant GLCMULADD;
     pol constant RANGE;
     pol constant GATE;
-    pol constant GLCMULADD;
-    pol commit a[9];
+    pol commit a[6];
 
     // Set all the publics. They are stored in the following order -> a[0](0), ....  , a[11](0), a[0](1), .... , a[11](1) ... 
 <% for (let i=0; i<nPublics; i++) { -%>
@@ -83,13 +83,17 @@ for(let i = 0; i < nInPoseidon; ++i) {
 }    -%>
 
 <% for(let i = 0; i < nInPoseidon; ++i) { -%>
-    pol poseidon<%- i %>_M = <%- poseidonMDS[i].join(' + ') %>;
+    POSEIDON_T * (<%- poseidonMDS[i].join(' + ') %>) = 0;
 <% } -%>
 
-<% for(let i = 0; i < nInPoseidon; ++i) { -%>
-    POSEIDON_T * (a[<%- i %>]' - poseidon<%- i %>_M) = 0;
-<% } -%>
-  
+    // Range Check
+
+    RANGE_CHECK * (a[0] - a[1] + 65536*a[2] + 4294967296*a[3] + 281474976710656*a[4] + 18446744073709551616*a[5]) = 0;
+
+    // RANGE_CHECK { a[1], a[2], a[3], a[4], a[5] } in { RANGE, RANGE, RANGE, RANGE, RANGE };
+
+    g678*RANGE_CHECK = 0;
+    
     // CMUL GATE - Check that a * b + c in Fp³ using (X³ - X - 1) as a generator is performed correctly
     // In this particular case, 
     // a = [a[0], a[1], a[2]]
@@ -107,9 +111,9 @@ for(let i = 0; i < nInPoseidon; ++i) {
     pol b0 = a[3]  + 16*0xFFFFFFFF00000001;
     pol b1 = a[4]  + 16*0xFFFFFFFF00000001;
     pol b2 = a[5]  + 16*0xFFFFFFFF00000001;
-    pol c0 = a[6] + 16*0xFFFFFFFF00000001;
-    pol c1 = a[7] + 16*0xFFFFFFFF00000001;
-    pol c2 = a[8] + 16*0xFFFFFFFF00000001;
+    pol c0 = a[0]' + 16*0xFFFFFFFF00000001;
+    pol c1 = a[1]' + 16*0xFFFFFFFF00000001;
+    pol c2 = a[2]' + 16*0xFFFFFFFF00000001;
 
     pol A1 = (a0 + a1) * (b0 + b1);
     pol B1 = (a0 + a2) * (b0 + b2);
@@ -119,30 +123,21 @@ for(let i = 0; i < nInPoseidon; ++i) {
     pol F1 = a2 * b2;
 
     // Whenever CMUL = 1, check that the CMul result matches with the values stored in a[3]', a[4]' and a[5]' respectively
-    GLCMULADD * (a[0]' - (C1 + D1 - E1 - F1 + c0)) = 0;
-    GLCMULADD * (a[1]' - (A1 + C1 - 2*E1 - D1 + c1)) = 0;
-    GLCMULADD * (a[2]' - (B1 - D1 + E1 + c2)) = 0;
-
-    // Range Check
-
-    pol ran_check = a[1] + 65536*a[2] + 4294967296*a[3] + 281474976710656*a[4] + 18446744073709551616*a[5];
-    RANGE_CHECK * (a[0] - ran_check) = 0;
-
-    RANGE_CHECK { a[1], a[2], a[3], a[4], a[5] } in { RANGE, RANGE, RANGE, RANGE, RANGE };
-
-    g678*RANGE_CHECK = 0;
+    GLCMULADD * (a[3]' - (C1 + D1 - E1 - F1 + c0)) = 0;
+    GLCMULADD * (a[4]' - (A1 + C1 - 2*E1 - D1 + c1)) = 0;
+    GLCMULADD * (a[5]' - (B1 - D1 + E1 + c2)) = 0;
 
     
     // Connection equations
 <% 
     let a = [];
     let S = [];
-    for(let i = 0; i < 9; ++i) {
+    for(let i = 0; i < 6; ++i) {
         a.push(`a[${i}]`);
         S.push(`S[${i}]`);
     }
 -%>
-    { <%- a.join(',') %> } connect { <%- S.join(',')  %> }
+    // { <%- a.join(',') %> } connect { <%- S.join(',')  %> }
 
 
         

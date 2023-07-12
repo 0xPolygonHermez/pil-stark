@@ -3,7 +3,7 @@ const { log2 } = require("pilcom/src/utils");
 
 module.exports ={
 
-    calculatePlonkConstraints: function(plonkConstraints, extraRows) {
+    calculatePlonkConstraints: function(plonkConstraints, nPlonk, extraRows = 0) {
         
         let partialRows = {};
         let r = 0;
@@ -19,7 +19,7 @@ module.exports ={
                 continue;
             } else if(partialRows[k]) {
                 ++partialRows[k];
-                if(partialRows[k] === 3) delete partialRows[k];
+                if(partialRows[k] === nPlonk) delete partialRows[k];
             } else {
                 partialRows[k] = 1;
                 r++;

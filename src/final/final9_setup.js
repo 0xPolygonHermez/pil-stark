@@ -19,10 +19,12 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     let rangeCheckRows = customGatesInfo.nRangeCheck;
     let nGLCMulAddRows = customGatesInfo.nGLCMulAdd * 2;
 
-    let totalExtraRowsPlonk = rangeCheckRows;
+    let totalExtraRowsPlonk = rangeCheckRows + customGatesInfo.nGLCMulAdd;
 
+    const nPlonk = 3;
+    
     // Calculate how many C12 constraints are needed 
-    const CPlonkConstraints = calculatePlonkConstraints(plonkConstraints, totalExtraRowsPlonk);
+    const CPlonkConstraints = calculatePlonkConstraints(plonkConstraints, nPlonk, totalExtraRowsPlonk);
 
     // Calculate the total number of publics used in PIL and how many rows are needed to store all of them
     let nPublics = r1cs.nOutputs + r1cs.nPubInputs;
@@ -37,7 +39,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
 
     const poseidonRows = customGatesInfo.nPoseidonT*(nRoundsPoseidon + 1);
 
-    console.log(`Number of Plonk constraints: ${plonkConstraints.length} -> Number of plonk per row: 2 -> Constraints:  ${CPlonkConstraints}`);
+    console.log(`Number of Plonk constraints: ${plonkConstraints.length} -> Number of plonk per row: ${nPlonk} -> Constraints:  ${CPlonkConstraints}`);
     console.log(`Number of Plonk additions: ${plonkAdditions.length}`);
     console.log(`Number of publics: ${nPublics} -> Constraints: ${nPublicRows}`);
     console.log(`Number of PoseidonT with ${customGatesInfo.nPoseidonInputs}: ${customGatesInfo.nPoseidonT} -> Number of rows: ${poseidonRows}`);
@@ -60,7 +62,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     console.log(`NUsed: ${NUsed}`);
     console.log(`nBits: ${nBits}, 2^nBits: ${N}`);
 
-    const template = await fs.promises.readFile(path.join(__dirname, "final.pil.ejs"), "utf8");
+    const template = await fs.promises.readFile(path.join(__dirname, "final9.pil.ejs"), "utf8");
     const obj = {
         N,
         NUsed,
@@ -177,14 +179,12 @@ module.exports = async function plonkSetup(F, r1cs, options) {
                 constPols.Final.C[k][r+1] = 0n;
             }
             
-            for(let k = 0; k < 9; k++) {
+            for(let k = 0; k < 6; k++) {
                 sMap[k][r] = cgu.signals[k];
+                sMap[k][r + 1] = cgu.signals[k + 6];
             }
-
-            sMap[0][r+1] = cgu.signals[9];
-            sMap[1][r+1] = cgu.signals[10];
-            sMap[2][r+1] = cgu.signals[11];
             
+            extraRowsPlonk.push(r);
             r += 2;
         } else {
             throw new Error("Custom gate not defined", cgu.id);

@@ -12,8 +12,6 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
 
     if(logger) logger.info("Starting fflonk setup");
     //Find the max PIL polynomial degree
-    const cnstPolsDefs = [];
-    const cmPolsDefs = [];
     let maxPilPolDeg = 0;
 
     let polsNames = {
@@ -23,6 +21,16 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
         3: [],
     };
 
+    let fiMap = {
+        0: {},
+        1: {},
+        2: {},
+        3: {},
+    };
+
+    const polsXi = []; 
+    const polsWXi = []; 
+    
     const polsOpenings = {};
     for (const polRef in pil.references) {
         const polInfo = pil.references[polRef];
@@ -32,193 +40,159 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
             if(polInfo.isArray) {
                 for(let i = 0; i < polInfo.len; ++i) {
                     const namePol = name + i;
-                    cnstPolsDefs.push({name: namePol, stage: 0, degree: polInfo.polDeg})
-                    polsOpenings[namePol] = 0;
-                    polsNames[0].push({name:namePol});
+                    const polId = polInfo.id + i;
+                    setPolDefs("const", 0, namePol, polId, polInfo.polDeg);
                 }
             } else {
-                cnstPolsDefs.push({name, stage: 0, degree: polInfo.polDeg})
-                polsOpenings[name] = 0;
-                polsNames[0].push({name});
+                setPolDefs("const", 0, name, polInfo.id, polInfo.polDeg);
             }
         } 
-        
+    
+        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+    }
+
+    fixFIndex(0);
+
+    for (const polRef in pil.references) {
+        const polInfo = pil.references[polRef];
+        const name = polRef;
         if(polInfo.type === 'cmP') {
             polInfo.stage = 1;
             if(polInfo.isArray) {
                 for(let i = 0; i < polInfo.len; ++i) {
                     const namePol = name + i;
-                    cmPolsDefs.push({name: namePol, stage: 1, degree: polInfo.polDeg})
-                    polsOpenings[namePol] = 1;
-                    polsNames[1].push({name: namePol});
+                    const polId = polInfo.id + i;
+                    setPolDefs("cm", 1, namePol, polId, polInfo.polDeg);             
                 }
             } else {
-                cmPolsDefs.push({name, stage: 1, degree: polInfo.polDeg})
-                polsOpenings[name] = 1;
-                polsNames[1].push({name});
-            }
-           
+                setPolDefs("cm", 1, name, polInfo.id, polInfo.polDeg);
+            } 
         }
-
         maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
     }
+
+    fixFIndex(1);
 
     const pilPower = log2(maxPilPolDeg - 1) + 1;
     const domainSize = 2 ** pilPower;
 
-    const polsXi = [...cnstPolsDefs, ...cmPolsDefs]; 
-
    
     for(let i = 0; i < fflonkInfo.puCtx.length; ++i) {
-        polsXi.push({name: `Plookup.H1_${i}`, stage: 2, degree: domainSize})
-        pil.references[`Plookup.H1_${i}`] = {
-            name: `Plookup.H1_${i}`,
+        const namePlookupH1 = `Plookup.H1_${i}`;
+        const idPlookupH1 = fflonkInfo.puCtx[i].h1Id;
+        pil.references[namePlookupH1] = {
+            name: namePlookupH1,
             isArray: false,
             polDeg: domainSize,
             type: "cmP",
-            id: fflonkInfo.puCtx[i].h1Id,
+            id: idPlookupH1,
             stage: 2,
         }
-        polsOpenings[`Plookup.H1_${i}`] = 1;
-        polsNames[2].push({name:`Plookup.H1_${i}`});
+        setPolDefs("cm", 2, namePlookupH1, idPlookupH1, domainSize);
 
-        polsXi.push({name: `Plookup.H2_${i}`, stage: 2, degree: domainSize})
-        pil.references[`Plookup.H2_${i}`] = {
-            name: `Plookup.H2_${i}`,
+        const namePlookupH2 = `Plookup.H2_${i}`;
+        const idPlookupH2 = fflonkInfo.puCtx[i].h2Id;
+        pil.references[namePlookupH2] = {
+            name: namePlookupH2,
             isArray: false,
             polDeg: domainSize,
             type: "cmP",
-            id: fflonkInfo.puCtx[i].h2Id,
+            id: idPlookupH2,
             stage: 2,
         }
-        polsOpenings[`Plookup.H2_${i}`] = 1;
-        polsNames[2].push({name:`Plookup.H2_${i}`});
-
-        polsXi.push({name: `Plookup.Z${i}`, stage: 3, degree: domainSize})
-        pil.references[`Plookup.Z${i}`] = {
-            name: `Plookup.Z${i}`,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: fflonkInfo.puCtx[i].zId,
-            stage:3,
-        }
-        polsOpenings[`Plookup.Z${i}`] = 1;
-        polsNames[3].push({name:`Plookup.Z${i}`});
+        setPolDefs("cm", 2, namePlookupH2, idPlookupH2, domainSize);
     }
 
+    fixFIndex(2);
 
-    for(let i = 0; i < fflonkInfo.peCtx.length; ++i) {
-        polsXi.push({name: `Permutation.Z${i}`, stage:3, degree: domainSize})
-        pil.references[`Permutation.Z${i}`] = {
-            name: `Permutation.Z${i}`,
+
+    for(let i = 0; i < fflonkInfo.puCtx.length; ++i) {
+        const namePlookupZ = `Plookup.Z${i}`;
+        const idPlookupZ = fflonkInfo.puCtx[i].zId;
+        pil.references[namePlookupZ] = {
+            name: namePlookupZ,
             isArray: false,
             polDeg: domainSize,
             type: "cmP",
-            id: fflonkInfo.peCtx[i].zId,
+            id: idPlookupZ,
             stage:3,
         }
-        polsOpenings[`Permutation.Z${i}`] = 1;
-        polsNames[3].push({name:`Permutation.Z${i}`});
+        setPolDefs("cm", 3, namePlookupZ, idPlookupZ, domainSize);
+    }
+
+    for(let i = 0; i < fflonkInfo.peCtx.length; ++i) {
+        const namePermutationZ = `Permutation.Z${i}`;
+        const idPermutationZ = fflonkInfo.peCtx[i].zId;
+        pil.references[namePermutationZ] = {
+            name: namePermutationZ,
+            isArray: false,
+            polDeg: domainSize,
+            type: "cmP",
+            id: idPermutationZ,
+            stage:3,
+        }
+        setPolDefs("cm", 3, namePermutationZ, idPermutationZ, domainSize);
     }
 
     for(let i = 0; i < fflonkInfo.ciCtx.length; ++i) {
-        polsXi.push({name: `Connection.Z${i}`, stage: 3, degree: domainSize})
-        pil.references[`Connection.Z${i}`] = {
-            name: `Connection.Z${i}`,
+        const nameConnectionZ = `Connection.Z${i}`;
+        const idConnectionZ = fflonkInfo.ciCtx[i].zId;
+        pil.references[nameConnectionZ] = {
+            name: nameConnectionZ,
             isArray: false,
             polDeg: domainSize,
             type: "cmP",
-            id: fflonkInfo.ciCtx[i].zId,
+            id: idConnectionZ,
             stage:3,
         }
-        polsOpenings[`Connection.Z${i}`] = 1;
-        polsNames[3].push({name:`Connection.Z${i}`});
+        setPolDefs("cm", 3, nameConnectionZ, idConnectionZ, domainSize);
     }
 
-
-    for(let i = 0; i < fflonkInfo.imExpsList.length; ++i) {
-        polsXi.push({name: `Im${fflonkInfo.imExpsList[i]}`, stage: 3, degree: domainSize})
-        pil.references[`Im${fflonkInfo.imExpsList[i]}`] = {
-            name: `Im${fflonkInfo.imExpsList[i]}`,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: fflonkInfo.imExp2cm[fflonkInfo.imExpsList[i]],
-            stage:3,
-        }
-	    polsOpenings[`Im${fflonkInfo.imExpsList[i]}`] = 1;
-        polsNames[3].push({name:`Im${fflonkInfo.imExpsList[i]}`});
-    }
-
-    polsXi.push({name: "Q", stage: 4, degree: (fflonkInfo.qDeg + 1) * domainSize});
     
-    const xiPols = fflonkInfo.evMap.filter(ev => !ev.prime);
-    for (let i = 0; i < xiPols.length; i++) {
-        if(xiPols[i].type === "const") continue;
-        const reference = findPolynomialByTypeId(pil, xiPols[i].type + "P", xiPols[i].id);
-        let name = reference;
-        if(pil.references[reference].isArray) {
-            name += (xiPols[i].id - pil.references[reference].id);
+    for(let i = 0; i < fflonkInfo.imExpsList.length; ++i) {
+        const nameImPol = `Im${fflonkInfo.imExpsList[i]}`;
+        const idImPol = fflonkInfo.imExp2cm[fflonkInfo.imExpsList[i]];
+        pil.references[nameImPol] = {
+            name: nameImPol,
+            isArray: false,
+            polDeg: domainSize,
+            type: "cmP",
+            id: idImPol,
+            stage:3,
         }
-        if(!polsOpenings[name]) throw new Error("Invalid polynomial name: " + name);
-        ++polsOpenings[name];
+        setPolDefs("cm", 3, nameImPol, idImPol, domainSize);
     }
 
-    const polsWXi = [];
-    const primePols = fflonkInfo.evMap.filter(ev => ev.prime);
-    for (let i = 0; i < primePols.length; i++) {
-        const reference = findPolynomialByTypeId(pil,primePols[i].type + "P", primePols[i].id);
-        let name = reference;
-        if(pil.references[reference].isArray) {
-            name += (primePols[i].id - pil.references[reference].id);
-        }
-        const stage = pil.references[reference].stage;
-        polsWXi.push({name, stage, degree: pil.references[reference].polDeg});
-        if(primePols[i].type === "const") continue;
-        if(!polsOpenings[name]) throw new Error("Invalid polynomial name: " + name);
-        ++polsOpenings[name];
-    }
+    fixFIndex(3);
+
+    polsXi.push({name: "Q", stage: 4, degree: (fflonkInfo.qDeg + 1) * domainSize, open: "0"});
+    
     
     polsXi.forEach(p => { if(p.name !== "Q" && polsOpenings[p.name]) {p.degree += polsOpenings[p.name]} });
+    polsWXi.forEach(p => p.degree += polsOpenings[p.name]);
 
-    const polDefs = [polsXi];
 
-    if(polsWXi.length > 0) {
-        polsWXi.forEach(p => p.degree += polsOpenings[p.name]);
-        polDefs.push(polsWXi);
-    }
+    polDefs = [polsXi, polsWXi];
 
     const config = {
         power: pilPower, 
         polDefs,
         extraMuls: options.extraMuls || 0,
-        openBy: "openingPoints",
+        openBy: "custom",
     }
 
-    console.log(config);
+    if(logger) logger.info("Starting shPlonk setup...");
     
     const {zkey, PTau, curve} = await setup(config, ptauFile, logger);
-    
-    // Compute maxCmPolsOpenings
-    let maxCmPolsOpenings = 0;
-    for(const polRef in pil.references) {
-        const polInfo = pil.references[polRef];
-        if(polInfo.type === "cmP") {
-            if(polInfo.isArray) {
-                for(let i = 0; i < polInfo.len; ++i) {
-                    // Compute max openings on committed polynomials to set a common bound on adding
-                    maxCmPolsOpenings = Math.max(maxCmPolsOpenings, polsOpenings[polRef + i]);
-                }
-            } else {
-                // Compute max openings on committed polynomials to set a common bound on adding
-                maxCmPolsOpenings = Math.max(maxCmPolsOpenings, polsOpenings[polRef]);
-            }          
-        }
-    }
 
+    if(logger) logger.info("ShPlonk setup done.");
+
+    // Compute maxCmPolsOpenings
+    let maxCmPolsOpenings = Math.max(...Object.values(polsOpenings));
+ 
     for(let i = 0; i < 4; i++) {
         for(let j = 0; j < polsNames[i].length; j++) {
+            console.log(polsNames[i][j].name, polsOpenings[polsNames[i][j].name]);
             polsNames[i][j].openings = polsOpenings[polsNames[i][j].name];
         }
     }
@@ -296,6 +270,62 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
     await writeConstPolsFile(constExtFile, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, curve.Fr, {});
 
     return {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns};
+
+    function setPolDefs(type, stage, name, id, domainSize) {
+        if(!["const", "cm"].includes(type)) throw new Error("Invalid type");
+        if(fflonkInfo.evMap.find(ev => ev.type === type && ev.id === id)) {
+            if(type === "cm") {
+                polsOpenings[name] = 1;
+            } else {
+                polsOpenings[name] = 0;
+            }
+
+            const openXi = fflonkInfo.evMap.find(ev => ev.type === type && ev.id === id && !ev.prime);
+            const openWXi = fflonkInfo.evMap.find(ev => ev.type === type && ev.id === id && ev.prime);
+            
+            const openName = openXi && openWXi ? "0,1" : openXi ? "0" : "1";
+            if(!fiMap[stage][openName]) fiMap[stage][openName] = 0;
+            ++fiMap[stage][openName];
+
+            polsNames[stage].push({name});
+            if(openXi) {
+                polsXi.push({name: name, stage: stage, degree: domainSize, open: openName})
+                if(type === "cm") ++polsOpenings[name];
+            }
+            if(openWXi) {
+                polsWXi.push({name: name, stage: stage, degree: domainSize, open: openName})
+                if(type === "cm") ++polsOpenings[name];                    
+            }
+        } else {
+            polsOpenings[name] = 0;
+            polsNames[stage].push({name});
+        }
+    }
+
+    function fixFIndex(stage, minPols = 3) {
+        const openings = Object.keys(fiMap[stage]);
+        if(openings.length == 1) return;
+
+        const nTotalOpenings = openings.reduce((acc, curr) => acc + curr, 0);
+        if(nTotalOpenings === 0) return;
+
+        
+        if(fiMap[stage]["0"] && fiMap[stage]["0"] < minPols) {
+            for(let i = 0; i < polsXi.length; ++i) {
+                if(polsXi[i].stage === stage) {
+                    polsXi[i].open = "0,1";
+                    if(!polsWXi.find(wxi => JSON.stringify(wxi) === JSON.stringify(polsXi[i]))) polsWXi.push(polsXi[i]);
+                }
+            }
+        } else if(fiMap[stage]["1"] && fiMap[stage]["1"] < minPols) {
+            for(let i = 0; i < polsWXi.length; ++i) {
+                if(polsWXi[i].stage === stage) {
+                    polsWXi[i].open = "0,1";
+                    if(!polsXi.find(xi => JSON.stringify(xi) === JSON.stringify(polsWXi[i]))) polsXi.push(polsWXi[i]);
+                }
+            }
+        }
+    }
 }
 
 function getPolFromBuffer(buff, nPols, N, id, Fr) {
@@ -304,18 +334,4 @@ function getPolFromBuffer(buff, nPols, N, id, Fr) {
         polBuffer.set(buff.slice((id + j * nPols) * Fr.n8, (id + j * nPols + 1) * Fr.n8), j * Fr.n8);
     }
     return polBuffer;
-}
-
-function findPolynomialByTypeId(pil, type, id) {
-    for (const polName in pil.references) {
-        if (pil.references[polName].type === type) {
-            if(pil.references[polName].isArray) {
-                if(id >= pil.references[polName].id && id < (pil.references[polName].id + pil.references[polName].len)) {
-                    return polName;
-                }
-            } else if(pil.references[polName].id === id) {
-                return polName;
-            }
-        } 
-    }
 }

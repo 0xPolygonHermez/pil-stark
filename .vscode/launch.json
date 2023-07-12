@@ -1325,7 +1325,7 @@
             ]
         },
         {
-            "name": "fibonacci final setup",
+            "name": "fibonacci final9 setup",
             "program": "src/final/main_final_setup.js",
             "request": "launch",
             "skipFiles": [
@@ -1337,6 +1337,26 @@
                 "-p ${workspaceFolder}/tmp/fibonacci.final.pil",
                 "-c ${workspaceFolder}/tmp/fibonacci.final.const",
                 "-e ${workspaceFolder}/tmp/fibonacci.final.exec",
+                "--cols=9"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "fibonacci final6 setup",
+            "program": "src/final/main_final_setup.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-r ${workspaceFolder}/tmp/fibonacci.c12.custom.verifier.r1cs",
+                "-p ${workspaceFolder}/tmp/fibonacci.final.pil",
+                "-c ${workspaceFolder}/tmp/fibonacci.final.const",
+                "-e ${workspaceFolder}/tmp/fibonacci.final.exec",
+                "--cols=6"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"

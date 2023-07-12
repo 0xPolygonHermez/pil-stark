@@ -3,8 +3,9 @@ const version = require("../../package").version;
 
 const { F1Field } = require("ffjavascript");
 const {readR1cs} = require("r1csfile");
-const plonkSetup = require("./final_setup.js");
 const { writeExecFile } = require("../helpers/exec_helpers");
+const plonkSetupFinal6 = require("./final6_setup");
+const plonkSetupFinal9 = require("./final9_setup");
 
 
 const argv = require("yargs")
@@ -23,13 +24,23 @@ async function run() {
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "final.pil";
     const execFile = typeof(argv.exec) === "string" ?  argv.exec.trim() : "final.exec";
 
+
     const r1cs = await readR1cs(r1csFile, { F, logger:console });
 
     const options = {
         forceNBits: argv.forceNBits
     };
+    
+    let cols = argv.cols ? Number(argv.cols) : 6;
+    
+    if(![6,9].includes(cols)) throw new Error("Invalid number of cols");
 
-    const res = await plonkSetup(F, r1cs, options);
+    let res;
+    if(cols === 9) {
+        res = await plonkSetupFinal9(F, r1cs, options);
+    } else {
+        res = await plonkSetupFinal6(F, r1cs, options);
+    }
 
     await fs.promises.writeFile(pilFile, res.pilStr, "utf8");
 
