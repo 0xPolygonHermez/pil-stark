@@ -89,7 +89,7 @@ describe("simple sm", async function () {
         // Create & constant polynomial coefficients and extended evaluations file
         const constPolsZkeyFilename =  path.join(__dirname, "../../", "tmp", `${filename}.ext.cnst`);
 
-        await fflonkSetup(pil, constPols, zkeyFilename, constPolsZkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1, logger});
+        await fflonkSetup(pil, constPols, zkeyFilename, constPolsZkeyFilename, ptauFile, fflonkInfo, {extraMuls: 0, logger});
 
         // Save verification key file
         const VkeyFilename = path.join(__dirname, "../../", "tmp", `${filename}.vkey`);

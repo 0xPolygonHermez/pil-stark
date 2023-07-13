@@ -313,7 +313,9 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
                         if(!polsWXi.find(wxi => JSON.stringify(wxi) === JSON.stringify(polsXi[i]))) polsWXi.push(polsXi[i]);
                     }
                 }
-            } else if(fiMap[stage]["1"] && fiMap[stage]["1"] < minPols) {
+            } 
+            
+            if(fiMap[stage]["1"] && fiMap[stage]["1"] < minPols) {
                 for(let i = 0; i < polsWXi.length; ++i) {
                     if(polsWXi[i].stage === stage) {
                         polsWXi[i].open = "0,1";
@@ -325,17 +327,18 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
 
         for(let i = 0; i < polsXi.length; ++i) {
             const fiName = `${polsXi[i].stage}_${polsXi[i].open}`;
-            if(!(fiName in fiNames)) fiNames[fiName] = fiIndex++;
+            if(!fiNames.hasOwnProperty(fiName)) fiNames[fiName] = fiIndex++;
             polsXi[i].fi = fiNames[fiName];
-            delete polsXi[i].open;
         }
 
         for(let i = 0; i < polsWXi.length; ++i) {
             const fiName = `${polsWXi[i].stage}_${polsWXi[i].open}`;
-            if(!(fiName in fiNames)) fiNames[fiName] = fiIndex++;
+            if(!fiNames.hasOwnProperty(fiName)) fiNames[fiName] = fiIndex++;
             polsWXi[i].fi = fiNames[fiName];
-            delete polsWXi[i].open;
         }
+
+        polsXi.forEach(p => delete p.open);
+        polsWXi.forEach(p => delete p.open);
     }
 }
 

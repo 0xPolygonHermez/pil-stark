@@ -12,6 +12,8 @@ const smConnection = require("../../test/state_machines/sm_connection/sm_connect
 const fs = require("fs");
 const {ethers, run} = require("hardhat");
 
+const Logger = require('logplease');
+
 describe("Fflonk connection sm", async function () {
     this.timeout(10000000);
 
@@ -29,6 +31,9 @@ describe("Fflonk connection sm", async function () {
     })
 
     it("It should create the pols main", async () => {
+        const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+        Logger.setLogLevel("DEBUG");
+        
         const F = new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
 
         const pil = await compile(F, path.join(__dirname, "../../test/state_machines/", "sm_connection", "connection_main.pil"));
@@ -57,16 +62,16 @@ describe("Fflonk connection sm", async function () {
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename,constExtFilename, ptauFile, fflonkInfo, {extraMuls: 2});
+        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename,constExtFilename, ptauFile, fflonkInfo, {logger, extraMuls: 1});
 
-        const zkey = await readPilFflonkZkeyFile(zkeyFilename, {});
+        const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 
-        const vk = await fflonkVerificationKey(zkey, {});
+        const vk = await fflonkVerificationKey(zkey, {logger});
 
-        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, fflonkInfo, {});
+        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, fflonkInfo, {logger});
 
-        const proofInputs = await exportFflonkCalldata(vk, proof, publicSignals, {})
-        const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {});
+        const proofInputs = await exportFflonkCalldata(vk, proof, publicSignals, {logger})
+        const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {logger});
 
         fs.writeFileSync("./tmp/contracts/pilfflonk_verifier_connection.sol", verifierCode.verifierPilFflonkCode, "utf-8");
         fs.writeFileSync("./tmp/contracts/shplonk_verifier_connection.sol", verifierCode.verifierShPlonkCode, "utf-8");

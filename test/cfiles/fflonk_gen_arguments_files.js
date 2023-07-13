@@ -97,7 +97,7 @@ describe("sm", async function () {
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.zkey`);
 
-        const options = {extraMuls: 2, logger};
+        const options = {extraMuls: 1, logger};
         if(namePil.includes("Plookup")) {
             options.extraMuls = 3;
         }

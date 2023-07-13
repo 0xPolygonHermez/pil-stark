@@ -22,7 +22,7 @@ describe("simple sm", async function () {
     it("Simple1", async () => {
         await runTest("simple1");
     });
-    it.only("Simple2", async () => {
+    it("Simple2", async () => {
         await runTest("simple2");
     });
     it("Simple2p", async () => {
@@ -70,7 +70,7 @@ describe("simple sm", async function () {
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename,constExtFilename, ptauFile, fflonkInfo, {extraMuls: 1, logger});
+        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename,constExtFilename, ptauFile, fflonkInfo, {extraMuls: 0, logger});
     
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 

@@ -61,7 +61,7 @@ describe("Fflonk All sm", async function () {
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename, constExtFilename, ptauFile, fflonkInfo, {extraMuls: 3, logger});
+        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename, constExtFilename, ptauFile, fflonkInfo, {extraMuls: 2, logger});
 
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 
