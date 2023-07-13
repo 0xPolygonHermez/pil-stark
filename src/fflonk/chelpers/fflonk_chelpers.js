@@ -220,11 +220,15 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
                 }
                
                 case "number": {
-                    if(!bigIntsFound.find(v => v === BigInt(r.value))) {
+                    if(bigIntsFound.findIndex(v => v === BigInt(r.value)) == -1) {
                         bigIntsFound.push(BigInt(r.value));
-                        bigIntsCode.push(`     AltBn128::FrElement v${vIndex};`);
-                        bigIntsCode.push(`     E.fr.fromString(v${vIndex}, "${BigInt(r.value).toString()}");`);
-                        bigIntsCode.push(`     params.constValues[${vIndex}] = v${vIndex};`);
+                        if(BigInt(r.value) > BigInt(Number.MAX_SAFE_INTEGER)) {
+                            bigIntsCode.push(`     AltBn128::FrElement v${vIndex};`);
+                            bigIntsCode.push(`     E.fr.fromString(v${vIndex}, "${BigInt(r.value).toString()}");`);
+                            bigIntsCode.push(`     params.constValues[${vIndex}] = v${vIndex};`);
+                        } else {
+                            bigIntsCode.push(`     params.constValues[${vIndex}] = E.fr.set(${BigInt(r.value).toString()});`);
+                        }
                         return `params.constValues[${vIndex++}]`;
                     } else {
                         return `params.constValues[${bigIntsFound.indexOf(BigInt(r.value))}]`;

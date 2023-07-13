@@ -169,6 +169,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
 
     const [cmts, evaluations] = await open(zkey, PTau, ctx, committedPols, curve, { logger, xiSeed: challengeXiSeed, nonCommittedPols: ["Q"] });
 
+    if(logger) logger.debug("··· Batched Inverse shplonk: " + Fr.toString(evaluations["inv"]));
     // Compute challengeXiSeed 
     let challengeXi = curve.Fr.exp(challengeXiSeed, zkey.powerW);
 
