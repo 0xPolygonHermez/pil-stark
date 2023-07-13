@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "test": "npx hardhat test",
-    "test:simple": "mocha test/fflonk_simple.test.js"
+    "test:simple": "mocha test/fflonk_simple.test.js",
+    "test:fibonacci": "mocha test/fflonk_fibonacci.test.js"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.3",

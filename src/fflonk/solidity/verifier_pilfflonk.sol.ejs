@@ -134,9 +134,9 @@ contract PilFflonkVerifier {
     // Byte offset of every parameter in the calldata
 
     // Polynomial commitments fi
-<%  let count = 128; -%>
+<%  let count = 128; // This is 128 because first two values are W and Wp -%>
 <%  for(let i = 0; i < vk.f.length; ++i) { -%>
-<%      if(vk.f[i].stages.length !== 1 || vk.f[i].stages[0].stage !== 0) { -%>
+<%      if(vk.f[i].stages[0].stage !== 0) { -%>
     uint16 constant pf<%- vk.f[i].index %> = 4 + <%- count %>;
 <%      count += 64 -%>
 <%      } -%>
@@ -169,7 +169,7 @@ contract PilFflonkVerifier {
         shPlonkAddress = _shPlonkAddress;
     }
 
-<%  let nBytesCommits = (vk.f.filter(fi => fi.stages.length !== 1 || fi.stages[0].stage !== 0).length + 2) * 2 + orderedEvals.length -%>
+<%  let nBytesCommits = (vk.f.filter(fi => fi.stages[0].stage !== 0).length + 2) * 2 + orderedEvals.length -%>
 
 <%  if (vk.nPublics > 0) { -%>
     function verifyProof(bytes32[<%- nBytesCommits %>] calldata proof, uint256[<%- Math.max(vk.nPublics, 1) %>] calldata pubSignals) public view returns (bool) {
@@ -197,13 +197,22 @@ contract PilFflonkVerifier {
 <%  } -%>
 <%  if (vk.nPublics > 0) { -%>
                 mstore(add(pMem, <%= memC %>), calldataload(pPublic))
-<%for (let i=1; i<vk.nPublics;i++) { %>
-                mstore(add(pMem, <%= memC + i * 32 %> ), calldataload(add(pPublic, <%= i * 32 %>)))
-<%}%>  
+<%  memC += 32 -%>
+<%  for (let i=1; i<vk.nPublics;i++) { %>
+                mstore(add(pMem, <%= memC %> ), calldataload(add(pPublic, <%= i * 32 %>)))
+<%  memC += 32 -%>
+<%  }  %>  
+<%  } -%>
+<%  for(let i = 0; i < vk.f.length; ++i) { -%>
+<%  if(vk.f[i].stages[0].stage === 1) { -%>
+                mstore(add(pMem, <%= memC %>), calldataload(pf<%- vk.f[i].index %>))
+                mstore(add(pMem, <%= memC + 32 %>), calldataload(add(pf<%- vk.f[i].index %>, 32)))
+<%  memC += 64 -%>
+<%  } -%>
 <%  } -%>
 
-<%  if (vk.nPublics > 0 || vk.f.filter(fi => fi.stages[0].stage === 0).length > 0) { -%>
-                mstore(add(pMem, pAlpha),  mod(keccak256(add(pMem, pLastMem), <%= vk.nPublics * 32 + vk.f.filter(fi => fi.stages[0].stage === 0).length * 64 %>), q))
+<%  if (vk.nPublics > 0 || vk.f.filter(fi => [0,1].includes(fi.stages[0].stage)).length > 0) { -%>
+                mstore(add(pMem, pAlpha),  mod(keccak256(add(pMem, pLastMem), <%= vk.nPublics * 32 + vk.f.filter(fi => [0,1].includes(fi.stages[0].stage)).length * 64 %>), q))
 <%  } else { -%>
                 mstore(add(pMem, pLastMem), 1)
                 mstore(add(pMem, pAlpha), mod(keccak256(add(pMem, pLastMem), 32), q))
@@ -213,25 +222,46 @@ contract PilFflonkVerifier {
                 mstore(add(pMem, pBeta), mod(keccak256(add(pMem, pAlpha), 32), q))
 
                 // Compute challenge.gamma
-                mstore(add(pMem, pGamma), mod(keccak256(add(pMem, pBeta), 32), q))      
-
-                // Compute challenge.delta
-                mstore(add(pMem, pDelta), mod(keccak256(add(pMem, pGamma), 32), q))
-
-                // Compute challenge.a
-                mstore(add(pMem, pA), mod(keccak256(add(pMem, pDelta), 32), q))     
-
-                // Compute xiSeed
-                mstore(add(pMem, pLastMem), mload(add(pMem, pA)))
-<%  memC = pLastMem + 32; -%>
+<%  memC = pLastMem; -%>
+                mstore(add(pMem, <%= memC %>), mload(add(pMem, pBeta)))
+<%  memC += 32 -%>
 <%  for(let i = 0; i < vk.f.length; ++i) { -%>
-<%  if(vk.f[i].stages[0].stage !== 0) { -%>
+<%  if(vk.f[i].stages[0].stage === 2) { -%>
                 mstore(add(pMem, <%= memC %>), calldataload(pf<%- vk.f[i].index %>))
                 mstore(add(pMem, <%= memC + 32 %>), calldataload(add(pf<%- vk.f[i].index %>, 32)))
 <%  memC += 64 -%>
 <%  } -%>
 <%  } -%>
-                let xiSeed := mod(keccak256(add(pMem, pLastMem), <%- vk.f.filter(f => f.stages[0].stage !== 0).length * 64 + 32 %>), q)
+                mstore(add(pMem, pGamma),  mod(keccak256(add(pMem, pLastMem), <%= 32 + vk.f.filter(fi => fi.stages[0].stage === 2).length * 64 %>), q))
+
+                // Compute challenge.delta
+                mstore(add(pMem, pDelta), mod(keccak256(add(pMem, pGamma), 32), q))
+
+                // Compute challenge.a
+<%  memC = pLastMem; -%>
+                mstore(add(pMem, <%= memC %>), mload(add(pMem, pDelta)))
+<%  memC += 32 -%>
+<%  for(let i = 0; i < vk.f.length; ++i) { -%>
+<%  if(vk.f[i].stages[0].stage === 3) { -%>
+                mstore(add(pMem, <%= memC %>), calldataload(pf<%- vk.f[i].index %>))
+                mstore(add(pMem, <%= memC + 32 %>), calldataload(add(pf<%- vk.f[i].index %>, 32)))
+<%  memC += 64 -%>
+<%  } -%>
+<%  } -%>
+                mstore(add(pMem, pA),  mod(keccak256(add(pMem, pLastMem), <%= 32 + vk.f.filter(fi => fi.stages[0].stage === 3).length * 64 %>), q))
+
+                // Compute xiSeed
+<%  memC = pLastMem; -%>
+                mstore(add(pMem, pLastMem), mload(add(pMem, pA)))
+<%  memC += 32; -%>
+<%  for(let i = 0; i < vk.f.length; ++i) { -%>
+<%  if(vk.f[i].stages[0].stage === 4) { -%>
+                mstore(add(pMem, <%= memC %>), calldataload(pf<%- vk.f[i].index %>))
+                mstore(add(pMem, <%= memC + 32 %>), calldataload(add(pf<%- vk.f[i].index %>, 32)))
+<%  memC += 64 -%>
+<%  } -%>
+<%  } -%>
+                let xiSeed := mod(keccak256(add(pMem, pLastMem), <%- 32 + vk.f.filter(fi => fi.stages[0].stage === 4).length * 64  %>), q)
                 mstore(add(pMem, pXiSeed), xiSeed)
                                 
                 // Compute xin
@@ -289,7 +319,7 @@ contract PilFflonkVerifier {
             function checkInput() {        
                 // Check commitments fullfill bn128 curve equation Y^2 = X^3 + 3
 <% for(let i = 0; i < vk.f.length; ++i) { -%>
-<%      if(vk.f[i].stages.length !== 1 || vk.f[i].stages[0].stage !== 0) { -%>
+<%      if(vk.f[i].stages[0].stage !== 0) { -%>
                 checkPointBelongsToBN128Curve(pf<%- vk.f[i].index %>)
 <% } -%>
 <% } -%>

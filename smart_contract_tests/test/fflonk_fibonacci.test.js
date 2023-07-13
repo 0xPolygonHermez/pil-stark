@@ -8,6 +8,8 @@ const { fflonkSetup, fflonkProve, fflonkInfoGen, fflonkVerify, exportFflonkCalld
 
 const smFibonacci = require("../../test/state_machines/sm_fibonacci/sm_fibonacci.js");
 
+const Logger = require('logplease');
+
 const fs = require("fs");
 const {ethers, run} = require("hardhat");
 
@@ -28,6 +30,9 @@ describe("Fflonk Fibonacci sm", async function () {
     })
 
     it("It should create the pols main", async () => {
+        const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+        Logger.setLogLevel("DEBUG");
+
         const F = new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
 
         const pil = await compile(F, path.join(__dirname, "../../test/state_machines/", "sm_fibonacci", "fibonacci_main.pil"));
@@ -55,17 +60,16 @@ describe("Fflonk Fibonacci sm", async function () {
 
         const fflonkInfo = fflonkInfoGen(F, pil);
 
-        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename,constExtFilename, ptauFile, fflonkInfo, {extraMuls: 2});
+        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename,constExtFilename, ptauFile, fflonkInfo, {logger,extraMuls: 2});
 
-        const zkey = await readPilFflonkZkeyFile(zkeyFilename, {});
+        const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 
-        const vk = await fflonkVerificationKey(zkey, {});
+        const vk = await fflonkVerificationKey(zkey, {logger});
 
-        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, fflonkInfo, {});
-        const proofInputs = await exportFflonkCalldata(vk, proof, publicSignals, {})
-        const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {});
+        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, fflonkInfo, {logger});
+        const proofInputs = await exportFflonkCalldata(vk, proof, publicSignals, {logger})
+        const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {logger});
 
-        
         fs.writeFileSync("./tmp/contracts/pilfflonk_verifier_fibonacci.sol", verifierCode.verifierPilFflonkCode, "utf-8");
         fs.writeFileSync("./tmp/contracts/shplonk_verifier_fibonacci.sol", verifierCode.verifierShPlonkCode, "utf-8");
 
@@ -85,6 +89,8 @@ describe("Fflonk Fibonacci sm", async function () {
             const inputs = proofInputs.split("],[")
             .map((str, index) => (index === 0 ? str + ']' : '[' + str))
             .map(str => JSON.parse(str));
+
+            console.log(...inputs);
             expect(await pilFflonkVerifier.verifyProof(...inputs)).to.equal(true);
     
         } else {

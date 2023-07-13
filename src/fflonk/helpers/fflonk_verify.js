@@ -1,4 +1,4 @@
-const { verifyOpenings, Keccak256Transcript, computeChallengeXiSeed } = require("shplonkjs");
+const { verifyOpenings, Keccak256Transcript } = require("shplonkjs");
 const {utils, getCurveFromName } = require("ffjavascript");
 const { fromObjectVk, fromObjectProof } = require("./helpers");
 const { unstringifyBigInts } = utils;
@@ -55,6 +55,11 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         transcript.addScalar(publics[i]);
     }
 
+    const stage1CommitPols = vk.f.filter(fi => fi.stages[0].stage === 1).map(fi => proof.polynomials[`f${fi.index}`]);
+    for(let i = 0; i < stage1CommitPols.length; i++) {
+        transcript.addPolCommitment(stage1CommitPols[i]);
+    }
+
     if(0 === transcript.data.length) {
         transcript.addScalar(curve.Fr.one);
     }
@@ -73,6 +78,11 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     transcript.reset();
     transcript.addScalar(ctx.challenges[1]);
 
+    const stage2CommitPols = vk.f.filter(fi => fi.stages[0].stage === 2).map(fi => proof.polynomials[`f${fi.index}`]);
+    for(let i = 0; i < stage2CommitPols.length; i++) {
+        transcript.addPolCommitment(stage2CommitPols[i]);
+    }
+
     ctx.challenges[2] = transcript.getChallenge();
     if (logger) logger.debug("··· challenges.gamma: " + Fr.toString(ctx.challenges[2]));
 
@@ -86,8 +96,25 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     transcript.reset();
     transcript.addScalar(ctx.challenges[3]);
 
+    const stage3CommitPols = vk.f.filter(fi => fi.stages[0].stage === 3).map(fi => proof.polynomials[`f${fi.index}`]);
+    for(let i = 0; i < stage3CommitPols.length; i++) {
+        transcript.addPolCommitment(stage3CommitPols[i]);
+    }
+
     ctx.challenges[4] = transcript.getChallenge();
     if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
+
+    // Compute challenge xi seed
+    transcript.reset();
+    transcript.addScalar(ctx.challenges[4]);
+
+    const stage4CommitPols = vk.f.filter(fi => fi.stages[0].stage === 4).map(fi => proof.polynomials[`f${fi.index}`]);
+    for(let i = 0; i < stage4CommitPols.length; i++) {
+        transcript.addPolCommitment(stage4CommitPols[i]);
+    }
+
+    let challengeXiSeed = transcript.getChallenge();
+    if (logger) logger.debug("··· challenges.xiSeed: " + Fr.toString(challengeXiSeed));
 
     // Store the polynomial commits to its corresponding fi
     for(let i = 0; i < vk.f.length; ++i) {
@@ -112,8 +139,7 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         }
     }
     
-    let xiSeed = computeChallengeXiSeed(vk.f.sort((a,b) => a.index - b.index), curve, {logger, fflonkPreviousChallenge: ctx.challenges[4] });
-    let challengeXi = curve.Fr.exp(xiSeed, vk.powerW);
+    let challengeXi = curve.Fr.exp(challengeXiSeed, vk.powerW);
     ctx.x = challengeXi;
 
     const execCode = executeCode(curve.Fr, ctx, fflonkInfo.verifierCode.first);
@@ -128,7 +154,7 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         return false;
     }
 
-    const res = verifyOpenings(vk, proof.polynomials, proof.evaluations, curve, {logger, fflonkPreviousChallenge: ctx.challenges[4], nonCommittedPols: ["Q"]});
+    const res = verifyOpenings(vk, proof.polynomials, proof.evaluations, curve, {logger, xiSeed: challengeXiSeed, nonCommittedPols: ["Q"]});
     await curve.terminate();
 
     return res;

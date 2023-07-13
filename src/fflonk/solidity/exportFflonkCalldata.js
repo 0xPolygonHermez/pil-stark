@@ -36,7 +36,7 @@ module.exports = async function exportFflonkCalldata(vk, proof, publicSignals, o
 
     // Check which of the fi are committed into the proof and which ones are part of the setup. 
     // A committed polynomial fi will be considered part of the setup if all its polynomials composing it are from the stage 0
-    const fCommitted = vk.f.filter(fi => fi.stages.length !== 1 || fi.stages[0].stage !== 0).sort((a, b) => a.index >= b.index ? 1 : -1);
+    const fCommitted = vk.f.filter(fi => fi.stages[0].stage !== 0).sort((a, b) => a.index >= b.index ? 1 : -1);
 
     // Order the evaluations. It is important to keep this order to then be consistant with the solidity verifier
     const  orderedEvals = getOrderedEvals(vk.f, proof.evaluations);
@@ -72,6 +72,13 @@ module.exports = async function exportFflonkCalldata(vk, proof, publicSignals, o
     // Add the montgomery batched inverse evaluation of zH at the end of the buffer
     Fr.toRprLE(proofBuff, G1.F.n8 * 2 * nG1 + Fr.n8 * (nFr - 1), proof.evaluations.invZh);
 
+    for(let i = 0; i < Object.keys(proof.polynomials).length; ++i) {
+        console.log(Object.keys(proof.polynomials)[i], curve.G1.toString(proof.polynomials[Object.keys(proof.polynomials)[i]]));
+    }
+
+    for(let i = 0; i < Object.keys(proof.evaluations).length; ++i) {
+        console.log(Object.keys(proof.evaluations)[i], curve.Fr.toString(proof.evaluations[Object.keys(proof.evaluations)[i]]));
+    }
 
     // Add non committed evaluations into the proof buffer
     for(let i = 0; i < nonCommittedPols.length; ++i) {
