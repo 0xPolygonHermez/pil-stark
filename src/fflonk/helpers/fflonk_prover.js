@@ -193,7 +193,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
     });
 
     Object.keys(evaluations).forEach(key => {
-        proof.evaluations[key] = ctx.curve.Fr.toObject(evaluations[key]);
+        if (key !== "Q") proof.evaluations[key] = ctx.curve.Fr.toObject(evaluations[key]);
     });
 
     proof = stringifyBigInts(proof);

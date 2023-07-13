@@ -146,13 +146,12 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
 
     const xN = curve.Fr.exp(challengeXi, ctx.N);
     ctx.Z = curve.Fr.sub(xN, curve.Fr.one);   
-   
-    const Q = curve.Fr.div(execCode, ctx.Z);
 
-    if(!curve.Fr.eq(Q, proof.evaluations["Q"])) {
-        console.log("Verify evaluations failed");
-        return false;
-    }
+    if(!curve.Fr.eq(curve.Fr.mul(ctx.Z, proof.evaluations["invZh"]), curve.Fr.one)) throw new Error("Invalid invZh evaluation");
+   
+    // TODO CHECK inv evaluation
+    const Q = curve.Fr.div(execCode, ctx.Z);
+    proof.evaluations["Q"] = Q;
 
     const res = verifyOpenings(vk, proof.polynomials, proof.evaluations, curve, {logger, xiSeed: challengeXiSeed, nonCommittedPols: ["Q"]});
     await curve.terminate();
