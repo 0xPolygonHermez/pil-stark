@@ -28,6 +28,10 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
         3: {},
     };
 
+    const nStages = 4;
+    let fiNames = {};
+    let fiIndex = 0;
+
     const polsXi = []; 
     const polsWXi = []; 
     
@@ -51,8 +55,6 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
         maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
     }
 
-    fixFIndex(0);
-
     for (const polRef in pil.references) {
         const polInfo = pil.references[polRef];
         const name = polRef;
@@ -70,8 +72,6 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
         }
         maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
     }
-
-    fixFIndex(1);
 
     const pilPower = log2(maxPilPolDeg - 1) + 1;
     const domainSize = 2 ** pilPower;
@@ -102,8 +102,6 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
         }
         setPolDefs("cm", 2, namePlookupH2, idPlookupH2, domainSize);
     }
-
-    fixFIndex(2);
 
 
     for(let i = 0; i < fflonkInfo.puCtx.length; ++i) {
@@ -163,9 +161,9 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
         setPolDefs("cm", 3, nameImPol, idImPol, domainSize);
     }
 
-    fixFIndex(3);
+    fixFIndex();
 
-    polsXi.push({name: "Q", stage: 4, degree: (fflonkInfo.qDeg + 1) * domainSize, open: "0"});
+    polsXi.push({name: "Q", stage: 4, degree: (fflonkInfo.qDeg + 1) * domainSize, fi: fiIndex});
     
     
     polsXi.forEach(p => { if(p.name !== "Q" && polsOpenings[p.name]) {p.degree += polsOpenings[p.name]} });
@@ -192,7 +190,6 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
  
     for(let i = 0; i < 4; i++) {
         for(let j = 0; j < polsNames[i].length; j++) {
-            console.log(polsNames[i][j].name, polsOpenings[polsNames[i][j].name]);
             polsNames[i][j].openings = polsOpenings[polsNames[i][j].name];
         }
     }
@@ -302,28 +299,42 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
         }
     }
 
-    function fixFIndex(stage, minPols = 3) {
-        const openings = Object.keys(fiMap[stage]);
-        if(openings.length == 1) return;
-
-        const nTotalOpenings = openings.reduce((acc, curr) => acc + curr, 0);
-        if(nTotalOpenings === 0) return;
-
-        
-        if(fiMap[stage]["0"] && fiMap[stage]["0"] < minPols) {
-            for(let i = 0; i < polsXi.length; ++i) {
-                if(polsXi[i].stage === stage) {
-                    polsXi[i].open = "0,1";
-                    if(!polsWXi.find(wxi => JSON.stringify(wxi) === JSON.stringify(polsXi[i]))) polsWXi.push(polsXi[i]);
+    function fixFIndex(minPols = 3) {
+        for(let stage = 0; stage < nStages; ++stage) {
+            const openings = Object.keys(fiMap[stage]);
+            if(openings.length <= 1) continue;
+            
+            if(!fiMap[stage]["0,1"] && fiMap[stage]["0"] >= minPols && fiMap[stage]["1"] >= minPols) continue;
+    
+            if(fiMap[stage]["0"] && fiMap[stage]["0"] < minPols) {
+                for(let i = 0; i < polsXi.length; ++i) {
+                    if(polsXi[i].stage === stage) {
+                        polsXi[i].open = "0,1";
+                        if(!polsWXi.find(wxi => JSON.stringify(wxi) === JSON.stringify(polsXi[i]))) polsWXi.push(polsXi[i]);
+                    }
+                }
+            } else if(fiMap[stage]["1"] && fiMap[stage]["1"] < minPols) {
+                for(let i = 0; i < polsWXi.length; ++i) {
+                    if(polsWXi[i].stage === stage) {
+                        polsWXi[i].open = "0,1";
+                        if(!polsXi.find(xi => JSON.stringify(xi) === JSON.stringify(polsWXi[i]))) polsXi.push(polsWXi[i]);
+                    }
                 }
             }
-        } else if(fiMap[stage]["1"] && fiMap[stage]["1"] < minPols) {
-            for(let i = 0; i < polsWXi.length; ++i) {
-                if(polsWXi[i].stage === stage) {
-                    polsWXi[i].open = "0,1";
-                    if(!polsXi.find(xi => JSON.stringify(xi) === JSON.stringify(polsWXi[i]))) polsXi.push(polsWXi[i]);
-                }
-            }
+        }
+
+        for(let i = 0; i < polsXi.length; ++i) {
+            const fiName = `${polsXi[i].stage}_${polsXi[i].open}`;
+            if(!(fiName in fiNames)) fiNames[fiName] = fiIndex++;
+            polsXi[i].fi = fiNames[fiName];
+            delete polsXi[i].open;
+        }
+
+        for(let i = 0; i < polsWXi.length; ++i) {
+            const fiName = `${polsWXi[i].stage}_${polsWXi[i].open}`;
+            if(!(fiName in fiNames)) fiNames[fiName] = fiIndex++;
+            polsWXi[i].fi = fiNames[fiName];
+            delete polsWXi[i].open;
         }
     }
 }
