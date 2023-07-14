@@ -1948,6 +1948,25 @@
             ]
         },
         {
+            "name": "simple fflonk shkey",
+            "program": "${workspaceFolder}/src/fflonk/main_shkey.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p test/state_machines/sm_simple/simple2p.pil",
+                "-f tmp/simple2p.fflonkinfo.json",
+                "-t tmp/powersOfTau28_hez_final_19.ptau",
+                "-e 1",
+                "-s tmp/simple2p.shkey.json"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "simple fflonk setup",
             "program": "${workspaceFolder}/src/fflonk/main_setup.js",
             "request": "launch",
@@ -1956,11 +1975,11 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-p test/state_machines/sm_simple/simple4.pil",
+                "-p test/state_machines/sm_simple/simple2p.pil",
                 "-t tmp/powersOfTau28_hez_final_19.ptau",
-                "-f tmp/simple.fflonkinfo.json",
-                "-c tmp/simple.const",
-                "-z tmp/simple.zkey",
+                "-f tmp/simple2p.fflonkinfo.json",
+                "-c tmp/simple2p.cnst",
+                "-z tmp/simple2p.zkey",
                 "--extraMuls=1"
             ],
             "runtimeArgs": [

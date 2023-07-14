@@ -1,211 +1,30 @@
 const {BigBuffer} = require("ffjavascript");
-const {log2} = require("pilcom/src/utils");
-const {setup, Polynomial, commit} = require("shplonkjs");
-const { ifft, fft, interpolate } = require("../../helpers/fft/fft_p.bn128");
+const { Polynomial, commit} = require("shplonkjs");
+const { interpolate } = require("../../helpers/fft/fft_p.bn128");
 const { writeConstPolsFile } = require("../const_pols_serializer");
 const { writePilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
+const fflonkShKey = require("./fflonk_shkey.js");
+const { readBinFile } = require("@iden3/binfileutils");
 
 module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constExtFile, ptauFile, fflonkInfo, options) {
     const logger = options.logger;
 
-    const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
+    let { zkey, PTau, curve } = await fflonkShKey(_pil, ptauFile, fflonkInfo, options);
 
-    if(logger) logger.info("Starting fflonk setup");
-    //Find the max PIL polynomial degree
-    let maxPilPolDeg = 0;
-
-    let polsNames = {
-        0: [],
-        1: [],
-        2: [],
-        3: [],
-    };
-
-    let fiMap = {
-        0: {},
-        1: {},
-        2: {},
-        3: {},
-    };
-
-    const nStages = 4;
-    let fiNames = {};
-    let fiIndex = 0;
-
-    const polsXi = []; 
-    const polsWXi = []; 
+    const {fd: fdPTau, sections: pTauSections} = await readBinFile(ptauFile, "ptau", 1, 1 << 22, 1 << 24);
+    const sG2 = curve.G2.F.n8 * 2;
+    zkey.X_2 = await fdPTau.read(sG2, pTauSections[3][0].p + sG2);
     
-    const polsOpenings = {};
-    for (const polRef in pil.references) {
-        const polInfo = pil.references[polRef];
-        const name = polRef;
-        if(polInfo.type === 'constP') {
-            polInfo.stage = 0;
-            if(polInfo.isArray) {
-                for(let i = 0; i < polInfo.len; ++i) {
-                    const namePol = name + i;
-                    const polId = polInfo.id + i;
-                    setPolDefs("const", 0, namePol, polId, polInfo.polDeg);
-                }
-            } else {
-                setPolDefs("const", 0, name, polInfo.id, polInfo.polDeg);
-            }
-        } 
-    
-        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+    const roots = Object.keys(zkey).filter(k => k.match(/^w\d/));    
+    for(let i = 0; i < roots.length; ++i) {
+        zkey[roots[i]] = curve.Fr.fromObject(zkey[roots[i]]);
     }
 
-    for (const polRef in pil.references) {
-        const polInfo = pil.references[polRef];
-        const name = polRef;
-        if(polInfo.type === 'cmP') {
-            polInfo.stage = 1;
-            if(polInfo.isArray) {
-                for(let i = 0; i < polInfo.len; ++i) {
-                    const namePol = name + i;
-                    const polId = polInfo.id + i;
-                    setPolDefs("cm", 1, namePol, polId, polInfo.polDeg);             
-                }
-            } else {
-                setPolDefs("cm", 1, name, polInfo.id, polInfo.polDeg);
-            } 
-        }
-        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
-    }
-
-    const pilPower = log2(maxPilPolDeg - 1) + 1;
-    const domainSize = 2 ** pilPower;
-
-   
-    for(let i = 0; i < fflonkInfo.puCtx.length; ++i) {
-        const namePlookupH1 = `Plookup.H1_${i}`;
-        const idPlookupH1 = fflonkInfo.puCtx[i].h1Id;
-        pil.references[namePlookupH1] = {
-            name: namePlookupH1,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: idPlookupH1,
-            stage: 2,
-        }
-        setPolDefs("cm", 2, namePlookupH1, idPlookupH1, domainSize);
-
-        const namePlookupH2 = `Plookup.H2_${i}`;
-        const idPlookupH2 = fflonkInfo.puCtx[i].h2Id;
-        pil.references[namePlookupH2] = {
-            name: namePlookupH2,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: idPlookupH2,
-            stage: 2,
-        }
-        setPolDefs("cm", 2, namePlookupH2, idPlookupH2, domainSize);
-    }
-
-
-    for(let i = 0; i < fflonkInfo.puCtx.length; ++i) {
-        const namePlookupZ = `Plookup.Z${i}`;
-        const idPlookupZ = fflonkInfo.puCtx[i].zId;
-        pil.references[namePlookupZ] = {
-            name: namePlookupZ,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: idPlookupZ,
-            stage:3,
-        }
-        setPolDefs("cm", 3, namePlookupZ, idPlookupZ, domainSize);
-    }
-
-    for(let i = 0; i < fflonkInfo.peCtx.length; ++i) {
-        const namePermutationZ = `Permutation.Z${i}`;
-        const idPermutationZ = fflonkInfo.peCtx[i].zId;
-        pil.references[namePermutationZ] = {
-            name: namePermutationZ,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: idPermutationZ,
-            stage:3,
-        }
-        setPolDefs("cm", 3, namePermutationZ, idPermutationZ, domainSize);
-    }
-
-    for(let i = 0; i < fflonkInfo.ciCtx.length; ++i) {
-        const nameConnectionZ = `Connection.Z${i}`;
-        const idConnectionZ = fflonkInfo.ciCtx[i].zId;
-        pil.references[nameConnectionZ] = {
-            name: nameConnectionZ,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: idConnectionZ,
-            stage:3,
-        }
-        setPolDefs("cm", 3, nameConnectionZ, idConnectionZ, domainSize);
-    }
-
-    
-    for(let i = 0; i < fflonkInfo.imExpsList.length; ++i) {
-        const nameImPol = `Im${fflonkInfo.imExpsList[i]}`;
-        const idImPol = fflonkInfo.imExp2cm[fflonkInfo.imExpsList[i]];
-        pil.references[nameImPol] = {
-            name: nameImPol,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: idImPol,
-            stage:3,
-        }
-        setPolDefs("cm", 3, nameImPol, idImPol, domainSize);
-    }
-
-    fixFIndex();
-
-    polsXi.push({name: "Q", stage: 4, degree: (fflonkInfo.qDeg + 1) * domainSize, fi: fiIndex});
-    
-    
-    polsXi.forEach(p => { if(p.name !== "Q" && polsOpenings[p.name]) {p.degree += polsOpenings[p.name]} });
-    polsWXi.forEach(p => p.degree += polsOpenings[p.name]);
-
-
-    polDefs = [polsXi, polsWXi];
-
-    const config = {
-        power: pilPower, 
-        polDefs,
-        extraMuls: options.extraMuls || 0,
-        openBy: "custom",
-    }
-
-    if(logger) logger.info("Starting shPlonk setup...");
-    
-    const {zkey, PTau, curve} = await setup(config, ptauFile, logger);
-
-    if(logger) logger.info("ShPlonk setup done.");
-
-    // Compute maxCmPolsOpenings
-    let maxCmPolsOpenings = Math.max(...Object.values(polsOpenings));
- 
-    for(let i = 0; i < 4; i++) {
-        for(let j = 0; j < polsNames[i].length; j++) {
-            polsNames[i][j].openings = polsOpenings[polsNames[i][j].name];
-        }
-    }
-
-    zkey.polsNamesStage = polsNames;
-
-    // Precompute ZK data
-    const domainSizeZK = domainSize + maxCmPolsOpenings;
-    zkey.powerZK = log2(domainSizeZK - 1) + 1;
-
-    zkey.nPublics = fflonkInfo.nPublics;
-    
     const nBits = zkey.power;
     const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
     const nBitsExt = zkey.power + extendBits;
 
+    const domainSize = 1 << nBits;
     const domainSizeExt = 1 << nBitsExt;
 
     const extendBitsZK = zkey.powerZK - zkey.power;
