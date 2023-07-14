@@ -13,9 +13,10 @@ const Logger = require("logplease");
 const { readPilFflonkZkeyFile } = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
 const { fflonkVerificationKey } = require("../../index.js");
 const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+const { execSync } = require('child_process');
 Logger.setLogLevel("DEBUG");
 
-describe("sm", async function () {
+describe("generating files for arguments", async function () {
     this.timeout(10000000);
 
     let curve;
@@ -121,5 +122,13 @@ describe("sm", async function () {
         const verificationKey = await fflonkVerificationKey(zkey, options);
     
         await fs.promises.writeFile(verificationKeyFilename, JSON.stringify(verificationKey, null, 1), "utf8");
+
+        // Save cHelpers file
+        try {
+            const command = `node src/fflonk/main_buildchelpers.js -z tmp/${outputFilename}.zkey -f tmp/${outputFilename}.fflonkinfo.json -c tmp/${outputFilename}.chelpers.cpp -C PilFflonkSteps -m`;
+            execSync(command);
+        } catch (error) {
+            console.error(`Error while generating chelpers: ${error.message}`);
+        }
     }
 });

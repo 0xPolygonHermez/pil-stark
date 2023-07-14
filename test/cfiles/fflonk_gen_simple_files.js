@@ -8,6 +8,7 @@ const fs = require("fs");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 const fflonkVerificationKey = require("../../src/fflonk/helpers/fflonk_verification_key.js");
 const {readPilFflonkZkeyFile} = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
+const { execSync } = require('child_process');
 
 const smSimple = require("../state_machines/sm_simple/sm_simple.js");
 
@@ -104,5 +105,13 @@ describe("simple sm", async function () {
         // Save committed polynomial evaluations file
         const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `${filename}.cmmt`);
         await committedPols.saveToFileFr(committedPolsFilename);
+
+        // Save cHelpers file
+        try {
+            const command = `node src/fflonk/main_buildchelpers.js -z tmp/${filename}.zkey -f tmp/${filename}.fflonkinfo.json -c tmp/${filename}.chelpers.cpp -C PilFflonkSteps -m`;
+            execSync(command);
+        } catch (error) {
+            console.error(`Error while generating chelpers: ${error.message}`);
+        }
     }
 });

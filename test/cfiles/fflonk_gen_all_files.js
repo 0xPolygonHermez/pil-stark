@@ -3,6 +3,7 @@ const assert = chai.assert;
 const {F1Field, buildBn128} = require("ffjavascript");
 const path = require("path");
 const fs = require("fs");
+const { execSync } = require('child_process');
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
@@ -20,7 +21,7 @@ const Logger = require("logplease");
 const logger = Logger.create("pil-fflonk", {showTimestamp: false});
 Logger.setLogLevel("DEBUG");
 
-describe("simple sm", async function () {
+describe("all sm generate files", async function () {
     this.timeout(10000000);
 
     let curve;
@@ -92,5 +93,13 @@ describe("simple sm", async function () {
         // Save committed polynomial evaluations file
         const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `all.cmmt`);
         await cmPols.saveToFileFr(committedPolsFilename);
+
+        // Save cHelpers file
+        try {
+            const command = `node src/fflonk/main_buildchelpers.js -z tmp/all.zkey -f tmp/all.fflonkinfo.json -c tmp/all.chelpers.cpp -C PilFflonkSteps -m`;
+            execSync(command);
+        } catch (error) {
+            console.error(`Error while generating chelpers: ${error.message}`);
+        }
     });
 });
