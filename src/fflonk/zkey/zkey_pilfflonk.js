@@ -179,8 +179,7 @@ async function writePolsNamesStageSection(fdZKey, zkey, curve) {
         await fdZKey.writeULE32(lenSubkeys);
 
         for(let j = 0; j < lenSubkeys; j++) {
-            await writeStringToFile(fdZKey, zkey.polsNamesStage[keys[i]][j].name);
-            await fdZKey.writeULE32(zkey.polsNamesStage[keys[i]][j].openings);
+            await writeStringToFile(fdZKey, zkey.polsNamesStage[keys[i]][j]);
         }
     }
 
@@ -375,8 +374,7 @@ async function readPolsNamesStageSection(fdZKey, sections, zkey) {
         const lenPolsStage = await fdZKey.readULE32();
         for(let j = 0; j < lenPolsStage; j++) {
             zkey.polsNamesStage[stage][j] = {};
-            zkey.polsNamesStage[stage][j].name = await fdZKey.readString();
-            zkey.polsNamesStage[stage][j].openings = await fdZKey.readULE32();
+            zkey.polsNamesStage[stage][j] = await fdZKey.readString();
         }
     }
 

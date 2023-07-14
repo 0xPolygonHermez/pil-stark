@@ -31,7 +31,6 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
     const polsXi = []; 
     const polsWXi = []; 
     
-    const polsOpenings = {};
     for (const polRef in pil.references) {
         const polInfo = pil.references[polRef];
         const name = polRef;
@@ -182,12 +181,6 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
         return fi.openingPoints.length + 1;
     }))
  
-    for(let i = 0; i < 4; i++) {
-        for(let j = 0; j < polsNames[i].length; j++) {
-            polsNames[i][j].openings = polsOpenings[polsNames[i][j].name];
-        }
-    }
-
     shkey.polsNamesStage = polsNames;
 
     // Precompute ZK data
@@ -218,26 +211,21 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
                 ++degree;
                 if(openXi) ++degree;
                 if(openWXi) ++degree;
-                polsOpenings[name] = 1;
-            } else {
-                polsOpenings[name] = 0;
             }
+
             const openName = openXi && openWXi ? "0,1" : openXi ? "0" : "1";
             if(!fiMap[stage][openName]) fiMap[stage][openName] = 0;
             ++fiMap[stage][openName];
 
-            polsNames[stage].push({name});
+            polsNames[stage].push(name);
             if(openXi) {
                 polsXi.push({name: name, stage: stage, degree: degree, open: openName})
-                if(type === "cm") ++polsOpenings[name];
             }
             if(openWXi) {
                 polsWXi.push({name: name, stage: stage, degree: degree, open: openName})
-                if(type === "cm") ++polsOpenings[name];                    
             }
         } else {
-            polsOpenings[name] = 0;
-            polsNames[stage].push({name});
+            polsNames[stage].push(name);
         }
     }
 

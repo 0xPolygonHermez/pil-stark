@@ -40,7 +40,7 @@ async function run() {
 
     // Load zkey file
     if (options.logger) options.logger.info("> Reading zkey file");
-    const zkey = await readPilFflonkZkeyFile(zkeyFile, {logger: options.logger});
+    const zkey = await readPilFflonkZkeyFile(zkeyFile, options);
 
     const F = new F1Field(zkey.r);
 

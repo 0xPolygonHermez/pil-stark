@@ -49,7 +49,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
         // Store coefs to context
         for (let i = 0; i < fflonkInfo.nConstants; i++) {
             const coefs = getPolFromBuffer(constPolsCoefs, fflonkInfo.nConstants, (1<<zkey.power)*factorZK, i, curve.Fr);
-            ctx[zkey.polsNamesStage[0][i].name] = new Polynomial(coefs, curve, logger);
+            ctx[zkey.polsNamesStage[0][i]] = new Polynomial(coefs, curve, logger);
         }
 
         const commits = await commit(0, zkey, ctx, PTau, curve, {multiExp: true, logger});
