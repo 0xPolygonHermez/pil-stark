@@ -14,6 +14,9 @@ const argv = require("yargs")
     .argv;
 
 async function run() {
+
+    const options = {logger: console};
+
     const fflonkInfoFile = typeof(argv.fflonkinfo) === "string" ?  argv.fflonkinfo.trim() : "mycircuit.fflonkInfo.json";
     const verificationKeyFile = typeof(argv.verificationkey) === "string" ?  argv.verificationkey.trim() : "verificationkey.json";
     const proofFile = typeof(argv.proof) === "string" ?  argv.proof.trim() : "mycircuit.proof.json";
@@ -29,7 +32,7 @@ async function run() {
         publicSignals = JSONbig.parse(publicSignalsRaw);
     }
 
-    const resV = await fflonkVerify(verificationKey, publicSignals, proof, fflonkInfo, {});
+    const resV = await fflonkVerify(verificationKey, publicSignals, proof, fflonkInfo, options);
     
     if (resV === true) {
         console.log("Verification Ok!!")
