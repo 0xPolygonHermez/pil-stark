@@ -83,7 +83,7 @@ for(let i = 0; i < nInPoseidon; ++i) {
 }    -%>
 
 <% for(let i = 0; i < nInPoseidon; ++i) { -%>
-    POSEIDON_T * (<%- poseidonMDS[i].join(' + ') %>) = 0;
+    POSEIDON_T * (a[<%= i %>]' - <%- poseidonMDS[i].join(' + ') %>) = 0;
 <% } -%>
 
     // CMUL GATE - Check that a * b + c in Fp³ using (X³ - X - 1) as a generator is performed correctly

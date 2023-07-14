@@ -185,6 +185,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
         }
     }
 
+    assert(N >= 65536);
     for(let i=0; i<N; i++) {
         constPols.Final.RANGE[i] = BigInt(i%65536);
     }

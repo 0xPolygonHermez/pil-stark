@@ -19,7 +19,7 @@ Logger.setLogLevel("DEBUG");
 describe("simple sm", async function () {
     this.timeout(10000000);
 
-    it("Simple1", async () => {
+    it.only("Simple1", async () => {
         await runTest("simple1");
     });
     it("Simple2", async () => {

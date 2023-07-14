@@ -18,6 +18,7 @@
     "test:fibonacci:gpu": "npm run fibonacci_buildconst && npm run fibonacci_exec && npm run fibonacci_pil_verify && npm run fibonacci_buildstarkinfo_gpu && npm run fibonacci_buildconsttree_gpu && npm run fibonacci_prove && npm run fibonacci_verify && npm run fibonacci_starkVerifier_gpu",
     "test:fibonacci:C12:pil": "npm run fibonacci_C12_setup && npm run fibonacci_C12_exec && npm run fibonacci_C12_pil_verify",
     "test:fibonacci:C12:prove": "npm run fibonacci_C12_buildstarkinfo && npm run fibonacci_C12_buildconsttree && npm run fibonacci_C12_prove && npm run fibonacci_C12_verify && npm run fibonacci_C12_gencircomBN128 && npm run fibonacci_C12_starkVerifierBN128",
+    "test:fibonacci:C12:prove:custom": "npm run fibonacci_C12_buildstarkinfo && npm run fibonacci_C12_buildconsttree_custom && npm run fibonacci_C12_prove_custom && npm run fibonacci_C12_verify_custom && npm run fibonacci_C12_gencircomBN128_custom && npm run fibonacci_C12_starkVerifierBN128_custom",
     "test:all": "npm run all_buildconst && npm run all_exec && npm run all_pil_verify && npm run all_buildstarkinfo && npm run all_buildconsttree && npm run all_prove && npm run all_verify && npm run all_starkVerifier",
     "test:all:gpu": "npm run all_buildconst && npm run all_exec && npm run all_pil_verify && npm run all_buildstarkinfo_gpu && npm run all_buildconsttree_gpu && npm run all_prove && npm run all_verify && npm run all_starkVerifier_gpu",
     "test:all:C18:pil": "npm run all_C18_setup && npm run all_C18_exec && npm run all_C18_pil_verify",

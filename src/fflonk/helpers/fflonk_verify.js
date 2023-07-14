@@ -118,7 +118,10 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
 
     // Store the polynomial commits to its corresponding fi
     for(let i = 0; i < vk.f.length; ++i) {
-        if(!proof.polynomials[`f${vk.f[i].index}`]) throw new Error(`f${vk.f[i].index} commit is missing`);
+        if(!proof.polynomials[`f${vk.f[i].index}`]) {
+            if(logger) logger.warn(`f${vk.f[i].index} commit is missing`);
+            return false;
+        }
         vk.f[i].commit = proof.polynomials[`f${vk.f[i].index}`];
     }
     
@@ -147,7 +150,10 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     const xN = curve.Fr.exp(challengeXi, ctx.N);
     ctx.Z = curve.Fr.sub(xN, curve.Fr.one);   
 
-    if(!curve.Fr.eq(curve.Fr.mul(ctx.Z, proof.evaluations["invZh"]), curve.Fr.one)) throw new Error("Invalid invZh evaluation");
+    if(!curve.Fr.eq(curve.Fr.mul(ctx.Z, proof.evaluations["invZh"]), curve.Fr.one)) {
+        if(logger) logger.warn("Invalid invZh evaluation");
+        return false;
+    }
    
     // TODO CHECK inv evaluation
     const Q = curve.Fr.div(execCode, ctx.Z);

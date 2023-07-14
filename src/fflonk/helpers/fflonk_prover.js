@@ -762,7 +762,8 @@ async function extend(stage, ctx, zkey, buffFrom, buffTo, buffCoefs, nBits, nBit
     const n = 1 << nBits;
 
     for (let i = 0; i < nPols; i++) {
-        for(let j = 0; j < zkey.polsNamesStage[stage][i].openings; ++j) {
+        let nOpenings = findNumberOpenings(zkey.f, zkey.polsNamesStage[stage][i].name, stage);
+        for(let j = 0; j < nOpenings; ++j) {
             // const b = Fr.random();
             const b = Fr.one;                
             let offset1 = (j * nPols + i) * Fr.n8; 
@@ -787,6 +788,19 @@ function getPolFromBuffer(buff, nPols, N, id, Fr) {
         polBuffer.set(buff.slice((id + j * nPols) * Fr.n8, (id + j * nPols + 1) * Fr.n8), j * Fr.n8);
     }
     return polBuffer
+}
+
+
+function findNumberOpenings(f, name, stage) {
+    for(let i = 0; i < f.length; ++i) {
+        if(f[i].stages[0].stage != stage) continue;
+        for(let j = 0; j < f[i].pols.length; ++j) {
+            if(f[i].pols[j] === name) {
+                return f[i].openingPoints.length + 1;
+            }
+        }
+    }
+    return 0;
 }
 
 function printPol(buffer, Fr) {

@@ -161,11 +161,6 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
 
     polsXi.push({name: "Q", stage: 4, degree: (fflonkInfo.qDeg + 1) * domainSize, fi: fiIndex});
     
-    
-    polsXi.forEach(p => { if(p.name !== "Q" && polsOpenings[p.name]) {p.degree += polsOpenings[p.name]} });
-    polsWXi.forEach(p => p.degree += polsOpenings[p.name]);
-
-
     polDefs = [polsXi, polsWXi];
 
     const config = {
@@ -182,7 +177,10 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
     if(logger) logger.info("ShPlonk setup done.");
 
     // Compute maxCmPolsOpenings
-    let maxCmPolsOpenings = Math.max(...Object.values(polsOpenings));
+    let maxCmPolsOpenings = Math.max(...shkey.f.map(fi => { 
+        if(fi.stages[0].stage === 0) return 0;
+        return fi.openingPoints.length + 1;
+    }))
  
     for(let i = 0; i < 4; i++) {
         for(let j = 0; j < polsNames[i].length; j++) {
@@ -210,26 +208,31 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
     function setPolDefs(type, stage, name, id, domainSize) {
         if(!["const", "cm"].includes(type)) throw new Error("Invalid type");
         if(fflonkInfo.evMap.find(ev => ev.type === type && ev.id === id)) {
-            if(type === "cm") {
-                polsOpenings[name] = 1;
-            } else {
-                polsOpenings[name] = 0;
-            }
+            let degree = domainSize;
+          
 
             const openXi = fflonkInfo.evMap.find(ev => ev.type === type && ev.id === id && !ev.prime);
             const openWXi = fflonkInfo.evMap.find(ev => ev.type === type && ev.id === id && ev.prime);
             
+            if(type === "cm") {
+                ++degree;
+                if(openXi) ++degree;
+                if(openWXi) ++degree;
+                polsOpenings[name] = 1;
+            } else {
+                polsOpenings[name] = 0;
+            }
             const openName = openXi && openWXi ? "0,1" : openXi ? "0" : "1";
             if(!fiMap[stage][openName]) fiMap[stage][openName] = 0;
             ++fiMap[stage][openName];
 
             polsNames[stage].push({name});
             if(openXi) {
-                polsXi.push({name: name, stage: stage, degree: domainSize, open: openName})
+                polsXi.push({name: name, stage: stage, degree: degree, open: openName})
                 if(type === "cm") ++polsOpenings[name];
             }
             if(openWXi) {
-                polsWXi.push({name: name, stage: stage, degree: domainSize, open: openName})
+                polsWXi.push({name: name, stage: stage, degree: degree, open: openName})
                 if(type === "cm") ++polsOpenings[name];                    
             }
         } else {
@@ -249,7 +252,10 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
                 for(let i = 0; i < polsXi.length; ++i) {
                     if(polsXi[i].stage === stage) {
                         polsXi[i].open = "0,1";
-                        if(!polsWXi.find(wxi => JSON.stringify(wxi) === JSON.stringify(polsXi[i]))) polsWXi.push(polsXi[i]);
+                        if(!polsWXi.find(wxi => JSON.stringify(wxi) === JSON.stringify(polsXi[i]))) {
+                            if(stage !== 0) polsXi[i].degree += 1;
+                            polsWXi.push(polsXi[i]);
+                        }
                     }
                 }
             } 
@@ -258,7 +264,10 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
                 for(let i = 0; i < polsWXi.length; ++i) {
                     if(polsWXi[i].stage === stage) {
                         polsWXi[i].open = "0,1";
-                        if(!polsXi.find(xi => JSON.stringify(xi) === JSON.stringify(polsWXi[i]))) polsXi.push(polsWXi[i]);
+                        if(!polsXi.find(xi => JSON.stringify(xi) === JSON.stringify(polsWXi[i]))) {
+                            if(stage !== 0) polsWXi[i].degree += 1;
+                            polsXi.push(polsWXi[i]);
+                        }
                     }
                 }
             }
