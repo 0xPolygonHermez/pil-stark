@@ -304,7 +304,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
             const openings = Object.keys(fiMap[stage]);
             if(openings.length <= 1) continue;
             
-            if(!fiMap[stage]["0,1"] && fiMap[stage]["0"] >= minPols && fiMap[stage]["1"] >= minPols) continue;
+            if(!fiMap[stage]["0,1"] && (fiMap[stage]["0"] >= minPols || fiMap[stage]["1"] >= minPols)) continue;
     
             if(fiMap[stage]["0"] && fiMap[stage]["0"] < minPols) {
                 for(let i = 0; i < polsXi.length; ++i) {
