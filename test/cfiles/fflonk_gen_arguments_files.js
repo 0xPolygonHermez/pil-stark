@@ -78,7 +78,7 @@ describe("generating files for arguments", async function () {
             await smGlobal.buildConstants(N, constPols.Global);
             await smModule.execute(N, committedPols[namePil], F);
         } else {
-            await smModule.execute(committedPols[namePil], [1,2], F);
+            await smModule.execute(N, committedPols[namePil], [1,2], F);
 
         }
 

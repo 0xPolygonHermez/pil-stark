@@ -70,28 +70,7 @@ async function writeX2nsSection(x_2ns, fd, Fr, options) {
 
 
 async function writeBuffer(buffer, fd, Fr, options) {
-    const MaxBuffSize = 1024 * 1024 * 256;  //  256Mb
-    const totalSize = buffer.byteLength;
-
-    const partialBuffer = new Uint8Array(Math.min(totalSize, MaxBuffSize));
-
-    const nElements = totalSize / Fr.n8;
-    let p = 0;
-    for (let i = 0; i < nElements; i++) {
-        const element = buffer.slice(i * Fr.n8, (i + 1) * Fr.n8);
-        Fr.toRprLE(partialBuffer, p, element);
-        p += Fr.n8;
-
-        if (p == partialBuffer.length) {
-            await fd.write(partialBuffer);
-            p = 0;
-        }
-    }
-
-    if (p) {
-        const buff8 = new Uint8Array(partialBuffer.buffer, 0, p);
-        await fd.write(buff8);
-    }
+    await fd.write(buffer);
 }
 
 exports.readConstPolsFile = async function (constPolsFilename, Fr, options) {
@@ -152,18 +131,9 @@ async function readX2nsSection(fd, sections, pols, Fr, options) {
 
 async function readBuffer(fd, section, Fr) {
     const size = section[0].size;
-    const partialBuffer = new BigBuffer(size);
-    const nElements = size / Fr.n8;
+    const buffer = new BigBuffer(size);
 
-    partialBuffer.set(await fd.read(size), 0);
+    buffer.set(await fd.read(size), 0);
 
-    let p=0;
-    for (let i = 0; i < nElements; i++) {
-        const element = partialBuffer.slice(i * Fr.n8, (i + 1) * Fr.n8);
-        
-        partialBuffer.set(Fr.fromRprLE(element), i * Fr.n8);
-        p += Fr.n8;
-    }
-
-    return partialBuffer;
+    return buffer;
 }

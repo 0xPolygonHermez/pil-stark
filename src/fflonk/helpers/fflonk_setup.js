@@ -39,7 +39,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
     let constPolsEvals = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
     let constPolsEvalsExt = new BigBuffer(fflonkInfo.nConstants * sDomainExt * factorZK); // Constant polynomials
 
-    cnstPols.writeToBigBufferFr(constPolsEvals, curve.Fr);
+    await cnstPols.writeToBigBufferFr(constPolsEvals, curve.Fr);
 
     if(fflonkInfo.nConstants > 0) {
         await interpolate(constPolsEvals, fflonkInfo.nConstants, nBits, constPolsCoefs, constPolsEvalsExt, nBitsExtZK, curve.Fr);
