@@ -33,7 +33,7 @@ async function run() {
     const input = JSON.parse(await fs.promises.readFile(inputFile, "utf8"));
     const cmPols =  newCommitPolsArray(pil, F);
 
-    const result = await smFibonacci.execute(cmPols.Fibonacci, input, F);
+    const result = await smFibonacci.execute(N, cmPols.Fibonacci, input, F);
     console.log("Result: " + result);
 
     if(curveName === "gl"){

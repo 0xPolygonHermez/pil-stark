@@ -1,8 +1,6 @@
 const { log2, getKs } = require("pilcom/src/utils.js");
 
-module.exports.buildConstants = async function (pols, F) {
-
-    const N = pols.S1.length;
+module.exports.buildConstants = async function (N, pols, F) {
 
     const pow = log2(N);
 
@@ -29,10 +27,7 @@ module.exports.buildConstants = async function (pols, F) {
 }
 
 
-module.exports.execute = async function (pols) {
-
-    const N = pols.a.length;
-
+module.exports.execute = async function (N, pols) {
 
     for (let i=0; i<N; i++) {
         pols.a[i] = BigInt(i);

@@ -7,6 +7,7 @@ const starkGen = require("../../src/stark/stark_gen.js");
 const starkVerify = require("../../src/stark/stark_verify.js");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
+const {log2} = require("pilcom/src/utils");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
 const smPlookup = require("../state_machines/sm_plookup/sm_plookup.js");
@@ -30,12 +31,17 @@ describe("test plookup sm", async function () {
         const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_plookup", "plookup_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
-        await smGlobal.buildConstants(constPols.Global);
-        await smPlookup.buildConstants(constPols.Plookup);
+        let maxPilPolDeg = 0;
+        for (const polRef in pil.references) {
+            maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+        }
+        const N = 2**(log2(maxPilPolDeg - 1) + 1);
+        await smGlobal.buildConstants(N, constPols.Global);
+        await smPlookup.buildConstants(N, constPols.Plookup);
 
         const cmPols = newCommitPolsArray(pil, F);
 
-        await smPlookup.execute(cmPols.Plookup);
+        await smPlookup.execute(N, cmPols.Plookup);
 
         const res = await verifyPil(F, pil, cmPols , constPols);
 

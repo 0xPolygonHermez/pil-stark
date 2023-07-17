@@ -3,7 +3,7 @@ const version = require("../../package").version;
 
 const { F1Field } = require("ffjavascript");
 const {readR1cs} = require("r1csfile");
-const { writeExecFile } = require("../helpers/exec_helpers");
+const { writeExecFile } = require("./exec_helpers");
 const plonkSetupFinal6 = require("./final6_setup");
 const plonkSetupFinal9 = require("./final9_setup");
 

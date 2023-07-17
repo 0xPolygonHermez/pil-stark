@@ -29,7 +29,12 @@ async function run() {
 
     const constPols = newConstantPolsArray(pil, F);
 
-    await smSimple.buildConstants(constPols.Simple);
+    let maxPilPolDeg = 0;
+    for (const polRef in pil.references) {
+        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+    }
+    const N = 2**(log2(maxPilPolDeg - 1) + 1);
+    await smSimple.buildConstants(N, constPols.Simple);
 
     if(curveName === "gl"){
         await constPols.saveToFile(outputFile);

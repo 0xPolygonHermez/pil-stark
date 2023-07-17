@@ -6,6 +6,7 @@ const starkSetup = require("../../src/stark/stark_setup.js");
 const starkGen = require("../../src/stark/stark_gen.js");
 const starkVerify = require("../../src/stark/stark_verify.js");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
+const {log2} = require("pilcom/src/utils");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
 const smSimpleConnection = require("../state_machines/sm_simple_connection/sm_simple_connection.js");
@@ -29,12 +30,17 @@ describe("test simple connection sm", async function () {
         const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple_connection", "simple_connection_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
-        await smGlobal.buildConstants(constPols.Global);
-        await smSimpleConnection.buildConstants(constPols.SimpleConnection, F);
+        let maxPilPolDeg = 0;
+        for (const polRef in pil.references) {
+            maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+        }
+        const N = 2**(log2(maxPilPolDeg - 1) + 1);
+        await smGlobal.buildConstants(N, constPols.Global);
+        await smSimpleConnection.buildConstants(N, constPols.SimpleConnection, F);
 
         const cmPols = newCommitPolsArray(pil, F);
 
-        await smSimpleConnection.execute(cmPols.SimpleConnection);
+        await smSimpleConnection.execute(N, cmPols.SimpleConnection);
 
         const res = await verifyPil(F, pil, cmPols , constPols);
 

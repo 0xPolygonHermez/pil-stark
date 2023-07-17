@@ -5,7 +5,7 @@ const { compile, newCommitPolsArray } = require("pilcom");
 const F3g = require("../../src/helpers/f3g.js");
 const { log2 } = require("pilcom/src/utils.js");
 const binFileUtils = require("@iden3/binfileutils");
-const { readExecFile } = require("../../src/helpers/exec_helpers");
+const { readExecFile } = require("../../src/compressor/exec_helpers");
 
 
 const argv = require("yargs")
@@ -33,7 +33,7 @@ async function run() {
 
     const nCommittedPols = cmPols.Final.a.length;
 
-    const { nAdds, nSMap, adds, sMap } = await readExecFile(F, execFile, nCommittedPols);
+    const { nAdds, nSMap, adds, sMap } = await readExecFile(execFile, nCommittedPols);
 
     const Nbits = log2(nSMap -1) +1;
     const N = 1 << Nbits;

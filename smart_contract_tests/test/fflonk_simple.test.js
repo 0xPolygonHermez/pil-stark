@@ -4,6 +4,7 @@ const expect = chai.expect;
 const {F1Field, getCurveFromName} = require("ffjavascript");
 const path = require("path");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
+const {log2} = require("pilcom/src/utils");
 
 const { fflonkSetup, fflonkProve, fflonkInfoGen, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey, readPilFflonkZkeyFile} = require("pil-stark");
 
@@ -23,12 +24,17 @@ async function runTest(pilFile, curve) {
     const pil = await compile(F, path.join(__dirname, "../../test/state_machines/", "sm_simple", `${pilFile}.pil`));
     const constPols =  newConstantPolsArray(pil, F);
 
-    await smSimple.buildConstants(constPols.Simple);
+    let maxPilPolDeg = 0;
+    for (const polRef in pil.references) {
+        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+    }
+    const N = 2**(log2(maxPilPolDeg - 1) + 1);
+    await smSimple.buildConstants(N, constPols.Simple);
 
     const cmPols = newCommitPolsArray(pil, F);
 
     const isArray = pilFile === "simple2p" ? true : false;
-    await smSimple.execute(cmPols.Simple, isArray, F);
+    await smSimple.execute(N, cmPols.Simple, isArray, F);
 
     const res = await verifyPil(F, pil, cmPols , constPols);
 

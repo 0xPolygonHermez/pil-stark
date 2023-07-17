@@ -4,6 +4,7 @@ const expect = chai.expect;
 const {F1Field, getCurveFromName} = require("ffjavascript");
 const path = require("path");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
+const {log2} = require("pilcom/src/utils");
 const { fflonkSetup, fflonkProve, fflonkInfoGen, fflonkVerify, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey, readPilFflonkZkeyFile} = require("pil-stark");
 
 const smFibonacci = require("../../test/state_machines/sm_fibonacci/sm_fibonacci.js");
@@ -38,11 +39,16 @@ describe("Fflonk Fibonacci sm", async function () {
         const pil = await compile(F, path.join(__dirname, "../../test/state_machines/", "sm_fibonacci", "fibonacci_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
-        await smFibonacci.buildConstants(constPols.Fibonacci);
+        let maxPilPolDeg = 0;
+        for (const polRef in pil.references) {
+            maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+        }
+        const N = 2**(log2(maxPilPolDeg - 1) + 1);
+        await smFibonacci.buildConstants(N, constPols.Fibonacci);
 
         const cmPols = newCommitPolsArray(pil, F);
 
-        await smFibonacci.execute(cmPols.Fibonacci, [1,2], F);
+        await smFibonacci.execute(N, cmPols.Fibonacci, [1,2], F);
 
         const res = await verifyPil(F, pil, cmPols , constPols);
 

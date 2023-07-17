@@ -10,6 +10,7 @@ const fflonkVerificationKey = require("../../src/fflonk/helpers/fflonk_verificat
 const { readPilFflonkZkeyFile } = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
+const {log2} = require("pilcom/src/utils");
 
 const smSimple = require("../state_machines/sm_simple/sm_simple.js");
 
@@ -19,7 +20,7 @@ Logger.setLogLevel("DEBUG");
 describe("simple sm", async function () {
     this.timeout(10000000);
 
-    it.only("Simple1", async () => {
+    it("Simple1", async () => {
         await runTest("simple1");
     });
     it("Simple2", async () => {
@@ -47,12 +48,17 @@ describe("simple sm", async function () {
         const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple", `${pilFile}.pil`));
         const constPols =  newConstantPolsArray(pil, F);
     
-        await smSimple.buildConstants(constPols.Simple);
+        let maxPilPolDeg = 0;
+        for (const polRef in pil.references) {
+            maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+        }
+        const N = 2**(log2(maxPilPolDeg - 1) + 1);
+        await smSimple.buildConstants(N, constPols.Simple);
     
         const cmPols = newCommitPolsArray(pil, F);
     
         const isArray = pilFile === "simple2p" ? true : false;
-        await smSimple.execute(cmPols.Simple, isArray, F);
+        await smSimple.execute(N, cmPols.Simple, isArray, F);
     
         const res = await verifyPil(F, pil, cmPols , constPols);
     

@@ -2,7 +2,7 @@ const fs = require("fs");
 const version = require("../../package").version;
 
 const {readR1cs} = require("r1csfile");
-const { writeExecFile } = require("../../src/helpers/exec_helpers");
+const { writeExecFile } = require("../../src/compressor/exec_helpers");
 const F3g = require("../../src/helpers/f3g");
 const plonkSetup = require("./plonksetup.js");
 
@@ -32,7 +32,7 @@ async function run() {
 
     await res.constPols.saveToFile(constFile);
 
-    await writeExecFile(F, execFile,res.plonkAdditions,  res.sMap);
+    await writeExecFile(execFile,res.plonkAdditions,  res.sMap);
 
     console.log("files Generated Correctly");
 }

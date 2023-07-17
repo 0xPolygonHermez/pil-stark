@@ -27,7 +27,12 @@ async function run() {
 
     const constPols = newConstantPolsArray(pil, F);
 
-    await smFibonacci.buildConstants(constPols.Fibonacci);
+    let maxPilPolDeg = 0;
+    for (const polRef in pil.references) {
+        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+    }
+    const N = 2**(log2(maxPilPolDeg - 1) + 1);
+    await smFibonacci.buildConstants(N, constPols.Fibonacci);
 
     if(curveName === "gl"){
         await constPols.saveToFile(outputFile);

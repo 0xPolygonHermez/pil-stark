@@ -6,6 +6,7 @@ const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
 const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
 const fs = require("fs");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
+const {log2} = require("pilcom/src/utils");
 const fflonkVerificationKey = require("../../src/fflonk/helpers/fflonk_verification_key.js");
 const {readPilFflonkZkeyFile} = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
 const { execSync } = require('child_process');
@@ -60,7 +61,12 @@ describe("simple sm", async function () {
         const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple", `${filename}.pil`));
         const constPols =  newConstantPolsArray(pil, F);
     
-        await smSimple.buildConstants(constPols.Simple);
+        let maxPilPolDeg = 0;
+        for (const polRef in pil.references) {
+            maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+        }
+        const N = 2**(log2(maxPilPolDeg - 1) + 1);
+        await smSimple.buildConstants(N, constPols.Simple);
     
         const committedPols = newCommitPolsArray(pil, F);
     

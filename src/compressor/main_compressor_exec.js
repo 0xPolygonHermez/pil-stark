@@ -4,7 +4,7 @@ const version = require("../../package").version;
 const { compile, newCommitPolsArray } = require("pilcom");
 const F3g = require("../helpers/f3g.js");
 const { WitnessCalculatorBuilder } = require("circom_runtime");
-const { readExecFile } = require("../helpers/exec_helpers");
+const { readExecFile } = require("./exec_helpers");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 
 
@@ -37,7 +37,7 @@ async function run() {
 
     const nCommittedPols =cmPols.Compressor.a.length;
     
-    const { nAdds, nSMap, adds, sMap } = await readExecFile(F, execFile, nCommittedPols);
+    const { nAdds, nSMap, adds, sMap } = await readExecFile(execFile, nCommittedPols);
 
     const fd =await fs.promises.open(wasmFile, "r");
     const st =await fd.stat();

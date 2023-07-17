@@ -7,6 +7,7 @@ const starkGen = require("../../src/stark/stark_gen.js");
 const starkVerify = require("../../src/stark/stark_verify.js");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
+const {log2} = require("pilcom/src/utils");
 
 const smFibonacci = require("../state_machines/sm_fibonacci/sm_fibonacci.js");
 
@@ -28,12 +29,17 @@ describe("test fibonacci sm", async function () {
         const F = new F3g("0xFFFFFFFF00000001");
         const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_fibonacci", "fibonacci_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
-
-        await smFibonacci.buildConstants(constPols.Fibonacci);
+        
+        let maxPilPolDeg = 0;
+        for (const polRef in pil.references) {
+            maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+        }
+        const N = 2**(log2(maxPilPolDeg - 1) + 1);
+        await smFibonacci.buildConstants(N, constPols.Fibonacci);
 
         const cmPols = newCommitPolsArray(pil, F);
 
-        const result = await smFibonacci.execute(cmPols.Fibonacci, [1,2], F);
+        const result = await smFibonacci.execute(N, cmPols.Fibonacci, [1,2], F);
         console.log("Result: " + result);
 
         const res = await verifyPil(F, pil, cmPols , constPols);

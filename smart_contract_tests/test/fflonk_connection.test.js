@@ -4,6 +4,7 @@ const expect = chai.expect;
 const {F1Field, getCurveFromName} = require("ffjavascript");
 const path = require("path");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
+const {log2} = require("pilcom/src/utils");
 const { fflonkSetup, fflonkProve, fflonkInfoGen, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey, readPilFflonkZkeyFile} = require("pil-stark");
 
 const smGlobal = require("../../test/state_machines/sm/sm_global.js");
@@ -39,12 +40,17 @@ describe("Fflonk connection sm", async function () {
         const pil = await compile(F, path.join(__dirname, "../../test/state_machines/", "sm_connection", "connection_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
-        await smGlobal.buildConstants(constPols.Global);
-        await smConnection.buildConstants(constPols.Connection, F);
+        let maxPilPolDeg = 0;
+        for (const polRef in pil.references) {
+            maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+        }
+        const N = 2**(log2(maxPilPolDeg - 1) + 1);
+        await smGlobal.buildConstants(N, constPols.Global);
+        await smConnection.buildConstants(N, constPols.Connection, F);
 
         const cmPols = newCommitPolsArray(pil, F);
 
-        await smConnection.execute(cmPols.Connection);
+        await smConnection.execute(N, cmPols.Connection);
 
         const res = await verifyPil(F, pil, cmPols , constPols);
 

@@ -1,15 +1,11 @@
-module.exports.buildConstants = async function (pols) {
+module.exports.buildConstants = async function (N, pols) {
     
     if(pols.selA) {
-        const N = pols.selA.length;
-
         for (let i=0; i<N; i++) {
             pols.selA[i] = 1n;
             pols.selB[i] = 1n;
         }
     } else {
-        const N = pols.selC.length;
-
         for (let i=0; i<N; i++) {
             if (i%2 == 0) {
                 pols.selC[i] = 1n;
@@ -23,17 +19,13 @@ module.exports.buildConstants = async function (pols) {
 }
 
 
-module.exports.execute = async function (pols) {
+module.exports.execute = async function (N, pols) {
     if(pols.a) {
-        const N = pols.a.length;
-
         for (let i=0; i<N; i++) {
             pols.a[i] = BigInt(i*i+i+1);
             pols.b[N-i-1] = pols.a[i];
         }
     } else {
-        const N = pols.c.length;
-
         for (let i=0; i<N; i++) {
             if (i%2 == 0) {
                 pols.c[i] = BigInt(i*i+i+1);

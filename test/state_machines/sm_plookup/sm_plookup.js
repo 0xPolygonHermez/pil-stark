@@ -1,6 +1,4 @@
-module.exports.buildConstants = async function (pols) {
-    const N = pols.A.length;
-
+module.exports.buildConstants = async function (N, pols) {
     let p=0;
     for ( let i=0; i<16;- i++) {
         for (let j=0; j<16; j++) {
@@ -21,9 +19,7 @@ module.exports.buildConstants = async function (pols) {
 }
 
 
-module.exports.execute = async function (pols) {
-
-    const N = pols.cc.length;
+module.exports.execute = async function (N, pols) {
 
     let p=0;
     for ( let i=0; i<16; i++) {

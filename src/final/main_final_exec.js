@@ -4,7 +4,7 @@ const version = require("../../package").version;
 const { compile, newCommitPolsArray } = require("pilcom");
 const { F1Field } = require("ffjavascript");
 const { WitnessCalculatorBuilder } = require("circom_runtime");
-const { readExecFile } = require("../helpers/exec_helpers");
+const { readExecFile } = require("./exec_helpers");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 
 const argv = require("yargs")

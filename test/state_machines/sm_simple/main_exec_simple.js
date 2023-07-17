@@ -30,7 +30,7 @@ async function run() {
 
     const cmPols =  newCommitPolsArray(pil, F);
 
-    await smSimple.execute(cmPols.Simple, F);
+    await smSimple.execute(N, cmPols.Simple, F);
 
     if(curveName === "gl"){
         await cmPols.saveToFile(outputFile);

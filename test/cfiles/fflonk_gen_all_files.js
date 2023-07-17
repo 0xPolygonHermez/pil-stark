@@ -6,6 +6,7 @@ const fs = require("fs");
 const { execSync } = require('child_process');
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
+const {log2} = require("pilcom/src/utils");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
 const smPlookup = require("../state_machines/sm_plookup/sm_plookup.js");
@@ -42,18 +43,23 @@ describe("all sm generate files", async function () {
         const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_all", "all_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
-        await smGlobal.buildConstants(constPols.Global);
-        await smPlookup.buildConstants(constPols.Plookup);
-        await smFibonacci.buildConstants(constPols.Fibonacci);
-        await smPermutation.buildConstants(constPols.Permutation);
-        await smConnection.buildConstants(constPols.Connection, F);
+        let maxPilPolDeg = 0;
+        for (const polRef in pil.references) {
+            maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+        }
+        const N = 2**(log2(maxPilPolDeg - 1) + 1);
+        await smGlobal.buildConstants(N, constPols.Global);
+        await smPlookup.buildConstants(N, constPols.Plookup);
+        await smFibonacci.buildConstants(N, constPols.Fibonacci);
+        await smPermutation.buildConstants(N, constPols.Permutation);
+        await smConnection.buildConstants(N, constPols.Connection, F);
 
         const cmPols = newCommitPolsArray(pil, F);
 
-        await smPlookup.execute(cmPols.Plookup);
-        await smFibonacci.execute(cmPols.Fibonacci, [1,2], F);
-        await smPermutation.execute(cmPols.Permutation);
-        await smConnection.execute(cmPols.Connection);
+        await smPlookup.execute(N, cmPols.Plookup);
+        await smFibonacci.execute(N, cmPols.Fibonacci, [1,2], F);
+        await smPermutation.execute(N, cmPols.Permutation);
+        await smConnection.execute(N, cmPols.Connection);
 
         const res = await verifyPil(F, pil, cmPols , constPols);
 

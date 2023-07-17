@@ -5,7 +5,7 @@ const F3g = require("../helpers/f3g.js");
 const {readR1cs} = require("r1csfile");
 const plonkSetupC18 = require("./compressor18_setup.js");
 const plonkSetupC12 = require("./compressor12_setup.js");
-const { writeExecFile } = require("../helpers/exec_helpers");
+const { writeExecFile } = require("./exec_helpers");
 
 
 const argv = require("yargs")
@@ -47,7 +47,7 @@ async function run() {
 
     await res.constPols.saveToFile(constFile);
 
-    await writeExecFile(F, execFile ,res.plonkAdditions, res.sMap);
+    await writeExecFile(execFile ,res.plonkAdditions, res.sMap);
 
     console.log("files Generated Correctly");
 

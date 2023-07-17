@@ -6,6 +6,7 @@ const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
 const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
 const fs = require("fs");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
+const {log2} = require("pilcom/src/utils");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
 
@@ -68,15 +69,20 @@ describe("generating files for arguments", async function () {
 
         const namePil = outputFilename.split("_").map(n => n.charAt(0).toUpperCase() + n.slice(1)).join("");
 
+        let maxPilPolDeg = 0;
+        for (const polRef in pil.references) {
+            maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+        }
+        const N = 2**(log2(maxPilPolDeg - 1) + 1);
         if(!namePil.includes("Fibonacci")) {
-            await smGlobal.buildConstants(constPols.Global);
-            await smModule.execute(committedPols[namePil], F);
+            await smGlobal.buildConstants(N, constPols.Global);
+            await smModule.execute(N, committedPols[namePil], F);
         } else {
             await smModule.execute(committedPols[namePil], [1,2], F);
 
         }
 
-        await smModule.buildConstants(constPols[namePil], F);
+        await smModule.buildConstants(N, constPols[namePil], F);
 
         const res = await verifyPil(F, pil, committedPols , constPols);
 

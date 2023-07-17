@@ -10,6 +10,7 @@ const fflonkVerificationKey = require("../../src/fflonk/helpers/fflonk_verificat
 const { readPilFflonkZkeyFile } = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
+const {log2} = require("pilcom/src/utils");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
 const smSimplePlookup = require("../state_machines/sm_simple_plookup/sm_simple_plookup.js");
@@ -28,12 +29,17 @@ describe("Fflonk plookup sm", async function () {
         const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_simple_plookup", "simple_plookup_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
-        await smGlobal.buildConstants(constPols.Global);
-        await smSimplePlookup.buildConstants(constPols.SimplePlookup);
+        let maxPilPolDeg = 0;
+        for (const polRef in pil.references) {
+            maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+        }
+        const N = 2**(log2(maxPilPolDeg - 1) + 1);
+        await smGlobal.buildConstants(N, constPols.Global);
+        await smSimplePlookup.buildConstants(N, constPols.SimplePlookup);
 
         const cmPols = newCommitPolsArray(pil, F);
 
-        await smSimplePlookup.execute(cmPols.SimplePlookup);
+        await smSimplePlookup.execute(N, cmPols.SimplePlookup);
 
         const res = await verifyPil(F, pil, cmPols , constPols);
 

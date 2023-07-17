@@ -25,10 +25,10 @@ async function run() {
     const pil = await compile(F, path.join(__dirname, "all_main.pil"));
     const cmPols =  newCommitPolsArray(pil, F);
 
-    await smPlookup.execute(cmPols.Plookup);
-    await smFibonacci.execute(cmPols.Fibonacci, [1,2], F);
-    await smPermutation.execute(cmPols.Permutation);
-    await smConnection.execute(cmPols.Connection);
+    await smPlookup.execute(N, cmPols.Plookup);
+    await smFibonacci.execute(N, cmPols.Fibonacci, [1,2], F);
+    await smPermutation.execute(N, cmPols.Permutation);
+    await smConnection.execute(N, cmPols.Connection);
 
     await cmPols.saveToFile(outputFile);
 

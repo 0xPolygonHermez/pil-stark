@@ -1,11 +1,9 @@
-module.exports.buildConstants = async function (pols) {
+module.exports.buildConstants = async function (N, pols) {
 
 }
 
 
-module.exports.execute = async function (pols) {
-
-    const N = pols.c.length;
+module.exports.execute = async function (N, pols) {
 
     for (let i=0; i<N; i++) {
         pols.a[i] = BigInt(i*i+i+1);
