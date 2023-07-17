@@ -156,9 +156,19 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
         setPolDefs("cm", 3, nameImPol, idImPol, domainSize);
     }
 
-    fixFIndex();
+    let maxCmPolsOpenings = fixFIndex();
+    
+    // Precompute ZK data
+    const domainSizeZK = domainSize + maxCmPolsOpenings;
+    const powerZK = log2(domainSizeZK - 1) + 1;
+    const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
+    const nBitsExt = pilPower + extendBits;
+    const domainSizeExt = 1 << nBitsExt;
 
-    polsXi.push({name: "Q", stage: 4, degree: (fflonkInfo.qDeg + 1) * domainSize, fi: fiIndex});
+    const extendBitsZK = powerZK - pilPower;
+    const factorZK = (1 << extendBitsZK);
+
+    polsXi.push({name: "Q", stage: 4, degree: domainSizeExt * factorZK, fi: fiIndex});
     
     polDefs = [polsXi, polsWXi];
 
@@ -175,18 +185,9 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
 
     if(logger) logger.info("ShPlonk setup done.");
 
-    // Compute maxCmPolsOpenings
-    let maxCmPolsOpenings = Math.max(...shkey.f.map(fi => { 
-        if(fi.stages[0].stage === 0) return 0;
-        return fi.openingPoints.length + 1;
-    }))
- 
     shkey.polsNamesStage = polsNames;
-
-    // Precompute ZK data
-    const domainSizeZK = domainSize + maxCmPolsOpenings;
-    shkey.powerZK = log2(domainSizeZK - 1) + 1;
-
+    shkey.powerZK = powerZK;
+    
     shkey.nPublics = fflonkInfo.nPublics;
     
     if(logger) logger.info("> Fflonk shkey generation finished");
@@ -261,6 +262,8 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
             }
         }
 
+        let maxCmPolsOpenings = Math.max(...[...polsXi, ...polsWXi].map(p => { if(p.stage === 0) { return 0; } else { return p.open.split(",").length + 1} }));
+
         for(let i = 0; i < polsXi.length; ++i) {
             const fiName = `${polsXi[i].stage}_${polsXi[i].open}`;
             if(!fiNames.hasOwnProperty(fiName)) fiNames[fiName] = fiIndex++;
@@ -275,5 +278,7 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
 
         polsXi.forEach(p => delete p.open);
         polsWXi.forEach(p => delete p.open);
+
+        return maxCmPolsOpenings;
     }
 }
