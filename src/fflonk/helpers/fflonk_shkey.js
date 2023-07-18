@@ -7,8 +7,6 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
 
     if(logger) logger.info("> Starting fflonk shkey generation");
-    //Find the max PIL polynomial degree
-    let maxPilPolDeg = 0;
 
     let polsNames = {
         0: [],
@@ -46,8 +44,6 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
                 setPolDefs("const", 0, name, polInfo.id, polInfo.polDeg);
             }
         } 
-    
-        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
     }
 
     for (const polRef in pil.references) {
@@ -65,12 +61,10 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
                 setPolDefs("cm", 1, name, polInfo.id, polInfo.polDeg);
             } 
         }
-        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
     }
 
-    const pilPower = log2(maxPilPolDeg - 1) + 1;
+    const pilPower = fflonkInfo.pilPower;
     const domainSize = 2 ** pilPower;
-
    
     for(let i = 0; i < fflonkInfo.puCtx.length; ++i) {
         const namePlookupH1 = `Plookup.H1_${i}`;
@@ -156,19 +150,14 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
         setPolDefs("cm", 3, nameImPol, idImPol, domainSize);
     }
 
-    let maxCmPolsOpenings = fixFIndex();
+    fixFIndex();
     
     // Precompute ZK data
-    const domainSizeZK = domainSize + maxCmPolsOpenings;
-    const powerZK = log2(domainSizeZK - 1) + 1;
     const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
-    const nBitsExt = pilPower + extendBits;
+    const nBitsExt = pilPower + extendBits + fflonkInfo.nBitsZK;
     const domainSizeExt = 1 << nBitsExt;
 
-    const extendBitsZK = powerZK - pilPower;
-    const factorZK = (1 << extendBitsZK);
-
-    polsXi.push({name: "Q", stage: 4, degree: domainSizeExt * factorZK, fi: fiIndex});
+    polsXi.push({name: "Q", stage: 4, degree: domainSizeExt, fi: fiIndex});
     
     polDefs = [polsXi, polsWXi];
 
@@ -186,7 +175,6 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
     if(logger) logger.info("ShPlonk setup done.");
 
     shkey.polsNamesStage = polsNames;
-    shkey.powerZK = powerZK;
     
     shkey.nPublics = fflonkInfo.nPublics;
     
@@ -262,8 +250,6 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
             }
         }
 
-        let maxCmPolsOpenings = Math.max(...[...polsXi, ...polsWXi].map(p => { if(p.stage === 0) { return 0; } else { return p.open.split(",").length + 1} }));
-
         for(let i = 0; i < polsXi.length; ++i) {
             const fiName = `${polsXi[i].stage}_${polsXi[i].open}`;
             if(!fiNames.hasOwnProperty(fiName)) fiNames[fiName] = fiIndex++;
@@ -278,7 +264,5 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
 
         polsXi.forEach(p => delete p.open);
         polsWXi.forEach(p => delete p.open);
-
-        return maxCmPolsOpenings;
     }
 }

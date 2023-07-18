@@ -34,34 +34,39 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
     ctx.curve = curve;
     ctx.Fr = curve.Fr;
 
-    ctx.N = 1 << zkey.power;
-    ctx.nBits = zkey.power;
     ctx.extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
-    ctx.nBitsExt = zkey.power + ctx.extendBits;
+
+    ctx.nBits = zkey.power;
+    ctx.nBitsCoefs = zkey.power + fflonkInfo.nBitsZK;
+    ctx.nBitsExt = zkey.power + ctx.extendBits + fflonkInfo.nBitsZK;
+
+    ctx.extendBitsTotal = (ctx.nBitsExt - ctx.nBits);
+
+    ctx.N = 1 << ctx.nBits;
+    ctx.NCoefs = 1 << ctx.nBitsCoefs;
     ctx.Next = (1 << ctx.nBitsExt);
 
     ctx.challenges = [];
 
     const domainSize = ctx.N;
+    const domainSizeCoefs = ctx.NCoefs;
     const domainSizeExt = ctx.Next;
+
     const power = zkey.power;
     const n8r = Fr.n8;
-    const sDomain = domainSize * n8r;
-    const sDomainExt = domainSizeExt * n8r;
 
-    // ZK data
-    const extendBitsZK = zkey.powerZK - power;
-    const factorZK = (1 << extendBitsZK);
-    const extendBitsTotal = ctx.extendBits + extendBitsZK;
-    const nBitsExtZK = ctx.nBits + extendBitsTotal;
+    const sDomain = domainSize * n8r;
+    const sDomainCoefs = domainSizeCoefs * n8r;
+    const sDomainExt = domainSizeExt * n8r;
 
     if (logger) {
         logger.debug("-----------------------------");
         logger.debug("  PIL-FFLONK PROVE SETTINGS");
         logger.debug(`  Curve:         ${curve.name}`);
         logger.debug(`  Domain size:   ${domainSize} (2^${power})`);
-        logger.debug(`  Extended Bits:   ${ctx.extendBits}`);
-        logger.debug(`  Domain size ext: ${domainSizeExt} (2^${power + ctx.extendBits})`);
+        logger.debug(`  Domaize size coefs: ${domainSizeCoefs} (2^${ctx.nBitsCoefs})`);
+        logger.debug(`  Domain size ext: ${domainSizeExt} (2^${ctx.nBitsExt})`);
+        logger.debug(`  ExtendBits: ${ctx.extendBitsTotal}`);
         logger.debug(`  Const  pols:   ${fflonkInfo.nConstants}`);
         logger.debug(`  Stage 1 pols:   ${fflonkInfo.mapSectionsN.cm1_n}`);
         logger.debug(`  Stage 2 pols:   ${fflonkInfo.mapSectionsN.cm2_n}`);
@@ -80,17 +85,17 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
 
     // Reserve big buffers for the polynomial coefficients
     ctx.const_coefs = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
-    ctx.cm1_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomain * factorZK);
-    ctx.cm2_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomain * factorZK);
-    ctx.cm3_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomain * factorZK);
+    ctx.cm1_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainCoefs);
+    ctx.cm2_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainCoefs);
+    ctx.cm3_coefs = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainCoefs);
 
     // Reserve big buffers for the polynomial evaluations in the extended
-    ctx.const_2ns = new BigBuffer(fflonkInfo.nConstants * sDomainExt * factorZK);
-    ctx.cm1_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainExt * factorZK);
-    ctx.cm2_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainExt * factorZK);
-    ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainExt * factorZK);
-    ctx.q_2ns = new BigBuffer(fflonkInfo.qDim * sDomainExt * factorZK);
-    ctx.x_2ns = new BigBuffer(sDomainExt * factorZK); // Omegas a l'extès
+    ctx.const_2ns = new BigBuffer(fflonkInfo.nConstants * sDomainExt);
+    ctx.cm1_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm1_n * sDomainExt);
+    ctx.cm2_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm2_n * sDomainExt);
+    ctx.cm3_2ns = new BigBuffer(fflonkInfo.mapSectionsN.cm3_n * sDomainExt);
+    ctx.q_2ns = new BigBuffer(fflonkInfo.qDim * sDomainExt);
+    ctx.x_2ns = new BigBuffer(sDomainExt); // Omegas a l'extès
 
     // Read constant polynomials
     await cnstPols.writeToBigBufferFr(ctx.const_n, Fr);
@@ -210,7 +215,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         // STEP 1.2 - Compute constant polynomials (coefficients + evaluations) and commit them
         if (fflonkInfo.nConstants > 0) {
             for (let i = 0; i < fflonkInfo.nConstants; i++) {
-                const coefs = getPolFromBuffer(ctx.const_coefs, fflonkInfo.nConstants, ctx.N * factorZK, i, Fr);
+                const coefs = getPolFromBuffer(ctx.const_coefs, fflonkInfo.nConstants, ctx.NCoefs, i, Fr);
                 ctx[zkey.polsNamesStage[0][i]] = new Polynomial(coefs, ctx.curve, logger);
             }
 
@@ -221,7 +226,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         // STEP 1.3 - Compute commit polynomials (coefficients + evaluations) and commit them
         if (!fflonkInfo.mapSectionsN.cm1_n) return;
 
-        await extend(1, ctx, zkey, ctx.cm1_n, ctx.cm1_2ns, ctx.cm1_coefs, ctx.nBits, nBitsExtZK, fflonkInfo.mapSectionsN.cm1_n, factorZK, Fr, logger);
+        await extend(1, ctx, zkey, fflonkInfo.mapSectionsN.cm1_n, Fr, logger);
 
         // STEP 1.4 - Commit stage 1 polynomials
         commitsStage1 = await commit(1, zkey, ctx, PTau, curve, { multiExp: true, logger });
@@ -282,7 +287,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
             setPol(ctx, fflonkInfo, fflonkInfo.cm_n[nCm2 + 2 * i + 1], h2);
         }
 
-        await extend(2, ctx, zkey, ctx.cm2_n, ctx.cm2_2ns, ctx.cm2_coefs, ctx.nBits, nBitsExtZK, fflonkInfo.mapSectionsN.cm2_n, factorZK, Fr, logger);
+        await extend(2, ctx, zkey, fflonkInfo.mapSectionsN.cm2_n, Fr, logger);
 
         // STEP 2.3 - Commit stage 2 polynomials
         commitsStage2 = await commit(2, zkey, ctx, PTau, curve, { multiExp: true, logger });
@@ -361,7 +366,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
 
         await callCalculateExps("step3", "n", pool, ctx, fflonkInfo, { logger });
 
-        await extend(3, ctx, zkey, ctx.cm3_n, ctx.cm3_2ns, ctx.cm3_coefs, ctx.nBits, nBitsExtZK, fflonkInfo.mapSectionsN.cm3_n, factorZK, Fr, logger);
+        await extend(3, ctx, zkey, fflonkInfo.mapSectionsN.cm3_n, Fr, logger);
 
         // STEP 3.3 - Commit stage 3 polynomials
         commitsStage3 = await commit(3, zkey, ctx, PTau, curve, { multiExp: true, logger });
@@ -388,10 +393,10 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 
         // STEP 4.2 - Compute stage 4 polynomial --> Q polynomial
-        await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, { factorZK: factorZK, logger });
+        await callCalculateExps("step42ns", "2ns", pool, ctx, fflonkInfo, { logger });
 
         ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, curve, logger);
-        ctx["Q"].divZh(ctx.N, 1 << extendBitsTotal);
+        ctx["Q"].divZh(ctx.N, 1 << ctx.extendBitsTotal);
 
         // STEP 4.3 - Commit stage 4 polynomials
         commitsStage4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });
@@ -411,14 +416,12 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
 }
 
 
-function calculateExps(ctx, code, dom, options = { factorZK: 1 }) {
-    const factorZK = options.factorZK || 1;
-
+function calculateExps(ctx, code, dom, options = {}) {
     ctx.tmp = new Array(code.tmpUsed);
 
-    cFirst = new Function("ctx", "i", compileCode(ctx, code.first, dom, false, factorZK));
+    cFirst = new Function("ctx", "i", compileCode(ctx, code.first, dom, false));
 
-    const N = (dom === "n" ? ctx.N : ctx.Next) * factorZK;
+    const N = dom === "n" ? ctx.N : ctx.Next;
 
     const pCtx = ctxProxy(ctx);
 
@@ -438,7 +441,7 @@ function calculateExpAtPoint(ctx, code, i) {
     return cFirst(pCtx, i);
 }
 
-async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, options = { factorZK: 1 }) {
+async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, options = { }) {
 
     let dom;
     let code = fflonkInfo[execPart];
@@ -497,12 +500,11 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, options = 
     for (let i = 0; i < execInfo.inputSections.length; i++) setWidth(execInfo.inputSections[i]);
     for (let i = 0; i < execInfo.outputSections.length; i++) setWidth(execInfo.outputSections[i]);
 
-    const factorZK = options.factorZK || 1;
+    const cFirst = compileCode(ctx, code.first, dom, false);
 
-    const cFirst = compileCode(ctx, code.first, dom, false, factorZK);
+    const n = dom === "n" ? ctx.N : ctx.Next;
+    const next = dom === "n" ? 1 : (1 << ctx.extendBitsTotal);
 
-    const n = (dom === "n" ? ctx.N : ctx.Next) * factorZK;
-    const next = (dom === "n" ? 1 : (1 << ctx.extendBits)) * factorZK;
     let nPerThread = Math.floor((n - 1) / pool.maxWorkers) + 1;
     if (nPerThread > maxNperThread) nPerThread = maxNperThread;
     if (nPerThread < minNperThread) nPerThread = minNperThread;
@@ -547,12 +549,11 @@ async function calculateExpsParallel(pool, ctx, execPart, fflonkInfo, options = 
 
 }
 
-function compileCode(ctx, code, dom, ret, factorZK) {
+function compileCode(ctx, code, dom, ret) {
     const body = [];
 
-    const Next = dom === "n" ? 1 : (1 << ctx.extendBits) * factorZK;
-    const N = (dom === "n" ? ctx.N : ctx.Next) * factorZK;
-
+    const next = dom === "n" ? 1 : (1 << ctx.extendBitsTotal);
+    const N = dom === "n" ? ctx.N : ctx.Next;
 
     for (let j = 0; j < code.length; j++) {
         const src = [];
@@ -581,7 +582,7 @@ function compileCode(ctx, code, dom, ret, factorZK) {
         switch (r.type) {
             case "tmp": return `ctx.tmp[${r.id}]`;
             case "const": {
-                const index = r.prime ? `((i + ${Next})%${N})` : "i"
+                const index = r.prime ? `((i + ${next})%${N})` : "i"
                 if (dom === "n") {
                     return `ctx.const_n.slice((${r.id} + ${index} * ${ctx.fflonkInfo.nConstants})*${ctx.Fr.n8}, (${r.id} + ${index} * ${ctx.fflonkInfo.nConstants} + 1)*${ctx.Fr.n8})`;
                 } else if (dom === "2ns") {
@@ -661,7 +662,7 @@ function compileCode(ctx, code, dom, ret, factorZK) {
     function evalMap(polId, prime, val) {
         let p = ctx.fflonkInfo.varPolMap[polId];
         offset = p.sectionPos;
-        let index = prime ? `((i + ${Next})%${N})` : "i";
+        let index = prime ? `((i + ${next})%${N})` : "i";
         let size = ctx.fflonkInfo.mapSectionsN[p.section];
         if (val) {
             return `ctx.${p.section}.set(${val},(${offset} + (${index}*${size}))*${ctx.Fr.n8})`;
@@ -755,18 +756,21 @@ function getPol(ctx, fflonkInfo, idPol) {
     return res;
 }
 
-async function extend(stage, ctx, zkey, buffFrom, buffTo, buffCoefs, nBits, nBitsExt, nPols, factorZK, Fr, logger) {
+async function extend(stage, ctx, zkey, nPols, Fr, logger) {
     
-    await ifft(buffFrom, nPols, nBits, buffCoefs, Fr);
+    const buffFrom = ctx["cm" + stage + "_n"];
+    const buffCoefs = ctx["cm" + stage + "_coefs"];
+    const buffTo = ctx["cm" + stage + "_2ns"];
 
-    const n = 1 << nBits;
+    await ifft(buffFrom, nPols, ctx.nBits, buffCoefs, Fr);
 
     for (let i = 0; i < nPols; i++) {
         let nOpenings = findNumberOpenings(zkey.f, zkey.polsNamesStage[stage][i], stage);
         for(let j = 0; j < nOpenings; ++j) {
-            const b = Fr.random();
+            // const b = Fr.random();
+            const b = Fr.two;
             let offset1 = (j * nPols + i) * Fr.n8; 
-            let offsetN = ((j + n) * nPols + i) * Fr.n8; 
+            let offsetN = ((j + ctx.N) * nPols + i) * Fr.n8; 
             buffCoefs.set(Fr.add(buffCoefs.slice(offset1,offset1 + Fr.n8), Fr.neg(b)), offset1);
             buffCoefs.set(Fr.add(buffCoefs.slice(offsetN, offsetN + Fr.n8), b), offsetN);
         }
@@ -774,11 +778,11 @@ async function extend(stage, ctx, zkey, buffFrom, buffTo, buffCoefs, nBits, nBit
 
     // Store coefs to context
     for (let i = 0; i < nPols; i++) {
-        const coefs = getPolFromBuffer(buffCoefs, nPols, n*factorZK, i, Fr);
+        const coefs = getPolFromBuffer(buffCoefs, nPols, ctx.NCoefs, i, Fr);
         ctx[zkey.polsNamesStage[stage][i]] = new Polynomial(coefs, ctx.curve, logger);
     }
 
-    await fft(buffCoefs, nPols, nBitsExt, buffTo, Fr);
+    await fft(buffCoefs, nPols, ctx.nBitsExt, buffTo, Fr);
 }
 
 function getPolFromBuffer(buff, nPols, N, id, Fr) {
