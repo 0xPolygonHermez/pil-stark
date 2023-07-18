@@ -17,6 +17,7 @@ template custom Num2Bytes(nBits) {
         e = e+e;
         if(i%16 == 15) {
             out[i\16] <-- b; 
+            assert(b < 65536);
             lc1 += b * e2;
             e2 = e2*65536;
             b = 0;
