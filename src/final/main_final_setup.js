@@ -1,7 +1,7 @@
 const fs = require("fs");
 const version = require("../../package").version;
 
-const { F1Field } = require("ffjavascript");
+const { F1Field, getCurveFromName } = require("ffjavascript");
 const {readR1cs} = require("r1csfile");
 const { writeExecFile } = require("./exec_helpers");
 const plonkSetupFinal6 = require("./final6_setup");
@@ -44,7 +44,13 @@ async function run() {
 
     await fs.promises.writeFile(pilFile, res.pilStr, "utf8");
 
-    await res.constPols.saveToFileFr(constFile);
+    const curve = await getCurveFromName("bn128");
+
+    const Fr = curve.Fr;
+
+    await curve.terminate();
+
+    await res.constPols.saveToFileFr(constFile, Fr);
 
     await writeExecFile(F, execFile, res.plonkAdditions,  res.sMap);
 

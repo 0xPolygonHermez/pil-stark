@@ -48,10 +48,10 @@ async function run() {
     const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
 
     const constPols =  newConstantPolsArray(pil, F);
-    await constPols.loadFromFileFr(constFile);
+    await constPols.loadFromFileFr(constFile, zkey.curve.Fr);
 
     const cmPols =  newCommitPolsArray(pil, F);
-    await cmPols.loadFromFileFr(commitFile);
+    await cmPols.loadFromFileFr(commitFile, zkey.curve.Fr);
 
     const pols = await readConstPolsFile(extConstFile, zkey.curve.Fr, {});
 

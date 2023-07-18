@@ -106,11 +106,11 @@ describe("simple sm", async function () {
         
         // Save constant polynomial evaluations file
         const constPolsFilename =  path.join(__dirname, "../../", "tmp", `${filename}.cnst`);
-        await constPols.saveToFileFr(constPolsFilename);
+        await constPols.saveToFileFr(constPolsFilename, curve.Fr);
 
         // Save committed polynomial evaluations file
         const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `${filename}.cmmt`);
-        await committedPols.saveToFileFr(committedPolsFilename);
+        await committedPols.saveToFileFr(committedPolsFilename, curve.Fr);
 
         // Save cHelpers file
         try {

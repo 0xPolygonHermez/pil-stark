@@ -116,11 +116,11 @@ describe("generating files for arguments", async function () {
     
         // Save constant polynomial evaluations file
         const constPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.cnst`);
-        await constPols.saveToFileFr(constPolsFilename);
+        await constPols.saveToFileFr(constPolsFilename, curve.Fr);
 
         // Save committed polynomial evaluations file
         const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.cmmt`);
-        await committedPols.saveToFileFr(committedPolsFilename);
+        await committedPols.saveToFileFr(committedPolsFilename, curve.Fr);
 
         // Generate verification key
         const verificationKeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.vkey`);

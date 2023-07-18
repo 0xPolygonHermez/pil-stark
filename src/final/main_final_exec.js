@@ -2,7 +2,7 @@ const fs = require("fs");
 const version = require("../../package").version;
 
 const { compile, newCommitPolsArray } = require("pilcom");
-const { F1Field } = require("ffjavascript");
+const { F1Field, getCurveFromName } = require("ffjavascript");
 const { WitnessCalculatorBuilder } = require("circom_runtime");
 const { readExecFile } = require("./exec_helpers");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
@@ -60,7 +60,13 @@ async function run() {
         }
     }
 
-    await cmPols.saveToFileFr(commitFile);
+    const curve = await getCurveFromName("bn128");
+
+    const Fr = curve.Fr;
+
+    await curve.terminate();
+
+    await cmPols.saveToFileFr(commitFile, Fr);
 
     console.log("files Generated Correctly");
 

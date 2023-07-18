@@ -5,7 +5,7 @@ const { newConstantPolsArray, compile } = require("pilcom");
 const smSimple = require("./sm_simple.js");
 
 const F3g = require("../../../src/helpers/f3g");
-const { F1Field } = require("ffjavascript");
+const { F1Field, getCurveFromName } = require("ffjavascript");
 
 
 const argv = require("yargs")
@@ -21,7 +21,7 @@ async function run() {
     if(argv.curve && !["gl", "bn128"].includes(argv.curve)) throw new Error("Curve not supported");
     
     const curveName = argv.curve || "gl";
-    const F = curveName === "gl" ? new F3g : new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
+    const F = curveName === "gl" ? new F3g() : new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
 
     if(argv.simple && !["1","2","2p","3","4","4p"].includes(argv.simple.toString())) throw new Error("Simple " + argv.simple.toString() + " does not exist" );
     const simple = argv.simple.toString() || "2";
@@ -39,7 +39,13 @@ async function run() {
     if(curveName === "gl"){
         await constPols.saveToFile(outputFile);
     } else {
-        await constPols.saveToFileFr(outputFile);
+        const curve = await getCurveFromName("bn128");
+
+    	const Fr = curve.Fr;
+
+    	await curve.terminate();
+
+        await cmPols.saveToFileFr(outputFile, Fr);
     }
 
     console.log("file Generated Correctly");

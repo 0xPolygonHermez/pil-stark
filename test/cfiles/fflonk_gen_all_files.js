@@ -94,11 +94,11 @@ describe("all sm generate files", async function () {
         
         // Save constant polynomial evaluations file
         const constPolsFilename =  path.join(__dirname, "../../", "tmp", `all.cnst`);
-        await constPols.saveToFileFr(constPolsFilename);
+        await constPols.saveToFileFr(constPolsFilename, curve.Fr);
 
         // Save committed polynomial evaluations file
         const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `all.cmmt`);
-        await cmPols.saveToFileFr(committedPolsFilename);
+        await cmPols.saveToFileFr(committedPolsFilename, curve.Fr);
 
         // Save cHelpers file
         try {

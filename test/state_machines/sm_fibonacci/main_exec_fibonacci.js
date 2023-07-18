@@ -5,7 +5,7 @@ const version = require("../../../package").version;
 const smFibonacci = require("./sm_fibonacci.js");
 
 const F3g = require("../../../src/helpers/f3g");
-const { F1Field } = require("ffjavascript");
+const { F1Field, getCurveFromName } = require("ffjavascript");
 
 const { newCommitPolsArray, compile } = require("pilcom");
 
@@ -26,7 +26,7 @@ async function run() {
     if(argv.curve && !["gl", "bn128"].includes(argv.curve)) throw new Error("Curve not supported");
     
     const curveName = argv.curve || "gl";
-    const F = curveName === "gl" ? new F3g : new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
+    const F = curveName === "gl" ? new F3g() : new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
     
     const pil = await compile(F, path.join(__dirname, "fibonacci_main.pil"));
 
@@ -39,7 +39,13 @@ async function run() {
     if(curveName === "gl"){
         await cmPols.saveToFile(outputFile);
     } else {
-        await cmPols.saveToFileFr(outputFile);
+       const curve = await getCurveFromName("bn128");
+
+    	const Fr = curve.Fr;
+
+    	await curve.terminate();
+
+        await cmPols.saveToFileFr(outputFile, Fr);
     }
 
     console.log("file Generated Correctly");

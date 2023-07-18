@@ -1,7 +1,7 @@
 const fs = require("fs");
 const version = require("../../package").version;
 
-const { F1Field } = require("ffjavascript");
+const { F1Field, getCurveFromName } = require("ffjavascript");
 const fflonkSetup = require("./helpers/fflonk_setup.js");
 const { newConstantPolsArray, compile } = require("pilcom");
 
@@ -33,9 +33,15 @@ async function run() {
     // PIL compile
     const pil = await compile(F, pilFile, null, pilConfig);
 
+    const curve = await getCurveFromName("bn128");
+
+    const Fr = curve.Fr;
+
+    await curve.terminate();
+
     // Load preprocessed polynomials
     const cnstPols = newConstantPolsArray(pil, F);
-    await cnstPols.loadFromFileFr(constFile);
+    await cnstPols.loadFromFileFr(constFile, Fr);
 
     const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
 

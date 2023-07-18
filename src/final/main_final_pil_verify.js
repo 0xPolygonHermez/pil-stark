@@ -3,7 +3,7 @@ const version = require("../../package").version;
 
 const { compile, verifyPil, newConstantPolsArray, newCommitPolsArray } = require("pilcom");
 
-const { F1Field } = require("ffjavascript");
+const { F1Field, getCurveFromName } = require("ffjavascript");
 
 const argv = require("yargs")
     .version(version)
@@ -33,8 +33,14 @@ async function run() {
     const constPols = newConstantPolsArray(pil, F);
     const cmPols =  newCommitPolsArray(pil, F);
 
-    await constPols.loadFromFileFr(constantFile);
-    await cmPols.loadFromFileFr(commitFile);
+    const curve = await getCurveFromName("bn128");
+
+    const Fr = curve.Fr;
+
+    await curve.terminate();
+
+    await constPols.loadFromFileFr(constantFile, Fr);
+    await cmPols.loadFromFileFr(commitFile, Fr);
 
     const res = await verifyPil(F, pil, cmPols, constPols, {publics});
 
