@@ -24,7 +24,7 @@ const range_polsseq_4 = new Set();
 
 
 
-module.exports = function compileCode_parser(fflonkInfo, nBits, factorZK, functionName, code, dom, ret) {
+module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, code, dom, ret) {
 
     var ops = [];
     var cont_ops = 0;
@@ -60,10 +60,13 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, factorZK, functi
     range_polsseq_4.clear();
 
     const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
-    const nBitsExt = nBits + extendBits;
+
+    const nBitsExt = nBits + extendBits + fflonkInfo.nBitsZK;
     
-    const next = (dom == "n" ? 1 : (1 << extendBits) * factorZK).toString();
-    const N = ((dom == "n" ? (1 << nBits) : (1 << nBitsExt)) * factorZK).toString();
+    const extendBitsTotal = nBitsExt - nBits;
+
+    const next = (dom == "n" ? 1 : (1 << extendBitsTotal)).toString();
+    const N = ((dom == "n" ? (1 << nBits) : (1 << nBitsExt))).toString();
     
     let vIndex = 0; 
 

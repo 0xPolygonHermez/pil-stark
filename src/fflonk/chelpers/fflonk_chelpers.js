@@ -3,17 +3,15 @@ const compileCode_42ns = require("./compileCode_42ns.js")
 
 module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
 
-    const nBits = zkey.power;
     const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
-    const nBitsExt = zkey.power + extendBits;
+
+    const nBits = zkey.power;
+    const nBitsExt = zkey.power + extendBits + fflonkInfo.nBitsZK;
     
+    const extendBitsTotal = (nBitsExt - nBits);
+
     const domainSize = 1 << nBits;
-    const Next = 1 << nBitsExt;
-
-
-    // ZK data
-    const extendBitsZK = zkey.powerZK - zkey.power;
-    const factorZK = (1 << extendBitsZK);
+    const domainSizeExt = 1 << nBitsExt;
 
     const code = [];
     const multipleCodeFiles = config && config.multipleCodeFiles;
@@ -63,7 +61,7 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
 
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(fflonkInfo, nBits, factorZK, "step2prev_first", fflonkInfo.step2prev.first, "n"));
+        code.push(compileCode_parser(fflonkInfo, nBits, "step2prev_first", fflonkInfo.step2prev.first, "n"));
         result.step2prev_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
@@ -78,7 +76,7 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(fflonkInfo, nBits, factorZK, "step3prev_first", fflonkInfo.step3prev.first, "n"));
+        code.push(compileCode_parser(fflonkInfo, nBits, "step3prev_first", fflonkInfo.step3prev.first, "n"));
         result.step3prev_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
@@ -93,7 +91,7 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(fflonkInfo, nBits, factorZK, "step3_first", fflonkInfo.step3.first, "n"));
+        code.push(compileCode_parser(fflonkInfo, nBits, "step3_first", fflonkInfo.step3.first, "n"));
         result.step3_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
@@ -112,9 +110,9 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
         result.step42ns_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
-    code.push(compileCode("step42ns_first", fflonkInfo.step42ns.first, "2ns", false, factorZK));
-    code.push(compileCode("step42ns_i", fflonkInfo.step42ns.first, "2ns", false, factorZK));
-    code.push(compileCode("step42ns_last", fflonkInfo.step42ns.first, "2ns", false, factorZK));
+    code.push(compileCode("step42ns_first", fflonkInfo.step42ns.first, "2ns", false));
+    code.push(compileCode("step42ns_i", fflonkInfo.step42ns.first, "2ns", false));
+    code.push(compileCode("step42ns_last", fflonkInfo.step42ns.first, "2ns", false));
 
     if (multipleCodeFiles) {
         result.step42ns = code.join("\n\n") + "\n";
@@ -130,11 +128,11 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
 
     return code.join("\n\n");
 
-    function compileCode(functionName, code, dom, ret = false, zkFactor = 1) {
+    function compileCode(functionName, code, dom, ret = false) {
         const body = [];    
 
-        const next = (dom == "n" ? 1 : (1 << extendBits) * zkFactor).toString();
-        const N = ((dom == "n" ? domainSize : Next) * zkFactor).toString();
+        const next = (dom == "n" ? 1 : (1 << extendBitsTotal)).toString();
+        const N = ((dom == "n" ? domainSize : domainSizeExt)).toString();
 
         for (let j = 0; j < code.length; j++) {
             const src = [];
@@ -192,7 +190,7 @@ module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
             switch (r.type) {
                 case "tmp": return `tmp_${r.id}`;
                 case "const": {
-                    const next = dom === "n" ? 1 : (1 << extendBits) * factorZK;
+                    const next = dom === "n" ? 1 : (1 << extendBitsTotal);
                     const index = r.prime ? `((i + ${next})%${N})` : "i"
                     if (dom == "n") {
                         return `params.const_n[${r.id} + ${index} * ${fflonkInfo.nConstants}]`;
