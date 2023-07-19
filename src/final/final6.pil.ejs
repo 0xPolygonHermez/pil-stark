@@ -85,9 +85,11 @@ for(let i = 0; i < nInPoseidon; ++i) {
 
     // Range Check
 
-    RANGE_CHECK * (a[0] - (a[1] + 65536*a[2] + 4294967296*a[3] + 281474976710656*a[4] + 18446744073709551616*a[5])) = 0;
-
-    RANGE_CHECK { a[1], a[2], a[3], a[4], a[5] } in { RANGE, RANGE, RANGE, RANGE, RANGE };
+    // RANGE_CHECK { a[1] } in { RANGE };
+    // RANGE_CHECK { a[2] } in { RANGE };
+    // RANGE_CHECK { a[3] } in { RANGE };
+    // RANGE_CHECK { a[4] } in { RANGE };
+    // RANGE_CHECK { a[5] } in { RANGE };
     
     // CMUL GATE - Check that a * b + c in Fp³ using (X³ - X - 1) as a generator is performed correctly
     // In this particular case, 
@@ -132,7 +134,7 @@ for(let i = 0; i < nInPoseidon; ++i) {
         S.push(`S[${i}]`);
     }
 -%>
-    // { <%- a.join(',') %> } connect { <%- S.join(',')  %> }
+    { <%- a.join(',') %> } connect { <%- S.join(',')  %> }
 
 
         
