@@ -131,7 +131,10 @@ describe("generating files for arguments", async function () {
 
         // Save cHelpers file
         try {
-            const command = `node src/fflonk/main_buildchelpers.js -z tmp/${outputFilename}.zkey -f tmp/${outputFilename}.fflonkinfo.json -c tmp/${outputFilename}.chelpers.cpp -C PilFflonkSteps -m`;
+            const cHelpersFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.chelpers.cpp`);
+
+            const cHelpersDir =  path.join(__dirname, "../../", "src", "fflonk/main_buildchelpers.js");
+            const command = `node ${cHelpersDir} -z ${zkeyFilename} -f ${fflonkInfoFilename} -c ${cHelpersFilename} -C PilFflonkSteps -m`;
             execSync(command);
         } catch (error) {
             console.error(`Error while generating chelpers: ${error.message}`);

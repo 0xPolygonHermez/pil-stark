@@ -43,35 +43,30 @@ exports.writeConstPolsFile = async function (constPolsFilename, constPolsCoefs, 
     await fd.close();
 }
 
-async function writeConstPolsCoefsSection(constPolsCoefs, fd, Fr, options) {
+async function writeConstPolsCoefsSection(constPolsCoefs, fd) {
     await startWriteSection(fd, CONST_POLS_FILE_COEFS_SECTION);
-    await writeBuffer(constPolsCoefs, fd, Fr, options);
+    await fd.write(constPolsCoefs);
     await endWriteSection(fd);
 }
 
-async function writeConstPolsEvalsExtSection(constPolsEvalsExt, fd, Fr, options) {
+async function writeConstPolsEvalsExtSection(constPolsEvalsExt, fd) {
     await startWriteSection(fd, CONST_POLS_FILE_EVALS_EXT_SECTION);
-    await writeBuffer(constPolsEvalsExt, fd, Fr, options);
+    await fd.write(constPolsEvalsExt);
     await endWriteSection(fd);
 }
 
-async function writeXnSection(x_n, fd, Fr, options) {
+async function writeXnSection(x_n, fd) {
     await startWriteSection(fd, X_N_SECTION);
-    await writeBuffer(x_n, fd, Fr, options);
+    await fd.write(x_n);
     await endWriteSection(fd);
 }
 
-async function writeX2nsSection(x_2ns, fd, Fr, options) {
+async function writeX2nsSection(x_2ns, fd) {
     await startWriteSection(fd, X_2NS_SECTION);
-    await writeBuffer(x_2ns, fd, Fr, options);
+    await fd.write(x_2ns);
     await endWriteSection(fd);
 }
 
-
-
-async function writeBuffer(buffer, fd, Fr, options) {
-    await fd.write(buffer);
-}
 
 exports.readConstPolsFile = async function (constPolsFilename, Fr, options) {
     let logger;
@@ -105,35 +100,26 @@ exports.readConstPolsFile = async function (constPolsFilename, Fr, options) {
     return pols;
 }
 
-async function readConstPolsCoefsSection(fd, sections, pols, Fr, options) {
+async function readConstPolsCoefsSection(fd, sections, pols) {
     await startReadUniqueSection(fd, sections, CONST_POLS_FILE_COEFS_SECTION);
-    pols.coefs = await readBuffer(fd, sections[CONST_POLS_FILE_COEFS_SECTION], Fr);
+    pols.coefs = await fd.read(sections[CONST_POLS_FILE_COEFS_SECTION].size);
     await endReadSection(fd);
 }
 
-async function readConstPolsEvalsExtSection(fd, sections, pols, Fr, options) {
+async function readConstPolsEvalsExtSection(fd, sections, pols) {
     await startReadUniqueSection(fd, sections, CONST_POLS_FILE_EVALS_EXT_SECTION);
-    pols.evalsExt = await readBuffer(fd, sections[CONST_POLS_FILE_EVALS_EXT_SECTION], Fr);
+    pols.evalsExt = await fd.read(sections[CONST_POLS_FILE_EVALS_EXT_SECTION].size);
     await endReadSection(fd);
 }
 
-async function readXnSection(fd, sections, pols, Fr, options) {
+async function readXnSection(fd, sections, pols) {
     await startReadUniqueSection(fd, sections, X_N_SECTION);
-    pols.x_n = await readBuffer(fd, sections[X_N_SECTION], Fr);
+    pols.x_n = await fd.read(sections[X_N_SECTION].size);
     await endReadSection(fd);
 }
 
-async function readX2nsSection(fd, sections, pols, Fr, options) {
+async function readX2nsSection(fd, sections, pols) {
     await startReadUniqueSection(fd, sections, X_2NS_SECTION);
-    pols.x_2ns = await readBuffer(fd, sections[X_2NS_SECTION], Fr);
+    pols.x_2ns = await fd.read(sections[X_2NS_SECTION].size);
     await endReadSection(fd);
-}
-
-async function readBuffer(fd, section, Fr) {
-    const size = section[0].size;
-    const buffer = new BigBuffer(size);
-
-    buffer.set(await fd.read(size), 0);
-
-    return buffer;
 }

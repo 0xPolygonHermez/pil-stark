@@ -59,48 +59,48 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     for(let i = 0; i < stage1CommitPols.length; i++) {
         transcript.addPolCommitment(stage1CommitPols[i]);
     }
+    
+    if(fflonkInfo.mapSectionsN.cm2_n > 0 || fflonkInfo.peCtx.length > 0) {
+        // Compute challenge alpha
+        ctx.challenges[0] = transcript.getChallenge();
+        if (logger) logger.debug("··· challenges.alpha: " + Fr.toString(ctx.challenges[0]));
+        
+        // Compute challenge beta
+        transcript.reset();
+        transcript.addScalar(ctx.challenges[0]);
+        ctx.challenges[1] = transcript.getChallenge();
+        if (logger) logger.debug("··· challenges.beta: " + Fr.toString(ctx.challenges[1]));
+        transcript.reset();
 
-    if(0 === transcript.data.length) {
-        transcript.addScalar(curve.Fr.one);
+        transcript.addScalar(ctx.challenges[1]);
     }
     
-    // Compute challenge alpha
-    ctx.challenges[0] = transcript.getChallenge();
-    if (logger) logger.debug("··· challenges.alpha: " + Fr.toString(ctx.challenges[0]));
-    
-    // Compute challenge beta
-    transcript.reset();
-    transcript.addScalar(ctx.challenges[0]);
-    ctx.challenges[1] = transcript.getChallenge();
-    if (logger) logger.debug("··· challenges.beta: " + Fr.toString(ctx.challenges[1]));
-
-    // Compute challenge gamma
-    transcript.reset();
-    transcript.addScalar(ctx.challenges[1]);
-
     const stage2CommitPols = vk.f.filter(fi => fi.stages[0].stage === 2).map(fi => proof.polynomials[`f${fi.index}`]);
     for(let i = 0; i < stage2CommitPols.length; i++) {
         transcript.addPolCommitment(stage2CommitPols[i]);
     }
 
-    ctx.challenges[2] = transcript.getChallenge();
-    if (logger) logger.debug("··· challenges.gamma: " + Fr.toString(ctx.challenges[2]));
+    if(fflonkInfo.mapSectionsN.cm3_n > 0) {
+        // Compute challenge gamma
+        ctx.challenges[2] = transcript.getChallenge();
+        if (logger) logger.debug("··· challenges.gamma: " + Fr.toString(ctx.challenges[2]));
 
-    // Compute challenge delta
-    transcript.reset();
-    transcript.addScalar(ctx.challenges[2]);
-    ctx.challenges[3] = transcript.getChallenge();
-    if (logger) logger.debug("··· challenges.delta: " + Fr.toString(ctx.challenges[3]));
+        // Compute challenge delta
+        transcript.reset();
+        transcript.addScalar(ctx.challenges[2]);
+        ctx.challenges[3] = transcript.getChallenge();
+        if (logger) logger.debug("··· challenges.delta: " + Fr.toString(ctx.challenges[3]));
+        transcript.reset();
 
-    // Compute challenge a
-    transcript.reset();
-    transcript.addScalar(ctx.challenges[3]);
-
+        transcript.addScalar(ctx.challenges[3]);
+    }
+    
     const stage3CommitPols = vk.f.filter(fi => fi.stages[0].stage === 3).map(fi => proof.polynomials[`f${fi.index}`]);
     for(let i = 0; i < stage3CommitPols.length; i++) {
         transcript.addPolCommitment(stage3CommitPols[i]);
     }
 
+    // Compute challenge a
     ctx.challenges[4] = transcript.getChallenge();
     if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 

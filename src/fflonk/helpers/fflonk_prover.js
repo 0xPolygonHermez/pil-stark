@@ -46,7 +46,7 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
     ctx.NCoefs = 1 << ctx.nBitsCoefs;
     ctx.Next = (1 << ctx.nBitsExt);
 
-    ctx.challenges = [];
+    ctx.challenges = [0,0,0,0,0];
 
     const domainSize = ctx.N;
     const domainSizeCoefs = ctx.NCoefs;
@@ -140,16 +140,25 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         }
     }
 
+    // Add constant composed polynomials
+    if (fflonkInfo.nConstants > 0) {
+        for (let i = 0; i < fflonkInfo.nConstants; i++) {
+            const coefs = getPolFromBuffer(ctx.const_coefs, fflonkInfo.nConstants, ctx.NCoefs, i, Fr);
+            ctx[zkey.polsNamesStage[0][i]] = new Polynomial(coefs, ctx.curve, logger);
+        }
+ 
+        const commitsConstants = await commit(0, zkey, ctx, PTau, curve, { multiExp: false, logger });
+        commitsConstants.forEach((com) => committedPols[`${com.index}`] = { pol: com.pol });
+    }
+
     // STAGE 1. Compute Trace Column Polynomials
     if (logger) logger.debug("> STAGE 1. Compute Trace Column Polynomials");
     await stage1();
 
     // STAGE 2. Compute Inclusion Polynomials
-    if (logger) logger.debug("> STAGE 2. Compute Inclusion Polynomials");
     await stage2();
 
     // STAGE 3. Compute Grand Product and Intermediate Polynomials
-    if (logger) logger.debug("> STAGE 3. Compute Grand Product and Intermediate Polynomials");
     await stage3();
 
     // STAGE 4. Trace Quotient Polynomials
@@ -212,17 +221,6 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
     };
 
     async function stage1() {
-        // STEP 1.2 - Compute constant polynomials (coefficients + evaluations) and commit them
-        if (fflonkInfo.nConstants > 0) {
-            for (let i = 0; i < fflonkInfo.nConstants; i++) {
-                const coefs = getPolFromBuffer(ctx.const_coefs, fflonkInfo.nConstants, ctx.NCoefs, i, Fr);
-                ctx[zkey.polsNamesStage[0][i]] = new Polynomial(coefs, ctx.curve, logger);
-            }
-
-            const commitsConstants = await commit(0, zkey, ctx, PTau, curve, { multiExp: false, logger });
-            commitsConstants.forEach((com) => committedPols[`${com.index}`] = { pol: com.pol });
-        }
-
         // STEP 1.3 - Compute commit polynomials (coefficients + evaluations) and commit them
         if (!fflonkInfo.mapSectionsN.cm1_n) return;
 
@@ -233,12 +231,6 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         commitsStage1.forEach((com) => committedPols[`${com.index}`] = { commit: com.commit, pol: com.pol });
 
         commitsStage1.forEach((com) => console.log(com.index, ctx.curve.G1.toString(com.commit)));
-
-    }
-
-    async function stage2() {
-        // STEP 2.1 - Compute random challenges
-        if (logger) logger.debug("> Computing challenges alpha and beta");
 
         const cnstCommitPols = Object.keys(zkey).filter(k => k.match(/^f\d/));
         for (let i = 0; i < cnstCommitPols.length; ++i) {
@@ -254,10 +246,12 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         for(let i = 0; i < commitsStage1.length; i++) {
             transcript.addPolCommitment(commitsStage1[i].commit);
         }
+    }
 
-        if (0 === transcript.data.length) {
-            transcript.addScalar(Fr.one);
-        }
+    async function stage2() {
+        if(!fflonkInfo.mapSectionsN.cm2_n && fflonkInfo.peCtx.length === 0) return;
+
+        if (logger) logger.debug("> Computing challenges alpha and beta");
 
         // Compute challenge alpha
         ctx.challenges[0] = transcript.getChallenge();
@@ -267,9 +261,13 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         transcript.reset();
         transcript.addScalar(ctx.challenges[0]);
         ctx.challenges[1] = transcript.getChallenge();
-        if (logger) logger.debug("··· challenges.beta: " + Fr.toString(ctx.challenges[1]));
+        transcript.reset();
+        transcript.addScalar(ctx.challenges[1]);
+        if (logger) logger.debug("··· challenges.beta: " + Fr.toString(ctx.challenges[1]));        
 
         if (!fflonkInfo.mapSectionsN.cm2_n) return;
+
+        if (logger) logger.debug("> STAGE 2. Compute Inclusion Polynomials");
 
         // STEP 2.2 - Compute stage 2 polynomials --> h1, h2
         await callCalculateExps("step2prev", "n", pool, ctx, fflonkInfo, false, { logger });
@@ -295,21 +293,18 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
 
         commitsStage2.forEach((com) => console.log(com.index, ctx.curve.G1.toString(com.commit)));
 
-    }
-
-    async function stage3() {
-        // STEP 3.1 - Compute random challenges
-        transcript.reset();
-
-        if (logger) logger.debug("> Computing challenges gamma and delta");
-
-        // Compute challenge gamma
-        transcript.addScalar(ctx.challenges[1]);
-
+        // STEP 2.4 - Add to transcript
         for(let i = 0; i < commitsStage2.length; i++) {
             transcript.addPolCommitment(commitsStage2[i].commit);
         }
+    }
 
+    async function stage3() {
+        if (!fflonkInfo.mapSectionsN.cm3_n) return;
+
+        if (logger) logger.debug("> STAGE 3. Compute Grand Product and Intermediate Polynomials");
+
+        // Compute challenge gamma
         ctx.challenges[2] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.gamma: " + Fr.toString(ctx.challenges[2]));
 
@@ -317,9 +312,9 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         transcript.reset();
         transcript.addScalar(ctx.challenges[2]);
         ctx.challenges[3] = transcript.getChallenge();
+        transcript.reset();
         if (logger) logger.debug("··· challenges.delta: " + Fr.toString(ctx.challenges[3]));
 
-        if (!fflonkInfo.mapSectionsN.cm3_n) return;
 
         // STEP 3.2 - Compute stage 3 polynomials --> Plookup Z, Permutations Z & ConnectionZ polynomials
         const nPlookups = fflonkInfo.puCtx.length;
@@ -374,21 +369,18 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
 
         commitsStage3.forEach((com) => console.log(com.index, ctx.curve.G1.toString(com.commit)));
 
-    }
-
-    async function stage4() {
-        // STEP 4.1 - Compute random challenges
-        transcript.reset();
-
-        if (logger) logger.debug("> Computing challenge a");
-
-        // Compute challenge a
         transcript.addScalar(ctx.challenges[3]);
 
         for(let i = 0; i < commitsStage3.length; i++) {
             transcript.addPolCommitment(commitsStage3[i].commit);
         }
+    }
 
+    async function stage4() {
+        // STEP 4.1 - Compute random challenges
+        if (logger) logger.debug("> Computing challenge a");
+
+        // Compute challenge a
         ctx.challenges[4] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
 

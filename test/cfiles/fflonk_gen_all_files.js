@@ -37,7 +37,7 @@ describe("all sm generate files", async function () {
 
     
 
-    it("Creates all files needed to generate a pilfflonk proof for simple4p", async () => {
+    it("Creates all files needed to generate a pilfflonk proof for all", async () => {
         const F = new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
 
         const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_all", "all_main.pil"));
@@ -102,7 +102,10 @@ describe("all sm generate files", async function () {
 
         // Save cHelpers file
         try {
-            const command = `node src/fflonk/main_buildchelpers.js -z tmp/all.zkey -f tmp/all.fflonkinfo.json -c tmp/all.chelpers.cpp -C PilFflonkSteps -m`;
+            const cHelpersFilename =  path.join(__dirname, "../../", "tmp", `all.chelpers.cpp`);
+
+            const cHelpersDir =  path.join(__dirname, "../../", "src", "fflonk/main_buildchelpers.js");
+            const command = `node ${cHelpersDir} -z ${zkeyFilename} -f ${fflonkInfoFilename} -c ${cHelpersFilename} -C PilFflonkSteps -m`;
             execSync(command);
         } catch (error) {
             console.error(`Error while generating chelpers: ${error.message}`);

@@ -149,20 +149,28 @@ contract PilFflonkVerifier {
 
     // Memory data
     // Challenges
+<%  let challengeCount = 32; -%>
     uint16 constant pY      = 0;
-    uint16 constant pAlpha  = 32;
-    uint16 constant pBeta   = 64;
-    uint16 constant pGamma  = 96;
-    uint16 constant pDelta  = 128;
-    uint16 constant pA      = 160;
-    uint16 constant pXiSeed = 192;
-    uint16 constant pXi = 224;
+<%  if(fflonkInfo.mapSectionsN.cm2_n > 0 || fflonkInfo.peCtx.length > 0) { -%> 
+    uint16 constant pAlpha  = <%- challengeCount %>;
+    uint16 constant pBeta   = <%- challengeCount + 32 %>;
+<%  challengeCount += 64; -%>
+<% } -%>
+   
+<%  if(fflonkInfo.mapSectionsN.cm3_n > 0) { -%> 
+    uint16 constant pGamma  = <%- challengeCount %>;
+    uint16 constant pDelta   = <%- challengeCount + 32 %>;
+<%  challengeCount += 64; -%>
+<% } -%>
+    uint16 constant pA      = <%- challengeCount %>;
+    uint16 constant pXiSeed = <%- challengeCount + 32 %>;
+    uint16 constant pXi = <%- challengeCount + 64 %>;
 
     // Quotient polynomial
-    uint16 constant pQ  = 256;
+    uint16 constant pQ  = <%- challengeCount + 96 %>;
     
 
-<%  let pLastMem = 288 -%>
+<%  let pLastMem = challengeCount + 128 -%>
     uint16 constant pLastMem = <%- pLastMem %>;
 
     constructor(address _shPlonkAddress) {
@@ -186,7 +194,6 @@ contract PilFflonkVerifier {
 <%  } -%>
                 let mIn := mload(0x40)
 
-                // Compute challenge.alpha
 <%  let memC = pLastMem; -%>
 <%  for(let i = 0; i < vk.f.length; ++i) { -%>
 <%  if(vk.f[i].stages[0].stage === 0) { -%>
@@ -211,20 +218,18 @@ contract PilFflonkVerifier {
 <%  } -%>
 <%  } -%>
 
-<%  if (vk.nPublics > 0 || vk.f.filter(fi => [0,1].includes(fi.stages[0].stage)).length > 0) { -%>
-                mstore(add(pMem, pAlpha),  mod(keccak256(add(pMem, pLastMem), <%= vk.nPublics * 32 + vk.f.filter(fi => [0,1].includes(fi.stages[0].stage)).length * 64 %>), q))
-<%  } else { -%>
-                mstore(add(pMem, pLastMem), 1)
-                mstore(add(pMem, pAlpha), mod(keccak256(add(pMem, pLastMem), 32), q))
-<%  } -%>
+<%  if(fflonkInfo.mapSectionsN.cm2_n > 0 || fflonkInfo.peCtx.length > 0) { -%>
+                // Compute challenge.alpha
+                mstore(add(pMem, pAlpha),  mod(keccak256(add(pMem, pLastMem), <%= memC - pLastMem %>), q))
 
                 // Compute challenge.beta
                 mstore(add(pMem, pBeta), mod(keccak256(add(pMem, pAlpha), 32), q))
-
-                // Compute challenge.gamma
 <%  memC = pLastMem; -%>
+
                 mstore(add(pMem, <%= memC %>), mload(add(pMem, pBeta)))
 <%  memC += 32 -%>
+<%  } -%>
+
 <%  for(let i = 0; i < vk.f.length; ++i) { -%>
 <%  if(vk.f[i].stages[0].stage === 2) { -%>
                 mstore(add(pMem, <%= memC %>), calldataload(pf<%- vk.f[i].index %>))
@@ -232,15 +237,19 @@ contract PilFflonkVerifier {
 <%  memC += 64 -%>
 <%  } -%>
 <%  } -%>
-                mstore(add(pMem, pGamma),  mod(keccak256(add(pMem, pLastMem), <%= 32 + vk.f.filter(fi => fi.stages[0].stage === 2).length * 64 %>), q))
+                
+<%  if(fflonkInfo.mapSectionsN.cm3_n > 0) { -%>
+                // Compute challenge.gamma
+                mstore(add(pMem, pGamma),  mod(keccak256(add(pMem, pLastMem), <%= memC - pLastMem %>), q))
 
                 // Compute challenge.delta
                 mstore(add(pMem, pDelta), mod(keccak256(add(pMem, pGamma), 32), q))
-
-                // Compute challenge.a
 <%  memC = pLastMem; -%>
+
                 mstore(add(pMem, <%= memC %>), mload(add(pMem, pDelta)))
 <%  memC += 32 -%>
+<%  } -%>
+
 <%  for(let i = 0; i < vk.f.length; ++i) { -%>
 <%  if(vk.f[i].stages[0].stage === 3) { -%>
                 mstore(add(pMem, <%= memC %>), calldataload(pf<%- vk.f[i].index %>))
@@ -248,7 +257,8 @@ contract PilFflonkVerifier {
 <%  memC += 64 -%>
 <%  } -%>
 <%  } -%>
-                mstore(add(pMem, pA),  mod(keccak256(add(pMem, pLastMem), <%= 32 + vk.f.filter(fi => fi.stages[0].stage === 3).length * 64 %>), q))
+                // Compute challenge.a
+                mstore(add(pMem, pA),  mod(keccak256(add(pMem, pLastMem), <%= memC - pLastMem %>), q))
 
                 // Compute xiSeed
 <%  memC = pLastMem; -%>
@@ -338,10 +348,14 @@ contract PilFflonkVerifier {
                 let mIn := mload(0x40)
                 let tmp
 
+<%  if (fflonkInfo.mapSectionsN.cm2_n > 0 || fflonkInfo.peCtx.length > 0) { -%>
                 let challengeAlpha := mload(add(pMem, pAlpha))
                 let challengeBeta := mload(add(pMem, pBeta))
+<%  } -%>  
+<%  if (fflonkInfo.mapSectionsN.cm3_n > 0) { -%>
                 let challengeGamma := mload(add(pMem, pGamma))
                 let challengeDelta := mload(add(pMem, pDelta))
+<%  } -%>  
                 let challengeA := mload(add(pMem, pA))
                 let challengeXi := mload(add(pMem, pXi))
                 
