@@ -1,6 +1,7 @@
 const chai = require("chai");
 const assert = chai.assert;
-const {F1Field, buildBn128} = require("ffjavascript");
+const {F1Field, buildBn128, utils} = require("ffjavascript");
+const { stringifyBigInts } = utils;
 const path = require("path");
 const fs = require("fs");
 const { execSync } = require('child_process');
@@ -19,6 +20,7 @@ const fflonkVerificationKey = require("../../src/fflonk/helpers/fflonk_verificat
 const {readPilFflonkZkeyFile} = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
 
 const Logger = require("logplease");
+const fflonk_shkey = require("../../src/fflonk/helpers/fflonk_shkey.js");
 const logger = Logger.create("pil-fflonk", {showTimestamp: false});
 Logger.setLogLevel("DEBUG");
 
@@ -81,6 +83,12 @@ describe("all sm generate files", async function () {
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", `all.zkey`);
     
+        let { zkey: shKey } = await fflonk_shkey(pil, ptauFile, fflonkInfo, {extraMuls: 2, logger});
+        shKey = stringifyBigInts(shKey);
+
+        const shKeyFilename =  path.join(__dirname, "../../", "tmp", `all.shkey.json`);
+        await fs.promises.writeFile(shKeyFilename, JSON.stringify(shKey, null, 1));
+
         await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 2, logger});
 
         // Save verification key file

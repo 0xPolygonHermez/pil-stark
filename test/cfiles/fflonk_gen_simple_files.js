@@ -1,6 +1,7 @@
 const chai = require("chai");
 const assert = chai.assert;
-const {F1Field, buildBn128} = require("ffjavascript");
+const {F1Field, buildBn128, utils} = require("ffjavascript");
+const { stringifyBigInts } = utils;
 const path = require("path");
 const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
 const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
@@ -93,6 +94,12 @@ describe("simple sm", async function () {
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", `${filename}.zkey`);
     
+        let { zkey: shKey } = await fflonk_shkey(pil, ptauFile, fflonkInfo, {extraMuls: 0, logger});
+        shKey = stringifyBigInts(shKey);
+
+        const shKeyFilename =  path.join(__dirname, "../../", "tmp", `${filename}.shkey.json`);
+        await fs.promises.writeFile(shKeyFilename, JSON.stringify(shKey, null, 1));
+
         await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 0, logger});
 
         // Save verification key file

@@ -1,6 +1,7 @@
 const chai = require("chai");
 const assert = chai.assert;
-const {F1Field, buildBn128} = require("ffjavascript");
+const {F1Field, buildBn128, utils} = require("ffjavascript");
+const { stringifyBigInts } = utils;
 const path = require("path");
 const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
 const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
@@ -108,6 +109,12 @@ describe("generating files for arguments", async function () {
         if(namePil.includes("Plookup")) {
             options.extraMuls = 3;
         }
+
+        const { zkey: shKey } = await fflonk_shkey(pil, ptauFile, fflonkInfo, options);
+        shKey = stringifyBigInts(shKey);
+
+        let shKeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.shkey.json`);
+        await fs.promises.writeFile(shKeyFilename, JSON.stringify(shKey, null, 1));
 
         await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, options);
     
