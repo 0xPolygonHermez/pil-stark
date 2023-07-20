@@ -20,7 +20,10 @@ module.exports = async function exportFflonkCalldata(vk, proof, publicSignals, o
 
     publicSignals = unstringifyBigInts(publicSignals);
 
-    const nonCommittedPols = ["Q"];    
+    const nonCommittedPols = [];
+    if(vk.maxQDegree === 0) {
+        nonCommittedPols.push("Q");    
+    }
 
     // Sort f by index
     vk.f.sort((a, b) => a.index - b.index);

@@ -25,10 +25,10 @@ describe("simple sm", async function () {
     it("Simple2", async () => {
         await runTest("simple2");
     });
-    it.only("Simple2p", async () => {
+    it("Simple2p", async () => {
         await runTest("simple2p");
     });
-    it("Simple3", async () => {
+    it.only("Simple3", async () => {
         await runTest("simple3");
     });
     it("Simple4", async () => {
@@ -70,7 +70,7 @@ describe("simple sm", async function () {
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", `fflonk_${pilFile}.zkey`);
 
-        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 0, logger});
+        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 0, logger, maxQDegree: 1});
     
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 

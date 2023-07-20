@@ -18,7 +18,7 @@ module.exports = async function exportPilFflonkVerifier(vk, fflonkInfo, options 
 
     for(let i = 0; i < vk.f.length; ++i) {
         if(vk.f[i].stages.length === 1 && vk.f[i].stages[0].stage === 0) {
-            vk.f[i].commit = vk[`f${vk.f[i].index}_0`];
+            vk.f[i].commit = vk[`f${vk.f[i].index}`];
             constantCommits.push({index: vk.f[i].index, commit: curve.G1.toObject(vk.f[i].commit)});
         }
     }
@@ -30,7 +30,11 @@ module.exports = async function exportPilFflonkVerifier(vk, fflonkInfo, options 
 
     let orderedEvals = getOrderedEvals(vk.f);
 
-    orderedEvals = orderedEvals. filter(e => e.name !== "Q");
+    const nonCommittedPols = [];
+    if(vk.maxQDegree === 0) {
+        orderedEvals = orderedEvals. filter(e => e.name !== "Q");
+        nonCommittedPols.push("Q");
+    }
 
     orderedEvals.push({name: "inv"});
 
@@ -74,7 +78,7 @@ module.exports = async function exportPilFflonkVerifier(vk, fflonkInfo, options 
     const template = await fs.promises.readFile(path.resolve(__dirname, "verifier_pilfflonk.sol.ejs"), "utf-8");
 
     const verifierPilFflonkCode = ejs.render(template, obj);
-    const verifierShPlonkCode = await exportSolidityShPlonkVerifier(vk, curve, {nonCommittedPols: ["Q"], xiSeed: true, checkInputs: false });
+    const verifierShPlonkCode = await exportSolidityShPlonkVerifier(vk, curve, {nonCommittedPols, xiSeed: true, checkInputs: false });
 
     return {verifierPilFflonkCode, verifierShPlonkCode}; 
 }

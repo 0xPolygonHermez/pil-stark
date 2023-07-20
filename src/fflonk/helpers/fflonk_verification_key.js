@@ -13,6 +13,7 @@ module.exports = async function fflonkVerificationKey(zkey, options) {
         protocol: zkey.protocol,
         curve: curve.name,
         nPublics: zkey.nPublics,
+        maxQDegree: zkey.maxQDegree,
         power: zkey.power,
         powerW: zkey.powerW,
         f: zkey.f,

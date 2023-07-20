@@ -30,6 +30,8 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     const domainSize = ctx.N;
     const power = vk.power;
 
+    const nPolsQ = vk.f.filter(fi => fi.stages[0].stage === 4).map(fi => fi.pols).flat(Infinity);
+
     if (logger) {
         logger.debug("------------------------------");
         logger.debug("  PIL-FFLONK VERIFY SETTINGS");
@@ -39,7 +41,7 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         logger.debug(`  Step 1 pols:   ${fflonkInfo.mapSectionsN.cm1_n}`);
         logger.debug(`  Step 2 pols:   ${fflonkInfo.mapSectionsN.cm2_n}`);
         logger.debug(`  Step 3 pols:   ${fflonkInfo.mapSectionsN.cm3_n}`);
-        logger.debug(`  Step 4 pols:   ${fflonkInfo.mapSectionsN.cm4_n}`);
+        logger.debug(`  Step 4 pols:   ${nPolsQ.length}`);
         logger.debug(`  Temp exp pols: ${fflonkInfo.mapSectionsN.tmpExp_n}`);
         logger.debug("------------------------------");
     }
@@ -155,11 +157,30 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         return false;
     }
    
-    // TODO CHECK inv evaluation
     const Q = curve.Fr.div(execCode, ctx.Z);
-    proof.evaluations["Q"] = Q;
 
-    const res = verifyOpenings(vk, proof.polynomials, proof.evaluations, curve, {logger, xiSeed: challengeXiSeed, nonCommittedPols: ["Q"]});
+    const nonCommittedPols = [];
+    if(vk.maxQDegree === 0) {
+        proof.evaluations["Q"] = Q;
+        nonCommittedPols.push("Q");
+    } else {
+        let xAcc = curve.Fr.one;
+        let q = curve.Fr.zero;
+        for (let i=0; i<nPolsQ.length; i++) {
+            q = curve.Fr.add(q, curve.Fr.mul(xAcc, proof.evaluations[`Q${i}`]));
+            for(let j = 0; j < vk.maxQDegree; ++j) {
+                xAcc = curve.Fr.mul(xAcc, xN);
+            }
+        }
+        if (!curve.Fr.eq(Q, q)) {
+            console.log(`Invalid Q.`)
+            return false;
+        }
+
+    }
+
+
+    const res = verifyOpenings(vk, proof.polynomials, proof.evaluations, curve, {logger, xiSeed: challengeXiSeed, nonCommittedPols});
     await curve.terminate();
 
     return res;

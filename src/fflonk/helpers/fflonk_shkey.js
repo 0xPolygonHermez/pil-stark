@@ -13,6 +13,7 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
         1: [],
         2: [],
         3: [],
+        4: [],
     };
 
     let fiMap = {
@@ -157,7 +158,18 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
     const nBitsExt = pilPower + extendBits + fflonkInfo.nBitsZK;
     const domainSizeExt = 1 << nBitsExt;
 
-    polsXi.push({name: "Q", stage: 4, degree: domainSizeExt, fi: fiIndex});
+    const domainSizeQ = domainSizeExt / 2;
+    if(!options.maxQDegree || domainSizeQ / domainSize <= options.maxQDegree) {
+        polsXi.push({name: "Q", stage: 4, degree: domainSizeQ, fi: fiIndex});
+        polsNames[4].push("Q")
+    } else {
+        const nQ = Math.ceil(domainSizeQ / (options.maxQDegree * domainSize));
+        for(let i = 0; i < nQ; ++i) {
+            let degree = i === nQ - 1 ? domainSizeQ - i*options.maxQDegree*domainSize : options.maxQDegree * domainSize;
+            polsXi.push({name: `Q${i}`, stage: 4, degree: degree, fi: fiIndex});
+            polsNames[4].push(`Q${i}`)
+        } 
+    }
     
     polDefs = [polsXi, polsWXi];
 
@@ -177,6 +189,8 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
     shkey.polsNamesStage = polsNames;
     
     shkey.nPublics = fflonkInfo.nPublics;
+
+    shkey.maxQDegree = options.maxQDegree || 0;
     
     if(logger) logger.info("> Fflonk shkey generation finished");
     

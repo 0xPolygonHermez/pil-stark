@@ -82,14 +82,15 @@ describe("all sm generate files", async function () {
         // Create & save zkey file
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", `all.zkey`);
-    
-        let { zkey: shKey } = await fflonk_shkey(pil, ptauFile, fflonkInfo, {extraMuls: 2, logger});
+        
+        const options = {extraMuls: 2, logger, maxQDegree: 0};
+        let { zkey: shKey } = await fflonk_shkey(pil, ptauFile, fflonkInfo, options);
         shKey = stringifyBigInts(shKey);
 
         const shKeyFilename =  path.join(__dirname, "../../", "tmp", `all.shkey.json`);
         await fs.promises.writeFile(shKeyFilename, JSON.stringify(shKey, null, 1));
 
-        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 2, logger});
+        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, options);
 
         // Save verification key file
         const VkeyFilename = path.join(__dirname, "../../", "tmp", `all.vkey`);

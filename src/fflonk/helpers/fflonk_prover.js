@@ -59,6 +59,9 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
     const sDomainCoefs = domainSizeCoefs * n8r;
     const sDomainExt = domainSizeExt * n8r;
 
+    const domainSizeQ = domainSizeExt / 2;
+    const nQ = zkey.maxQDegree ? Math.ceil(domainSizeQ / (zkey.maxQDegree * domainSize)) : 1;
+
     if (logger) {
         logger.debug("-----------------------------");
         logger.debug("  PIL-FFLONK PROVE SETTINGS");
@@ -71,6 +74,7 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
         logger.debug(`  Stage 1 pols:   ${fflonkInfo.mapSectionsN.cm1_n}`);
         logger.debug(`  Stage 2 pols:   ${fflonkInfo.mapSectionsN.cm2_n}`);
         logger.debug(`  Stage 3 pols:   ${fflonkInfo.mapSectionsN.cm3_n}`);
+        logger.debug(`  Stage 4 pols:   ${nQ}`);
         logger.debug(`  Temp exp pols: ${fflonkInfo.mapSectionsN.tmpExp_n}`);
         logger.debug("-----------------------------");
     }
@@ -116,6 +120,7 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
     let commitsStage3 = [];
     let commitsStage4 = [];
 
+    const nonCommittedPols = [];
 
     const transcript = new Keccak256Transcript(curve);
 
@@ -156,7 +161,7 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
     const challengeXiSeed = transcript.getChallenge();
     if (logger) logger.debug("··· challenges.xiSeed: " + Fr.toString(challengeXiSeed));
 
-    const [cmts, evaluations] = await open(zkey, PTau, ctx, committedPols, curve, { logger, xiSeed: challengeXiSeed, nonCommittedPols: ["Q"] });
+    const [cmts, evaluations] = await open(zkey, PTau, ctx, committedPols, curve, { logger, xiSeed: challengeXiSeed, nonCommittedPols});
 
     if(logger) logger.debug("··· Batched Inverse shplonk: " + Fr.toString(evaluations["inv"]));
     // Compute challengeXiSeed 
@@ -209,8 +214,6 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
                 const pol = new Polynomial(zkey[cnstCommitPols[i]].pol, curve, logger);
                 transcript.addPolCommitment(commit);
                 committedPols[`${cnstCommitPols[i]}_0`] = { commit: commit, pol: pol };
-
-                printPol(pol.coef, Fr);
             }
         }
 
@@ -394,6 +397,18 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
 
         ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, curve, logger);
         ctx["Q"].divZh(ctx.N, 1 << ctx.extendBitsTotal);
+
+        if(zkey.maxQDegree) {
+            const domainSizeQ = domainSizeExt / 2;
+            const nQ = Math.ceil(domainSizeQ / (zkey.maxQDegree * domainSize));
+            for(let i = 0; i < nQ; ++i) {
+                const st = (i * zkey.maxQDegree * domainSize) * Fr.n8;
+                const end = (i == nQ - 1 ? domainSizeQ : (i + 1) * zkey.maxQDegree * domainSize) * Fr.n8;
+                ctx[`Q${i}`] = new Polynomial(ctx["Q"].coef.slice(st, end), curve, logger);
+            } 
+        } else {
+            nonCommittedPols.push("Q");
+        }
 
         // STEP 4.3 - Commit stage 4 polynomials
         commitsStage4 = await commit(4, zkey, ctx, PTau, curve, { multiExp: true, logger });

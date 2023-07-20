@@ -106,6 +106,7 @@ async function writePilFflonkHeaderSection(fdZKey, zkey, curve) {
     await fdZKey.writeULE32(zkey.power);
     await fdZKey.writeULE32(zkey.powerW);
     await fdZKey.writeULE32(zkey.nPublics);
+    await fdZKey.writeULE32(zkey.maxQDegree);
     await fdZKey.write(zkey.X_2);
 
     await endWriteSection(fdZKey);
@@ -354,6 +355,7 @@ async function readPilFflonkHeaderSection(fdZKey, sections, zkey) {
     zkey.power = await fdZKey.readULE32();
     zkey.powerW = await fdZKey.readULE32();
     zkey.nPublics = await fdZKey.readULE32();
+    zkey.maxQDegree = await fdZKey.readULE32();
     zkey.X_2 = await fdZKey.read(128);
 
     await endReadSection(fdZKey);
