@@ -8,13 +8,12 @@ const { newConstantPolsArray, compile } = require("pilcom");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_setup.js -p <pil> -P [-P <pilconfig.json] -f <fflonkInfo.json> -c <circuit.const> -e <circuit.ext.const> -t <ptau> -z <circuit.zkey>")
+    .usage("node main_setup.js -p <pil> -P [-P <pilconfig.json] -f <fflonkInfo.json> -c <circuit.const> -t <ptau> -z <circuit.zkey>")
     .alias("t", "tau")   // Input -> ptau
     .alias("p", "pil")    // Input -> Proposed PIL
     .alias("P", "pilconfig")
     .alias("f", "fflonkInfo")
-    .alias("c", "const")  // Output -> file required to build the constants
-    .alias("e", "extconst") // Output -> file required to build the constants coefs / evals
+    .alias("c", "const")  // Input -> file required to build the constants
     .alias("z", "zkey")   // Output -> File required to execute
     .string("extraMuls")
     .argv;
@@ -26,7 +25,6 @@ async function run() {
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
     const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
     const constFile = typeof(argv.const) === "string" ?  argv.const.trim() : "mycircuit.const";
-    const constExtFile = typeof(argv.extconst) === "string" ?  argv.extconst.trim() : "mycircuit.ext.const";
     const zkeyFile = typeof(argv.zkey) === "string" ?  argv.zkey.trim() : "mycircuit_zkey.json";
     const fflonkInfoFile = typeof(argv.fflonkInfo) === "string" ?  argv.fflonkInfo.trim() : "fflonkInfo.json";
 
@@ -48,7 +46,7 @@ async function run() {
     let options = {};
     options.extraMuls = Number(argv.extraMuls) || 2;
         
-    await fflonkSetup(pil, cnstPols, zkeyFile, constExtFile, ptauFile, fflonkInfo, options);
+    await fflonkSetup(pil, cnstPols, zkeyFile, ptauFile, fflonkInfo, options);
 
     console.log("Setup done correctly");
 }

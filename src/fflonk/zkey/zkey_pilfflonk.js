@@ -13,8 +13,14 @@ const {
     ZKEY_PF_F_COMMITMENTS_SECTION,
     ZKEY_PF_OMEGAS_SECTION,
     ZKEY_PF_PTAU_SECTION,
-    ZKEY_PF_POLSNAMESSTAGE_SECTION
+    ZKEY_PF_POLSNAMESSTAGE_SECTION,
+    ZKEY_PF_CONST_POLS_EVALS_SECTION,
+    ZKEY_PF_CONST_POLS_COEFS_SECTION,
+    ZKEY_PF_CONST_POLS_EVALS_EXT_SECTION,
+    ZKEY_PF_X_N_SECTION,
+    ZKEY_PF_X_EXT_SECTION,
 } = require("./zkey_pilfflonk_constants.js");
+
 const { HEADER_ZKEY_SECTION, PILFFLONK_PROTOCOL_ID } = require("./zkey_constants.js");
 const { BigBuffer, Scalar, getCurveFromQ } = require("ffjavascript");
 
@@ -43,6 +49,26 @@ exports.writePilFflonkZkeyFile = async function (zkey, zkeyFilename, pTau, curve
 
     if (logger) logger.info(`··· Writing Section ${ZKEY_PF_POLSNAMESSTAGE_SECTION}. Pols names stage Section`);
     await writePolsNamesStageSection(fdZKey, zkey, pTau, curve);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Writing Section ${ZKEY_PF_CONST_POLS_EVALS_SECTION}. Const Pols Evaluations`);
+    await writeConstPolsEvalsSection(fdZKey, zkey);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Writing Section ${ZKEY_PF_CONST_POLS_COEFS_SECTION}. Const Pols Coefs`);
+    await writeConstPolsCoefsSection(fdZKey, zkey);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Writing Section ${ZKEY_PF_CONST_POLS_EVALS_EXT_SECTION}. Const Pols Extended Evaluations`);
+    await writeConstPolsEvalsExtSection(fdZKey,zkey);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Writing Section ${ZKEY_PF_X_N_SECTION}. X_n evaluations`);
+    await writeXnSection(fdZKey,zkey);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Writing Section ${ZKEY_PF_X_EXT_SECTION}. X_Ext evaluations`);
+    await writeX2nsSection(fdZKey,zkey);
     if (globalThis.gc) globalThis.gc();
 
     if (logger) logger.info(`··· Writing Section ${ZKEY_PF_OMEGAS_SECTION}. Omegas Section`);
@@ -154,7 +180,9 @@ async function writeFCommitmentsSection(fdZKey, zkey, curve) {
 
     for (let i = 0; i < len; i++) {
         await writeStringToFile(fdZKey, commitments[i]);
-        await fdZKey.write(zkey[commitments[i]]);
+        await fdZKey.write(zkey[commitments[i]].commit);
+        await fdZKey.writeULE32(zkey[commitments[i]].pol.byteLength);
+        await fdZKey.write(zkey[commitments[i]].pol);
     }
 
     await endWriteSection(fdZKey);
@@ -184,6 +212,37 @@ async function writePolsNamesStageSection(fdZKey, zkey, curve) {
 
     await endWriteSection(fdZKey);
 }
+
+async function writeConstPolsEvalsSection(fdZkey, zkey) {
+    await startWriteSection(fdZkey, ZKEY_PF_CONST_POLS_EVALS_SECTION);
+    await fdZkey.write(zkey.constPolsEvals);
+    await endWriteSection(fdZkey);
+}
+
+async function writeConstPolsCoefsSection(fdZkey, zkey) {
+    await startWriteSection(fdZkey, ZKEY_PF_CONST_POLS_COEFS_SECTION);
+    await fdZkey.write(zkey.constPolsCoefs);
+    await endWriteSection(fdZkey);
+}
+
+async function writeConstPolsEvalsExtSection(fdZkey, zkey) {
+    await startWriteSection(fdZkey, ZKEY_PF_CONST_POLS_EVALS_EXT_SECTION);
+    await fdZkey.write(zkey.constPolsEvalsExt);
+    await endWriteSection(fdZkey);
+}
+
+async function writeXnSection(fdZkey, zkey) {
+    await startWriteSection(fdZkey, ZKEY_PF_X_N_SECTION);
+    await fdZkey.write(zkey.x_n);
+    await endWriteSection(fdZkey);
+}
+
+async function writeX2nsSection(fdZkey, zkey) {
+    await startWriteSection(fdZkey, ZKEY_PF_X_EXT_SECTION);
+    await fdZkey.write(zkey.x_2ns);
+    await endWriteSection(fdZkey);
+}
+
 
 async function writeOmegasSection(fdZKey, zkey, curve) {
     await startWriteSection(fdZKey, ZKEY_PF_OMEGAS_SECTION);
@@ -243,6 +302,26 @@ exports.readPilFflonkZkeyFile = async function (zkeyFilename, options) {
 
     if (logger) logger.info(`··· Reading Section ${ZKEY_PF_POLSNAMESSTAGE_SECTION}. Polynomials names stage Section`);
     await readPolsNamesStageSection(fdZKey, sections, zkey);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_CONST_POLS_EVALS_SECTION}. Const Pols Evaluations`);
+    await readConstPolsEvalsSection(fdZKey, sections, zkey);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_CONST_POLS_COEFS_SECTION}. Const Pols Coefs`);
+    await readConstPolsCoefsSection(fdZKey, sections, zkey);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_CONST_POLS_EVALS_EXT_SECTION}. Const Pols Evals Ext`);
+    await readConstPolsEvalsExtSection(fdZKey, sections, zkey);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_X_N_SECTION}. X_n Evaluations`);
+    await readXnSection(fdZKey, sections, zkey);
+    if (globalThis.gc) globalThis.gc();
+
+    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_X_EXT_SECTION}.  X_2ns Evaluations`);
+    await readX2nsSection(fdZKey, sections, zkey);
     if (globalThis.gc) globalThis.gc();
 
     if (logger) logger.info(`··· Reading Section ${ZKEY_PF_OMEGAS_SECTION}. Omegas Section`);
@@ -351,7 +430,11 @@ async function readFCommitmentsSection(fdZKey, sections, zkey) {
 
     for (let i = 0; i < len; i++) {
         const name = await fdZKey.readString();
-        zkey[name] = await fdZKey.read(64);
+        const commit = await fdZKey.read(64);
+        const lenPol = await fdZKey.readULE32();
+        const pol = await fdZKey.read(lenPol);
+
+        zkey[name] = {commit, pol};
     }
 
     await endReadSection(fdZKey);
@@ -379,6 +462,37 @@ async function readPolsNamesStageSection(fdZKey, sections, zkey) {
     await endReadSection(fdZKey);
 }
 
+
+async function readConstPolsEvalsSection(fdZKey, sections, zkey) {
+    await startReadUniqueSection(fdZKey, sections, ZKEY_PF_CONST_POLS_EVALS_SECTION);
+    zkey.constPolsEvals = await fdZKey.read(sections[ZKEY_PF_CONST_POLS_EVALS_SECTION][0].size);
+    await endReadSection(fdZKey);
+}
+
+async function readConstPolsCoefsSection(fdZKey, sections, zkey) {
+    await startReadUniqueSection(fdZKey, sections, ZKEY_PF_CONST_POLS_COEFS_SECTION);
+    zkey.constPolsCoefs = await fdZKey.read(sections[ZKEY_PF_CONST_POLS_COEFS_SECTION][0].size);
+    await endReadSection(fdZKey);
+}
+
+async function readConstPolsEvalsExtSection(fdZKey, sections, zkey) {
+    await startReadUniqueSection(fdZKey, sections, ZKEY_PF_CONST_POLS_EVALS_EXT_SECTION);
+    zkey.constPolsEvalsExt = await fdZKey.read(sections[ZKEY_PF_CONST_POLS_EVALS_EXT_SECTION][0].size);
+
+    await endReadSection(fdZKey);
+}
+
+async function readXnSection(fdZKey, sections, zkey) {
+    await startReadUniqueSection(fdZKey, sections, ZKEY_PF_X_N_SECTION);
+    zkey.x_n = await fdZKey.read(sections[ZKEY_PF_X_N_SECTION][0].size);
+    await endReadSection(fdZKey);
+}
+
+async function readX2nsSection(fdZKey, sections, zkey) {
+    await startReadUniqueSection(fdZKey, sections, ZKEY_PF_X_EXT_SECTION);
+    zkey.x_2ns = await fdZKey.read(sections[ZKEY_PF_X_EXT_SECTION][0].size);
+    await endReadSection(fdZKey);
+}
 
 async function readOmegasSection(fdZKey, sections, zkey) {
     await startReadUniqueSection(fdZKey, sections, ZKEY_PF_OMEGAS_SECTION);

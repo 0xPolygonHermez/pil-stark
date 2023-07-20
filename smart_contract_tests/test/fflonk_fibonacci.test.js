@@ -39,11 +39,9 @@ describe("Fflonk Fibonacci sm", async function () {
         const pil = await compile(F, path.join(__dirname, "../../test/state_machines/", "sm_fibonacci", "fibonacci_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
-        let maxPilPolDeg = 0;
-        for (const polRef in pil.references) {
-            maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
-        }
-        const N = 2**(log2(maxPilPolDeg - 1) + 1);
+        const fflonkInfo = fflonkInfoGen(F, pil);
+
+        const N = 2**(fflonkInfo.pilPower);
         await smFibonacci.buildConstants(N, constPols.Fibonacci);
 
         const cmPols = newCommitPolsArray(pil, F);
@@ -62,17 +60,14 @@ describe("Fflonk Fibonacci sm", async function () {
 
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", "fflonk_fibonacci.zkey");
-        const constExtFilename =  path.join(__dirname, "../../", "tmp", "fflonk_fibonacci.ext.const");
 
-        const fflonkInfo = fflonkInfoGen(F, pil);
-
-        const {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns} = await fflonkSetup(pil, constPols, zkeyFilename,constExtFilename, ptauFile, fflonkInfo, {logger,extraMuls: 2});
-
+        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1, logger});
+   
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 
         const vk = await fflonkVerificationKey(zkey, {logger});
 
-        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, constPols, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, fflonkInfo, {logger});
+        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, fflonkInfo, {logger});
         const proofInputs = await exportFflonkCalldata(vk, proof, publicSignals, {logger})
         const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {logger});
 

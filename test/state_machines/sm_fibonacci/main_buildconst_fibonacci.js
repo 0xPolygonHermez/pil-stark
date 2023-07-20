@@ -6,6 +6,8 @@ const smFibonacci = require("./sm_fibonacci.js");
 
 const F3g = require("../../../src/helpers/f3g");
 const { F1Field, getCurveFromName } = require("ffjavascript");
+const { fflonkInfoGen } = require("../../..");
+const { log2 } = require("pilcom/src/utils");
 
 const argv = require("yargs")
     .version(version)
@@ -26,12 +28,13 @@ async function run() {
     const pil = await compile(F, path.join(__dirname, "fibonacci_main.pil"));
 
     const constPols = newConstantPolsArray(pil, F);
-
+    
     let maxPilPolDeg = 0;
     for (const polRef in pil.references) {
         maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
     }
     const N = 2**(log2(maxPilPolDeg - 1) + 1);
+
     await smFibonacci.buildConstants(N, constPols.Fibonacci);
 
     if(curveName === "gl"){
@@ -43,7 +46,7 @@ async function run() {
 
     	await curve.terminate();
 
-        await cmPols.saveToFileFr(outputFile, Fr);
+        await constPols.saveToFileFr(outputFile, Fr);
     }
 
     console.log("file Generated Correctly");

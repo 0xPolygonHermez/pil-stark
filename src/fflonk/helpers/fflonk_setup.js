@@ -1,20 +1,16 @@
 const {BigBuffer} = require("ffjavascript");
 const { Polynomial, commit} = require("shplonkjs");
 const { interpolate } = require("../../helpers/fft/fft_p.bn128");
-const { writeConstPolsFile } = require("../const_pols_serializer");
 const { writePilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 const fflonkShKey = require("./fflonk_shkey.js");
-const { readBinFile } = require("@iden3/binfileutils");
 
-module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constExtFile, ptauFile, fflonkInfo, options) {
+module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFile, fflonkInfo, options) {
     const logger = options.logger;
 
     let { zkey, PTau, curve } = await fflonkShKey(_pil, ptauFile, fflonkInfo, options);
 
-    const {fd: fdPTau, sections: pTauSections} = await readBinFile(ptauFile, "ptau", 1, 1 << 22, 1 << 24);
-    const sG2 = curve.G2.F.n8 * 2;
-    zkey.X_2 = await fdPTau.read(sG2, pTauSections[3][0].p + sG2);
-    
+    zkey.X_2 = curve.G2.fromObject(zkey.X_2);
+
     const roots = Object.keys(zkey).filter(k => k.match(/^w\d/));    
     for(let i = 0; i < roots.length; ++i) {
         zkey[roots[i]] = curve.Fr.fromObject(zkey[roots[i]]);
@@ -33,39 +29,42 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
     const sDomain = domainSize * curve.Fr.n8;
     const sDomainExt = domainSizeExt * curve.Fr.n8;
 
-    let constPolsCoefs = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
-    let constPolsEvals = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
-    let constPolsEvalsExt = new BigBuffer(fflonkInfo.nConstants * sDomainExt); // Constant polynomials
+    zkey.constPolsCoefs = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
+    zkey.constPolsEvals = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
+    zkey.constPolsEvalsExt = new BigBuffer(fflonkInfo.nConstants * sDomainExt); // Constant polynomials
 
-    await cnstPols.writeToBigBufferFr(constPolsEvals, curve.Fr);
+    await cnstPols.writeToBigBufferFr(zkey.constPolsEvals, curve.Fr);
 
     if(fflonkInfo.nConstants > 0) {
-        await interpolate(constPolsEvals, fflonkInfo.nConstants, nBits, constPolsCoefs, constPolsEvalsExt, nBitsExt, curve.Fr);
+        await interpolate(zkey.constPolsEvals, fflonkInfo.nConstants, nBits, zkey.constPolsCoefs, zkey.constPolsEvalsExt, nBitsExt, curve.Fr);
     
         const ctx = {};
 
         // Store coefs to context
         for (let i = 0; i < fflonkInfo.nConstants; i++) {
-            const coefs = getPolFromBuffer(constPolsCoefs, fflonkInfo.nConstants, domainSizeCoefs, i, curve.Fr);
+            const coefs = getPolFromBuffer(zkey.constPolsCoefs, fflonkInfo.nConstants, domainSizeCoefs, i, curve.Fr);
             ctx[zkey.polsNamesStage[0][i]] = new Polynomial(coefs, curve, logger);
         }
 
         const commits = await commit(0, zkey, ctx, PTau, curve, {multiExp: true, logger});
 
         for(let j = 0; j < commits.length; ++j) {
-            zkey[`${commits[j].index}`] = commits[j].commit;
+            const index = commits[j].index.split("_")[0];
+            const commit = commits[j].commit;
+            const pol = commits[j].pol.coef.slice(0, (commits[j].pol.degree() + 1)*curve.Fr.n8);
+            zkey[index] = {commit, pol};
         }
     }
 
     // Precalculate x_n and x_2ns
-    const x_n = new BigBuffer(domainSize * curve.Fr.n8); // Omegas de field extension
-    const x_2ns = new BigBuffer(domainSizeExt * curve.Fr.n8); // Omegas a l'extès
+    zkey.x_n = new BigBuffer(domainSize * curve.Fr.n8); // Omegas de field extension
+    zkey.x_2ns = new BigBuffer(domainSizeExt * curve.Fr.n8); // Omegas a l'extès
         
     let w = curve.Fr.one;
     for (let i = 0; i < domainSize; i++) {
         const i_n8r = i * curve.Fr.n8;
 
-        x_n.set(w, i_n8r);
+        zkey.x_n.set(w, i_n8r);
         w = curve.Fr.mul(w, curve.Fr.w[zkey.power])
     }
 
@@ -73,7 +72,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
     for (let i = 0; i < domainSizeExt; i++) {
         const i_n8r = i * curve.Fr.n8;
 
-        x_2ns.set(w, i_n8r);
+        zkey.x_2ns.set(w, i_n8r);
         w = curve.Fr.mul(w, curve.Fr.w[nBitsExt]);
     }
 
@@ -81,9 +80,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, constE
 
     await writePilFflonkZkeyFile(zkey, zkeyFilename, PTau, curve, {logger}); 
 
-    await writeConstPolsFile(constExtFile, constPolsCoefs, constPolsEvalsExt, x_n, x_2ns, curve.Fr, {});
-
-    return {constPolsCoefs, constPolsEvalsExt, x_n, x_2ns};
+    return;
 }
 
 function getPolFromBuffer(buff, nPols, N, id, Fr) {

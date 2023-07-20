@@ -81,10 +81,7 @@ describe("all sm generate files", async function () {
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", `all.zkey`);
     
-        // Create & constant polynomial coefficients and extended evaluations file
-        const constPolsZkeyFilename =  path.join(__dirname, "../../", "tmp", `all.ext.cnst`);
-
-        await fflonkSetup(pil, constPols, zkeyFilename, constPolsZkeyFilename, ptauFile, fflonkInfo, {extraMuls: 2, logger});
+        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 2, logger});
 
         // Save verification key file
         const VkeyFilename = path.join(__dirname, "../../", "tmp", `all.vkey`);

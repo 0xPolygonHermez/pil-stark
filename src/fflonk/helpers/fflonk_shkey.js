@@ -170,7 +170,7 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
 
     if(logger) logger.info("Starting shPlonk setup...");
     
-    const {zkey: shkey, PTau, curve} = await setup(config, ptauFile, logger);
+    const {zkey: shkey, PTau, curve} =await setup(config, ptauFile, logger);
 
     if(logger) logger.info("ShPlonk setup done.");
 
@@ -184,6 +184,8 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
     for(let i = 0; i < roots.length; ++i) {
         shkey[roots[i]] = curve.Fr.toObject(shkey[roots[i]]);
     }
+
+    shkey.X_2 = curve.G2.toObject(shkey.X_2);
 
     return { zkey: shkey, PTau, curve };
 

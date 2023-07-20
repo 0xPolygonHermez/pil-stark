@@ -14,7 +14,7 @@ const minNperThread = 1 << 12;
 
 const { stringifyBigInts } = utils;
 
-module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoefs, cnstPolsE, x_n, x_2ns, fflonkInfo, options) {
+module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
     const logger = options.logger;
 
     if (logger) logger.info("PIL-FFLONK PROVER STARTED");
@@ -97,19 +97,17 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
     ctx.q_2ns = new BigBuffer(fflonkInfo.qDim * sDomainExt);
     ctx.x_2ns = new BigBuffer(sDomainExt); // Omegas a l'extès
 
-    // Read constant polynomials
-    await cnstPols.writeToBigBufferFr(ctx.const_n, Fr);
-
     // Read committed polynomials
     await cmPols.writeToBigBufferFr(ctx.cm1_n, Fr);
 
     // Read const coefs and extended evals
-    ctx.const_coefs.set(cnstPolsCoefs);
-    ctx.const_2ns.set(cnstPolsE);
+    ctx.const_n.set(zkey.constPolsEvals);
+    ctx.const_coefs.set(zkey.constPolsCoefs);
+    ctx.const_2ns.set(zkey.constPolsEvalsExt);
 
     // Read x_n and x_2ns
-    ctx.x_n.set(x_n);
-    ctx.x_2ns.set(x_2ns);
+    ctx.x_n.set(zkey.x_n);
+    ctx.x_2ns.set(zkey.x_2ns);
 
     const committedPols = {};
 
@@ -125,31 +123,8 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
 
     const pool = workerpool.pool(__dirname + '/fflonk_prover_worker.js');
 
-    // Calculate publics
-    ctx.publics = [];
-    for (let i = 0; i < fflonkInfo.publics.length; i++) {
-        const publicPol = fflonkInfo.publics[i];
-
-        if ("cmP" === publicPol.polType) {
-            const offset = (fflonkInfo.publics[i].idx * fflonkInfo.mapSectionsN.cm1_n + fflonkInfo.publics[i].polId) * n8r;
-            ctx.publics[i] = ctx.cm1_n.slice(offset, offset + n8r);
-        } else if ("imP" === publicPol.polType) {
-            ctx.publics[i] = calculateExpAtPoint(ctx, fflonkInfo.publicsCode[i], publicPol.idx);
-        } else {
-            throw new Error(`Invalid public type: ${polType.type}`);
-        }
-    }
-
-    // Add constant composed polynomials
-    if (fflonkInfo.nConstants > 0) {
-        for (let i = 0; i < fflonkInfo.nConstants; i++) {
-            const coefs = getPolFromBuffer(ctx.const_coefs, fflonkInfo.nConstants, ctx.NCoefs, i, Fr);
-            ctx[zkey.polsNamesStage[0][i]] = new Polynomial(coefs, ctx.curve, logger);
-        }
- 
-        const commitsConstants = await commit(0, zkey, ctx, PTau, curve, { multiExp: false, logger });
-        commitsConstants.forEach((com) => committedPols[`${com.index}`] = { pol: com.pol });
-    }
+    // STAGE 0. Compute Publics and store constants
+    await stage0();
 
     // STAGE 1. Compute Trace Column Polynomials
     if (logger) logger.debug("> STAGE 1. Compute Trace Column Polynomials");
@@ -220,6 +195,47 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         publicSignals,
     };
 
+    async function stage0() {
+        // Add constant composed polynomials
+        if (fflonkInfo.nConstants > 0) {
+            for (let i = 0; i < fflonkInfo.nConstants; i++) {
+                const coefs = getPolFromBuffer(ctx.const_coefs, fflonkInfo.nConstants, ctx.NCoefs, i, Fr);
+                ctx[zkey.polsNamesStage[0][i]] = new Polynomial(coefs, ctx.curve, logger);
+            }
+            
+            const cnstCommitPols = Object.keys(zkey).filter(k => k.match(/^f\d/));
+            for (let i = 0; i < cnstCommitPols.length; ++i) {
+                const commit = zkey[cnstCommitPols[i]].commit;
+                const pol = new Polynomial(zkey[cnstCommitPols[i]].pol, curve, logger);
+                transcript.addPolCommitment(commit);
+                committedPols[`${cnstCommitPols[i]}_0`] = { commit: commit, pol: pol };
+
+                printPol(pol.coef, Fr);
+            }
+        }
+
+        // Calculate publics
+        ctx.publics = [];
+        for (let i = 0; i < fflonkInfo.publics.length; i++) {
+            const publicPol = fflonkInfo.publics[i];
+
+            if ("cmP" === publicPol.polType) {
+                const offset = (fflonkInfo.publics[i].idx * fflonkInfo.mapSectionsN.cm1_n + fflonkInfo.publics[i].polId) * n8r;
+                ctx.publics[i] = ctx.cm1_n.slice(offset, offset + n8r);
+            } else if ("imP" === publicPol.polType) {
+                ctx.publics[i] = calculateExpAtPoint(ctx, fflonkInfo.publicsCode[i], publicPol.idx);
+            } else {
+                throw new Error(`Invalid public type: ${polType.type}`);
+            }
+        }
+
+
+        // Add all the publics to the transcript
+        for (let i = 0; i < fflonkInfo.publics.length; i++) {
+            transcript.addScalar(ctx.publics[i]);
+        }
+    }
+
     async function stage1() {
         // STEP 1.3 - Compute commit polynomials (coefficients + evaluations) and commit them
         if (!fflonkInfo.mapSectionsN.cm1_n) return;
@@ -231,17 +247,6 @@ module.exports = async function fflonkProve(zkey, cmPols, cnstPols, cnstPolsCoef
         commitsStage1.forEach((com) => committedPols[`${com.index}`] = { commit: com.commit, pol: com.pol });
 
         commitsStage1.forEach((com) => console.log(com.index, ctx.curve.G1.toString(com.commit)));
-
-        const cnstCommitPols = Object.keys(zkey).filter(k => k.match(/^f\d/));
-        for (let i = 0; i < cnstCommitPols.length; ++i) {
-            transcript.addPolCommitment(zkey[cnstCommitPols[i]]);
-            committedPols[`${cnstCommitPols[i]}`].commit = zkey[cnstCommitPols[i]];
-        }
-
-        // Add all the publics to the transcript
-        for (let i = 0; i < fflonkInfo.publics.length; i++) {
-            transcript.addScalar(ctx.publics[i]);
-        }
 
         for(let i = 0; i < commitsStage1.length; i++) {
             transcript.addPolCommitment(commitsStage1[i].commit);

@@ -29,7 +29,7 @@ module.exports = async function fflonkVerificationKey(zkey, options) {
 
     const fs = Object.keys(zkey).filter(k => k.match(/^f\d/));    
     for(let i = 0; i < fs.length; ++i) {
-        vKey[fs[i]] = curve.G1.toObject(zkey[fs[i]]);
+        vKey[fs[i]] = curve.G1.toObject(zkey[fs[i]].commit);
     }
 
     let index = 0;

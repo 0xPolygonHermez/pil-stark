@@ -1427,7 +1427,6 @@
                 "-f tmp/fibonacci.final.fflonkinfo.json",
                 "-t tmp/powersOfTau28_hez_final_19.ptau",
                 "-c tmp/fibonacci.final.const",
-                "-e tmp/fibonacci.final.ext.cnst",
                 "-z tmp/fibonacci.final.zkey",
                 "--extraMuls=5",
 
@@ -2067,7 +2066,6 @@
                 "-t tmp/powersOfTau28_hez_final_19.ptau",
                 "-f tmp/fibonacci.fflonkinfo.json",
                 "-c tmp/fibonacci.const",
-                "-e tmp/fibonacci.ext.const",
                 "-z tmp/fibonacci.zkey"
             ],
             "runtimeArgs": [
@@ -2104,11 +2102,9 @@
             "args": [
                 "-p test/state_machines/sm_fibonacci/fibonacci_main.pil",
                 "-m tmp/fibonacci.commit",
-                "-c tmp/fibonacci.const",
                 "-t tmp/powersOfTau28_hez_final_19.ptau",
                 "-f tmp/fibonacci.fflonkinfo.json",
                 "-z tmp/fibonacci.zkey",
-                "-e tmp/fibonacci.ext.const",
                 "-o tmp/fibonacci.fflonk.proof.json",
                 "-b tmp/fibonacci.fflonk.publics.json"
             ],

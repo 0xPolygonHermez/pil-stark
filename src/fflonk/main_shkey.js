@@ -44,11 +44,10 @@ async function run() {
     const fflonkInfoRaw = await fs.promises.readFile(fflonkInfoFile, "utf8");
     const fflonkInfo = JSON.parse(fflonkInfoRaw);
 
-    let { zkey: shKey, PTau, curve } = await fflonkShKey(pil, ptauFile, fflonkInfo, {
+    let { zkey: shKey } = await fflonkShKey(pil, ptauFile, fflonkInfo, {
         extraMuls,
     });
 
-    delete shKey.X_2;
     shKey = stringifyBigInts(shKey);
     await fs.promises.writeFile(shkeyFile, JSON.stringify(shKey, null, 1));
 

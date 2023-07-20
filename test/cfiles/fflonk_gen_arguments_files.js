@@ -109,10 +109,7 @@ describe("generating files for arguments", async function () {
             options.extraMuls = 3;
         }
 
-        // Create & constant polynomial coefficients and extended evaluations file
-        const constPolsZkeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.ext.cnst`);
-
-        await fflonkSetup(pil, constPols, zkeyFilename, constPolsZkeyFilename, ptauFile, fflonkInfo, options);
+        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, options);
     
         // Save constant polynomial evaluations file
         const constPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.cnst`);

@@ -8,6 +8,7 @@ const F3g = require("../../../src/helpers/f3g");
 const { F1Field, getCurveFromName } = require("ffjavascript");
 
 const { newCommitPolsArray, compile } = require("pilcom");
+const { log2 } = require("pilcom/src/utils");
 
 
 const argv = require("yargs")
@@ -32,6 +33,12 @@ async function run() {
 
     const input = JSON.parse(await fs.promises.readFile(inputFile, "utf8"));
     const cmPols =  newCommitPolsArray(pil, F);
+
+    let maxPilPolDeg = 0;
+    for (const polRef in pil.references) {
+        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+    }
+    const N = 2**(log2(maxPilPolDeg - 1) + 1);
 
     const result = await smFibonacci.execute(N, cmPols.Fibonacci, input, F);
     console.log("Result: " + result);
