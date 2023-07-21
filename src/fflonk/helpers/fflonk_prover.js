@@ -401,10 +401,37 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
         if(zkey.maxQDegree) {
             const domainSizeQ = domainSizeExt / 2;
             const nQ = Math.ceil(domainSizeQ / (zkey.maxQDegree * domainSize));
+            // let rand1 = Fr.random();
+            // let rand2 = Fr.random();
+            let rand1 = Fr.two;
+            let rand2 = Fr.e(3);
             for(let i = 0; i < nQ; ++i) {
                 const st = (i * zkey.maxQDegree * domainSize) * Fr.n8;
                 const end = (i == nQ - 1 ? domainSizeQ : (i + 1) * zkey.maxQDegree * domainSize) * Fr.n8;
-                ctx[`Q${i}`] = new Polynomial(ctx["Q"].coef.slice(st, end), curve, logger);
+
+                let len = end - st;
+                let extLen = i == nQ - 1 ? len : len + 2 * Fr.n8;
+                let coefs = new BigBuffer(extLen);
+                
+                coefs.set(ctx["Q"].coef.slice(st, end));
+
+                // Blind Qi polynomials
+                if (i > 0) {
+                    coefs.set(Fr.sub(coefs.slice(0, Fr.n8), rand1), 0);
+                    coefs.set(Fr.sub(coefs.slice(Fr.n8, 2*Fr.n8), rand2), Fr.n8);
+                }
+
+                if (i < nQ - 1) {
+                    // rand1 = Fr.random();
+                    // rand2 = Fr.random();
+                    rand1 = Fr.two;
+                    rand2 = Fr.e(3);
+                    coefs.set(rand1, len);
+                    coefs.set(rand2, len + Fr.n8);
+                }
+                
+                ctx[`Q${i}`] = new Polynomial(coefs, curve, logger);
+
             } 
         } else {
             nonCommittedPols.push("Q");
