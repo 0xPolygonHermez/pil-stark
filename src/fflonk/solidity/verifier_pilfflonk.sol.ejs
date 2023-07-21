@@ -107,7 +107,11 @@ pragma solidity >=0.7.0 <0.9.0;
 <%      } -%>
 <%      } else throw new Error("Invalid op: " + inst.op); -%>
 <%  } -%>
+<% if(vk.maxQDegree == 0) { -%>
                 mstore(add(pMem, pQ), mulmod(tmp, calldataload(pEval_invZh), q))
+<%  } else { -%>
+                let Q := mulmod(tmp, calldataload(pEval_invZh), q)
+<%  } -%>
 <%  } -%>
 
 
@@ -165,12 +169,17 @@ contract PilFflonkVerifier {
     uint16 constant pA      = <%- challengeCount %>;
     uint16 constant pXiSeed = <%- challengeCount + 32 %>;
     uint16 constant pXi = <%- challengeCount + 64 %>;
+<% challengeCount += 96; -%>
 
+<% if(vk.maxQDegree > 0) { -%>
+    uint16 constant pXiN = <%- challengeCount %>;
+<% challengeCount += 32; -%>
+<% } else { -%>
     // Quotient polynomial
-    uint16 constant pQ  = <%- challengeCount + 96 %>;
-    
+    uint16 constant pQ  = <%- challengeCount %>;
+<% } -%>
 
-<%  let pLastMem = challengeCount + 128 -%>
+<%  let pLastMem = challengeCount + 32 -%>
     uint16 constant pLastMem = <%- pLastMem %>;
 
     constructor(address _shPlonkAddress) {
@@ -293,6 +302,10 @@ contract PilFflonkVerifier {
                 xin:= mulmod(xin, xin, q)
 <%  } -%>
 
+<%  if(vk.maxQDegree > 0) { -%>
+                mstore(add(pMem, pXiN), xin)
+<%  } -%>
+
                 let zh := mod(add(sub(xin, 1), q), q)
 
                 // Check that eval zh inv is correct
@@ -358,8 +371,31 @@ contract PilFflonkVerifier {
 <%  } -%>  
                 let challengeA := mload(add(pMem, pA))
                 let challengeXi := mload(add(pMem, pXi))
+<%  if(vk.maxQDegree > 0) { -%>
+                let challengeXiN := mload(add(pMem, pXiN))
+<% } -%>
                 
 <% unrollCode(fflonkInfo.verifierCode.first); -%>
+
+<%  if(vk.maxQDegree > 0) { -%>
+                tmp := 0
+                let xAcc := 1
+<%  const nPolsQ = vk.f.filter(fi => fi.stages[0].stage === 4).map(fi => fi.pols).flat(Infinity).length; -%>
+<%  for(let i = 0; i < nPolsQ; ++i) { -%>
+                tmp := addmod(tmp, mulmod(calldataload(pEval_Q<%- i %>), xAcc, q), q)
+<%  if(i < nPolsQ - 1) { -%>
+<%  for(let j = 0; j < vk.maxQDegree; ++j) { -%>
+                xAcc := mulmod(xAcc, challengeXiN, q)
+<% } -%>
+<% } -%>
+<% } -%>
+
+                // Check that Q and tmp are equal
+                if iszero(eq(tmp, Q)) {
+                    mstore(0, 0)
+                    return(0,0x20)
+                }
+<% } -%>
             }
             
             let pMem := mload(0x40)
@@ -385,10 +421,12 @@ contract PilFflonkVerifier {
             mstore(add(pMem, pLastMem),shPlonkSelector)
             calldatacopy(add(pMem, add(pLastMem, 0x04)),0x04, <%- (nBytesCommits - 1) * 32 %>)
             mstore(add(pMem, add(pLastMem, <%- (nBytesCommits - 1) * 32 + 4 %>)), mload(add(pMem, pXiSeed)))
+<%  if (vk.maxQDegree === 0) { -%>
             mstore(add(pMem, add(pLastMem, <%- (nBytesCommits - 1) * 32 + 4 + 32 %>)), mload(add(pMem, pQ)))
-
             let success := staticcall(gas(), shPlonkAddr, add(pMem, pLastMem), <%- (nBytesCommits - 1) * 32 + 4 + 64 %>, add(pMem, pLastMem), 32)
-
+<%  } else { -%> 
+            let success := staticcall(gas(), shPlonkAddr, add(pMem, pLastMem), <%- (nBytesCommits - 1) * 32 + 4 + 32 %>, add(pMem, pLastMem), 32)
+<%  } -%>   
             let isValid := and(success, mload(add(pMem, pLastMem)))
             mstore(0, isValid)
             return(0,0x20)

@@ -61,7 +61,8 @@ module.exports = async function exportPilFflonkVerifier(vk, fflonkInfo, options 
     }
     
     let nBytesCommits = (vk.f.filter(fi => fi.stages.length !== 1 || fi.stages[0].stage !== 0).length + 2) * 2 + (orderedEvals.length - 1);
-    const signatureStr = `verifyCommitments(bytes32[${nBytesCommits}],bytes32,bytes32[1])`;
+
+    const signatureStr = vk.maxQDegree == 0 ? `verifyCommitments(bytes32[${nBytesCommits}],bytes32,bytes32[1])` : `verifyCommitments(bytes32[${nBytesCommits}],bytes32)`;
     const signatureBytes = `0x${new Keccak(256).update(signatureStr).digest("hex").substring(0,8)}`;
 
     const obj = {
