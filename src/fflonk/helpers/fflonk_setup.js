@@ -1,3 +1,4 @@
+const { readBinFile } = require("@iden3/binfileutils");
 const {BigBuffer} = require("ffjavascript");
 const { Polynomial, commit} = require("shplonkjs");
 const { interpolate } = require("../../helpers/fft/fft_p.bn128");
@@ -9,7 +10,9 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
 
     let { zkey, PTau, curve } = await fflonkShKey(_pil, ptauFile, fflonkInfo, options);
 
-    zkey.X_2 = curve.G2.fromObject(zkey.X_2);
+    const {fd: fdPTau, sections: pTauSections} = await readBinFile(ptauFile, "ptau", 1, 1 << 22, 1 << 24);
+    const sG2 = curve.G2.F.n8 * 2;
+    zkey.X_2 = await fdPTau.read(sG2, pTauSections[3][0].p + sG2);  
 
     const roots = Object.keys(zkey).filter(k => k.match(/^w\d/));    
     for(let i = 0; i < roots.length; ++i) {

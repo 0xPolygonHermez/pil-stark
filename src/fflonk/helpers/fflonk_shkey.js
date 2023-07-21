@@ -202,8 +202,6 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
         shkey[roots[i]] = curve.Fr.toObject(shkey[roots[i]]);
     }
 
-    shkey.X_2 = curve.G2.toObject(shkey.X_2);
-
     return { zkey: shkey, PTau, curve };
 
     function setPolDefs(type, stage, name, id, domainSize) {
