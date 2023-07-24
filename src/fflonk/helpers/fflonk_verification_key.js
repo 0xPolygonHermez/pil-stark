@@ -1,5 +1,4 @@
 const {utils} = require("ffjavascript");
-const { readPilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 
 const {stringifyBigInts} = utils;
 
@@ -17,8 +16,6 @@ module.exports = async function fflonkVerificationKey(zkey, options) {
         power: zkey.power,
         powerW: zkey.powerW,
         f: zkey.f,
-        k1: curve.Fr.toObject(zkey.k1),
-        k2: curve.Fr.toObject(zkey.k2),
         w: curve.Fr.toObject(curve.Fr.w[zkey.power]),
         X_2: curve.G2.toObject(zkey.X_2),
     };

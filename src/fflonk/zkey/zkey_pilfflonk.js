@@ -274,6 +274,8 @@ exports.readPilFflonkZkeyFile = async function (zkeyFilename, options) {
     let logger;
     if (options && options.logger) logger = options.logger;
 
+    let vk = options.vk || false;
+
     if (logger) logger.info("> Reading the Pil-Fflonk zkey file");
 
     // TODO change to version 2
@@ -305,34 +307,36 @@ exports.readPilFflonkZkeyFile = async function (zkeyFilename, options) {
     await readPolsNamesStageSection(fdZKey, sections, zkey);
     if (globalThis.gc) globalThis.gc();
 
-    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_CONST_POLS_EVALS_SECTION}. Const Pols Evaluations`);
-    await readConstPolsEvalsSection(fdZKey, sections, zkey);
-    if (globalThis.gc) globalThis.gc();
-
-    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_CONST_POLS_COEFS_SECTION}. Const Pols Coefs`);
-    await readConstPolsCoefsSection(fdZKey, sections, zkey);
-    if (globalThis.gc) globalThis.gc();
-
-    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_CONST_POLS_EVALS_EXT_SECTION}. Const Pols Evals Ext`);
-    await readConstPolsEvalsExtSection(fdZKey, sections, zkey);
-    if (globalThis.gc) globalThis.gc();
-
-    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_X_N_SECTION}. X_n Evaluations`);
-    await readXnSection(fdZKey, sections, zkey);
-    if (globalThis.gc) globalThis.gc();
-
-    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_X_EXT_SECTION}.  X_2ns Evaluations`);
-    await readX2nsSection(fdZKey, sections, zkey);
-    if (globalThis.gc) globalThis.gc();
-
     if (logger) logger.info(`··· Reading Section ${ZKEY_PF_OMEGAS_SECTION}. Omegas Section`);
     await readOmegasSection(fdZKey, sections, zkey);
     if (globalThis.gc) globalThis.gc();
 
-    if (logger) logger.info(`··· Reading Section ${ZKEY_PF_PTAU_SECTION}. Powers of Tau Section`);
-    await readPTauSection(fdZKey, sections, zkey);
-    if (globalThis.gc) globalThis.gc();
+    if(!vk) {
+        if (logger) logger.info(`··· Reading Section ${ZKEY_PF_CONST_POLS_EVALS_SECTION}. Const Pols Evaluations`);
+        await readConstPolsEvalsSection(fdZKey, sections, zkey);
+        if (globalThis.gc) globalThis.gc();
 
+        if (logger) logger.info(`··· Reading Section ${ZKEY_PF_CONST_POLS_COEFS_SECTION}. Const Pols Coefs`);
+        await readConstPolsCoefsSection(fdZKey, sections, zkey);
+        if (globalThis.gc) globalThis.gc();
+
+        if (logger) logger.info(`··· Reading Section ${ZKEY_PF_CONST_POLS_EVALS_EXT_SECTION}. Const Pols Evals Ext`);
+        await readConstPolsEvalsExtSection(fdZKey, sections, zkey);
+        if (globalThis.gc) globalThis.gc();
+
+        if (logger) logger.info(`··· Reading Section ${ZKEY_PF_X_N_SECTION}. X_n Evaluations`);
+        await readXnSection(fdZKey, sections, zkey);
+        if (globalThis.gc) globalThis.gc();
+
+        if (logger) logger.info(`··· Reading Section ${ZKEY_PF_X_EXT_SECTION}.  X_2ns Evaluations`);
+        await readX2nsSection(fdZKey, sections, zkey);
+        if (globalThis.gc) globalThis.gc();
+
+        if (logger) logger.info(`··· Reading Section ${ZKEY_PF_PTAU_SECTION}. Powers of Tau Section`);
+        await readPTauSection(fdZKey, sections, zkey);
+        if (globalThis.gc) globalThis.gc();
+    }
+    
     if (logger) logger.info("> Reading the zkey file finished");
 
     await fdZKey.close();
@@ -436,6 +440,7 @@ async function readFCommitmentsSection(fdZKey, sections, zkey) {
         const lenPol = await fdZKey.readULE32();
         const pol = await fdZKey.read(lenPol);
 
+        
         zkey[name] = {commit, pol};
     }
 

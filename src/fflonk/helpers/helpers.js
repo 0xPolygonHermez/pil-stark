@@ -6,8 +6,6 @@ module.exports.fromObjectVk = function fromObjectVk(curve, vk) {
     vk = unstringifyBigInts(vk);
 
     const res = vk;
-    res.k1 = curve.Fr.fromObject(vk.k1);
-    res.k2 = curve.Fr.fromObject(vk.k2);
     res.w = curve.Fr.fromObject(vk.w);
     const ws = Object.keys(vk).filter(k => k.match(/^w\d/));    
     for(let i = 0; i < ws.length; ++i) {
