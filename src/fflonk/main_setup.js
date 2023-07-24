@@ -15,7 +15,8 @@ const argv = require("yargs")
     .alias("f", "fflonkInfo")
     .alias("c", "const")  // Input -> file required to build the constants
     .alias("z", "zkey")   // Output -> File required to execute
-    .string("extraMuls")
+    .alias("e", "extraMuls")
+    .alias("q", "maxQDegree")
     .argv;
 
 async function run() {
@@ -45,6 +46,7 @@ async function run() {
 
     let options = {};
     options.extraMuls = Number(argv.extraMuls) || 2;
+    options.maxQDegree = Number(argv.maxQDegree) || 0;
         
     await fflonkSetup(pil, cnstPols, zkeyFile, ptauFile, fflonkInfo, options);
 

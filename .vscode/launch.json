@@ -1415,6 +1415,26 @@
             ]
         },
         {
+            "name": "fibonacci final fflonk shkey",
+            "program": "${workspaceFolder}/src/fflonk/main_shkey.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-p tmp/fibonacci.final.pil",
+                "-f tmp/fibonacci.final.fflonkinfo.json",
+                "-t tmp/powersOfTau28_hez_final_24.ptau",
+                "-e 6",
+                "-q 4",
+                "-s tmp/fibonacci.final.shkey.json"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "fibonacci final fflonk setup",
             "program": "src/fflonk/main_setup.js",
             "request": "launch",
@@ -1428,8 +1448,8 @@
                 "-t tmp/powersOfTau28_hez_final_19.ptau",
                 "-c tmp/fibonacci.final.const",
                 "-z tmp/fibonacci.final.zkey",
-                "--extraMuls=5",
-
+                "-e 6",
+                "-q 4",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1979,7 +1999,7 @@
                 "-f tmp/simple2p.fflonkinfo.json",
                 "-c tmp/simple2p.cnst",
                 "-z tmp/simple2p.zkey",
-                "--extraMuls=1"
+                "-e 1"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"

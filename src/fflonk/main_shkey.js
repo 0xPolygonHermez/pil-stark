@@ -16,7 +16,9 @@ const argv = require("yargs")
     .alias("f", "fflonkInfo")
     .alias("t", "ptau") // Input -> ptau
     .alias("s", "shkey") // Output -> File required to execute
-    .alias("e", "extraMuls").argv;
+    .alias("e", "extraMuls")
+    .alias("q", "maxQDegree")
+    .argv;
 
 async function run() {
     const F = new F1Field(
@@ -36,6 +38,8 @@ async function run() {
         typeof argv.ptau === "string" ? argv.ptau.trim() : "powers.ptau";
     const shkeyFile =
         typeof argv.shkey === "string" ? argv.shkey.trim() : "pil.shkey";
+
+    const maxQDegree = Number(argv.maxQDegree) || 0;
     const extraMuls = Number(argv.extraMuls) || 2;
 
     // PIL compile
@@ -45,7 +49,7 @@ async function run() {
     const fflonkInfo = JSON.parse(fflonkInfoRaw);
 
     let { zkey: shKey } = await fflonkShKey(pil, ptauFile, fflonkInfo, {
-        extraMuls,
+        extraMuls, maxQDegree
     });
 
     shKey = stringifyBigInts(shKey);
