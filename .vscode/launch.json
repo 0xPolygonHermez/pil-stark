@@ -2296,14 +2296,15 @@
             ]
         },
         {
-            "name": "plonktest setup",
+            "name": "plonktest setup goldilocks",
             "program": "test/plonk2pil/main_plonksetup.js",
             "request": "launch",
             "args": [
-                "-r ${workspaceFolder}/tmp/plonktest.r1cs",
-                "-p ${workspaceFolder}/tmp/plonktest.pil",
-                "-c ${workspaceFolder}/tmp/plonktest.const",
-                "-e ${workspaceFolder}/tmp/plonktest.exec"            ],
+                "-r ${workspaceFolder}/tmp/plonktest.gl.r1cs",
+                "-p ${workspaceFolder}/tmp/plonktest.gl.pil",
+                "-c ${workspaceFolder}/tmp/plonktest.gl.const",
+                "-e ${workspaceFolder}/tmp/plonktest.gl.exec"            
+            ],
             "skipFiles": [
                 "<node_internals>/**"
             ],
@@ -2313,14 +2314,14 @@
             ]
         },
         {
-            "name": "plonktest exec",
+            "name": "plonktest exec goldilocks",
             "program": "test/plonk2pil/main_plonkexec.js",
             "request": "launch",
             "args": [
-                "-e ${workspaceFolder}/tmp/plonktest.exec",
-                "-w ${workspaceFolder}/tmp/plonktest.wtns",
-                "-p ${workspaceFolder}/tmp/plonktest.pil",
-                "-m ${workspaceFolder}/tmp/plonktest.commit"],
+                "-e ${workspaceFolder}/tmp/plonktest.gl.exec",
+                "-w ${workspaceFolder}/tmp/plonktest.gl.wtns",
+                "-p ${workspaceFolder}/tmp/plonktest.gl.pil",
+                "-m ${workspaceFolder}/tmp/plonktest.gl.commit"],
             "skipFiles": [
                 "<node_internals>/**"
             ],
@@ -2330,7 +2331,7 @@
             ]
         },
         {
-            "name": "plonktest verify",
+            "name": "plonktest verify goldilocks",
             "program": "node_modules/pilcom/src/main_pilverifier.js",
             "request": "launch",
             "skipFiles": [
@@ -2338,9 +2339,9 @@
             ],
             "type": "pwa-node",
             "args": [
-                "${workspaceFolder}/tmp/plonktest.commit",
-                "-p ${workspaceFolder}/tmp/plonktest.pil",
-                "-c ${workspaceFolder}/tmp/plonktest.const",
+                "${workspaceFolder}/tmp/plonktest.gl.commit",
+                "-p ${workspaceFolder}/tmp/plonktest.gl.pil",
+                "-c ${workspaceFolder}/tmp/plonktest.gl.const",
                 "--field=0xFFFFFFFF00000001"
             ],
             "runtimeArgs": [
@@ -2348,74 +2349,55 @@
             ]
         },
         {
-            "name": "zkevm recursive2 setup",
-            "program": "src/compressor/main_compressor_setup.js",
+            "name": "plonktest setup bn128",
+            "program": "test/plonk2pil/main_plonksetup.js",
             "request": "launch",
+            "args": [
+                "-r ${workspaceFolder}/tmp/plonktest.bn128.r1cs",
+                "-p ${workspaceFolder}/tmp/plonktest.bn128.pil",
+                "-c ${workspaceFolder}/tmp/plonktest.bn128.const",
+                "-e ${workspaceFolder}/tmp/plonktest.bn128.exec",
+                "--curve=bn128"            
+            ],
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
-            "args": [
-                "-r ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.r1cs",
-                "-p ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.pil",
-                "-c ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.const",
-                "-e ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.exec",
-            ],
             "runtimeArgs": [
-                "--max-old-space-size=32000"
+                "--max-old-space-size=512000"
             ]
         },
         {
-            "name": "zkevm recursive2 exec",
-            "program": "src/compressor/main_compressor_exec.js",
+            "name": "plonktest exec bn128",
+            "program": "test/plonk2pil/main_plonkexec.js",
             "request": "launch",
+            "args": [
+                "-e ${workspaceFolder}/tmp/plonktest.bn128.exec",
+                "-w ${workspaceFolder}/tmp/plonktest.bn128.wtns",
+                "-p ${workspaceFolder}/tmp/plonktest.bn128.pil",
+                "-m ${workspaceFolder}/tmp/plonktest.bn128.commit",
+                "--curve=bn128"            
+            ],
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
-            "args": [
-                "-i ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/zkevm.recursive2.zkin.proof_01.json",
-                "-w ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2_js/recursive2.wasm",
-                "-p ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.pil",
-                "-e ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.exec",
-                "-m ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursive2.commit",
-            ],
             "runtimeArgs": [
-                "--max-old-space-size=32000"
+                "--max-old-space-size=512000"
             ]
         },
         {
-            "name": "zkevm generate circom",
-            "program": "src/main_pil2circom.js",
+            "name": "plonktest verify bn128",
+            "program": "src/final/main_final_pil_verify.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node",
             "args": [
-                "-p ${workspaceFolder}/../zkevm-proverjs/pil/main.pil",
-                "-s ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-rc.1-stark/zkevm.starkinfo.json",
-                "-v ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-rc.1-stark/zkevm.verkey.json",
-                "-o ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-rc.1-stark/zkevm.verifier.circom",
-            ],
-            "runtimeArgs": [
-                "--max-old-space-size=32000"
-            ]
-        },
-        {
-            "name": "recursive1 exec",
-            "program": "src/compressor/main_compressor_exec.js",
-            "request": "launch",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node",
-            "args": [
-                "-i /tmp/zkinC12a.json",
-                "-w ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-evals2-20221212/recursive1_js/recursive1.wasm",
-                "-p ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-evals2-20221212/recursive1.pil",
-                "-e ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-evals2-20221212/recursive1.exec",
-                "-m /tmp/recursive1.commit",
+                "-t ${workspaceFolder}/tmp/plonktest.bn128.commit",
+                "-p ${workspaceFolder}/tmp/plonktest.bn128.pil",
+                "-c ${workspaceFolder}/tmp/plonktest.bn128.const",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"

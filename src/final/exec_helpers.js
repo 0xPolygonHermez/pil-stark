@@ -1,46 +1,34 @@
 const fs = require("fs");
 const BigArray = require("@iden3/bigarray");
-
+const fastFile = require("fastfile");
 
 module.exports.readExecFile = async function readExecFile(F, execFile, nCommittedPols) {
 
-    const fd =await fs.promises.open(execFile, "r");
-
-    const buffH = new Uint8Array(2*F.n8);
-    await fd.read({buffer: buffH, offset: 0, length: 2*F.n8});
-        
-    const nAdds = Number(F.fromRprLE(buffH, 0));
-    const nSMap = Number(F.fromRprLE(buffH, F.n8));
-
-    const size = (nAdds*4 + nCommittedPols*nSMap)*F.n8;
-    const buff = new Uint8Array(size);
-
-    await fd.read({buffer: buff, offset: 0, length: size });
-
-    let p = 0;
-    const adds = new BigArray(nAdds);
-    for (let i=0; i < nAdds; ++i) {
-        adds[i] = [];
-        for(let j = 0; j < 4; ++j) {
-            adds[i][j] = F.fromRprLE(buff, p);
-            p += F.n8;
-        }
-    }
+    const fd = await fastFile.readExisting(execFile);
     
-    const sMap = new BigArray(nCommittedPols);
+    const nAdds = await fd.readULE64();
+    const nSMap = await fd.readULE64();
 
-    for(let c = 0; c < nCommittedPols; c++) {
-        sMap[c] = [];
+    const n8r = F.n8;
+
+    const lenAdds = nAdds*4*n8r;
+    const lenSMap = nSMap*nCommittedPols*n8r;
+
+    const buffAdds = await fd.read(lenAdds, 2*n8r);
+    let p = 0;
+    const adds = new BigArray(nAdds*4);
+    for (let i=0; i < nAdds*4; ++i) {
+        adds[i] = BigInt(F.toString(buffAdds.slice(p, p+n8r)));
+        p += n8r;
     }
 
-    for (let i=0; i<nSMap; i++) {
-        for (let j=0; j<nCommittedPols; j++) {
-            sMap[j][i] = F.fromRprLE(buff, p);
-            p += F.n8;
-        }
+    const sMap = new BigArray(nCommittedPols * nSMap);
+    const buffSMap = await fd.read(lenSMap, 2*n8r + lenAdds);
+    p = 0;
+    for (let i=0; i<nSMap * nCommittedPols; i++) {
+        sMap[i] = BigInt(F.toString(buffSMap.slice(p, p+n8r)));
+        p += n8r;
     }
-
-    await fd.close();
 
     return { nAdds, nSMap, adds, sMap };
 
@@ -48,29 +36,36 @@ module.exports.readExecFile = async function readExecFile(F, execFile, nCommitte
 
 module.exports.writeExecFile = async function writeExecFile(F, execFile, adds, sMap) {
 
-    const size = (2 + adds.length*4 + sMap.length*sMap[0].length)*F.n8;
-    const buff = new Uint8Array(size);
+    const fd = await fastFile.createOverride(execFile);
+
+    fd.writeULE64(adds.length);
+    fd.writeULE64(sMap[0].length);
     
-    F.toRprLE(buff, 0, adds.length);
-    F.toRprLE(buff, F.n8, sMap[0].length);
-    
-    let p = 2*F.n8;
-    for (let i=0; i< adds.length; i++) {
+    const n8r = F.n8;
+
+    const lenAdds = adds.length*4*n8r;
+    const buffAdds = new Uint8Array(lenAdds);
+    let p = 0;
+    for (let i = 0; i < adds.length; i++) {
         for(let j = 0; j < 4; j++)  {
-            F.toRprLE(buff, p, adds[i][j]);
-            p += F.n8;
+            buffAdds.set(F.e(adds[i][j]), p);
+            p += n8r;
         }
     }
 
+    await fd.write(buffAdds, 2*n8r);
+
+    const lenSMap = sMap.length*sMap[0].length*n8r;
+    const buffSMap = new Uint8Array(lenSMap);
+    p = 0;
     for (let i=0; i<sMap[0].length; i++) {
         for (let j=0; j<sMap.length; j++) {
-            F.toRprLE(buff, p, sMap[j][i]);
-            p += F.n8;
+            buffSMap.set(F.e(sMap[j][i]), p);
+            p += n8r;
         }
     }
-    
-    const fd =await fs.promises.open(execFile, "w+");
-    await fd.write(buff);
-    await fd.close();
 
+    await fd.write(buffSMap, 2*n8r + lenAdds);
+
+    await fd.close();
 }

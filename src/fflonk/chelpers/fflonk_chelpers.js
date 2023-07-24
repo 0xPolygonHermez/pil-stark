@@ -1,12 +1,12 @@
 const compileCode_parser = require("./compileCode_parser.js")
 const compileCode_42ns = require("./compileCode_42ns.js")
 
-module.exports = function buildCHelpers(zkey, fflonkInfo, config = {}) {
+module.exports = function buildCHelpers(fflonkInfo, config = {}) {
 
     const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
 
-    const nBits = zkey.power;
-    const nBitsExt = zkey.power + extendBits + fflonkInfo.nBitsZK;
+    const nBits = fflonkInfo.pilPower;
+    const nBitsExt = fflonkInfo.pilPower + extendBits + fflonkInfo.nBitsZK;
     
     const extendBitsTotal = (nBitsExt - nBits);
 

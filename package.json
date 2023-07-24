@@ -95,8 +95,10 @@
     "verifier_final_setup": "NODE_OPTIONS=--max-old-space-size=32000 node src/final/main_final_setup.js -r test/final/verifier.r1cs -p tmp/verifier.final.pil -c tmp/verifier.final.const -e tmp/verifier.final.exec",
     "verifier_final_exec": "NODE_OPTIONS=--max-old-space-size=32000 node src/final/main_final_exec.js -i test/final/verifier.proof.zkin.json -w test/final/verifier_js/verifier.wasm -p tmp/verifier.final.pil -e tmp/verifier.final.exec -m tmp/verifier.final.commit",
     "verifier_final_pil_verify": "NODE_OPTIONS=--max-old-space-size=32000 node src/final/main_final_pil_verify.js -t tmp/verifier.final.commit -p tmp/verifier.final.pil -c tmp/verifier.final.const",
-    "plonktest_compile": "circom --O1 --prime goldilocks --r1cs --sym --wasm --c --verbose test/circuits/plonktest.circom -o tmp",
-    "plonktest_wc": "snarkjs wc tmp/plonktest_js/plonktest.wasm test/circuits/plonkinput.json tmp/plonktest.wtns"
+    "plonktest_gl_compile": "circom --O1 --prime goldilocks --r1cs --sym --wasm --c --verbose test/plonk2pil/plonktest.gl.circom -o tmp/",
+    "plonktest_gl_wc": "snarkjs wc tmp/plonktest.gl_js/plonktest.gl.wasm test/plonk2pil/plonkinput.json tmp/plonktest.gl.wtns",
+    "plonktest_bn128_compile": "circom --O1 --r1cs --sym --wasm --c --verbose test/plonk2pil/plonktest.bn128.circom -o tmp/",
+    "plonktest_bn128_wc": "snarkjs wc tmp/plonktest.bn128_js/plonktest.bn128.wasm test/plonk2pil/plonkinput.json tmp/plonktest.bn128.wtns"
   },
   "keywords": [
     "stark",
@@ -112,6 +114,7 @@
     "circomlib": "^2.0.5",
     "circomlibjs": "^0.1.6",
     "ejs": "^3.1.8",
+    "fastfile": "^0.0.20",
     "json-bigint": "^1.0.0",
     "pilcom": "https://github.com/0xPolygonHermez/pilcom.git#polsArrayGeneric",
     "r1csfile": "^0.0.44",

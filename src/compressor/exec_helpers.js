@@ -11,15 +11,15 @@ module.exports.readExecFile = async function readExecFile(execFile, nCommittedPo
     const nSMap= Number(buffH[1]);
 
 
-    const addsBuff = new BigUint64Array(nAdds*4);
-    await fd.read(addsBuff, 0, nAdds*4*8);
+    const adds = new BigUint64Array(nAdds*4);
+    await fd.read(adds, 0, nAdds*4*8);
 
-    const sMapBuff = new BigUint64Array(nSMap*nCommittedPols);
-    await fd.read(sMapBuff, 0, nSMap*nCommittedPols*8);
+    const sMap = new BigUint64Array(nSMap*nCommittedPols);
+    await fd.read(sMap, 0, nSMap*nCommittedPols*8);
 
     await fd.close();
 
-    return { nAdds, nSMap, addsBuff, sMapBuff };
+    return { nAdds, nSMap, adds, sMap };
 
 }
 

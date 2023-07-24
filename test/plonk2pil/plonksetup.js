@@ -1,6 +1,5 @@
 const fs = require("fs");
 const path = require("path");
-const F3g = require("../../src/helpers/f3g.js");
 const { log2 } = require("pilcom/src/utils.js");
 const {tmpName} = require("tmp-promise");
 const { newConstantPolsArray, compile, getKs } = require("pilcom");
@@ -9,8 +8,7 @@ const r1cs2plonk = require("../../src/r1cs2plonk");
 
 
 
-module.exports = async function plonkSetup(r1cs) {
-    const F = new F3g();
+module.exports = async function plonkSetup(F, r1cs) {
     const [plonkConstraints, plonkAdditions] = r1cs2plonk(F, r1cs);
 
     const nPublics = r1cs.nOutputs + r1cs.nPubInputs;
@@ -62,7 +60,6 @@ module.exports = async function plonkSetup(r1cs) {
     r += nPublicRows;
 
     // Paste plonk constraints.
-    const partialRows = {};
     for (let i=0; i<plonkConstraints.length; i++) {
         if ((i%10000) == 0) console.log(`Processing constraint... ${i}/${plonkConstraints.length}`);
         const c = plonkConstraints[i];
@@ -74,7 +71,7 @@ module.exports = async function plonkSetup(r1cs) {
         sMap[0][r] = c[0];
         sMap[1][r] = c[1];
         sMap[2][r] = c[2];
-        r ++;
+        r++;
     }
 
     // Calculate S Polynomials

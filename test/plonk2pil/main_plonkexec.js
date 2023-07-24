@@ -3,9 +3,10 @@ const version = require("../../package").version;
 
 const { compile, newCommitPolsArray } = require("pilcom");
 const F3g = require("../../src/helpers/f3g.js");
-const { log2 } = require("pilcom/src/utils.js");
 const binFileUtils = require("@iden3/binfileutils");
 const { readExecFile } = require("../../src/compressor/exec_helpers");
+const { readExecFile: readExecFileFr } = require("../../src/final/exec_helpers");
+const { F1Field, getCurveFromName } = require("ffjavascript");
 
 
 const argv = require("yargs")
@@ -16,10 +17,14 @@ const argv = require("yargs")
     .alias("P", "pilconfig")
     .alias("e", "exec")
     .alias("m", "commit")
+    .string("curve")
     .argv;
 
 async function run() {
-    const F = new F3g();
+
+    const curveName = argv.curve || "gl";
+
+    const F = curveName === "gl" ? new F3g() : new F1Field(21888242871839275222246405745257275088548364400416034343698204186575808495617n);
 
     const wtnsFile = typeof(argv.wtns) === "string" ?  argv.wtns.trim() : "witness.wtns";
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
@@ -31,30 +36,48 @@ async function run() {
 
     const cmPols = newCommitPolsArray(pil, F);
 
-    const nCommittedPols = cmPols.Final.a.length;
+    const nCommittedPols = cmPols.PlonkCircuit.a.length;
 
-    const { nAdds, nSMap, adds, sMap } = await readExecFile(execFile, nCommittedPols);
+    let Fr;
+    if(curveName !== "gl"){
+        const curve = await getCurveFromName("bn128");
 
-    const Nbits = log2(nSMap -1) +1;
-    const N = 1 << Nbits;
+    	Fr = curve.Fr;
+
+    	await curve.terminate();
+    }
+
+    let res;
+    if(curveName === "gl"){
+        res = await readExecFile(execFile, nCommittedPols);
+    } else {
+        res = await readExecFileFr(Fr, execFile, nCommittedPols);
+    }
+
+    const { nAdds, nSMap, adds, sMap } = res;
+
 
     const w = await readWtns(wtnsFile);
 
     for (let i=0; i<nAdds; i++) {
-        w.push( F.add( F.mul( w[adds[i][0]], adds[i][2]), F.mul( w[adds[i][1]],  adds[i][3]  )));
+        w.push( F.add( F.mul( w[adds[i*4]], adds[i*4 + 2]), F.mul( w[adds[i*4+1]],  adds[i*4+3]  )));
     }
 
     for (let i=0; i<nSMap; i++) {
         for (let j=0; j<nCommittedPols; j++) {
-            if (sMap[j][i] != 0) {
-                cmPols.PlonkCircuit.a[j][i] = w[sMap[j][i]];
+            if (sMap[nCommittedPols*i+j] != 0) {
+                cmPols.PlonkCircuit.a[j][i] = w[sMap[nCommittedPols*i+j]];
             } else {
                 cmPols.PlonkCircuit.a[j][i] = 0n;
             }
         }
     }
 
-    await cmPols.saveToFile(commitFile);
+    if(curveName === "gl") {
+        await cmPols.saveToFile(commitFile);
+    } else {
+        await cmPols.saveToFileFr(commitFile, Fr);
+    }
 
     console.log("files Generated Correctly");
 
