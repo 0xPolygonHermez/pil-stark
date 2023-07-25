@@ -59,7 +59,7 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
     const sDomainCoefs = domainSizeCoefs * n8r;
     const sDomainExt = domainSizeExt * n8r;
 
-    const domainSizeQ = fflonkInfo.qDeg * domainSize + fflonkInfo.maxPolsOpenings * 2 + 1;
+    const domainSizeQ = fflonkInfo.qDeg * domainSize + fflonkInfo.maxPolsOpenings * (fflonkInfo.qDeg + 1);
     const nQ = zkey.maxQDegree ? Math.ceil(domainSizeQ / (zkey.maxQDegree * domainSize)) : 1;
 
     if (logger) {
