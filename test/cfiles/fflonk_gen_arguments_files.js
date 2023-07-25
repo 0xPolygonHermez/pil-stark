@@ -16,6 +16,7 @@ const { readPilFflonkZkeyFile } = require("../../src/fflonk/zkey/zkey_pilfflonk.
 const { fflonkVerificationKey } = require("../../index.js");
 const logger = Logger.create("pil-fflonk", {showTimestamp: false});
 const { execSync } = require('child_process');
+const fflonk_shkey = require("../../src/fflonk/helpers/fflonk_shkey.js");
 Logger.setLogLevel("DEBUG");
 
 describe("generating files for arguments", async function () {
@@ -110,7 +111,7 @@ describe("generating files for arguments", async function () {
             options.extraMuls = 3;
         }
 
-        const { zkey: shKey } = await fflonk_shkey(pil, ptauFile, fflonkInfo, options);
+        let { zkey: shKey } = await fflonk_shkey(pil, ptauFile, fflonkInfo, options);
         shKey = stringifyBigInts(shKey);
 
         let shKeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.shkey.json`);

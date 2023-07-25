@@ -90,8 +90,8 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     // Paste public inputs. All constant polynomials are set to 0
     for (let i=0; i<nPublicRows; i++) {
         constPols.Final.GATE[i] = 0n;
-        constPols.Final.POSEIDON_T[i] = 0n;
-        constPols.Final.PARTIAL[i] = 0n;
+        constPols.Final.POSEIDON_FULL_ROUND[i] = 0n;
+        constPols.Final.POSEIDON_PARTIAL_ROUND[i] = 0n;
         constPols.Final.RANGE_CHECK[i] = 0n;
         constPols.Final.GLCMULADD[i] = 0n;
         for (let k=0; k<5; k++) {
@@ -125,7 +125,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
             // First 30 rows store the each one of the rounds, while the last one only stores the output hash value so
             // that it can be checked.
             // All constant polynomials are set to 0 except for C, which contains the GL Poseidon constants, 
-            // POSEIDON16, which is always 1, and PARTIAL, which is 1 in the first and last for rounds and zero otherwise
+            // POSEIDON16, which is always 1, and POSEIDON_PARTIAL_ROUND, which is 1 in the first and last for rounds and zero otherwise
             for (let k=0; k<nRoundsPoseidon + 1; k++) {
                 for (let j=0; j<5; j++) {
                     sMap[j][r+k] = cgu.signals[k*customGatesInfo.nPoseidonInputs+j];
@@ -134,8 +134,8 @@ module.exports = async function plonkSetup(F, r1cs, options) {
             
                 constPols.Final.GATE[r+k] = 0n;
                 constPols.Final.GLCMULADD[r + k] = 0n;
-                constPols.Final.POSEIDON_T[r+k] = k < nRoundsPoseidon ? 1n: 0n;
-                constPols.Final.PARTIAL[r+k] = k < nRoundsPoseidon ? ((k<4)||(k>=nRoundsP + 4) ? 0n : 1n) : 0n;
+                constPols.Final.POSEIDON_FULL_ROUND[r+k] =  k < nRoundsPoseidon ? ((k<4)||(k>=nRoundsP + 4) ? 1n : 0n) : 0n;
+                constPols.Final.POSEIDON_PARTIAL_ROUND[r+k] = k < nRoundsPoseidon ? ((k<4)||(k>=nRoundsP + 4) ? 0n : 1n) : 0n;
                 constPols.Final.RANGE_CHECK[r+k] = 0n;
             }
             r+=nRoundsPoseidon + 1;
@@ -144,8 +144,8 @@ module.exports = async function plonkSetup(F, r1cs, options) {
             assert(cgu.signals.length == 1 + nBytes);
             constPols.Final.GATE[r] = 0n;
             constPols.Final.GLCMULADD[r] = 0n;
-            constPols.Final.POSEIDON_T[r] = 0n;
-            constPols.Final.PARTIAL[r] = 0n;
+            constPols.Final.POSEIDON_FULL_ROUND[r] = 0n;
+            constPols.Final.POSEIDON_PARTIAL_ROUND[r] = 0n;
             constPols.Final.RANGE_CHECK[r] = 1n;
     
             for (let k=0; k<5; k++) {
@@ -164,14 +164,14 @@ module.exports = async function plonkSetup(F, r1cs, options) {
             assert(cgu.signals.length == 12);
             constPols.Final.GATE[r] = 0n;
             constPols.Final.GLCMULADD[r] = 1n;
-            constPols.Final.POSEIDON_T[r] = 0n;
-            constPols.Final.PARTIAL[r] = 0n;
+            constPols.Final.POSEIDON_FULL_ROUND[r] = 0n;
+            constPols.Final.POSEIDON_PARTIAL_ROUND[r] = 0n;
             constPols.Final.RANGE_CHECK[r] = 0n;
     
             constPols.Final.GATE[r+1] = 0n;
             constPols.Final.GLCMULADD[r+1] = 0n;
-            constPols.Final.POSEIDON_T[r+1] = 0n;
-            constPols.Final.PARTIAL[r+1] = 0n;
+            constPols.Final.POSEIDON_FULL_ROUND[r+1] = 0n;
+            constPols.Final.POSEIDON_PARTIAL_ROUND[r+1] = 0n;
             constPols.Final.RANGE_CHECK[r+1] = 0n;
 
             for (let k=0; k<5; k++) {
@@ -232,8 +232,8 @@ module.exports = async function plonkSetup(F, r1cs, options) {
         } else {
             constPols.Final.GATE[r] = 1n;
             constPols.Final.GLCMULADD[r] = 0n;
-            constPols.Final.PARTIAL[r] = 0n;
-            constPols.Final.POSEIDON_T[r] = 0n;
+            constPols.Final.POSEIDON_PARTIAL_ROUND[r] = 0n;
+            constPols.Final.POSEIDON_FULL_ROUND[r] = 0n;
             constPols.Final.RANGE_CHECK[r] = 0n;
             sMap[0][r] = c[0];
             sMap[1][r] = c[1];
@@ -294,8 +294,8 @@ module.exports = async function plonkSetup(F, r1cs, options) {
         if ((r%100000) == 0) console.log(`Point check -> Empty gates... ${r}/${N}`);
         constPols.Final.GATE[r] = 0n;
         constPols.Final.GLCMULADD[r] = 0n;
-        constPols.Final.POSEIDON_T[r] = 0n;
-        constPols.Final.PARTIAL[r] = 0n;
+        constPols.Final.POSEIDON_FULL_ROUND[r] = 0n;
+        constPols.Final.POSEIDON_PARTIAL_ROUND[r] = 0n;
         constPols.Final.RANGE_CHECK[r] = 0n;
         for (let k=0; k<5; k++) {
             constPols.Final.C[k][r] = 0n;

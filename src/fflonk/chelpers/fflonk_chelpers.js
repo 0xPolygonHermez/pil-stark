@@ -220,7 +220,7 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
                 case "number": {
                     if(bigIntsFound.findIndex(v => v === BigInt(r.value)) == -1) {
                         bigIntsFound.push(BigInt(r.value));
-                        if(BigInt(r.value) >= BigInt(1 << 32)) {
+                        if(BigInt(r.value) >= BigInt(4294967296)) {
                             bigIntsCode.push(`     AltBn128::FrElement v${vIndex};`);
                             bigIntsCode.push(`     E.fr.fromString(v${vIndex}, "${BigInt(r.value).toString()}");`);
                             bigIntsCode.push(`     params.constValues[${vIndex}] = v${vIndex};`);

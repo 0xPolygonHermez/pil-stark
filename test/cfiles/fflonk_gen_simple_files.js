@@ -15,6 +15,7 @@ const { execSync } = require('child_process');
 const smSimple = require("../state_machines/sm_simple/sm_simple.js");
 
 const Logger = require("logplease");
+const fflonk_shkey = require("../../src/fflonk/helpers/fflonk_shkey.js");
 const logger = Logger.create("pil-fflonk", {showTimestamp: false});
 Logger.setLogLevel("DEBUG");
 
