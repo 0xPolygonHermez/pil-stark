@@ -66,15 +66,15 @@ pragma solidity >=0.7.0 <0.9.0;
 <%  } -%>
 
 <%  function getDestRef(i) {
-    let dest = i === codeNoCopy.length - 1 
-        || (codeNoCopy[i+1].src[0] && JSON.stringify(codeNoCopy[i+1].src[0]) === JSON.stringify(codeNoCopy[i].dest)) 
+    let dest = i === codeNoCopy.length - 1 || (i < codeNoCopy.length - 1
+        && ((codeNoCopy[i+1].src[0] && JSON.stringify(codeNoCopy[i+1].src[0]) === JSON.stringify(codeNoCopy[i].dest)) 
         || (codeNoCopy[i+1].src[1] && JSON.stringify(codeNoCopy[i+1].src[1]) === JSON.stringify(codeNoCopy[i].dest)) 
-        || (codeNoCopy[i+1].src[2] && JSON.stringify(codeNoCopy[i+1].src[2]) === JSON.stringify(codeNoCopy[i].dest))  
+        || (codeNoCopy[i+1].src[2] && JSON.stringify(codeNoCopy[i+1].src[2]) === JSON.stringify(codeNoCopy[i].dest)))) 
             ? "tmp"
-            : i === codeNoCopy.length - 2 
-            || (codeNoCopy[i+2].src[0] && JSON.stringify(codeNoCopy[i+2].src[0]) === JSON.stringify(codeNoCopy[i].dest)) 
+            : i < codeNoCopy.length - 2
+            && ((codeNoCopy[i+2].src[0] && JSON.stringify(codeNoCopy[i+2].src[0]) === JSON.stringify(codeNoCopy[i].dest)) 
             || (codeNoCopy[i+2].src[1] && JSON.stringify(codeNoCopy[i+2].src[1]) === JSON.stringify(codeNoCopy[i].dest)) 
-            || (codeNoCopy[i+2].src[2] && JSON.stringify(codeNoCopy[i+2].src[2]) === JSON.stringify(codeNoCopy[i].dest)) 
+            || (codeNoCopy[i+2].src[2] && JSON.stringify(codeNoCopy[i+2].src[2]) === JSON.stringify(codeNoCopy[i].dest))) 
                 ? "tmp2" 
                 : ref(codeNoCopy[i].dest, true); 
     return dest;
