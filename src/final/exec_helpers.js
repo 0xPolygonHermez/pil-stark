@@ -1,5 +1,3 @@
-const fs = require("fs");
-const BigArray = require("@iden3/bigarray");
 const fastFile = require("fastfile");
 
 module.exports.readExecFile = async function readExecFile(F, execFile, nCommittedPols) {
@@ -14,16 +12,16 @@ module.exports.readExecFile = async function readExecFile(F, execFile, nCommitte
     const lenAdds = nAdds*4*n8r;
     const lenSMap = nSMap*nCommittedPols*n8r;
 
-    const buffAdds = await fd.read(lenAdds, 2*n8r);
+    const buffAdds = await fd.read(lenAdds);
     let p = 0;
-    const adds = new BigArray(nAdds*4);
+    const adds = new Array(nAdds*4);
     for (let i=0; i < nAdds*4; ++i) {
         adds[i] = BigInt(F.toString(buffAdds.slice(p, p+n8r)));
         p += n8r;
     }
 
-    const sMap = new BigArray(nCommittedPols * nSMap);
-    const buffSMap = await fd.read(lenSMap, 2*n8r + lenAdds);
+    const sMap = new Array(nCommittedPols * nSMap);
+    const buffSMap = await fd.read(lenSMap);
     p = 0;
     for (let i=0; i<nSMap * nCommittedPols; i++) {
         sMap[i] = BigInt(F.toString(buffSMap.slice(p, p+n8r)));
@@ -53,7 +51,7 @@ module.exports.writeExecFile = async function writeExecFile(F, execFile, adds, s
         }
     }
 
-    await fd.write(buffAdds, 2*n8r);
+    await fd.write(buffAdds);
 
     const lenSMap = sMap.length*sMap[0].length*n8r;
     const buffSMap = new Uint8Array(lenSMap);
@@ -65,7 +63,7 @@ module.exports.writeExecFile = async function writeExecFile(F, execFile, adds, s
         }
     }
 
-    await fd.write(buffSMap, 2*n8r + lenAdds);
+    await fd.write(buffSMap);
 
     await fd.close();
 }

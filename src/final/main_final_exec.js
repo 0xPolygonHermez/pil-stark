@@ -58,7 +58,7 @@ async function run() {
 
     for (let i=0; i<nSMap; i++) {
         for (let j=0; j<nCommittedPols; j++) {
-            if (sMap[j][i] != 0) {
+            if (sMap[nCommittedPols*i+j] != 0n) {
                 cmPols.Final.a[j][i] = w[sMap[nCommittedPols*i+j]];
             } else {
                 cmPols.Final.a[j][i] = 0n;
