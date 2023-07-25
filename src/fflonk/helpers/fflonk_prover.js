@@ -59,7 +59,7 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
     const sDomainCoefs = domainSizeCoefs * n8r;
     const sDomainExt = domainSizeExt * n8r;
 
-    const domainSizeQ = domainSizeExt / 2;
+    const domainSizeQ = fflonkInfo.qDeg * domainSize + fflonkInfo.maxPolsOpenings * 2;
     const nQ = zkey.maxQDegree ? Math.ceil(domainSizeQ / (zkey.maxQDegree * domainSize)) : 1;
 
     if (logger) {
@@ -398,8 +398,9 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
         ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, curve, logger);
         ctx["Q"].divZh(ctx.N, 1 << ctx.extendBitsTotal);
 
+        console.log("Q DEGREE", ctx["Q"].degree());
+
         if(zkey.maxQDegree) {
-            const domainSizeQ = domainSizeExt / 2;
             const nQ = Math.ceil(domainSizeQ / (zkey.maxQDegree * domainSize));
             // let rand1 = Fr.random();
             // let rand2 = Fr.random();

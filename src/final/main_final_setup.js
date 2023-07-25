@@ -52,7 +52,7 @@ async function run() {
 
     await res.constPols.saveToFileFr(constFile, Fr);
 
-    await writeExecFile(F, execFile, res.plonkAdditions,  res.sMap);
+    await writeExecFile(Fr, execFile, res.plonkAdditions, res.sMap);
 
     console.log("files Generated Correctly");
 

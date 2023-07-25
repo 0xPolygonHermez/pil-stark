@@ -17,8 +17,8 @@ namespace Global(%N);
 namespace Final(%N);
     pol constant S[6];
     pol constant C[5];
-    pol constant PARTIAL;
-    pol constant POSEIDON_T;
+    pol constant POSEIDON_PARTIAL_ROUND;
+    pol constant POSEIDON_FULL_ROUND;
     pol constant RANGE_CHECK;
     pol constant GLCMULADD;
     pol constant RANGE;
@@ -61,27 +61,39 @@ namespace Final(%N);
     pol a<%- i %>_2 = a<%- i %>_1 * a<%- i %>_1;
     pol a<%- i %>_4 = a<%- i %>_2 * a<%- i %>_2;
     pol a<%- i %>_5 = a<%- i %>_4 * a<%- i %>_1;
-<%      if (i==0) { -%>
-    pol a<%- i %>_R = a<%- i %>_5; // The first element is always exponentiated, no matter the round
-<%      } else { -%>
-    pol a<%- i %>_R = PARTIAL * (a<%- i %>_1 - a<%- i %>_5) + a<%- i %>_5; // Determine if the <%- i %>th element needs to be raised to the 5th power or not using PARTIAL
-<%      } -%>
 <% } -%>
 
     // Check Poseidon rounds that use M matrix
+    // Check Poseidon rounds that use M matrix
 <%  
-const poseidonMDS = [];
+const poseidonFull = [];
 for(let i = 0; i < nInPoseidon; ++i) { 
     const poseidonRow = [];
     for(let j = 0; j < nInPoseidon; j++) { 
-        poseidonRow.push(`${BigInt(M[i][j])} * a${j}_R`); 
+        poseidonRow.push(`${BigInt(M[i][j])} * a${j}_5`); 
     }
-    poseidonMDS.push(poseidonRow);
+    poseidonFull.push(poseidonRow);
 }    -%>
 
 <% for(let i = 0; i < nInPoseidon; ++i) { -%>
-    POSEIDON_T * (a[<%= i %>]' - (<%- poseidonMDS[i].join(' + ') %>)) = 0;
+    POSEIDON_FULL_ROUND * (a[<%= i %>]' - (<%- poseidonFull[i].join(' + ') %>)) = 0;
 <% } -%>
+
+<%  
+const poseidonPartial = [];
+for(let i = 0; i < nInPoseidon; ++i) { 
+    const poseidonRow = [];
+    poseidonRow.push(`${BigInt(M[i][0])} * a0_5`); 
+    for(let j = 1; j < nInPoseidon; j++) { 
+        poseidonRow.push(`${BigInt(M[i][j])} * a${j}_1`); 
+    }
+    poseidonPartial.push(poseidonRow);
+}    -%>
+
+<% for(let i = 0; i < nInPoseidon; ++i) { -%>
+    POSEIDON_PARTIAL_ROUND * (a[<%= i %>]' - (<%- poseidonPartial[i].join(' + ') %>)) = 0;
+<% } -%>
+
 
     // Range Check
 

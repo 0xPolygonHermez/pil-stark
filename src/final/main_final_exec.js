@@ -41,30 +41,30 @@ async function run() {
 
     const nCommittedPols = cmPols.Final.a.length;
     
-    const { nAdds, nSMap, adds, sMap } = await readExecFile(F, execFile, nCommittedPols);
-
-    const wc = await WitnessCalculatorBuilder(wasm);
-    const w = await wc.calculateWitness(input);
-
-    for (let i=0; i<nAdds; i++) {
-        w.push( F.add( F.mul(w[adds[i][0]], adds[i][2]), F.mul( w[adds[i][1]], adds[i][3] )));
-    }
-
-    for (let i=0; i<nSMap; i++) {
-        for (let j=0; j<nCommittedPols; j++) {
-            if (sMap[j][i] != 0) {
-                cmPols.Final.a[j][i] = w[sMap[j][i]];
-            } else {
-                cmPols.Final.a[j][i] = 0n;
-            }
-        }
-    }
-
     const curve = await getCurveFromName("bn128");
 
     const Fr = curve.Fr;
 
     await curve.terminate();
+
+    const { nAdds, nSMap, adds, sMap } = await readExecFile(Fr, execFile, nCommittedPols);
+
+    const wc = await WitnessCalculatorBuilder(wasm);
+    const w = await wc.calculateWitness(input);
+
+    for (let i=0; i<nAdds; i++) {
+        w.push( F.add( F.mul( w[adds[i*4]], adds[i*4 + 2]), F.mul( w[adds[i*4+1]],  adds[i*4+3]  )));
+    }
+
+    for (let i=0; i<nSMap; i++) {
+        for (let j=0; j<nCommittedPols; j++) {
+            if (sMap[j][i] != 0) {
+                cmPols.Final.a[j][i] = w[sMap[nCommittedPols*i+j]];
+            } else {
+                cmPols.Final.a[j][i] = 0n;
+            }
+        }
+    }
 
     await cmPols.saveToFileFr(commitFile, Fr);
 

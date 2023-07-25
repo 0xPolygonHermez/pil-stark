@@ -153,14 +153,10 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
 
     fixFIndex();
     
-    // Precompute ZK data
-    const extendBits = Math.ceil(Math.log2(fflonkInfo.qDeg + 1));
-    const nBitsExt = pilPower + extendBits + fflonkInfo.nBitsZK;
-    const domainSizeExt = 1 << nBitsExt;
-
     let maxQDegree = options.maxQDegree || 0;
 
-    const domainSizeQ = domainSizeExt / 2;
+    const domainSizeQ = fflonkInfo.qDeg * domainSize + fflonkInfo.maxPolsOpenings * 2;
+
     if(!maxQDegree || domainSizeQ / domainSize <= maxQDegree) {
         maxQDegree = 0;
         polsXi.push({name: "Q", stage: 4, degree: domainSizeQ, fi: fiIndex});
