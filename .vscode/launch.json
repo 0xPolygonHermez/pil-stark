@@ -1425,9 +1425,9 @@
             "args": [
                 "-p tmp/fibonacci.final.pil",
                 "-f tmp/fibonacci.final.fflonkinfo.json",
-                "-t tmp/powersOfTau28_hez_final_24.ptau",
-                "-e 6",
-                "-q 4",
+                "-t tmp/powersOfTau28_hez_final_19.ptau",
+                "-e 5",
+                "-q 5",
                 "-s tmp/fibonacci.final.shkey.json"
             ],
             "runtimeArgs": [
@@ -1448,8 +1448,8 @@
                 "-t tmp/powersOfTau28_hez_final_19.ptau",
                 "-c tmp/fibonacci.final.const",
                 "-z tmp/fibonacci.final.zkey",
-                "-e 6",
-                "-q 4",
+                "-e 5",
+                "-q 5",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1464,7 +1464,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-s ${workspaceFolder}/tmp/fibonacci.final.fflonkinfo.json",
+                "-f ${workspaceFolder}/tmp/fibonacci.final.fflonkinfo.json",
                 "-c tmp/fibonacci.final.chelpers.cpp",
                 "-C PilFflonkSteps",
                 "-m"

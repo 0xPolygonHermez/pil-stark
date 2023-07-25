@@ -157,12 +157,12 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
 
     const domainSizeQ = fflonkInfo.qDeg * domainSize + fflonkInfo.maxPolsOpenings * 2 + 1;
 
-    if(!maxQDegree || (domainSizeQ - fflonkInfo.maxPolsOpenings * 2 + 1) / domainSize <= maxQDegree) {
+    if(!maxQDegree || (domainSizeQ - (fflonkInfo.maxPolsOpenings * 2 + 1)) / domainSize <= maxQDegree) {
         maxQDegree = 0;
         polsXi.push({name: "Q", stage: 4, degree: domainSizeQ, fi: fiIndex});
         polsNames[4].push("Q")
     } else {
-        const nQ = Math.ceil((domainSizeQ - fflonkInfo.maxPolsOpenings * 2 + 1) / (maxQDegree * domainSize));
+        const nQ = Math.ceil((domainSizeQ - (fflonkInfo.maxPolsOpenings * 2 + 1)) / (maxQDegree * domainSize));
         for(let i = 0; i < nQ; ++i) {
             let degree = i === nQ - 1 ? domainSizeQ - i*maxQDegree*domainSize : maxQDegree * domainSize + 2;
             polsXi.push({name: `Q${i}`, stage: 4, degree: degree, fi: fiIndex});
