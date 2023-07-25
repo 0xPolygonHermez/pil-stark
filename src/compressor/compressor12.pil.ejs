@@ -166,22 +166,13 @@ namespace Compressor(%N);
 <% for(let i = 0; i < 12; ++i) { -%>
 <% let sumArray = []; -%>
 <% for(let j = 0; j < 12; ++j) { sumArray.push(`${P[j][i]} * a${j}_R`); } -%>
-    pol poseidonP<%- i + 1 %> = (a[<%- i %>]' - (<%- sumArray.join(" + ") -%>));
+    POSEIDONP * (a[<%- i %>]' - (<%- sumArray.join(" + ") -%>)) = 0;
 <% } -%>
-     
+    
 <% for(let i = 0; i < 12; ++i) { -%>
 <% let sumArray = []; -%>
 <% for(let j = 0; j < 12; ++j) { sumArray.push(`${M[j][i]} * a${j}_R`); } -%>
-    pol poseidonM<%- i %> = (a[<%- i %>]' - (<%- sumArray.join(" + ") -%>));
-<% } -%>
-
-
-<% for(let i = 0; i < 12; ++i) { -%>
-    POSEIDONM * poseidonM<%- i %> = 0;
-<% } -%>
-
-<% for(let i = 0; i < 12; ++i) { -%>
-    POSEIDONP * poseidonP<%- i + 1 %> = 0;
+    POSEIDONM * (a[<%- i %>]' - (<%- sumArray.join(" + ") -%>)) = 0;
 <% } -%>
 
 <% for(let i = 0; i < 12; i++)  { -%>

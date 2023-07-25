@@ -9,6 +9,7 @@ const smPermutation = require("../sm_permutation/sm_permutation.js");
 const smConnection = require("../sm_connection/sm_connection.js");
 
 const F3g = require("../../../src/helpers/f3g.js");
+const { log2 } = require("pilcom/src/utils");
 
 
 const argv = require("yargs")

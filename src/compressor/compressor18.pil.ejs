@@ -170,37 +170,31 @@ namespace Compressor(%N);
 <%      }  -%>
 <%  } -%>
 
+<%  if(r == 21) { -%>
+    PARTIALROUND * (a[0]' - (<%- sumArray.join(" + ") %>)) = 0;
+<%  } else { -%>
     pol s0_R<%- r  %> = <%- sumArray.join(" + ") %>;
+<%  } -%>
 <%  for(let j = 1; j < 12; ++j) { -%>
+<%    if(r == 21) { -%>
+    PARTIALROUND * (a[<%- j %>]' - ( <%- `s${j}_R${r - 1}` %> + a<%- r %>_R * <%- SS[23 * r + 11 + j] %>)) = 0;
+<%    } else { -%>
     pol s<%- j %>_R<%- r %> = <%- r === 0 ? `a[${j}]` : `s${j}_R${r - 1}` %> + a<%- r %>_R * <%- SS[23 * r + 11 + j] %>;
 <%  } -%>
-
 <%  } -%>
 <%  } -%>
-        
+<%  } -%>
 
 <% for(let i = 0; i < 12; ++i) { -%>
 <% let sumArray = []; -%>
 <% for(let j = 0; j < 12; ++j) { sumArray.push(`${P[j][i]} * a${j + 12}_R`); } -%>
-    pol poseidonP<%- i + 1 %> = (a[<%- i %>]' - (<%- sumArray.join(" + ") -%>));
+    POSEIDONP * (a[<%- i %>]' - (<%- sumArray.join(" + ") -%>)) = 0;
 <% } -%>
-    
-<% for(let i = 0; i < 12; ++i) { -%>
-    POSEIDONP * poseidonP<%- i + 1 %> = 0;
-<% } -%>
-     
+            
 <% for(let i = 0; i < 12; ++i) { -%>
 <% let sumArray = []; -%>
 <% for(let j = 0; j < 12; ++j) { sumArray.push(`${M[j][i]} * a${j + 12}_R`); } -%>
-    pol poseidonM<%- i + 12 + 1 %> = (a[<%- i %>]' - (<%- sumArray.join(" + ") -%>));
-<% } -%>
-
-<% for(let i = 0; i < 12; ++i) { -%>
-    POSEIDONM * poseidonM<%- i + 12 + 1 %> = 0;
-<% } -%>
-
-<% for(let i = 0; i < 12; i++)  { -%>
-    PARTIALROUND * (a[<%- i %>]' - s<%- i %>_R21) = 0;
+    POSEIDONM * (a[<%- i %>]' - (<%- sumArray.join(" + ") -%>)) = 0;
 <% } -%>
 
     // CMUL GATE - Check that a * b in Fp³ using (X³ - X - 1) as a generator is performed correctly

@@ -8,6 +8,7 @@ const smConnection = require("../sm_connection/sm_connection.js");
 
 const F3g = require("../../../src/helpers/f3g.js");
 const { newCommitPolsArray, compile } = require("pilcom");
+const { log2 } = require("pilcom/src/utils");
 
 
 const argv = require("yargs")
@@ -24,6 +25,12 @@ async function run() {
     const F = new F3g();
     const pil = await compile(F, path.join(__dirname, "all_main.pil"));
     const cmPols =  newCommitPolsArray(pil, F);
+
+    let maxPilPolDeg = 0;
+    for (const polRef in pil.references) {
+        maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
+    }
+    const N = 2**(log2(maxPilPolDeg - 1) + 1);
 
     await smPlookup.execute(N, cmPols.Plookup);
     await smFibonacci.execute(N, cmPols.Fibonacci, [1,2], F);

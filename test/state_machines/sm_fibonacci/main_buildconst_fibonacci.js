@@ -6,7 +6,6 @@ const smFibonacci = require("./sm_fibonacci.js");
 
 const F3g = require("../../../src/helpers/f3g");
 const { F1Field, getCurveFromName } = require("ffjavascript");
-const { fflonkInfoGen } = require("../../..");
 const { log2 } = require("pilcom/src/utils");
 
 const argv = require("yargs")
