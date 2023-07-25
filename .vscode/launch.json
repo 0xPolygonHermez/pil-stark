@@ -1454,7 +1454,77 @@
             "runtimeArgs": [
                 "--max-old-space-size=32000"
             ]
-        }
+        },
+        {
+            "name": "fibonacci final build CHelpers",
+            "program": "${workspaceFolder}/src/fflonk/main_buildchelpers.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-s ${workspaceFolder}/tmp/fibonacci.final.fflonkinfo.json",
+                "-c tmp/fibonacci.final.chelpers.cpp",
+                "-C PilFflonkSteps",
+                "-m"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "fibonacci final fflonk verification key",
+            "program": "${workspaceFolder}/src/fflonk/main_exportVerificationKey.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-z tmp/fibonacci.final.zkey",
+                "-v tmp/fibonacci.final.vkey",
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "fibonacci final fflonk calldata",
+            "program": "${workspaceFolder}/src/fflonk/main_exportCalldata.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-v tmp/fibonacci.final.vkey",
+                "-o tmp/fibonacci.final.proof.json",
+                "-b tmp/fibonacci.final.publics.json",
+                "-c tmp/fibonacci.calldata.txt"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
+            "name": "fibonacci final fflonk solidity verifier",
+            "program": "${workspaceFolder}/src/fflonk/main_exportSolidityVerifier.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-v tmp/fibonacci.final.vkey",
+                "-f tmp/fibonacci.final.fflonkinfo.json",
+                "-p tmp/fibonacci_pilfflonk_verifier.sol",
+                "-s tmp/fibonacci_shplonk_verifier.sol"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
         {
             "name": "all buildconst",
             "program": "test/state_machines/sm_all/main_buildconst_all.js",
@@ -2016,7 +2086,6 @@
             "args": [
                 "-f tmp/simple.fflonkinfo.json",
                 "-c tmp/simple.fflonk.chelpers.cpp",
-                "-z tmp/simple.zkey",
                 "-C PilFflonkSteps",
                 "-m"
             ],
@@ -2103,7 +2172,6 @@
             "args": [
                 "-f tmp/fibonacci.fflonkinfo.json",
                 "-c tmp/fibonacci.fflonk.chelpers.cpp",
-                "-z tmp/fibonacci.zkey",
                 "-C PilFflonkSteps",
                 "-m"
             ],
@@ -2142,7 +2210,7 @@
             "type": "pwa-node",
             "args": [
                 "-z tmp/fibonacci.zkey",
-                "-v tmp/fibonacci.verificationkey.json",
+                "-v tmp/fibonacci.vkey",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -2158,7 +2226,7 @@
             "type": "pwa-node",
             "args": [
                 "-f tmp/fibonacci.fflonkinfo.json",
-                "-v tmp/fibonacci.verificationkey.json",
+                "-v tmp/fibonacci.vkey",
                 "-o tmp/fibonacci.fflonk.proof.json",
                 "-b tmp/fibonacci.fflonk.publics.json"
             ],
@@ -2175,7 +2243,7 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-v tmp/fibonacci.verificationkey.json",
+                "-v tmp/fibonacci.vkey",
                 "-o tmp/fibonacci.fflonk.proof.json",
                 "-b tmp/fibonacci.fflonk.publics.json",
                 "-c tmp/fibonacci.calldata.txt"
@@ -2193,126 +2261,13 @@
             ],
             "type": "pwa-node",
             "args": [
-                "-v tmp/fibonacci.verificationkey.json",
+                "-v tmp/fibonacci.vkey.json",
                 "-f tmp/fibonacci.fflonkinfo.json",
                 "-p tmp/fibonacci_pilfflonk_verifier.sol",
                 "-s tmp/fibonacci_shplonk_verifier.sol"
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
-            ]
-        },
-        {
-            "name": "zkevm build const tree",
-            "program": "src/main_buildconsttree.js",
-            "request": "launch",
-            "args": [
-                "-c ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.const",
-                "-p ${workspaceFolder}/../zkevm-proverjs/pil/main.pil",
-                "-s ${workspaceFolder}/../zkevm-proverjs/src/zkevm.starkstruct.json",
-                "-t ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.consttree",
-                "-v ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.verkey.json"
-            ],
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node",
-            "runtimeArgs": [
-                "--max-old-space-size=512000"
-            ]
-        },
-        {
-            "name": "zkevm build starkinfo",
-            "program": "src/main_genstarkinfo.js",
-            "request": "launch",
-            "args": [
-                "-p ${workspaceFolder}/../zkevm-proverjs/pil/main.pil",
-                "-s ${workspaceFolder}/../zkevm-proverjs/src/zkevm.starkstruct.json",
-                "-i ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.starkinfo.json"
-            ],
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node",
-            "runtimeArgs": [
-                "--max-old-space-size=512000"
-            ]
-        },
-        {
-            "name": "zkevm cHelpers",
-            "program": "src/main_buildchelpers.js",
-            "request": "launch",
-            "args": [
-                "-s ${workspaceFolder}/../zkevm-proverjs/src/zkevm.starkstruct.json",
-                "-c ${workspaceFolder}/../zkevm-proverjs/build/proof/zkevm.chelpers.cpp"
-            ],
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node",
-            "runtimeArgs": [
-                "--trace-gc",
-                "--trace-gc-ignore-scavenger",
-                "--max-semi-space-size=1024",
-                "--max-old-space-size=128000"
-            ]
-        },
-        {
-            "name": "zkevm proof",
-            "program": "src/main_prover.js",
-            "request": "launch",
-            "args": [
-                "-m ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.commit",
-                "-c ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.const",
-                "-t ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.consttree",
-                "-p ${workspaceFolder}/../zkevm-proverjs/pilred/main.pil",
-                "-s ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.starkinfo.json",
-                "-o ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.proof.json",
-                "-z ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.zkin.proof.json",
-                "-b ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.public.json"
-            ],
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node",
-            "runtimeArgs": [
-                "--max-old-space-size=512000"
-            ]
-        },
-        {
-            "name": "zkevm verify",
-            "program": "src/main_verifier.js",
-            "request": "launch",
-            "args": [
-                "-s ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.starkinfo.json",
-                "-v ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.verkey.json",
-                "-o ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.proof.json.good",
-                "-b ${workspaceFolder}/../zkevm-proverjs/build/v0.5.1.0-reduced/zkevm.public.json.good"
-            ],
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node",
-            "runtimeArgs": [
-                "--max-old-space-size=512000"
-            ]
-        },
-        {
-            "name": "zkevm c12 verify",
-            "program": "src/main_verifier.js",
-            "request": "launch",
-            "args": [
-                "-s ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursivef.starkstruct.json",
-                "-v ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/recursivef.verkey.json",
-                "-o ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/zkevm.recursiveF.proof.json",
-                "-b ${workspaceFolder}/../zkevm-proverjs/build/pomegranate/zkevm.recursiveF.public.json"
-            ],
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node",
-            "runtimeArgs": [
-                "--max-old-space-size=512000"
             ]
         },
         {
