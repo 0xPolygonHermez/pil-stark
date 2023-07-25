@@ -1,7 +1,7 @@
 const { readBinFile } = require("@iden3/binfileutils");
 const {BigBuffer} = require("ffjavascript");
 const { Polynomial, commit} = require("shplonkjs");
-const { ifft, fft } = require("../../helpers/fft/fft_p.bn128");
+const { interpolate } = require("../../helpers/fft/fft_p.bn128");
 const { writePilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 const fflonkShKey = require("./fflonk_shkey.js");
 
@@ -39,9 +39,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     await cnstPols.writeToBigBufferFr(zkey.constPolsEvals, curve.Fr);
 
     if(fflonkInfo.nConstants > 0) {
-        await ifft(zkey.constPolsEvals, fflonkInfo.nConstants, nBits, zkey.constPolsCoefs, curve.Fr);
-
-        await fft(zkey.constPolsCoefs, fflonkInfo.nConstants, nBitsExt, zkey.constPolsEvalsExt, curve.Fr);
+        await interpolate(zkey.constPolsEvals, fflonkInfo.nConstants, nBits, zkey.constPolsCoefs, zkey.constPolsEvalsExt, nBitsExt, curve.Fr);
     
         const ctx = {};
 
