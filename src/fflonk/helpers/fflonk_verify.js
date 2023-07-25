@@ -159,6 +159,8 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
    
     const Q = curve.Fr.div(execCode, ctx.Z);
 
+    console.log("Q", curve.Fr.toString(Q));
+    
     const nonCommittedPols = [];
     if(vk.maxQDegree === 0) {
         proof.evaluations["Q"] = Q;

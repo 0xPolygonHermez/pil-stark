@@ -1425,9 +1425,8 @@
             "args": [
                 "-p tmp/fibonacci.final.pil",
                 "-f tmp/fibonacci.final.fflonkinfo.json",
-                "-t tmp/powersOfTau28_hez_final_19.ptau",
+                "-t tmp/powersOfTau28_hez_final_24.ptau",
                 "-e 5",
-                "-q 5",
                 "-s tmp/fibonacci.final.shkey.json"
             ],
             "runtimeArgs": [
@@ -1445,11 +1444,10 @@
             "args": [
                 "-p tmp/fibonacci.final.pil",
                 "-f tmp/fibonacci.final.fflonkinfo.json",
-                "-t tmp/powersOfTau28_hez_final_19.ptau",
+                "-t tmp/powersOfTau28_hez_final_24.ptau",
                 "-c tmp/fibonacci.final.const",
                 "-z tmp/fibonacci.final.zkey",
                 "-e 5",
-                "-q 5",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1508,6 +1506,24 @@
             ]
         },
         {
+            "name": "fibonacci final fflonk verify",
+            "program": "${workspaceFolder}/src/fflonk/main_verifier.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-f tmp/fibonacci.final.fflonkinfo.json",
+                "-v tmp/fibonacci.final.vkey",
+                "-o ../roger/pilfflonk/runtime/proof.json",
+                "-b ../roger/pilfflonk/runtime/public.json"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "fibonacci final fflonk solidity verifier",
             "program": "${workspaceFolder}/src/fflonk/main_exportSolidityVerifier.js",
             "request": "launch",
@@ -1525,6 +1541,7 @@
                 "--max-old-space-size=32000"
             ]
         },
+        
         {
             "name": "all buildconst",
             "program": "test/state_machines/sm_all/main_buildconst_all.js",
@@ -2047,7 +2064,7 @@
             "args": [
                 "-p test/state_machines/sm_simple/simple2p.pil",
                 "-f tmp/simple2p.fflonkinfo.json",
-                "-t tmp/powersOfTau28_hez_final_19.ptau",
+                "-t tmp/powersOfTau28_hez_final_24.ptau",
                 "-e 1",
                 "-s tmp/simple2p.shkey.json"
             ],
@@ -2065,7 +2082,7 @@
             "type": "pwa-node",
             "args": [
                 "-p test/state_machines/sm_simple/simple2p.pil",
-                "-t tmp/powersOfTau28_hez_final_19.ptau",
+                "-t tmp/powersOfTau28_hez_final_24.ptau",
                 "-f tmp/simple2p.fflonkinfo.json",
                 "-c tmp/simple2p.cnst",
                 "-z tmp/simple2p.zkey",
@@ -2152,7 +2169,7 @@
             "type": "pwa-node",
             "args": [
                 "-p test/state_machines/sm_fibonacci/fibonacci_main.pil",
-                "-t tmp/powersOfTau28_hez_final_19.ptau",
+                "-t tmp/powersOfTau28_hez_final_24.ptau",
                 "-f tmp/fibonacci.fflonkinfo.json",
                 "-c tmp/fibonacci.const",
                 "-z tmp/fibonacci.zkey"
@@ -2190,7 +2207,7 @@
             "args": [
                 "-p test/state_machines/sm_fibonacci/fibonacci_main.pil",
                 "-m tmp/fibonacci.commit",
-                "-t tmp/powersOfTau28_hez_final_19.ptau",
+                "-t tmp/powersOfTau28_hez_final_24.ptau",
                 "-f tmp/fibonacci.fflonkinfo.json",
                 "-z tmp/fibonacci.zkey",
                 "-o tmp/fibonacci.fflonk.proof.json",

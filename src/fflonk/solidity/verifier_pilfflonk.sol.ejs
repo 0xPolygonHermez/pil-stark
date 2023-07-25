@@ -65,43 +65,67 @@ pragma solidity >=0.7.0 <0.9.0;
 <%      copyObject[inst.dest.id] = ref(inst.src[0]); -%>
 <%  } -%>
 
+<%  function getDestRef(i) {
+    let dest = i === codeNoCopy.length - 1 
+        || (codeNoCopy[i+1].src[0] && JSON.stringify(codeNoCopy[i+1].src[0]) === JSON.stringify(codeNoCopy[i].dest)) 
+        || (codeNoCopy[i+1].src[1] && JSON.stringify(codeNoCopy[i+1].src[1]) === JSON.stringify(codeNoCopy[i].dest)) 
+        || (codeNoCopy[i+1].src[2] && JSON.stringify(codeNoCopy[i+1].src[2]) === JSON.stringify(codeNoCopy[i].dest))  
+            ? "tmp"
+            : i === codeNoCopy.length - 2 
+            || (codeNoCopy[i+2].src[0] && JSON.stringify(codeNoCopy[i+2].src[0]) === JSON.stringify(codeNoCopy[i].dest)) 
+            || (codeNoCopy[i+2].src[1] && JSON.stringify(codeNoCopy[i+2].src[1]) === JSON.stringify(codeNoCopy[i].dest)) 
+            || (codeNoCopy[i+2].src[2] && JSON.stringify(codeNoCopy[i+2].src[2]) === JSON.stringify(codeNoCopy[i].dest)) 
+                ? "tmp2" 
+                : ref(codeNoCopy[i].dest, true); 
+    return dest;
+} -%>
+
+<%  function getSrcRef(i, index) {
+    let src = i > 0 && JSON.stringify(codeNoCopy[i-1].dest) === JSON.stringify(codeNoCopy[i].src[index]) 
+        ? "tmp" 
+        : i > 1 && JSON.stringify(codeNoCopy[i-2].dest) === JSON.stringify(codeNoCopy[i].src[index])
+            ? "tmp2"   
+            : ref(codeNoCopy[i].src[index]); 
+    return src;
+} -%>
+
 <%  for(let i=0; i<codeNoCopy.length; i++) { -%>
 <%      let inst = codeNoCopy[i]; -%>
 <%      if(inst.op === "add") { -%>
 <%      let nextIndex = i+1; -%>
-<%      let dest = i === codeNoCopy.length - 1 || (codeNoCopy[i+1].src[0] && ref(codeNoCopy[i+1].src[0]) === ref(inst.dest)) || (codeNoCopy[i+1].src[1] && ref(codeNoCopy[i+1].src[1]) === ref(inst.dest)) || (codeNoCopy[i+1].src[2] && ref(codeNoCopy[i+1].src[2]) === ref(inst.dest)) ? "tmp" : ref(inst.dest, true); -%>
-<%      let src0 = i > 0 && ref(codeNoCopy[i-1].dest) === ref(inst.src[0]) ? "tmp" : ref(inst.src[0]); -%>
-<%      let src1 = i > 0 && ref(codeNoCopy[i-1].dest) === ref(inst.src[1]) ? "tmp" : ref(inst.src[1]); -%>
-<%      if(dest === "tmp") { -%>
-                tmp := addmod(<%- src0 %>,<%-src1 %>, q)
+<%      let dest = getDestRef(i); -%>
+<%      let src0 = getSrcRef(i, 0); -%>
+<%      let src1 = getSrcRef(i, 1); -%>
+<%      if(["tmp", "tmp2"].includes(dest)) { -%>
+                <%- dest %> := addmod(<%- src0 %>,<%-src1 %>, q)
 <%      } else { -%>
                 mstore(<%- dest %>, addmod(<%- src0 %>,<%-src1 %>, q))
 <%      } -%>
 <%      } else if (inst.op === "sub") { -%>
-<%      let dest = i === codeNoCopy.length - 1 || (codeNoCopy[i+1].src[0] && ref(codeNoCopy[i+1].src[0]) === ref(inst.dest)) || (codeNoCopy[i+1].src[1] && ref(codeNoCopy[i+1].src[1]) === ref(inst.dest)) || (codeNoCopy[i+1].src[2] && ref(codeNoCopy[i+1].src[2]) === ref(inst.dest)) ? "tmp" : ref(inst.dest, true); -%>
-<%      let src0 = i > 0 && ref(codeNoCopy[i-1].dest) === ref(inst.src[0]) ? "tmp" : ref(inst.src[0]); -%>
-<%      let src1 = i > 0 && ref(codeNoCopy[i-1].dest) === ref(inst.src[1]) ? "tmp" : ref(inst.src[1]); -%>
-<%      if(dest === "tmp") { -%>
-                tmp := mod(add(sub(<%-src0 %>, <%-src1 %>), q), q)
+<%      let dest = getDestRef(i); -%>
+<%      let src0 = getSrcRef(i, 0); -%>
+<%      let src1 = getSrcRef(i, 1); -%>
+<%      if(["tmp", "tmp2"].includes(dest)) { -%>
+                <%- dest %> := mod(add(sub(<%-src0 %>, <%-src1 %>), q), q)
 <%      } else { -%>
                 mstore(<%-dest %>, mod(add(sub(<%-src0 %>, <%-src1 %>), q), q))
 <%      } -%>
 <%      } else if (inst.op === "mul") { -%>
-<%      let dest = i === codeNoCopy.length - 1 || (codeNoCopy[i+1].src[0] && ref(codeNoCopy[i+1].src[0]) === ref(inst.dest)) || (codeNoCopy[i+1].src[1] && ref(codeNoCopy[i+1].src[1]) === ref(inst.dest)) || (codeNoCopy[i+1].src[2] && ref(codeNoCopy[i+1].src[2]) === ref(inst.dest)) ? "tmp" : ref(inst.dest, true); -%>
-<%      let src0 = i > 0 && ref(codeNoCopy[i-1].dest) === ref(inst.src[0]) ? "tmp" : ref(inst.src[0]); -%>
-<%      let src1 = i > 0 && ref(codeNoCopy[i-1].dest) === ref(inst.src[1]) ? "tmp" : ref(inst.src[1]); -%>
-<%      if(dest === "tmp") { -%>
-                tmp := mulmod(<%-src0 %>,<%- src1 %>, q)
+<%      let dest = getDestRef(i); -%>
+<%      let src0 = getSrcRef(i, 0); -%>
+<%      let src1 = getSrcRef(i, 1); -%>
+<%      if(["tmp", "tmp2"].includes(dest)) { -%>
+                <%- dest %> := mulmod(<%-src0 %>,<%- src1 %>, q)
 <%      } else { -%>
                 mstore(<%- dest %>, mulmod(<%-src0 %>,<%- src1 %>, q))
 <%      } -%>
 <%      } else if (inst.op === "muladd") { -%>
-<%      let dest = i === codeNoCopy.length - 1 || (codeNoCopy[i+1].src[0] && ref(codeNoCopy[i+1].src[0]) === ref(inst.dest)) || (codeNoCopy[i+1].src[1] && ref(codeNoCopy[i+1].src[1]) === ref(inst.dest)) || (codeNoCopy[i+1].src[2] && ref(codeNoCopy[i+1].src[2]) === ref(inst.dest)) ? "tmp" : ref(inst.dest, true); -%>
-<%      let src0 = i > 0 && ref(codeNoCopy[i-1].dest) === ref(inst.src[0]) ? "tmp" : ref(inst.src[0]); -%>
-<%      let src1 = i > 0 && ref(codeNoCopy[i-1].dest) === ref(inst.src[1]) ? "tmp" : ref(inst.src[1]); -%>
-<%      let src2 = i > 0 && ref(codeNoCopy[i-1].dest) === ref(inst.src[2]) ? "tmp" : ref(inst.src[2]); -%>
-<%      if(dest === "tmp") { -%>
-                tmp := addmod(mulmod(<%-src0 %>,<%-src1 %>, q),<%- src2 %>, q)
+<%      let dest = getDestRef(i); -%>
+<%      let src0 = getSrcRef(i, 0); -%>
+<%      let src1 = getSrcRef(i, 1); -%>
+<%      let src2 = getSrcRef(i, 2); -%>
+<%      if(["tmp", "tmp2"].includes(dest)) { -%>
+                <%- dest %> := addmod(mulmod(<%-src0 %>,<%-src1 %>, q),<%- src2 %>, q)
 <%      } else { -%>
                 mstore(<%- dest %>, addmod(mulmod(<%-src0 %>,<%-src1 %>, q),<%- src2 %>, q))
 <%      } -%>
@@ -153,8 +177,7 @@ contract PilFflonkVerifier {
 
     // Memory data
     // Challenges
-<%  let challengeCount = 32; -%>
-    uint16 constant pY      = 0;
+<%  let challengeCount = 0; -%>
 <%  if(fflonkInfo.mapSectionsN.cm2_n > 0 || fflonkInfo.peCtx.length > 0) { -%> 
     uint16 constant pAlpha  = <%- challengeCount %>;
     uint16 constant pBeta   = <%- challengeCount + 32 %>;
@@ -360,6 +383,7 @@ contract PilFflonkVerifier {
             
                 let mIn := mload(0x40)
                 let tmp
+                let tmp2
 
 <%  if (fflonkInfo.mapSectionsN.cm2_n > 0 || fflonkInfo.peCtx.length > 0) { -%>
                 let challengeAlpha := mload(add(pMem, pAlpha))
