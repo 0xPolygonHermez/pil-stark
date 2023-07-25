@@ -155,7 +155,7 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
     
     let maxQDegree = options.maxQDegree || 0;
 
-    const domainSizeQ = fflonkInfo.qDeg * domainSize + fflonkInfo.maxPolsOpenings * 2;
+    const domainSizeQ = fflonkInfo.qDeg * domainSize + fflonkInfo.maxPolsOpenings * 2 + 1;
 
     if(!maxQDegree || domainSizeQ / domainSize <= maxQDegree) {
         maxQDegree = 0;

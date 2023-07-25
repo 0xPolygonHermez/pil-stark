@@ -59,7 +59,7 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
     const sDomainCoefs = domainSizeCoefs * n8r;
     const sDomainExt = domainSizeExt * n8r;
 
-    const domainSizeQ = fflonkInfo.qDeg * domainSize + fflonkInfo.maxPolsOpenings * 2;
+    const domainSizeQ = fflonkInfo.qDeg * domainSize + fflonkInfo.maxPolsOpenings * 2 + 1;
     const nQ = zkey.maxQDegree ? Math.ceil(domainSizeQ / (zkey.maxQDegree * domainSize)) : 1;
 
     if (logger) {
@@ -212,6 +212,7 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
             for (let i = 0; i < cnstCommitPols.length; ++i) {
                 const commit = zkey[cnstCommitPols[i]].commit;
                 const pol = new Polynomial(zkey[cnstCommitPols[i]].pol, curve, logger);
+                console.log(cnstCommitPols[i], curve.G1.toString(commit));
                 transcript.addPolCommitment(commit);
                 committedPols[`${cnstCommitPols[i]}_0`] = { commit: commit, pol: pol };
             }
