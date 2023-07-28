@@ -8,7 +8,7 @@ const { newConstantPolsArray, compile } = require("pilcom");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_setup.js -p <pil> -P [-P <pilconfig.json] -f <fflonkInfo.json> -c <circuit.const> -t <ptau> -z <circuit.zkey>")
+    .usage("node main_setup.js -p <pil> -P [-P <pilconfig.json] -f <fflonkInfo.json> -c <circuit.const> -t <ptau> -z <circuit.zkey> -e <extraMuls>")
     .alias("t", "tau")   // Input -> ptau
     .alias("p", "pil")    // Input -> Proposed PIL
     .alias("P", "pilconfig")
@@ -45,8 +45,9 @@ async function run() {
     const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
 
     let options = {};
-    options.extraMuls = Number(argv.extraMuls) || 2;
-    options.maxQDegree = Number(argv.maxQDegree) || 0;
+
+    options.extraMuls = argv.extraMuls === undefined ? 2 : Number(argv.extraMuls);
+    options.maxQDegree = argv.maxQDegree === undefined ? 0 : Number(argv.maxQDegree);
         
     await fflonkSetup(pil, cnstPols, zkeyFile, ptauFile, fflonkInfo, options);
 
