@@ -47,13 +47,13 @@ async function run() {
 
     await curve.terminate();
 
-    const { nAdds, nSMap, adds, sMap } = await readExecFile(Fr, execFile, nCommittedPols);
+    const { nAdds, nSMap, addsBigInt, addsFr, sMap } = res;
 
     const wc = await WitnessCalculatorBuilder(wasm);
     const w = await wc.calculateWitness(input);
 
     for (let i=0; i<nAdds; i++) {
-        w.push( F.add( F.mul( w[adds[i*4]], adds[i*4 + 2]), F.mul( w[adds[i*4+1]],  adds[i*4+3]  )));
+        w.push( F.add( F.mul( w[addsBigInt[i*2]], addsFr[i*2]), F.mul( w[addsBigInt[i*2+1]],  addsFr[i*2+1]  )));
     }
 
     for (let i=0; i<nSMap; i++) {
