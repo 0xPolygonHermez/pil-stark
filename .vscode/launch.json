@@ -2084,7 +2084,7 @@
                 "-p test/state_machines/sm_simple/simple2p.pil",
                 "-t tmp/powersOfTau28_hez_final_24.ptau",
                 "-f tmp/simple2p.fflonkinfo.json",
-                "-c tmp/simple2p.cnst",
+                "-c tmp/simple2p.const",
                 "-z tmp/simple2p.zkey",
                 "-e 1"
             ],

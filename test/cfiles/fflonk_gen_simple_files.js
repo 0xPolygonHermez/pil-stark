@@ -110,11 +110,11 @@ describe("simple sm", async function () {
         await fs.promises.writeFile(VkeyFilename, JSON.stringify(verificationKey, null, 1), "utf8");
         
         // Save constant polynomial evaluations file
-        const constPolsFilename =  path.join(__dirname, "../../", "tmp", `${filename}.cnst`);
+        const constPolsFilename =  path.join(__dirname, "../../", "tmp", `${filename}.const`);
         await constPols.saveToFileFr(constPolsFilename, curve.Fr);
 
         // Save committed polynomial evaluations file
-        const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `${filename}.cmmt`);
+        const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `${filename}.commit`);
         await committedPols.saveToFileFr(committedPolsFilename, curve.Fr);
 
         // Save cHelpers file

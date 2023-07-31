@@ -120,11 +120,11 @@ describe("generating files for arguments", async function () {
         await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, options);
     
         // Save constant polynomial evaluations file
-        const constPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.cnst`);
+        const constPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.const`);
         await constPols.saveToFileFr(constPolsFilename, curve.Fr);
 
         // Save committed polynomial evaluations file
-        const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.cmmt`);
+        const committedPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.commit`);
         await committedPols.saveToFileFr(committedPolsFilename, curve.Fr);
 
         // Generate verification key
