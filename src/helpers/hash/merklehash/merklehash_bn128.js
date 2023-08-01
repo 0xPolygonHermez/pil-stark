@@ -153,7 +153,7 @@ module.exports = class MerkleHash {
             const nBitsArity = Math.ceil(Math.log2(self.arity));
             const nextIdx = idx >> nBitsArity;
             
-            const si =  idx ^ (idx & (self.arity - 1));
+            const si = (idx - (idx % self.arity));
 
             const sibs = [];
 
@@ -197,16 +197,17 @@ module.exports = class MerkleHash {
                 return value;
             }
 
-            const nBitsArity = Math.ceil(Math.log2(self.arity));
-
-            const curIdx = idx & (self.arity - 1);
-            const nextIdx = idx >> nBitsArity;
+            const curIdx = idx % self.arity;
+            const nextIdx = Math.floor(idx/ self.arity);
 
             const buff = new Uint8Array(32*self.arity);
             for (let i=0; i<self.arity; i++) {
-                buff.set(self.F.e(mp[offset][i]), i*32);
+                if(i == curIdx) {
+                    buff.set(value, curIdx*32);
+                } else {
+                    buff.set(self.F.e(mp[offset][i]), i*32);
+                }
             }
-            buff.set(value, curIdx*32);
 
             const nextValue = self.poseidon(buff);
 

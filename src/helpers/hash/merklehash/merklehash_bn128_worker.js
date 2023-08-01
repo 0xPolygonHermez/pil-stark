@@ -100,7 +100,6 @@ async function linearHash(wasmModule, buffIn, width, st_i, st_n, arity, custom) 
 }
 
 
-// a deliberately inefficient implementation of the fibonacci sequence
 async function merkelizeLevel(wasmModule, buffIn, st_i, st_n, arity) {
     console.log(`merkelizing bn128 hash start.... ${st_i}/${st_n}`);
     const nOps = buffIn.byteLength / (32*arity);

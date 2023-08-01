@@ -2,48 +2,46 @@ const chai = require("chai");
 const path = require("path");
 const { buildPoseidon } = require("circomlibjs");
 const MerkleHash = require("../../../src/helpers/hash/merklehash/merklehash_bn128.js");
+const tmp = require('temporary');
+const fs = require("fs");
+const ejs = require("ejs");
 
 const assert = chai.assert;
 
 const wasm_tester = require("circom_tester").wasm;
 
-function getBits(idx, nBits) {
+function getBits(idx, nLevels, arity) {
+    const logArity = Math.ceil(Math.log2(arity));
     res = [];
-    for (let i=0; i<nBits; i++) {
-        res[i] = (idx >> i)&1 ? 1n : 0n;
+    for (let i = 0; i < nLevels; i++) {
+        const curIdx = idx % arity;
+        for (let j=0; j<logArity; j++) {
+            const bit = (curIdx >> j) & 1 ? 1n : 0n;
+            res.push(bit);
+        }
+        idx = Math.floor(idx / arity);
+
     }
     return res;
 }
 
 describe("Merkle Hash BN128 Circuit Test", function () {
-    let circuit16;
-    let circuit4;
-    let MH16;
-    let MH4;
     let poseidon;
 
     this.timeout(10000000);
 
     before( async() => {
         poseidon = await buildPoseidon();
-        MH16 = new MerkleHash(poseidon, 16, true);
-        MH4 = new MerkleHash(poseidon, 4, true);
-
-        circuit16 = await wasm_tester(path.join(__dirname, "circom", "merklehash16.bn128.custom.test.circom"), {O:1, include: ["circuits.bn128.custom", "node_modules/circomlib/circuits"]});
-        circuit4 = await wasm_tester(path.join(__dirname, "circom", "merklehash4.bn128.custom.test.circom"), {O:1, include: ["circuits.bn128.custom", "node_modules/circomlib/circuits"]});
     });
 
     it("Should calculate merkle hash of 9 complex elements with arity 16", async () => {
         const arity = 16;
-        const nBitsArity = Math.ceil(Math.log2(arity))
-        const NPols = 9;
-        const nBits = Math.ceil(NPols*3/arity)*nBitsArity;
-        const idx = 9;
-
-        const N = 1<<nBits;
+        const nPols = 9;
+        const N = 514;
+        const idx = 34;
 
         const pols = [];
-        for (let i=0; i<NPols;i++) {
+        for (let i=0; i<nPols;i++) {
             pols[i] = [];
             for (let j=0; j<N; j++) {
                 pols[i][j] = [];
@@ -53,41 +51,50 @@ describe("Merkle Hash BN128 Circuit Test", function () {
             }
         }
 
-        const tree = await MH16.merkelize(pols, 3, NPols, N);
+        const MH = new MerkleHash(poseidon, arity, true);
+        
+        const tree = await MH.merkelize(pols, 3, nPols, N);
 
-        proof = MH16.getGroupProof(tree, idx);
+        proof = MH.getGroupProof(tree, idx);
 
-        const calcRoot = MH16.calculateRootFromGroupProof(proof[1], idx, proof[0]);
-        const root = MH16.root(tree);
+        const calcRoot = MH.calculateRootFromGroupProof(proof[1], idx, proof[0]);
+        const root = MH.root(tree);
         assert(root == calcRoot);
+
+        const logArity = Math.ceil(Math.log2(arity));
+        const nLevels = proof[1].length;
+        const nBits = nLevels * logArity;
+
+        const template = await fs.promises.readFile(path.join(__dirname, "circom", "merklehash.bn128.custom.test.circom.ejs"), "utf8");
+        const content = ejs.render(template, {nBits, nPols, arity, dirName:path.join(__dirname, "circom")});
+        const circuitFile = path.join(new tmp.Dir().path, "circuit.circom");
+        await fs.promises.writeFile(circuitFile, content);
+        const circuit = await wasm_tester(circuitFile, {O:1, include: ["circuits.bn128.custom", "node_modules/circomlib/circuits"]});
 
         const input={
             values: proof[0],
             siblings: proof[1],
-            key: getBits(idx, nBits),
+            key: getBits(idx, nLevels, arity),
             root: root,
             enable: 1,
         };
 
-        const w1 = await circuit16.calculateWitness(input, true);
+        const w1 = await circuit.calculateWitness(input, true);
 
-        await circuit16.assertOut(w1, {});
+        await circuit.assertOut(w1, {});
 
-        const [groupElements, mp] = MH16.getGroupProof(tree, idx);
-        assert(MH16.verifyGroupProof(root, mp, idx, groupElements));
+        const [groupElements, mp] = MH.getGroupProof(tree, idx);
+        assert(MH.verifyGroupProof(root, mp, idx, groupElements));
     });
 
     it("Should calculate merkle hash of 9 complex elements with arity 4", async () => {
         const arity = 4;
-        const nBitsArity = Math.ceil(Math.log2(arity));
-        const NPols = 9;
-        const nBits = Math.ceil(NPols*3/arity)*nBitsArity;
-        const idx = 9;
-
-        const N = 1<<nBits;
+        const nPols = 9;
+        const N = 514;
+        const idx = 34;
 
         const pols = [];
-        for (let i=0; i<NPols;i++) {
+        for (let i=0; i<nPols;i++) {
             pols[i] = [];
             for (let j=0; j<N; j++) {
                 pols[i][j] = [];
@@ -97,27 +104,92 @@ describe("Merkle Hash BN128 Circuit Test", function () {
             }
         }
 
-        const tree = await MH4.merkelize(pols, 3, NPols, N);
+        const MH = new MerkleHash(poseidon, arity, true);
 
-        proof = MH4.getGroupProof(tree, idx);
+        const tree = await MH.merkelize(pols, 3, nPols, N);
 
-        const calcRoot = MH4.calculateRootFromGroupProof(proof[1], idx, proof[0]);
-        const root = MH4.root(tree);
+        proof = MH.getGroupProof(tree, idx);
+
+        const calcRoot = MH.calculateRootFromGroupProof(proof[1], idx, proof[0]);
+        const root = MH.root(tree);
         assert(root == calcRoot);
+
+        const logArity = Math.ceil(Math.log2(arity));
+        const nLevels = proof[1].length;
+        const nBits = nLevels * logArity;
+
+        const template = await fs.promises.readFile(path.join(__dirname, "circom", "merklehash.bn128.custom.test.circom.ejs"), "utf8");
+        const content = ejs.render(template, {nBits, nPols, arity, dirName:path.join(__dirname, "circom")});
+        const circuitFile = path.join(new tmp.Dir().path, "circuit.circom");
+        await fs.promises.writeFile(circuitFile, content);
+        const circuit = await wasm_tester(circuitFile, {O:1, include: ["circuits.bn128.custom", "node_modules/circomlib/circuits"]});
 
         const input={
             values: proof[0],
             siblings: proof[1],
-            key: getBits(idx, nBits),
+            key: getBits(idx, nLevels, arity),
             root: root,
             enable: 1,
         };
 
-        const w1 = await circuit4.calculateWitness(input, true);
+        const w1 = await circuit.calculateWitness(input, true);
 
-        await circuit4.assertOut(w1, {});
+        await circuit.assertOut(w1, {});
 
-        const [groupElements, mp] = MH4.getGroupProof(tree, idx);
-        assert(MH4.verifyGroupProof(root, mp, idx, groupElements));
+        const [groupElements, mp] = MH.getGroupProof(tree, idx);
+        assert(MH.verifyGroupProof(root, mp, idx, groupElements));
+    });
+
+    it("Should calculate merkle hash of 9 complex elements with arity 6", async () => {
+        const arity = 6;
+        const nPols = 9;
+        const N = 514;
+        const idx = 34;
+
+        const pols = [];
+        for (let i=0; i<nPols;i++) {
+            pols[i] = [];
+            for (let j=0; j<N; j++) {
+                pols[i][j] = [];
+                for (let k=0; k<3; k++) {
+                    pols[i][j][k] = BigInt(i*1000+j*10+k+1);
+                }
+            }
+        }
+
+        const MH = new MerkleHash(poseidon, arity, true);
+
+        const tree = await MH.merkelize(pols, 3, nPols, N);
+
+        proof = MH.getGroupProof(tree, idx);
+
+        const calcRoot = MH.calculateRootFromGroupProof(proof[1], idx, proof[0]);
+        const root = MH.root(tree);
+        assert(root == calcRoot);
+
+        const [groupElements, mp] = MH.getGroupProof(tree, idx);
+        assert(MH.verifyGroupProof(root, mp, idx, groupElements));
+
+        const logArity = Math.ceil(Math.log2(arity));
+        const nLevels = proof[1].length;
+        const nBits = nLevels * logArity;
+
+        const template = await fs.promises.readFile(path.join(__dirname, "circom", "merklehash.bn128.custom.test.circom.ejs"), "utf8");
+        const content = ejs.render(template, {nBits, nPols, arity, dirName:path.join(__dirname, "circom")});
+        const circuitFile = path.join(new tmp.Dir().path, "circuit.circom");
+        await fs.promises.writeFile(circuitFile, content);
+        const circuit = await wasm_tester(circuitFile, {O:1, include: ["circuits.bn128.custom", "node_modules/circomlib/circuits"]});
+
+        const input={
+            values: proof[0],
+            siblings: proof[1],
+            key: getBits(idx, nLevels, arity),
+            root: root,
+            enable: 1,
+        };
+
+        const w1 = await circuit.calculateWitness(input, true);
+        
+        await circuit.assertOut(w1, {});
     });
 });

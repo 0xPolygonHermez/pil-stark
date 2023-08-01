@@ -7,14 +7,8 @@ include "poseidon.circom";
 
 
 template Merkle(keyBits, arity) {
-    var nLevels = 0;
     var nBits = log2(arity);
-    var n = 1 << keyBits;
-    var nn = n;
-    while (nn>1) {
-        nLevels ++;
-        nn = (nn - 1)\arity + 1;
-    }
+    var nLevels = (keyBits + nBits - 1)\nBits;
 
     signal input value;
     signal input siblings[nLevels][arity];
@@ -53,7 +47,6 @@ template Merkle(keyBits, arity) {
 
         var nextNBits = keyBits - nBits;
         if (nextNBits<0) nextNBits = 0;
-        var nNext = (n - 1)\arity + 1;
 
         mNext = Merkle(nextNBits, arity);
         mNext.value <== hash.out[0];

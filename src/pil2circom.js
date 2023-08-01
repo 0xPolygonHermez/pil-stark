@@ -2,7 +2,6 @@ const ejs = require("ejs");
 const F3g = require("./helpers/f3g.js");
 const fs = require("fs");
 const path = require("path");
-const { log2 } = require("pilcom/src/utils.js");
 
 
 module.exports = async function pil2circom(pil, constRoot, starkInfo, options) {
@@ -37,7 +36,7 @@ module.exports = async function pil2circom(pil, constRoot, starkInfo, options) {
         pil: pil,
         options: options,
         arity: Number(options.arity),
-        nBitsArity: log2(options.arity),
+        nBitsArity: Math.ceil(Math.log2(options.arity)),
     };
 
     return ejs.render(template ,  obj);

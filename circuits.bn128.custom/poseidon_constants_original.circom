@@ -542,6 +542,8 @@ function POSEIDON_C_ORIGINAL(t) {
             0x198d07192db4fac2a82a4a79839d6a2b97c4dd4d37b4e8f3b53009f79b34e6a4,
             0x29eb1de42a3ad381b23b4131426897a32709b29d53bb946dfd15784d1f63e572
         ];
+    } else if(t==6) {
+        return [0];
     } else if(t==7) {
         return [
             0x2197703fceb4cbf07c6dbf46c4ad93e7d14e554db66d09102ff84824743fe4e7,
@@ -1042,6 +1044,8 @@ function POSEIDON_C_ORIGINAL(t) {
             0x03e2bf82690c804bb6ee3c79dabd1892ea53a9811e2424a19fae446b8ae49cad,
             0x0e6dce1bbe6e9e465cbe14dcc615611867414676dd8a8ce9946649b1c4e81116
         ];
+    } else if(t==8) {
+        return [0];
     } else if(t==9) {
         return [
             0x2088ce9534577bf38be7bc457f2756d558d66e0c07b9cc001a580bd42cda0e77,
@@ -3044,6 +3048,8 @@ function POSEIDON_M_ORIGINAL(t) {
                 0x14074bb14c982c81c9ad171e4f35fe49b39c4a7a72dbb6d9c98d803bfed65e64
             ]
         ];
+    } else if(t==6) {
+        return [[0]];
     } else if(t==7) {
         return [
             [   
@@ -3110,6 +3116,8 @@ function POSEIDON_M_ORIGINAL(t) {
                 0x01b2e9d20d9b55deb048cabe1636f0e96363bec886679cbd91f332fb2bade44f
             ]
         ];
+    } else if(t==8) {
+        return [[0]];
     } else if(t==9) {
         return [
             [

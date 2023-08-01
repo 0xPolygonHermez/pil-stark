@@ -572,15 +572,15 @@ template StarkVerifier() {
     signal input s0_valsC[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants%>];
     
     // Merkle proofs for each of the evaluations
-    signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+    signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.ceil(starkStruct.steps[0].nBits/nBitsArity) %>][<%- arity %>];
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
-    signal input s0_siblings2[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+    signal input s0_siblings2[<%- starkStruct.nQueries %>][<%- Math.ceil(starkStruct.steps[0].nBits/nBitsArity) %>][<%- arity %>];
 <% }                                         -%>
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
-    signal input s0_siblings3[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+    signal input s0_siblings3[<%- starkStruct.nQueries %>][<%- Math.ceil(starkStruct.steps[0].nBits/nBitsArity) %>][<%- arity %>];
 <% }                                         -%>
-    signal input s0_siblings4[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
-    signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+    signal input s0_siblings4[<%- starkStruct.nQueries %>][<%- Math.ceil(starkStruct.steps[0].nBits/nBitsArity) %>][<%- arity %>];
+    signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.ceil(starkStruct.steps[0].nBits/nBitsArity) %>][<%- arity %>];
 
     // Contains the root of the original polynomial and all the intermediate FRI polynomials except for the last step
 <% let si_roots = []; -%>
@@ -594,7 +594,7 @@ template StarkVerifier() {
     // and the sibling paths for each query.
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
     signal input s<%- s %>_vals[<%- starkStruct.nQueries %>][<%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits))*3 %>];
-    signal input s<%- s %>_siblings[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[s].nBits -1) /nBitsArity) +1 %>][<%- arity %>];
+    signal input s<%- s %>_siblings[<%- starkStruct.nQueries %>][<%- Math.ceil(starkStruct.steps[s].nBits/nBitsArity) %>][<%- arity %>];
 <% }                                                  -%>
 
     // Evaluations of the final FRI polynomial over a set of points of size bounded its degree
@@ -824,15 +824,15 @@ template Main() {
 <% }                                         -%>
     signal input s0_vals4[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm4_2ns %>];
     signal input s0_valsC[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants%>];
-    signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+    signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.ceil(starkStruct.steps[0].nBits/nBitsArity) %>][<%- arity %>];
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
-    signal input s0_siblings2[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+    signal input s0_siblings2[<%- starkStruct.nQueries %>][<%- Math.ceil(starkStruct.steps[0].nBits/nBitsArity)  %>][<%- arity %>];
 <% }                                         -%>
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
-    signal input s0_siblings3[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+    signal input s0_siblings3[<%- starkStruct.nQueries %>][<%- Math.ceil(starkStruct.steps[0].nBits/nBitsArity)  %>][<%- arity %>];
 <% }                                         -%>
-    signal input s0_siblings4[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
-    signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+    signal input s0_siblings4[<%- starkStruct.nQueries %>][<%- Math.ceil(starkStruct.steps[0].nBits/nBitsArity)  %>][<%- arity %>];
+    signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.ceil(starkStruct.steps[0].nBits/nBitsArity)  %>][<%- arity %>];
 
 <% for (let s=0; s<starkStruct.steps.length-1; s++) {   -%>
     signal input s<%- s+1 %>_root;
@@ -840,7 +840,7 @@ template Main() {
 
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
     signal input s<%- s %>_vals[<%- starkStruct.nQueries %>][<%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits))*3 %>];
-    signal input s<%- s %>_siblings[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[s].nBits -1) /nBitsArity) +1 %>][<%- arity %>];
+    signal input s<%- s %>_siblings[<%- starkStruct.nQueries %>][<%- Math.ceil(starkStruct.steps[s].nBits/nBitsArity)  %>][<%- arity %>];
 <% }                                                  -%>
 
     signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];

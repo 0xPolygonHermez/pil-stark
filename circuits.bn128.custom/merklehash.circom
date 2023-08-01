@@ -11,8 +11,8 @@ include "utils.circom";
     - elementsInLinear: Each leave of the merkle tree is made by this number of values. 
 */
 template MerkleHash(eSize, elementsInLinear, nBits, arity) {
-    var logArity = log2(arity);
-    var nLevels = (nBits - 1)\logArity +1;
+    var log2Arity = log2(arity);
+    var nLevels = (nBits + log2Arity - 1)\log2Arity;
     signal input values[elementsInLinear][eSize];
     signal input siblings[nLevels][arity]; // Sibling path to calculate the merkle root given a set of values. 
     signal input key[nBits]; // Defines either each element of the sibling path is the left or right one
@@ -28,8 +28,8 @@ template MerkleHash(eSize, elementsInLinear, nBits, arity) {
 
 
 template parallel VerifyMerkleHash(eSize, elementsInLinear, nBits, arity) {
-    var nLeaves = log2(arity);
-    var nLevels = (nBits - 1)\nLeaves +1;
+    var log2Arity = log2(arity);
+    var nLevels = (nBits + log2Arity - 1)\log2Arity;
     signal input values[elementsInLinear][eSize];
     signal input siblings[nLevels][arity]; // Sibling path to calculate the merkle root given a set of values.
     signal input key[nBits]; // Defines either each element of the sibling path is the left or right one
