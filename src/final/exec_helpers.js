@@ -126,11 +126,22 @@ async function writeExecInfoSection(fd, adds, sMap) {
 
 async function writeAddsBigIntSection(fd, adds) {
     await startWriteSection(fd, ADDS_BIGINT_SECTION);
+
+    const tmpBuff64 = new Uint8Array(8);
+    const tmpBuff64v = new DataView(tmpBuff64.buffer);
+
+    const buffer = new Uint8Array(adds.length*2*8);
+    let p = 0;
     for (let i = 0; i < adds.length; i++) {
         for(let j = 0; j < 2; j++)  {
-            await fd.writeULE64(adds[i][j]);
+            tmpBuff64v.setUint32(0, adds[i][j] & 0xFFFFFFFF, true);
+            tmpBuff64v.setUint32(4, Math.floor(adds[i][j] / 0x100000000) , true);
+            buffer.set(tmpBuff64, p);
+            p += 8;
         }
     }
+
+    await fd.write(buffer);
 
     await endWriteSection(fd);
 
@@ -157,10 +168,20 @@ async function writeAddsFrSection(fd, adds, F) {
 async function writeSMapSection(fd, sMap) {
     await startWriteSection(fd, SMAP_SECTION);
 
+    const tmpBuff64 = new Uint8Array(8);
+    const tmpBuff64v = new DataView(tmpBuff64.buffer);
+
+    const buffer = new Uint8Array(sMap[0].length*sMap.length*8);
+    let p = 0;
     for (let i=0; i<sMap[0].length; i++) {
         for (let j=0; j<sMap.length; j++) {
-            await fd.writeULE64(sMap[j][i]);
+            tmpBuff64v.setUint32(0, sMap[j][i] & 0xFFFFFFFF, true);
+            tmpBuff64v.setUint32(4, Math.floor(sMap[j][i] / 0x100000000) , true);
+            buffer.set(tmpBuff64, p);
+            p += 8;
         }
     }
+
+    await fd.write(buffer);
     await endWriteSection(fd);
 }
