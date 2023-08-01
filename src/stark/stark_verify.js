@@ -22,9 +22,10 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
     } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
         let arity = options.arity || 16;
-        let custom = options.custom || false;    
+        let custom = options.custom || false; 
+        let transcriptArity = custom ? arity : 16;   
         MH = await buildMerkleHashBN128(arity, custom);
-        transcript = new TranscriptBN128(poseidonBN128, arity);
+        transcript = new TranscriptBN128(poseidonBN128, transcriptArity);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }

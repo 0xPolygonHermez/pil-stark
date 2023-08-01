@@ -89,45 +89,7 @@ template GLCMulAdd() {
         _ <== Num2Bits(80)(k[i]);
         _ <== Num2Bits(64)(out[i]);
     }
-}
 
-template GLCMulAdd1() {
-    signal input ina;
-    signal input inb[3];
-    signal input inc[3];
-    signal output out[3];
-
-    var p=0xFFFFFFFF00000001;
-
-    signal A,B,C,D,E,F,G;
-    signal m[3];
-
-    A <== (ina+16*p)  * ((inb[0]+16*p) + (inb[1]+16*p));
-    B <== (ina+16*p)  * ((inb[0]+16*p) + (inb[2]+16*p));
-    C <== ((inb[1]+16*p) + (inb[2]+16*p));
-    D <== (ina+16*p) * (inb[0]+16*p);
-    E <== (inb[1]+16*p);
-    F <== (inb[2]+16*p);
-    G <== D-E;
-    
-    m[0] <== C+G-F + inc[0]+16*p;
-    m[1] <== A+C-E-E-D + inc[1]+16*p;
-    m[2] <== B-G + inc[2]+16*p;
-
-    signal k[3];
-
-    k[0] <-- m[0] \ p;
-    k[1] <-- m[1] \ p;
-    k[2] <-- m[2] \ p;
-
-    out[0] <== m[0] -k[0]*p;
-    out[1] <== m[1] -k[1]*p;
-    out[2] <== m[2] -k[2]*p;
-
-    for (var i = 0; i<3; i++) {
-        _ <== Num2Bits(80)(k[i]);
-        _ <== Num2Bits(64)(out[i]);
-    }
 }
 
 template GLCMul() {
@@ -136,14 +98,6 @@ template GLCMul() {
     signal output out[3];
 
     out <== GLCMulAdd()(ina, inb, [0,0,0]);
-}
-
-template GLCMul1() {
-    signal input ina;
-    signal input inb[3];
-    signal output out[3];
-
-    out <== GLCMulAdd1()(ina, inb, [0,0,0]);
 }
 
 

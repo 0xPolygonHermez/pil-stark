@@ -43,7 +43,8 @@ async function run() {
 
     if(starkInfo.starkStruct.verificationHashType === "BN128") {
         options.arity =  Number(argv.arity) || 16;
-        console.log(`Arity: ${options.arity}, Custom: ${options.custom}`);
+        options.transcriptArity = 16;
+        console.log(`Arity: ${options.arity}, transcriptArity: ${options.transcriptArity}, Custom: ${options.custom}`);
     }
 
     const verifier = await pil2circom(pil, constRoot, starkInfo, options);

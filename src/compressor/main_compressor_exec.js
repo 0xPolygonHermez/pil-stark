@@ -24,10 +24,10 @@ async function run() {
 
     const inputFile = typeof(argv.input) === "string" ?  argv.input.trim() : "mycircuit.proof.zkin.json";
     const wasmFile = typeof(argv.wasm) === "string" ?  argv.wasm.trim() : "mycircuit.verifier.wasm";
-    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.c15.pil";
+    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.c12.pil";
     const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
-    const execFile = typeof(argv.exec) === "string" ?  argv.exec.trim() : "mycircuit.c15.exec";
-    const commitFile = typeof(argv.commit) === "string" ?  argv.commit.trim() : "mycircuit.c15.exec";
+    const execFile = typeof(argv.exec) === "string" ?  argv.exec.trim() : "mycircuit.c12.exec";
+    const commitFile = typeof(argv.commit) === "string" ?  argv.commit.trim() : "mycircuit.c12.exec";
 
     const input = JSONbig.parse(await fs.promises.readFile(inputFile, "utf8"));
 

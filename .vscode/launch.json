@@ -1164,7 +1164,7 @@
                 "-t ${workspaceFolder}/tmp/fibonacci.c12.custom.consttree",
                 "-v ${workspaceFolder}/tmp/fibonacci.c12.custom.verkey.json",
                 "--custom=true",
-                "--arity=4",
+                "--arity=6",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1212,7 +1212,7 @@
                 "-b ${workspaceFolder}/tmp/fibonacci.c12.custom.public.json",
                 "--proverAddr=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
                 "--custom=true",
-                "--arity=4",
+                "--arity=6",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1250,7 +1250,7 @@
                 "-b ${workspaceFolder}/tmp/fibonacci.c12.custom.public.json",
                 "-v ${workspaceFolder}/tmp/fibonacci.c12.custom.verkey.json",
                 "--custom=true",
-                "--arity=4",
+                "--arity=6",
             ],
             "runtimeArgs": [
                 "--max-old-space-size=32000"
@@ -1363,6 +1363,25 @@
             ]
         },
         {
+            "name": "fibonacci finalfflonk setup",
+            "program": "src/final/main_final_setup.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "args": [
+                "-r ${workspaceFolder}/tmp/fibonacci.c12.verifier.r1cs",
+                "-p ${workspaceFolder}/tmp/fibonacci.final.pil",
+                "-c ${workspaceFolder}/tmp/fibonacci.final.const",
+                "-e ${workspaceFolder}/tmp/fibonacci.final.exec",
+                "--cols=0"
+            ],
+            "runtimeArgs": [
+                "--max-old-space-size=32000"
+            ]
+        },
+        {
             "name": "fibonacci final exec",
             "program": "src/final/main_final_exec.js",
             "request": "launch",
@@ -1425,7 +1444,7 @@
             "args": [
                 "-p tmp/fibonacci.final.pil",
                 "-f tmp/fibonacci.final.fflonkinfo.json",
-                "-t tmp/powersOfTau28_hez_final_24.ptau",
+                "-t ../zkevm-proverjs/build/powersOfTau28_hez_final.ptau",
                 "-e 5",
                 "-s tmp/fibonacci.final.shkey.json"
             ],
@@ -1444,7 +1463,7 @@
             "args": [
                 "-p tmp/fibonacci.final.pil",
                 "-f tmp/fibonacci.final.fflonkinfo.json",
-                "-t tmp/powersOfTau28_hez_final_24.ptau",
+                "-t ../zkevm-proverjs/build/powersOfTau28_hez_final.ptau",
                 "-c tmp/fibonacci.final.const",
                 "-z tmp/fibonacci.final.zkey",
                 "-e 5",

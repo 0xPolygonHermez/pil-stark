@@ -62,17 +62,17 @@ class Transcript {
     updateState() {
         if(this.hCnt > 0) {
             const firstUnused = Math.max(this.hiCnt, 1);
-            if(firstUnused < (arity + 1)) {
-                this.code.push(`for(var i = ${firstUnused}; i < ${arity + 1}; i++){
+            if(firstUnused < (transcriptArity + 1)) {
+                this.code.push(`for(var i = ${firstUnused}; i < ${transcriptArity + 1}; i++){
         _ <== transcriptHash_${this.hCnt -1}[i]; // Unused transcript values        
     }`)
             }
         }
-        while (this.pending.length < arity) {
+        while (this.pending.length < transcriptArity) {
             this.pending.push("0");
         }
-        this.code.push(`\n    signal transcriptHash_${this.hCnt++}[${Number(arity) + 1}] <== PoseidonEx(${arity}, ${arity + 1})([${this.pending.join(',')}], ${this.state});`);
-        for (let i=0; i<arity+1; i++) {
+        this.code.push(`\n    signal transcriptHash_${this.hCnt++}[${Number(transcriptArity) + 1}] <== PoseidonEx(${transcriptArity}, ${transcriptArity + 1})([${this.pending.join(',')}], ${this.state});`);
+        for (let i=0; i<transcriptArity+1; i++) {
             this.out[i] = `transcriptHash_${this.hCnt-1}[${i}]`;
         }
         this.out3 = [];
@@ -96,7 +96,7 @@ class Transcript {
         this.out = [];
         this.out3 = [];
         this.pending.push(a);
-        if (this.pending.length == arity) {
+        if (this.pending.length == transcriptArity) {
             this.updateState();
         }
     }
@@ -110,8 +110,8 @@ class Transcript {
             n2b[i] = `transcriptN2b_${this.n2bCnt++}`;
             this.code.push(`signal ${n2b[i]}[254] <== Num2Bits_strict()(${f});`);
         }
-        if(this.hiCnt < arity + 1) {
-            this.code.push(`for(var i = ${this.hiCnt}; i < ${arity + 1}; i++){
+        if(this.hiCnt < transcriptArity + 1) {
+            this.code.push(`for(var i = ${this.hiCnt}; i < ${transcriptArity + 1}; i++){
         _ <== transcriptHash_${this.hCnt - 1}[i]; // Unused transcript values           
     }\n`)
         }
@@ -209,9 +209,9 @@ class Transcript {
 <%          if ((inst.src[0].dim==1) && (inst.src[1].dim==1)) {                         -%>
     signal <%- ref(inst.dest) %> <== GLMul()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>);
 <%          } else if ((inst.src[0].dim==1) && (inst.src[1].dim==3)) {                  -%>
-    signal <%- ref(inst.dest) %>[3] <== GLCMul1()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>);
+    signal <%- ref(inst.dest) %>[3] <== GLCMul()([<%- ref(inst.src[0]) %>, 0, 0], <%- ref(inst.src[1]) %>);
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==1)) {                  -%>
-    signal <%- ref(inst.dest) %>[3] <== GLCMul1()(<%- ref(inst.src[1]) %>, <%- ref(inst.src[0]) %>);
+    signal <%- ref(inst.dest) %>[3] <== GLCMul()(<%- ref(inst.src[0]) %>, [<%- ref(inst.src[1]) %>,0,0]);
 <%          } else if ((inst.src[0].dim==3) && (inst.src[1].dim==3)) {                  -%>
     signal <%- ref(inst.dest) %>[3] <== GLCMul()(<%- ref(inst.src[0]) %>, <%- ref(inst.src[1]) %>);
 <%          } else throw new Error("Invalid src dimensions");                          -%>
@@ -341,7 +341,7 @@ template parallel VerifyFRI(prevStepBits, currStepBits, nextStepBits, e0, e1) {
     }
 
     signal coefs[1 << step][3] <== FFT(step, 1)(s_vals_curr);
-    signal evalXprime[3] <== GLCMul1()(s_X, s_specialX);
+    signal evalXprime[3] <== GLCMul()(s_specialX, [s_X, 0, 0]);
     signal evalPol[3] <== EvalPol(1 << step)(coefs, evalXprime);
     
     signal s_keys_lowValues[nextStep];
@@ -477,11 +477,11 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
 
 
     signal den1inv[3] <== GLCInv()([X - challenges7[0] + p, -challenges7[1] + p, -challenges7[2] + p]);
-    signal xDivXSubXi[3] <== GLCMul1()(X, den1inv);
+    signal xDivXSubXi[3] <== GLCMul()([X, 0, 0], den1inv);
     
     signal wXi[3] <== GLCMul()([roots(<%- starkStruct.nBits %>), 0, 0], challenges7);
     signal den2inv[3] <== GLCInv()([X - wXi[0] + p, -wXi[1] + p, -wXi[2] + p]);
-    signal xDivXSubWXi[3] <== GLCMul1()(X, den2inv);
+    signal xDivXSubWXi[3] <== GLCMul()([X, 0, 0], den2inv);
    
 <% const evalQ = unrollCode(starkInfo.verifierQueryCode.first) -%>
 

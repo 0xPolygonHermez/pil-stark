@@ -542,6 +542,34 @@ template MapValues() {
 }
 
 
+template parallel VerifyFinalPol() {
+    ///////
+    // Check Degree last pol
+    ///////
+    signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
+    signal input enable;
+
+<% const nLastBits = starkStruct.steps[ starkStruct.steps.length-1].nBits;  -%>
+<% console.log("NLastBits", nLastBits); -%>
+<% const maxDegBits =  Math.max(nLastBits -  (starkStruct.nBitsExt - starkStruct.nBits), 0); -%>
+<% console.log("MaxDegBits", maxDegBits); -%>
+    // Calculate the IFFT to get the coefficients of finalPol 
+    signal lastIFFT[<%- 1 << nLastBits %>][3] <== FFT(<%- nLastBits %>, 1)(finalPol);
+
+    // Check that the degree of the final polynomial is bounded by the degree defined in the last step of the folding
+    // This means ?????? in terms of IFFT
+    for (var k= <%- 1 << maxDegBits %>; k< <%- 1 << nLastBits %>; k++) {
+        for (var e=0; e<3; e++) {
+            enable * lastIFFT[k][e] === 0;
+        }
+    }
+
+    // The coefficients of lower degree can have any value
+    for (var k= 0; k < <%- 1 << maxDegBits %>; k++) {
+        _ <== lastIFFT[k];
+    }
+}
+
 template StarkVerifier() {
     signal input publics[<%- pil.publics.length %>]; // constant polynomials
     signal input root1; // Merkle tree root of the evaluations of all trace polynomials
@@ -704,39 +732,47 @@ template StarkVerifier() {
     }
     
     ///////////
-    // FRI
+    // Verify Merkle roots
     ///////////
-
-    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         
-        //Check that all that the root obtained using the values and the sibling path is the same as the one being sent as input 
-
-        //Calculate merkle root for s0 vals
+    //Calculate merkle root for s0 vals
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm1_2ns %>, <%- starkStruct.steps[0].nBits %>, <%- arity %>)(s0_vals1_p[q], s0_siblings1[q], ys[q], root1, enable);
+    }
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm2_2ns %>, <%- starkStruct.steps[0].nBits %>, <%- arity %>)(s0_vals2_p[q], s0_siblings2[q], ys[q], root2, enable);
+    }
 <% }                                        -%>
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm3_2ns %>, <%- starkStruct.steps[0].nBits %>, <%- arity %>)(s0_vals3_p[q], s0_siblings3[q], ys[q], root3, enable);
+    }
 <% }     -%>
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm4_2ns %>, <%- starkStruct.steps[0].nBits %>,<%- arity %>)(s0_vals4_p[q], s0_siblings4[q], ys[q], root4, enable);
-        VerifyMerkleHash(1, <%- starkInfo.nConstants %>, <%- starkStruct.steps[0].nBits %>, <%- arity %>)(s0_valsC_p[q], s0_siblingsC[q], ys[q], rootC, enable);                                    
+    }
+
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
+        VerifyMerkleHash(1, <%- starkInfo.nConstants %>, <%- starkStruct.steps[0].nBits %>, <%- arity %>)(s0_valsC_p[q], s0_siblingsC[q], ys[q], rootC, enable);  
+    }                                  
 
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
-
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         // Calculate merkle root for s<%- s %> vals
         var s<%- s %>_keys_merkle[<%- starkStruct.steps[s].nBits %>];
         for(var i = 0; i < <%-starkStruct.steps[s].nBits %>; i++) { s<%- s %>_keys_merkle[i] = ys[q][i]; }
         VerifyMerkleHash(3, <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>, <%- starkStruct.steps[s].nBits %>,<%- arity %>)(s<%- s %>_vals_p[q], s<%- s %>_siblings[q], s<%- s %>_keys_merkle, s<%- s %>_root, enable);
-
+    }
 <% } -%>
 
-        ///////////
-        // Verify FRI query
-        ///////////
+    ///////////
+    // Verify FRI query
+    ///////////
 
-        // After checking that all merkle roots are properly built, the query and the intermediate 
-        // polynomials need to be verified 
+    // After checking that all merkle roots are properly built, the query and the intermediate 
+    // polynomials need to be verified 
+    for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
 <%  let nextValsPol = 0 < starkStruct.steps.length-1 ? "s1_vals_p[q]" : "finalPol"; 
     let nextStep = 0 < starkStruct.steps.length-1 ? starkStruct.steps[1].nBits : 0; 
     let queryVals = ["s0_vals1[q]"];
@@ -777,29 +813,7 @@ template StarkVerifier() {
 <% } -%>
     }
 
-    ///////
-    // Check Degree last pol
-    ///////
-
-<% const nLastBits = starkStruct.steps[ starkStruct.steps.length-1].nBits;  -%>
-<% console.log("NLastBits", nLastBits); -%>
-<% const maxDegBits =  Math.max(nLastBits -  (starkStruct.nBitsExt - starkStruct.nBits), 0); -%>
-<% console.log("MaxDegBits", maxDegBits); -%>
-    // Calculate the IFFT to get the coefficients of finalPol 
-    signal lastIFFT[<%- 1 << nLastBits %>][3] <== FFT(<%- nLastBits %>, 1)(finalPol);
-
-    // Check that the degree of the final polynomial is bounded by the degree defined in the last step of the folding
-    // This means ?????? in terms of IFFT
-    for (var k= <%- 1 << maxDegBits %>; k< <%- 1 << nLastBits %>; k++) {
-        for (var e=0; e<3; e++) {
-            enable * lastIFFT[k][e] === 0;
-        }
-    }
-
-    // The coefficients of lower degree can have any value
-    for (var k= 0; k < <%- 1 << maxDegBits %>; k++) {
-        _ <== lastIFFT[k];
-    }
+    VerifyFinalPol()(finalPol, enable);
 }
 
 <% if (!options.skipMain) {  -%>

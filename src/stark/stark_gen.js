@@ -42,9 +42,10 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         const poseidonBN128 = await buildPoseidonBN128();
         let arity = options.arity || 16;
         let custom = options.custom || false;
-        console.log(`Arity: ${arity}, Custom: ${custom}`);
+        let transcriptArity = custom ? arity : 16;
+        console.log(`Arity: ${arity},  transcriptArity: ${transcriptArity}, Custom: ${custom}`);
         MH = await buildMerkleHashBN128(arity, custom);
-        transcript = new TranscriptBN128(poseidonBN128, arity);
+        transcript = new TranscriptBN128(poseidonBN128, transcriptArity);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
