@@ -1,5 +1,6 @@
 const {log2} = require("pilcom/src/utils");
 const {setup} = require("shplonkjs");
+const {Scalar} = require("ffjavascript");
 
 module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options) {
     const logger = options.logger;
@@ -200,6 +201,12 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
     for(let i = 0; i < roots.length; ++i) {
         shkey[roots[i]] = curve.Fr.toObject(shkey[roots[i]]);
     }
+
+    shkey.primeQ = curve.q;
+    shkey.n8q = (Math.floor((Scalar.bitLength(shkey.primeQ) - 1) / 64) + 1) * 8;
+
+    shkey.primeR = curve.r;
+    shkey.n8r = (Math.floor((Scalar.bitLength(shkey.primeR) - 1) / 64) + 1) * 8;
 
     return { zkey: shkey, PTau, curve };
 
