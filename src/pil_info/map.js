@@ -183,12 +183,6 @@ module.exports = function map(res, pil, stark) {
 
 
     res.qDim = getExpDim(pil, res.cExp, stark);
-    const ppq_2ns = addPol({
-        section: "q_2ns",
-        dim:res.qDim
-    });
-    res.q_2ns.push(ppq_2ns);
-
     if(stark) {
         for (let i=0; i<res.qDeg; i++) {
             const ppz_n = addPol({
@@ -211,6 +205,13 @@ module.exports = function map(res, pil, stark) {
         });
         res.f_2ns.push(ppf_2ns);
     }
+
+    const ppq_2ns = addPol({
+        section: "q_2ns",
+        dim:res.qDim
+    });
+    res.q_2ns.push(ppq_2ns);
+
     
     mapSections(res, stark);
    
@@ -219,14 +220,14 @@ module.exports = function map(res, pil, stark) {
         res.mapOffsets.cm1_n = 0;
         res.mapOffsets.cm2_n = res.mapOffsets.cm1_n +  N * res.mapSectionsN.cm1_n;
         res.mapOffsets.cm3_n = res.mapOffsets.cm2_n +  N * res.mapSectionsN.cm2_n;
-        res.mapOffsets.tmpExp_n = res.mapOffsets.cm3_n +  N * res.mapSectionsN.cm3_n;
+        res.mapOffsets.cm4_n = res.mapOffsets.cm3_n +  N * res.mapSectionsN.cm3_n;
+        res.mapOffsets.tmpExp_n = res.mapOffsets.cm4_n +  N * res.mapSectionsN.cm4_n;
         res.mapOffsets.cm1_2ns = res.mapOffsets.tmpExp_n +  N * res.mapSectionsN.tmpExp_n;
         res.mapOffsets.cm2_2ns = res.mapOffsets.cm1_2ns +  Next * res.mapSectionsN.cm1_2ns;
         res.mapOffsets.cm3_2ns = res.mapOffsets.cm2_2ns +  Next * res.mapSectionsN.cm2_2ns;
-        res.mapOffsets.q_2ns = res.mapOffsets.cm3_2ns +  Next * res.mapSectionsN.cm3_2ns;
-        res.mapOffsets.cm4_n = res.mapOffsets.q_2ns +  N * res.mapSectionsN.q_2ns;
-        res.mapOffsets.cm4_2ns = res.mapOffsets.cm4_n +  Next * res.mapSectionsN.cm4_n;
-        res.mapOffsets.f_2ns = res.mapOffsets.cm4_2ns +  Next * res.mapSectionsN.cm4_2ns;
+        res.mapOffsets.cm4_2ns = res.mapOffsets.cm3_2ns +  Next * res.mapSectionsN.cm3_2ns;
+        res.mapOffsets.q_2ns = res.mapOffsets.cm4_2ns +  Next * res.mapSectionsN.cm4_2ns;
+        res.mapOffsets.f_2ns = res.mapOffsets.q_2ns +  Next * res.mapSectionsN.q_2ns;
         res.mapTotalN = res.mapOffsets.f_2ns +  Next * res.mapSectionsN.f_2ns;
     } 
     

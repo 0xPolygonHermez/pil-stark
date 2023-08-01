@@ -1,21 +1,13 @@
-const CHALLENGE_U = 0;
-const CHALLENGE_DEFVAL = 1;
-const CHALLENGE_BETA = 2;
-const CHALLENGE_GAMMA = 3;
-const CHALLENGE_ALPHA = 4;
-const CHALLENGE_XI = 5;
-const CHALLENGE_V = 6;
-const CHALLENGE_VP = 7;
 
 const challengeMap = {
-    "u": CHALLENGE_U,
-    "defVal": CHALLENGE_DEFVAL,
-    "gamma": CHALLENGE_GAMMA,
-    "beta": CHALLENGE_BETA,
-    "vc": CHALLENGE_ALPHA,
-    "xi": CHALLENGE_XI,
-    "vf1": CHALLENGE_V,
-    "vf2": CHALLENGE_VP
+    "u": 0,
+    "defVal": 1,
+    "gamma": 2,
+    "beta": 3,
+    "vc": 4,
+    "vf1": 5,
+    "vf2": 6,
+    "xi": 7
 };
 
 class ExpressionOps {
