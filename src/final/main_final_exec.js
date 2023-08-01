@@ -47,7 +47,7 @@ async function run() {
 
     await curve.terminate();
 
-    const { nAdds, nSMap, addsBigInt, addsFr, sMap } = res;
+    const { nAdds, nSMap, addsBigInt, addsFr, sMap } = await readExecFile(Fr, execFile, nCommittedPols);
 
     const wc = await WitnessCalculatorBuilder(wasm);
     const w = await wc.calculateWitness(input);
