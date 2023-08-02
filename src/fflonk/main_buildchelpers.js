@@ -6,7 +6,7 @@ const buildCHelpers = require("./chelpers/fflonk_chelpers.js");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_buildchelpers.js -f <fflonkinfo.json> -c <chelpers.cpp> [-C <classname>]")
+    .usage("node main_buildchelpers.js -f <fflonkinfo.json> -c <chelpers.cpp>")
     .alias("f", "fflonkinfo")
     .alias("c", "chelpers")
     .alias("C", "cls")
@@ -15,7 +15,6 @@ const argv = require("yargs")
     .argv;
 
 async function run() {
-    const cls = typeof (argv.cls) === "string" ? argv.cls.trim() : "Fflonk";
     const fflonkInfoFile = typeof (argv.fflonkinfo) === "string" ? argv.fflonkinfo.trim() : "mycircuit.fflonkinfo.json";
     const chelpersFile = typeof (argv.chelpers) === "string" ? argv.chelpers.trim() : "mycircuit.chelpers.cpp";
     const multipleCodeFiles = argv.multiple;
@@ -23,7 +22,7 @@ async function run() {
 
     const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
     
-    const cCode = buildCHelpers(fflonkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes: optcodes } : {});
+    const cCode = buildCHelpers(fflonkInfo, multipleCodeFiles ? { multipleCodeFiles: true, optcodes: optcodes } : {});
 
     if (multipleCodeFiles) {
         const baseDir = path.dirname(chelpersFile);

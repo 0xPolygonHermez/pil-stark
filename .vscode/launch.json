@@ -1483,7 +1483,6 @@
             "args": [
                 "-f ${workspaceFolder}/tmp/fibonacci.final.fflonkinfo.json",
                 "-c tmp/fibonacci.final.chelpers.cpp",
-                "-C PilFflonkSteps",
                 "-m"
             ],
             "runtimeArgs": [
@@ -2122,7 +2121,6 @@
             "args": [
                 "-f tmp/simple.fflonkinfo.json",
                 "-c tmp/simple.fflonk.chelpers.cpp",
-                "-C PilFflonkSteps",
                 "-m"
             ],
             "runtimeArgs": [
@@ -2208,7 +2206,6 @@
             "args": [
                 "-f tmp/fibonacci.fflonkinfo.json",
                 "-c tmp/fibonacci.fflonk.chelpers.cpp",
-                "-C PilFflonkSteps",
                 "-m"
             ],
             "runtimeArgs": [

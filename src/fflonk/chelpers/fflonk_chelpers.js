@@ -30,7 +30,7 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
 
     code.push(
         [
-        `void ${config.className}::publics_first(AltBn128::Engine &E, StepsParams &params, uint64_t i, uint64_t pub) {`,
+        `void PilFflonkSteps::publics_first(AltBn128::Engine &E, PilFflonkStepsParams &params, uint64_t i, uint64_t pub) {`,
         ...codePublics,
         `}`
         ].join("\n")
@@ -38,7 +38,7 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
 
     code.push(
         [
-        `void ${config.className}::publics_i(AltBn128::Engine &E, StepsParams &params, uint64_t i, uint64_t pub) {`,
+        `void PilFflonkSteps::publics_i(AltBn128::Engine &E, PilFflonkStepsParams &params, uint64_t i, uint64_t pub) {`,
         ...codePublics,
         `}`
         ].join("\n")
@@ -46,7 +46,7 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
 
     code.push(
         [
-        `void ${config.className}::publics_last(AltBn128::Engine &E, StepsParams &params, uint64_t i, uint64_t pub) {`,
+        `void PilFflonkSteps::publics_last(AltBn128::Engine &E, PilFflonkStepsParams &params, uint64_t i, uint64_t pub) {`,
         ...codePublics,
         `}`
         ].join("\n")
@@ -117,8 +117,8 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
     if (multipleCodeFiles) {
         result.step42ns = code.join("\n\n") + "\n";
         result.constValues =  [
-            `u_int64_t ${config.className}::getNumConstValues() { return ${vIndex}; }\n`,
-            `void ${config.className}::setConstValues(AltBn128::Engine &E, StepsParams &params) {`,
+            `u_int64_t PilFflonkSteps::getNumConstValues() { return ${vIndex}; }\n`,
+            `void PilFflonkSteps::setConstValues(AltBn128::Engine &E, PilFflonkStepsParams &params) {`,
             ...bigIntsCode,
             `}`
         ].join("\n");
@@ -177,7 +177,7 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
             ].join("\n");
         } else {
             res = [
-                `void ${config.className}::${functionName}(AltBn128::Engine &E, StepsParams &params, uint64_t i) {`,
+                `void PilFflonkSteps::${functionName}(AltBn128::Engine &E, PilFflonkStepsParams &params, uint64_t i) {`,
                 ...body,
                 `}`
             ].join("\n");

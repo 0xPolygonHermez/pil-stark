@@ -122,7 +122,7 @@ describe("simple sm", async function () {
             const cHelpersFilename =  path.join(__dirname, "../../", "tmp", `${filename}.chelpers.cpp`);
 
             const cHelpersDir =  path.join(__dirname, "../../", "src", "fflonk/main_buildchelpers.js");
-            const command = `node ${cHelpersDir} -f ${fflonkInfoFilename} -c ${cHelpersFilename} -C PilFflonkSteps -m`;
+            const command = `node ${cHelpersDir} -f ${fflonkInfoFilename} -c ${cHelpersFilename}  -m`;
             execSync(command);
         } catch (error) {
             console.error(`Error while generating chelpers: ${error.message}`);
