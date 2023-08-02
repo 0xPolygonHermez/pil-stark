@@ -79,7 +79,7 @@ module.exports = async function exportPilFflonkVerifier(vk, fflonkInfo, options 
     const template = await fs.promises.readFile(path.resolve(__dirname, "verifier_pilfflonk.sol.ejs"), "utf-8");
 
     const verifierPilFflonkCode = ejs.render(template, obj);
-    const verifierShPlonkCode = await exportSolidityShPlonkVerifier(vk, curve, {nonCommittedPols, xiSeed: true, checkInputs: false });
+    const verifierShPlonkCode = await exportSolidityShPlonkVerifier(vk, curve, {...options, nonCommittedPols, xiSeed: true, checkInputs: false });
 
     return {verifierPilFflonkCode, verifierShPlonkCode}; 
 }

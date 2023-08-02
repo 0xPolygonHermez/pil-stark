@@ -4,7 +4,7 @@ const exportPilFflonkVerifier = require("./solidity/exportPilFflonkVerifier");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_exportSolidityVerifier.js -v <verificationkey.json> -f <fflonkinfo.json> -p <pilfflonkverifier.sol> -s <shplonkverifier.sol>")
+    .usage("node main_exportSolidityVerifier.js -v <verificationkey.json> -f <fflonkinfo.json> -p <pilfflonkverifier.sol> -s <shplonkverifier.sol> [--extendLoops]")
     .alias("f", "fflonkinfo")
     .alias("v", "verificationkey")
     .alias("p", "pilfflonkverifier")
@@ -21,7 +21,11 @@ async function run() {
    
     const verificationKey = JSON.parse(await fs.promises.readFile(verificationKeyFile, "utf8"));
 
-    const verifierCode = await exportPilFflonkVerifier(verificationKey, fflonkInfo, {});
+    const options = {
+        extendLoops: argv.extendLoops || false,
+    }
+
+    const verifierCode = await exportPilFflonkVerifier(verificationKey, fflonkInfo, options);
     
     await fs.promises.writeFile(pilFflonkVerifierFile, verifierCode.verifierPilFflonkCode, "utf8");
 
