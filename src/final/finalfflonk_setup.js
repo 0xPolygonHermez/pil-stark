@@ -11,14 +11,17 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     // Calculate the number plonk Additions and plonk constraints from the R1CS
     const [plonkConstraints, plonkAdditions] = r1cs2plonk(F, r1cs);
         
-    const nPlonk = 2;
+    const nCommitted = options.nCommitted ? Number(options.nCommitted) : 6;
+    if(nCommitted%3 != 0 || nCommitted < 3) throw new Error("Invalid number of committed polynomials");
+
+    const nPlonk = nCommitted/3;
 
     // Calculate how many C12 constraints are needed 
     const CPlonkConstraints = calculatePlonkConstraints(plonkConstraints,nPlonk);
 
     // Calculate the total number of publics used in PIL and how many rows are needed to store all of them
     let nPublics = r1cs.nOutputs + r1cs.nPubInputs;
-    const nPublicRows = Math.floor((nPublics - 1)/6) + 1; 
+    const nPublicRows = Math.floor((nPublics - 1)/nCommitted) + 1; 
 
 
     console.log(`Number of Plonk constraints: ${plonkConstraints.length} -> Number of plonk per row: ${nPlonk} -> Constraints:  ${CPlonkConstraints}`);
@@ -47,6 +50,8 @@ module.exports = async function plonkSetup(F, r1cs, options) {
         NUsed,
         nBits,
         nPublics,
+        nPlonk,
+        nCommitted,
     };
 
     const pilStr = ejs.render(template ,  obj);
@@ -58,9 +63,9 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     fs.promises.unlink(pilFile);
 
     // Stores the positions of all the values that each of the committed polynomials takes in each row 
-    // Remember that there are 6 committed polynomials and the number of rows is stored in NUsed
+    // Remember that there are ${nCommitted} committed polynomials and the number of rows is stored in NUsed
     const sMap = [];
-    for (let i=0;i<6; i++) {
+    for (let i=0;i<nCommitted; i++) {
         sMap[i] = new Uint32Array(N);
     }
 
@@ -72,14 +77,14 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     }
 
     // Store the public inputs position in the mapping sMap
-    for (let i=0; i<nPublicRows*6; i++) {
-        // Since each row contains 6 public inputs, it is possible that
+    for (let i=0; i<nPublicRows*nCommitted; i++) {
+        // Since each row contains ${nCommitted} public inputs, it is possible that
         // the last row is partially empty. Therefore, fulfill that last row
         // with 0.
         if(i < nPublics) {
-            sMap[i%6][Math.floor(i/6)] = 1+i;
+            sMap[i%nCommitted][Math.floor(i/nCommitted)] = 1+i;
         } else {
-            sMap[i%6][Math.floor(i/6)] = 0;
+            sMap[i%nCommitted][Math.floor(i/nCommitted)] = 0;
         }
     }
 
@@ -108,13 +113,11 @@ module.exports = async function plonkSetup(F, r1cs, options) {
         // If the constraint is not stored in partialRows (which means that there is no other row that is using this very same set of constraints and is not full)
         // check if there's any half row. If that's the case, attach the new set of constraints values to that row 
         } else {
-            sMap[0][r] = c[0];
-            sMap[1][r] = c[1];
-            sMap[2][r] = c[2];
-
-            sMap[3][r] = c[0];
-            sMap[4][r] = c[1];
-            sMap[5][r] = c[2];
+            for(let j=0; j < nPlonk; j++) {
+                sMap[3*j][r] = c[0];
+                sMap[3*j + 1][r] = c[1];
+                sMap[3*j + 2][r] = c[2];
+            }
 
             constPols.Final.C[0][r] = c[3];
             constPols.Final.C[1][r] = c[4];
@@ -129,12 +132,12 @@ module.exports = async function plonkSetup(F, r1cs, options) {
         }
     }
 
-    const ks = getKs(F, 5);
+    const ks = getKs(F, nCommitted - 1);
     let w = F.one;
     for (let i=0; i<N; i++) {
         if ((i%10000) == 0) console.log(`Point check -> Preparing S... ${i}/${N}`);
         constPols.Final.S[0][i] = w;
-        for (let j=1; j<6; j++) {
+        for (let j=1; j<nCommitted; j++) {
             constPols.Final.S[j][i] = F.mul(w, ks[j-1]);
         }
         w = F.mul(w, F.w[nBits]);
@@ -143,7 +146,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
     const lastSignal = {}
     for (let i=0; i<r; i++) {
         if ((i%10000) == 0) console.log(`Point check -> Connection S... ${i}/${r}`);
-        for (let j=0; j<6; j++) {
+        for (let j=0; j<nCommitted; j++) {
             if (sMap[j][i]) {
                 if (typeof lastSignal[sMap[j][i]] !== "undefined") {
                     const ls = lastSignal[sMap[j][i]];
