@@ -9,7 +9,6 @@ const argv = require("yargs")
     .usage("node main_buildchelpers.js -f <fflonkinfo.json> -c <chelpers.cpp>")
     .alias("f", "fflonkinfo")
     .alias("c", "chelpers")
-    .alias("C", "cls")
     .alias("m", "multiple")
     .alias("o", "optcodes")
     .argv;
@@ -32,7 +31,6 @@ async function run() {
         const dotPos = chelpersFile.lastIndexOf('.');
         const leftFilename = dotPos < 0 ? chelpersFile : chelpersFile.substr(0, dotPos);
         const ext = dotPos < 0 ? '.cpp' : chelpersFile.substr(dotPos);
-        const classInclude = cls.charAt(0).toLowerCase() + cls.slice(1) + ".hpp";
         for (cpart in cCode) {
             console.log(cpart);
             let code, ext2;
