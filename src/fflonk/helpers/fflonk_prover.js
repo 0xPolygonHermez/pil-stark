@@ -403,10 +403,9 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
 
         if(zkey.maxQDegree) {
             const nQ = Math.ceil(domainSizeQ / (zkey.maxQDegree * domainSize));
-            // let rand1 = Fr.random();
-            // let rand2 = Fr.random();
-            let rand1 = Fr.two;
-            let rand2 = Fr.e(3);
+            let rand1 = Fr.random();
+            let rand2 = Fr.random();
+    
             for(let i = 0; i < nQ; ++i) {
                 const st = (i * zkey.maxQDegree * domainSize) * Fr.n8;
                 const end = (i == nQ - 1 ? domainSizeQ : (i + 1) * zkey.maxQDegree * domainSize) * Fr.n8;
@@ -424,10 +423,8 @@ module.exports = async function fflonkProve(zkey, cmPols, fflonkInfo, options) {
                 }
 
                 if (i < nQ - 1) {
-                    // rand1 = Fr.random();
-                    // rand2 = Fr.random();
-                    rand1 = Fr.two;
-                    rand2 = Fr.e(3);
+                    rand1 = Fr.random();
+                    rand2 = Fr.random();
                     coefs.set(rand1, len);
                     coefs.set(rand2, len + Fr.n8);
                 }
@@ -808,8 +805,7 @@ async function extend(stage, ctx, zkey, nPols, Fr, logger) {
     for (let i = 0; i < nPols; i++) {
         let nOpenings = findNumberOpenings(zkey.f, zkey.polsNamesStage[stage][i], stage);
         for(let j = 0; j < nOpenings; ++j) {
-            // const b = Fr.random();
-            const b = Fr.two;
+            const b = Fr.random();
             let offset1 = (j * nPols + i) * Fr.n8; 
             let offsetN = ((j + ctx.N) * nPols + i) * Fr.n8; 
             buffCoefs.set(Fr.add(buffCoefs.slice(offset1,offset1 + Fr.n8), Fr.neg(b)), offset1);

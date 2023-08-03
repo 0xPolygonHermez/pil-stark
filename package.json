@@ -98,7 +98,11 @@
     "plonktest_gl_compile": "circom --O1 --prime goldilocks --r1cs --sym --wasm --c --verbose test/plonk2pil/plonktest.gl.circom -o tmp/",
     "plonktest_gl_wc": "snarkjs wc tmp/plonktest.gl_js/plonktest.gl.wasm test/plonk2pil/plonkinput.json tmp/plonktest.gl.wtns",
     "plonktest_bn128_compile": "circom --O1 --r1cs --sym --wasm --c --verbose test/plonk2pil/plonktest.bn128.circom -o tmp/",
-    "plonktest_bn128_wc": "snarkjs wc tmp/plonktest.bn128_js/plonktest.bn128.wasm test/plonk2pil/plonkinput.json tmp/plonktest.bn128.wtns"
+    "plonktest_bn128_wc": "snarkjs wc tmp/plonktest.bn128_js/plonktest.bn128.wasm test/plonk2pil/plonkinput.json tmp/plonktest.bn128.wtns",
+    "gen_arguments_files": "mocha test/cfiles/fflonk_gen_arguments_files.js",
+    "gen_simple_files": "mocha test/cfiles/fflonk_gen_simple_files.js",
+    "gen_all_files": "mocha test/cfiles/fflonk_gen_all_files.js",
+    "gen_files": "npm run gen_arguments_files && npm run gen_simple_files && npm run gen_all_files"
   },
   "keywords": [
     "stark",
