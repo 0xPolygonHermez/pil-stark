@@ -9,6 +9,7 @@ const starkVerify = require("../../src/stark/stark_verify.js");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 const {log2} = require("pilcom/src/utils");
 
+const Logger = require('logplease');
 
 const smFibonacci = require("../state_machines/sm_fibonacci/sm_fibonacci.js");
 
@@ -16,6 +17,9 @@ describe("test fibonacci sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
+        const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+        Logger.setLogLevel("DEBUG");
+
         const starkStruct = {
             nBits: 6,
             nBitsExt: 8,
@@ -55,7 +59,7 @@ describe("test fibonacci sm", async function () {
 
         const setup = await starkSetup(constPols, pil, starkStruct, {F});
 
-        const resP = await starkGen(cmPols, constPols, setup.constTree, setup.starkInfo);
+        const resP = await starkGen(cmPols, constPols, setup.constTree, setup.starkInfo, {logger});
 
         const resV = await starkVerify(resP.proof, resP.publics, setup.constRoot, setup.starkInfo);
 

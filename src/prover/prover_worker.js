@@ -1,20 +1,17 @@
 
 const workerpool = require('workerpool');
-const {BigBuffer} = require("ffjavascript");
+const F3g = require("../helpers/f3g.js");
 
-async function fflonkgen_execute(ctx, cFirstSrc, n, execInfo, st_name, st_i, st_n) {
+
+async function proofgen_execute(ctx, stark, cFirstSrc, n, execInfo, st_name, st_i, st_n) {
 
     cFirst = new Function("ctx", "i", cFirstSrc);
 
     console.log(`start exec ${st_name}... ${st_i}/${st_n} `);
-    ctx.tmp = [];
-
-    for (let s=0; s<execInfo.outputSections.length; s++) {
-        const si = execInfo.outputSections[s];
-        if (typeof ctx[si.name] == "undefined") {
-            ctx[si.name] = new BigBuffer(si.width*(n+ctx.next)*ctx.Fr.n8);
-        }
+    if(stark) {
+        ctx.F = new F3g();
     }
+    ctx.tmp = [];
 
     for (let i=0; i<n; i++) {
         cFirst(ctx, i);
@@ -32,8 +29,7 @@ async function fflonkgen_execute(ctx, cFirstSrc, n, execInfo, st_name, st_i, st_
 
 if (!workerpool.isMainThread) {
     workerpool.worker({
-        fflonkgen_execute: fflonkgen_execute,
+        proofgen_execute: proofgen_execute,
     });
 }
-
-module.exports.fflonkgen_execute = fflonkgen_execute;
+module.exports.proofgen_execute = proofgen_execute;

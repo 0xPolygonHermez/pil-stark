@@ -40,6 +40,10 @@ module.exports = class F3g {
         buildFFT(this, 7277203076849721926n);
     }
 
+    e(a) {
+        this.toString(a);
+    }
+    
     add(a, b) {
         if (typeof(a) == "bigint") {
             if (typeof(b) == "bigint") {
