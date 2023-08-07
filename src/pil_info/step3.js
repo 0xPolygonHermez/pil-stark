@@ -1,6 +1,6 @@
 
 const {pilCodeGen, buildCode} = require("./codegen.js");
-const ExpressionOps = require("../helpers/expressionops");
+const ExpressionOps = require("./expressionops");
 const getKs = require("pilcom").getKs;
 
 module.exports = function generateStep3(F, res, pil, ctx) {

@@ -1,6 +1,6 @@
-const { fftBench, ifftBench } = require("../src/search_optimizer/bench_fft.js");
+const { fftBench, ifftBench } = require("../src/fflonk/search_optimizer/bench_fft.js");
 
-const { msmBench } = require("../src/search_optimizer/bench_msm.js");
+const { msmBench } = require("../src/fflonk/search_optimizer/bench_msm.js");
 const chai = require("chai");
 const path = require("path");
 const assert = chai.assert;
@@ -9,7 +9,7 @@ const { BigBuffer } = require("ffjavascript");
 
 
 const { buildBn128 } = require("ffjavascript");
-const { exhaustiveSearchOptimizerFflonk } = require("../src/search_optimizer/search_optimizer.js");
+const { exhaustiveSearchOptimizerFflonk } = require("../src/fflonk/search_optimizer/search_optimizer.js");
 
 describe("test search optimizer", async function () {
     this.timeout(10000000);
