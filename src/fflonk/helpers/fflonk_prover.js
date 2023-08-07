@@ -132,10 +132,6 @@ async function initProver(pilInfo, zkey, logger) {
 
     ctx.transcript = new Keccak256Transcript(ctx.curve);
 
-    return ctx;
-}
-
-async function stage0(ctx, logger) {
     // Add constant composed polynomials
     if (ctx.pilInfo.nConstants > 0) {
         for (let i = 0; i < ctx.pilInfo.nConstants; i++) {
@@ -155,6 +151,10 @@ async function stage0(ctx, logger) {
         }
     }
 
+    return ctx;
+}
+
+async function stage0(ctx, logger) {
     // Calculate publics
     ctx.publics = [];
     for (let i = 0; i < ctx.pilInfo.publics.length; i++) {
