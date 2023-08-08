@@ -7,7 +7,8 @@ const { assert } = require("chai");
 const buildPoseidonGL = require("../helpers/hash/poseidon/poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 
-module.exports = async function starkVerify(proof, publics, constRoot, starkInfo, options) {
+module.exports = async function starkVerify(proof, publics, constRoot, starkInfo, options = {}) {
+    const logger = options.logger;
 
     const starkStruct = starkInfo.starkStruct;
 
@@ -36,6 +37,23 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
 
     assert(nBits+extendBits == starkStruct.steps[0].nBits, "First step must be just one");
 
+    if (logger) {
+        logger.debug("-----------------------------");
+        logger.debug("  PIL-STARK VERIFY SETTINGS");
+        logger.debug(`  Blow up factor: ${extendBits}`);
+        logger.debug(`  Number queries: ${starkStruct.nQueries}`);
+        logger.debug(`  Number Stark steps: ${starkStruct.steps.length}`);
+        logger.debug(`  VerificationType: ${starkStruct.verificationHashType}`);
+        logger.debug(`  Domain size: ${N} (2^${nBits})`);
+        logger.debug(`  Const  pols:   ${starkInfo.nConstants}`);
+        logger.debug(`  Stage 1 pols:   ${starkInfo.nCm1}`);
+        logger.debug(`  Stage 2 pols:   ${starkInfo.nCm2}`);
+        logger.debug(`  Stage 3 pols:   ${starkInfo.nCm3}`);
+        logger.debug(`  Stage 4 pols:   ${starkInfo.nCm4}`);
+        logger.debug(`  Temp exp pols: ${starkInfo.mapSectionsN.tmpExp_n}`);
+        logger.debug("-----------------------------");
+    }
+
     const F = poseidon.F;
 
     ctx = {
@@ -49,26 +67,46 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
     }
 
     transcript.put(proof.root1);
-    ctx.challenges[0] = transcript.getField(); // u
-    ctx.challenges[1] = transcript.getField(); // defVal
-    transcript.put(proof.root2);
-    ctx.challenges[2] = transcript.getField(); // gamma
-    ctx.challenges[3] = transcript.getField(); // beta
 
+    // Compute challenge alpha
+    ctx.challenges[0] = transcript.getField(); 
+    if (logger) logger.debug("··· challenges.alpha: " + F.toString(ctx.challenges[0]));
+
+    // Compute challenge beta
+    ctx.challenges[1] = transcript.getField();
+    if (logger) logger.debug("··· challenges.beta: " + F.toString(ctx.challenges[1]));
+
+    transcript.put(proof.root2);
+
+    // Compute challenge gamma
+    ctx.challenges[2] = transcript.getField();
+    if (logger) logger.debug("··· challenges.gamma: " + F.toString(ctx.challenges[2]));
+
+    // Compute challenge delta
+    ctx.challenges[3] = transcript.getField();
+    if (logger) logger.debug("··· challenges.delta: " + F.toString(ctx.challenges[3]));
+
+    // Compute challenge a
     transcript.put(proof.root3);
-    ctx.challenges[4] = transcript.getField(); // vc
+    ctx.challenges[4] = transcript.getField();
+    if (logger) logger.debug("··· challenges.a: " + F.toString(ctx.challenges[4]));
+
 
     transcript.put(proof.root4);
-    ctx.challenges[7] = transcript.getField(); // xi
+    ctx.challenges[7] = transcript.getField();
+    if (logger) logger.debug("··· challenges.xi: " + F.toString(ctx.challenges[7]));
 
     for (let i=0; i<ctx.evals.length; i++) {
         transcript.put(ctx.evals[i]);
     }
 
-    ctx.challenges[5] = transcript.getField(); // v1
-    ctx.challenges[6] = transcript.getField(); // v2
+    ctx.challenges[5] = transcript.getField();
+    if (logger) logger.debug("··· challenges.v1: " + F.toString(ctx.challenges[5]));
 
-    console.log("Verify Evaluation");
+    ctx.challenges[6] = transcript.getField(); // v2
+    if (logger) logger.debug("··· challenges.v2: " + F.toString(ctx.challenges[6]));
+
+    if (logger) logger.debug("Verifying evaluations");
 
     const xN = F.exp(ctx.challenges[7], N)
     ctx.Z = F.sub(xN, 1n);
@@ -85,24 +123,26 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
 
     const qZ = F.mul(q, ctx.Z);
 
-    if (!F.eq(res, qZ)) return false;
+    if (!F.eq(res, qZ)) {
+        if(logger) logger.warn("Invalid evaluations");
+        return false;
+    }
 
     const fri = new FRI( starkStruct, MH );
 
-    const checkQuery = (query, idx) => {
-        console.log("Verify Query:"+  idx)
-        let res;
-        res = MH.verifyGroupProof(proof.root1, query[0][1], idx, query[0][0]);
-        if (!res) return false;
-        res = MH.verifyGroupProof(proof.root2, query[1][1], idx, query[1][0]);
-        if (!res) return false;
-        res = MH.verifyGroupProof(proof.root3, query[2][1], idx, query[2][0]);
-        if (!res) return false;
-        res = MH.verifyGroupProof(proof.root4, query[3][1], idx, query[3][0]);
-        if (!res) return false;
-        res = MH.verifyGroupProof(constRoot, query[4][1], idx, query[4][0]);
-        if (!res) return false;
+    if(logger) logger.debug("Verifying queries");
 
+    const checkQuery = (query, idx) => {
+        if(logger) logger.debug("Verifying query: " + idx);
+        for(let i = 0; i < 5; ++i) {
+            const root = i < 4 ? proof[`root${i + 1}`] : constRoot;
+            let res = MH.verifyGroupProof(root, query[i][1], idx, query[i][0]);
+            if (!res) {
+                if(logger) logger.warn(`Invalid root${i + 1}`);
+                return false;
+            }
+        }
+        
         const ctxQry = {};
         ctxQry.tree1 = query[0][0];
         ctxQry.tree2 = query[1][0];

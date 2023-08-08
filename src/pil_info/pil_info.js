@@ -1,12 +1,13 @@
 
-const generatePublicCalculators = require("./publics.js");
-const generateStep2 = require("./step2");
-const generateStep3 = require("./step3");
-const generateConstraintPolynomial = require("./cp_prover");
-const generateConstraintPolynomialVerifier = require("./cp_ver");
+const generatePublicCalculators = require("./helpers/publics.js");
+const generateStep2 = require("./helpers/pil1_stages/stage2");
+const generateStep3 = require("./helpers/pil1_stages/stage3");
 
-const generateFRIPolynomial = require("./fri_prover");
-const generateVerifierQuery = require("./fri_verifier");
+const generateConstraintPolynomial = require("./helpers/quotientPolynomial/cp_prover");
+const generateConstraintPolynomialVerifier = require("./helpers/quotientPolynomial/cp_ver");
+
+const generateFRIPolynomial = require("./helpers/fri/fri_prover");
+const generateVerifierQuery = require("./helpers/fri/fri_verifier");
 
 const map = require("./map.js");
 

@@ -4,6 +4,8 @@ const version = require("../../package").version;
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true, storeAsString: true });
 const fflonkVerify = require("./helpers/fflonk_verify");
 
+const Logger = require('logplease');
+
 const argv = require("yargs")
     .version(version)
     .usage("node main_verify.js -v <verificationkey.json> -f <fflonkinfo.json> -o <proof.json> -b <public.json>")
@@ -15,7 +17,10 @@ const argv = require("yargs")
 
 async function run() {
 
-    const options = {logger: console};
+    const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+    Logger.setLogLevel("DEBUG");
+
+    const options = {logger};
 
     const fflonkInfoFile = typeof(argv.fflonkinfo) === "string" ?  argv.fflonkinfo.trim() : "mycircuit.fflonkInfo.json";
     const verificationKeyFile = typeof(argv.verificationkey) === "string" ?  argv.verificationkey.trim() : "verificationkey.json";

@@ -15,10 +15,12 @@ const { interpolate, ifft, fft } = require("../helpers/fft/fft_p.js");
 const {BigBuffer} = require("pilcom");
 const { callCalculateExps, getPolRef } = require("../prover/prover_helpers.js");
 
-module.exports.initProverStark = async function initProverStark(pilInfo, constPols, constTree) {
+module.exports.initProverStark = async function initProverStark(pilInfo, constPols, constTree, logger) {
     const ctx = {};
 
     ctx.prover = "stark";
+
+    if (logger) logger.info("PIL-STARK PROVER STARTED");
 
     ctx.F = new F3g();
 
@@ -36,6 +38,24 @@ module.exports.initProverStark = async function initProverStark(pilInfo, constPo
     ctx.Next = 1 << ctx.pilInfo.starkStruct.nBitsExt;
     ctx.tmp = [];
     ctx.challenges = [];
+
+    if (logger) {
+        logger.debug("-----------------------------");
+        logger.debug("  PIL-STARK PROVE SETTINGS");
+        logger.debug(`  Blow up factor: ${ctx.extendBits}`);
+        logger.debug(`  Number queries: ${ctx.pilInfo.starkStruct.nQueries}`);
+        logger.debug(`  Number Stark steps: ${ctx.pilInfo.starkStruct.steps.length}`);
+        logger.debug(`  VerificationType: ${ctx.pilInfo.starkStruct.verificationHashType}`);
+        logger.debug(`  Domain size: ${ctx.N} (2^${ctx.nBits})`);
+        logger.debug(`  Domain size ext: ${ctx.Next} (2^${ctx.nBitsExt})`);
+        logger.debug(`  Const  pols:   ${ctx.pilInfo.nConstants}`);
+        logger.debug(`  Stage 1 pols:   ${ctx.pilInfo.nCm1}`);
+        logger.debug(`  Stage 2 pols:   ${ctx.pilInfo.nCm2}`);
+        logger.debug(`  Stage 3 pols:   ${ctx.pilInfo.nCm3}`);
+        logger.debug(`  Stage 4 pols:   ${ctx.pilInfo.nCm4}`);
+        logger.debug(`  Temp exp pols: ${ctx.pilInfo.mapSectionsN.tmpExp_n}`);
+        logger.debug("-----------------------------");
+    }
 
     assert(1 << ctx.nBits == ctx.N, "N must be a power of 2");
 
@@ -105,6 +125,8 @@ module.exports.initProverStark = async function initProverStark(pilInfo, constPo
 }
 
 module.exports.computeQStark = async function computeQStark(ctx, logger) {
+    if (logger) logger.debug("Compute Trace Quotient Polynomials");
+
     const qq1 = new Proxy(new BigBuffer(ctx.pilInfo.qDim*ctx.Next), BigBufferHandler);
     const qq2 = new Proxy(new BigBuffer(ctx.pilInfo.qDim*ctx.pilInfo.qDeg*ctx.Next), BigBufferHandler);
     await ifft(ctx.q_2ns, ctx.pilInfo.qDim, ctx.nBitsExt, qq1);
@@ -124,7 +146,7 @@ module.exports.computeQStark = async function computeQStark(ctx, logger) {
 
     await fft(qq2, ctx.pilInfo.qDim * ctx.pilInfo.qDeg, ctx.nBitsExt, ctx.cm4_2ns);
 
-    if (logger) logger.debug("> Merkelizing 4...");
+    if (logger) logger.debug("··· Merkelizing Q polynomial tree");
     if (global.gc) {global.gc();}
     ctx.trees[4] = await ctx.MH.merkelize(ctx.cm4_2ns, ctx.pilInfo.mapSectionsN.cm4_2ns, 1 << ctx.nBitsExt);
 
@@ -133,7 +155,10 @@ module.exports.computeQStark = async function computeQStark(ctx, logger) {
 }
 
 module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challenge, logger) {
+    if (logger) logger.debug("Compute Evals");
+
     ctx.challenges[7] = challenge; // xi
+    if (logger) logger.debug("··· challenges.xi: " + ctx.F.toString(ctx.challenges[7]));
 
     let LEv = new Array(ctx.N);
     let LpEv = new Array(ctx.N);
@@ -192,8 +217,14 @@ module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challen
 }
 
 module.exports.computeFRIStark = async function computeFRIStark(ctx, challenge, parallelExec, useThreads, logger) {
+    if (logger) logger.debug("Compute FRI");
+
     ctx.challenges[5] = challenge; // v1
+    if (logger) logger.debug("··· challenges.v1: " + ctx.F.toString(ctx.challenges[5]));
+
     ctx.challenges[6] = ctx.transcript.getField(); // v2
+    if (logger) logger.debug("··· challenges.v2: " + ctx.F.toString(ctx.challenges[6]));
+
 
     // Calculate xDivXSubXi, xDivX4SubWXi
     if (global.gc) {global.gc();}
@@ -227,7 +258,6 @@ module.exports.computeFRIStark = async function computeFRIStark(ctx, challenge, 
 
     await callCalculateExps("step52ns", "2ns", ctx, parallelExec, useThreads);
 
-
     const friPol = new Array(ctx.N<<ctx.extendBits);
 
     for (let i=0; i<ctx.N<<ctx.extendBits; i++) {
@@ -252,7 +282,9 @@ module.exports.computeFRIStark = async function computeFRIStark(ctx, challenge, 
     ctx.friProof = await ctx.fri.prove(ctx.transcript, friPol, queryPol);
 }
 
-module.exports.genProofStark = async function genProof(ctx) {
+module.exports.genProofStark = async function genProof(ctx, logger) {
+    if(logger) logger.debug("Generating proof");
+
     const proof = {
         root1: ctx.MH.root(ctx.trees[1]),
         root2: ctx.MH.root(ctx.trees[2]),
@@ -267,14 +299,17 @@ module.exports.genProofStark = async function genProof(ctx) {
     return {proof, publics};
 }
 
-module.exports.extendAndMerkelize = async function  extendAndMerkelize(stage, ctx) {
+module.exports.extendAndMerkelize = async function  extendAndMerkelize(stage, ctx, logger) {
 
     const buffFrom = ctx["cm" + stage + "_n"];
     const buffTo = ctx["cm" + stage + "_2ns"];
 
     const nPols = ctx.pilInfo.mapSectionsN["cm" + stage + "_n"];
-
+    
+    if (logger) logger.debug("··· Interpolating " + stage);
     await interpolate(buffFrom, nPols, ctx.nBits, buffTo, ctx.nBitsExt);
+    
+    if (logger) logger.debug("··· Merkelizing Stage " + stage);
     ctx.trees[stage] = await ctx.MH.merkelize(buffTo, nPols, 1 << ctx.nBitsExt);
 
     const nextChallenge = await module.exports.calculateChallengeStark(stage, ctx);    

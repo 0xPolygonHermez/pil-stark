@@ -116,7 +116,7 @@ module.exports.initProverFflonk = async function initProver(pilInfo, zkey, logge
 }
 
 module.exports.computeQFflonk = async function computeQ(ctx, logger) {
-    if (logger) logger.debug("> STAGE 4. Compute Trace Quotient Polynomials");
+    if (logger) logger.debug("Compute Trace Quotient Polynomials");
 
     ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, ctx.curve, logger);
     ctx["Q"].divZh(ctx.N, 1 << ctx.extendBits);
@@ -169,7 +169,7 @@ module.exports.computeQFflonk = async function computeQ(ctx, logger) {
 }
 
 module.exports.computeOpeningsFflonk = async function computeOpenings(ctx,challenge, logger) {
-    if (logger) logger.debug("> STAGE 5. Open Polynomials");
+    if (logger) logger.debug("Open Polynomials");
 
     const challengeXiSeed = challenge;
     if (logger) logger.debug("··· challenges.xiSeed: " + ctx.F.toString(challengeXiSeed));
@@ -194,6 +194,8 @@ module.exports.computeOpeningsFflonk = async function computeOpenings(ctx,challe
 }
 
 module.exports.genProofFflonk = async function genProof(ctx, logger) {
+    if(logger) logger.debug("Generating proof");
+
     let proof = { polynomials: {}, evaluations: {} };
     proof.protocol = "pilfflonk";
     proof.curve = ctx.curve.name;

@@ -58,7 +58,7 @@ describe("test connection sm", async function () {
 
         const resP = await starkGen(cmPols, constPols, setup.constTree, setup.starkInfo, {logger});
 
-        const resV = await starkVerify(resP.proof, resP.publics, setup.constRoot, setup.starkInfo);
+        const resV = await starkVerify(resP.proof, resP.publics, setup.constRoot, setup.starkInfo, {logger});
 
         assert(resV==true);
     });

@@ -8,6 +8,8 @@ const { proof2zkin } = require("./proof2zkin");
 const buildMerklehashGL = require("./helpers/hash/merklehash/merklehash_p.js");
 const buildMerkleHashBN128 = require("./helpers/hash/merklehash/merklehash_bn128_p.js");
 
+const Logger = require('logplease');
+
 const F3g = require("./helpers/f3g.js");
 const { createHash } = require("crypto");
 
@@ -52,7 +54,10 @@ async function run() {
     const cmPols =  newCommitPolsArray(pil, F);
     await cmPols.loadFromFile(commitFile);
 
-    let options = {};
+    const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+    Logger.setLogLevel("DEBUG");
+
+    let options = {logger};
     let MH;
     if (starkInfo.starkStruct.verificationHashType == "GL") {
         MH = await buildMerklehashGL();

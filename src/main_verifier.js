@@ -3,6 +3,8 @@ const version = require("../package").version;
 const starkVerify = require("./stark/stark_verify.js");
 var JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });;
 
+const Logger = require('logplease');
+
 const argv = require("yargs")
     .version(version)
     .usage("node main_verifier.js -s <starkinfo.json> -v <verkey.json> -o <proof.json> -b <public.json>")
@@ -28,7 +30,10 @@ async function run() {
 
     proof = str2bigInt(proof);
 
-    let options = {};
+    const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+    Logger.setLogLevel("DEBUG");
+
+    let options = {logger};
     if (starkInfo.starkStruct.verificationHashType === "BN128") {
         options.arity = Number(argv.arity) || 16;
         options.custom = argv.custom || false;

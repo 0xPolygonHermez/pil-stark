@@ -1,11 +1,13 @@
 const fs = require("fs");
 const version = require("../../package").version;
 
-const { newConstantPolsArray, newCommitPolsArray, compile } = require("pilcom");
+const {newCommitPolsArray, compile } = require("pilcom");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true, storeAsString: true });
 const { F1Field } = require("ffjavascript");
 const fflonkProve = require("./helpers/fflonk_prover");
 const { readPilFflonkZkeyFile } = require("./zkey/zkey_pilfflonk");
+
+const Logger = require('logplease');
 
 const argv = require("yargs")
     .version(version)
@@ -31,7 +33,10 @@ async function run() {
     const proofFile = typeof(argv.proof) === "string" ?  argv.proof.trim() : "mycircuit.proof.json";
     const publicFile = typeof(argv.public) === "string" ?  argv.public.trim() : "mycircuit.public.json";
 
-    const options = {logger: console};
+    const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+        Logger.setLogLevel("DEBUG");
+
+    const options = {logger};
 
     // Load zkey file
     if (options.logger) options.logger.info("> Reading zkey file");

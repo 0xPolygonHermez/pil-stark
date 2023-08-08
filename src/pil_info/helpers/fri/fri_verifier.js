@@ -1,5 +1,5 @@
 
-const {pilCodeGen, buildCode} = require("./codegen.js");
+const {pilCodeGen, buildCode} = require("../../codegen.js");
 
 module.exports = function generateVerifierQuery(res, pil) {
 

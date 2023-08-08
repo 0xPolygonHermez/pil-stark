@@ -1,5 +1,5 @@
-const {pilCodeGen, buildCode} = require("./codegen.js");
-const ExpressionOps = require("./expressionops");
+const {pilCodeGen, buildCode} = require("../../codegen.js");
+const ExpressionOps = require("../../expressionops");
 
 module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, stark) {
 

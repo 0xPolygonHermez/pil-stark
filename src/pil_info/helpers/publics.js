@@ -1,5 +1,5 @@
 
-const {pilCodeGen, buildCode, iterateCode} = require("./codegen.js");
+const {pilCodeGen, buildCode, iterateCode} = require("../codegen.js");
 
 module.exports = function generatePublicCalculators(res, pil) {
     res.publicsCode = [];
