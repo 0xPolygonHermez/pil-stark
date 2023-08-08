@@ -4,7 +4,6 @@ const expect = chai.expect;
 const {F1Field, getCurveFromName} = require("ffjavascript");
 const path = require("path");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
-const {log2} = require("pilcom/src/utils");
 
 const { fflonkSetup, fflonkProve, fflonkInfoGen, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey, readPilFflonkZkeyFile} = require("pil-stark");
 
@@ -70,9 +69,9 @@ describe("Fflonk connection sm", async function () {
 
         const vk = await fflonkVerificationKey(zkey, {logger});
 
-        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, fflonkInfo, {logger});
+        const {proof, publics} = await fflonkProve(zkey, cmPols, fflonkInfo, {logger});
 
-        const proofInputs = await exportFflonkCalldata(vk, proof, publicSignals, {logger})
+        const proofInputs = await exportFflonkCalldata(vk, proof, publics, {logger})
         const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {logger});
 
         fs.writeFileSync("./tmp/contracts/pilfflonk_verifier_simple_connection.sol", verifierCode.verifierPilFflonkCode, "utf-8");
@@ -90,7 +89,7 @@ describe("Fflonk connection sm", async function () {
 
         await pilFflonkVerifier.deployed();
         
-        if(publicSignals.length > 0) {
+        if(publics.length > 0) {
             const inputs = proofInputs.split("],[")
             .map((str, index) => (index === 0 ? str + ']' : '[' + str))
             .map(str => JSON.parse(str));

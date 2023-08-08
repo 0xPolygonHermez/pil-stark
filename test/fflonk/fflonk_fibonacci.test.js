@@ -56,8 +56,9 @@ describe("Fflonk Fibonacci sm", async function () {
 
         const vk = await fflonkVerificationKey(zkey, {logger});
 
-        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, fflonkInfo, {logger});
-        const isValid = await fflonkVerify(vk, publicSignals, proof, fflonkInfo, {logger});
+        const {proof, publics} = await fflonkProve(zkey, cmPols, fflonkInfo, {logger});
+        
+        const isValid = await fflonkVerify(vk, publics, proof, fflonkInfo, {logger});
         
         assert(isValid);
     });

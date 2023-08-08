@@ -12,7 +12,6 @@ const { readPilFflonkZkeyFile } = require("../../src/fflonk/zkey/zkey_pilfflonk.
 const Logger = require('logplease');
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
-const {log2} = require("pilcom/src/utils");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
 const smPlookup = require("../state_machines/sm_plookup/sm_plookup.js");
@@ -58,9 +57,9 @@ describe("Fflonk plookup sm", async function () {
 
         const vk = await fflonkVerificationKey(zkey, {logger});
 
-        const {proof, publicSignals} = await fflonkProve(zkey, cmPols, fflonkInfo, {logger});
+        const {proof, publics} = await fflonkProve(zkey, cmPols, fflonkInfo, {logger});
 
-        const isValid = await fflonkVerify(vk, publicSignals, proof, fflonkInfo, {logger});
+        const isValid = await fflonkVerify(vk, publics, proof, fflonkInfo, {logger});
         assert(isValid);
     });
 });

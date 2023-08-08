@@ -8,6 +8,8 @@ module.exports.starkInfo = require("./src/stark/stark_info.js");
 
 module.exports.r1cs2plonk = require("./src/r1cs2plonk");
 
+module.exports.proofGen = require("./src/prover/prover.js");
+
 module.exports.fflonkSetup = require("./src/fflonk/helpers/fflonk_setup.js");
 module.exports.fflonkProve = require("./src/fflonk/helpers/fflonk_prover.js");
 module.exports.fflonkInfoGen = require("./src/fflonk/helpers/fflonk_info.js");

@@ -7,7 +7,6 @@ const starkGen = require("../../src/stark/stark_gen.js");
 const starkVerify = require("../../src/stark/stark_verify.js");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
-const {log2} = require("pilcom/src/utils");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
 const smPlookup = require("../state_machines/sm_plookup/sm_plookup.js");
@@ -15,10 +14,15 @@ const smFibonacci = require("../state_machines/sm_fibonacci/sm_fibonacci.js");
 const smPermutation = require("../state_machines/sm_permutation/sm_permutation.js");
 const smConnection = require("../state_machines/sm_connection/sm_connection.js");
 
+const Logger = require('logplease');
+
 describe("test All sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
+        const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+        Logger.setLogLevel("DEBUG");
+
         const starkStruct = {
             nBits: 8,
             nBitsExt: 9,
@@ -34,11 +38,8 @@ describe("test All sm", async function () {
         const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_all", "all_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
-        let maxPilPolDeg = 0;
-        for (const polRef in pil.references) {
-            maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
-        }
-        const N = 2**(log2(maxPilPolDeg - 1) + 1);
+        const N = 2**(starkStruct.nBits);
+
         await smGlobal.buildConstants(N, constPols.Global);
         await smPlookup.buildConstants(N, constPols.Plookup);
         await smFibonacci.buildConstants(N, constPols.Fibonacci);
@@ -64,7 +65,7 @@ describe("test All sm", async function () {
 
         const setup = await starkSetup(constPols, pil, starkStruct, {F});
 
-        const resP = await starkGen(cmPols, constPols, setup.constTree, setup.starkInfo);
+        const resP = await starkGen(cmPols, constPols, setup.constTree, setup.starkInfo, {logger});
 
         const resV = await starkVerify(resP.proof, resP.publics, setup.constRoot, setup.starkInfo);
 

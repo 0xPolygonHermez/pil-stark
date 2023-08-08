@@ -1,8 +1,27 @@
 const { proofgen_execute } = require("./prover_worker");
 const workerpool = require("workerpool");
+const {BigBuffer} = require("ffjavascript");
+const { BigBufferHandler } = require("../fflonk/helpers/fflonk_prover_helpers");
 
 const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
+
+module.exports.calculatePublics = async function calculatePublics(ctx) {
+    // Calculate publics
+    ctx.publics = [];
+    for (let i=0; i<ctx.pilInfo.publics.length; i++) {
+        const publicPol = ctx.pilInfo.publics[i];
+
+        if ("cmP" === publicPol.polType) {
+            const offset = (ctx.pilInfo.publics[i].idx * ctx.pilInfo.mapSectionsN.cm1_n + ctx.pilInfo.publics[i].polId);
+            ctx.publics[i] = ctx.cm1_n[offset];
+        } else if ("imP" === publicPol.polType) {
+            ctx.publics[i] = module.exports.calculateExpAtPoint(ctx, ctx.pilInfo.publicsCode[i], publicPol.idx);
+        } else {
+            throw new Error(`Invalid public type: ${polType.type}`);
+        }
+    }
+}
 
 module.exports.callCalculateExps = async function callCalculateExps(step, dom, ctx, parallelExec, useThreads) {
     if (parallelExec) {
@@ -301,8 +320,10 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
         execInfo.inputSections.push({ name: "cm3_2ns" });
         execInfo.inputSections.push({ name: "const_2ns" });
         execInfo.inputSections.push({ name: "x_2ns" });
-        execInfo.inputSections.push({ name: "Zi_2ns" });
         execInfo.outputSections.push({ name: "q_2ns" });
+        if(ctx.prover === "stark") {
+            execInfo.inputSections.push({ name: "Zi_2ns" });
+        }
         dom = "2ns";
     } else if (execPart == "step52ns") {
         execInfo.inputSections.push({ name: "cm1_2ns" });
@@ -421,9 +442,9 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
             }
     
             if (useThreads) {
-                promises.push(pool.exec("fflonkgen_execute", [ctxIn, false, cFirst, curN, execInfo, execPart, i, n]));
+                promises.push(pool.exec("proofgen_execute", [ctxIn, false, cFirst, curN, execInfo, execPart, i, n]));
             } else {
-                res.push(await fflonkgen_execute(ctxIn, false, cFirst, curN, execInfo, execPart, i, n));
+                res.push(await proofgen_execute(ctxIn, false, cFirst, curN, execInfo, execPart, i, n));
             }
         }
         if (useThreads) {

@@ -2,7 +2,7 @@ const fs = require("fs");
 const version = require("../package").version;
 
 const { newConstantPolsArray, newCommitPolsArray, compile } = require("pilcom");
-const starkGen = require("./stark/stark_gen.js");
+const proofGen = require("./prover/prover.js");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true, storeAsString: true });
 const { proof2zkin } = require("./proof2zkin");
 const buildMerklehashGL = require("./helpers/hash/merklehash/merklehash_p.js");
@@ -70,7 +70,7 @@ async function run() {
 
     const constTree = await MH.readFromFile(constTreeFile);
 
-    const resP = await starkGen(cmPols, constPols, constTree, starkInfo, options);
+    const resP = await proofGen(cmPols, starkInfo, constTree, constPols, null, options)
 
     await fs.promises.writeFile(proofFile, JSONbig.stringify(resP.proof, null, 1), "utf8");
 
