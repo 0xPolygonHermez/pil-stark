@@ -8,6 +8,8 @@ const starkVerify = require("../../src/stark/stark_verify.js");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
+const Logger = require('logplease');
+
 const smGlobal = require("../state_machines/sm/sm_global.js");
 const smConnection = require("../state_machines/sm_connection/sm_connection.js");
 
@@ -15,6 +17,9 @@ describe("test connection sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
+        const logger = Logger.create("pil-stark", {showTimestamp: false});
+        Logger.setLogLevel("DEBUG");
+
         const starkStruct = {
             nBits: 10,
             nBitsExt: 11,

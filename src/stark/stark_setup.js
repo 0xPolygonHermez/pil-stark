@@ -1,7 +1,7 @@
 
 const {BigBuffer} = require("pilcom");
 const buildMerklehashGL = require("../helpers/hash/merklehash/merklehash_p.js");
-const starkInfoGen = require("./stark_info.js")
+const pilInfo = require("../pil_info/pil_info.js");
 
 const { interpolate } = require("../helpers/fft/fft_p");
 
@@ -32,6 +32,6 @@ module.exports = async function starkSetup(constPols, pil, starkStruct, options)
     return {
         constTree: constTree,
         constRoot: MH.root(constTree),
-        starkInfo: starkInfoGen(F, pil, starkStruct)
+        starkInfo: pilInfo(F, pil, true, starkStruct)
     }
 }

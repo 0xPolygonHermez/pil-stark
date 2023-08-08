@@ -4,7 +4,7 @@ const {F1Field, buildBn128, utils} = require("ffjavascript");
 const { stringifyBigInts } = utils;
 const path = require("path");
 const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
-const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
+const pilInfo = require("../../src/pil_info/pil_info.js");
 const fs = require("fs");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 const {log2} = require("pilcom/src/utils");
@@ -97,8 +97,8 @@ describe("generating files for arguments", async function () {
         }
 
         // Create & save fflonkInfo
-        const fflonkInfo = fflonkInfoGen(F, pil);
-
+        const fflonkInfo = pilInfo(F, pil, false);
+        
         const fflonkInfoFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.fflonkinfo.json`);
         await fs.promises.writeFile(fflonkInfoFilename, JSON.stringify(fflonkInfo, null, 1), "utf8");
 

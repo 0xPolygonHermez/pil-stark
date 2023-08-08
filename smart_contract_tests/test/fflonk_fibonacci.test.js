@@ -5,7 +5,7 @@ const {F1Field, getCurveFromName} = require("ffjavascript");
 const path = require("path");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
-const { fflonkSetup, fflonkProve, fflonkInfoGen, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey, readPilFflonkZkeyFile} = require("pil-stark");
+const { fflonkSetup, fflonkProve, pilInfo, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey, readPilFflonkZkeyFile} = require("pil-stark");
 
 const smFibonacci = require("../../test/state_machines/sm_fibonacci/sm_fibonacci.js");
 
@@ -39,8 +39,8 @@ describe("Fflonk Fibonacci sm", async function () {
         const pil = await compile(F, path.join(__dirname, "../../test/state_machines/", "sm_fibonacci", "fibonacci_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
-        const fflonkInfo = fflonkInfoGen(F, pil);
-
+        const fflonkInfo = pilInfo(F, pil, false);
+        
         const N = 2**(fflonkInfo.pilPower);
         await smFibonacci.buildConstants(N, constPols.Fibonacci);
 
@@ -68,7 +68,7 @@ describe("Fflonk Fibonacci sm", async function () {
         const vk = await fflonkVerificationKey(zkey, {logger});
 
         const {proof, publics} = await fflonkProve(zkey, cmPols, fflonkInfo, {logger});
-        
+
         const proofInputs = await exportFflonkCalldata(vk, proof, publics, {logger})
         const verifierCode = await exportPilFflonkVerifier(vk, fflonkInfo, {logger});
 

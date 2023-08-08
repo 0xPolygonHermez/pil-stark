@@ -6,7 +6,7 @@ const F3g = require("../../src/helpers/f3g");
 const { compile } = require("pilcom");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 const proof2zkin = require("../../src/proof2zkin").proof2zkin;
-const starkInfoGen = require("../../src/stark/stark_info.js")
+const pilInfo = require("../../src/pil_info/pil_info.js");
 
 const wasm_tester = require("circom_tester").wasm;
 
@@ -28,7 +28,6 @@ describe("Stark Verification Circuit Test", function () {
         const pilFile = path.join(__dirname, "../state_machines/sm_all", "all_main.pil");
         const proofFile = path.join(__dirname, "../../", "tmp", "all.proof.json");
         const publicsFile = path.join(__dirname, "../../", "tmp", "all.public.json")
-        const zkInputFile = path.join(__dirname, "../../", "tmp", "all.zkinput.json")
 
 
         const F = new F3g("0xFFFFFFFF00000001");
@@ -41,7 +40,7 @@ describe("Stark Verification Circuit Test", function () {
         const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
         const publics = JSONbig.parse(await fs.promises.readFile(publicsFile, "utf8"));
 
-        const starkInfo = starkInfoGen(F, pil, starkStruct);
+        const starkInfo = pilInfo(F, pil, true, starkStruct);
         const circuitSrc = await pil2circom(pil, constRoot, starkInfo)
 
         await fs.promises.writeFile(circomFile, circuitSrc, "utf8");

@@ -6,16 +6,6 @@ module.exports.polMulAxi = function polMulAxi(F, p, init, acc) {
     }
 }
 
-module.exports.polMulAxiBuffer = function polMulAxiBuffer(Fr, buffer, init, acc) {
-    let r = init;
-    let len = buffer.byteLength / Fr.n8;
-
-    for (let i = 0; i < len; i++) {
-        buffer.set(Fr.mul(buffer.slice(i * Fr.n8, (i + 1) * Fr.n8), r), i * Fr.n8);
-        r = Fr.mul(r, acc);
-    }
-}
-
 module.exports.evalPol = function evalPol(F, p, x) {
     if (p.length == 0) return F.zero;
     let res = p[p.length-1];

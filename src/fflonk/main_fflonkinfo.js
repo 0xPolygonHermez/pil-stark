@@ -2,7 +2,7 @@ const fs = require("fs");
 const version = require("../../package").version;
 
 const { F1Field } = require("ffjavascript");
-const fflonkInfoGen = require("./helpers/fflonk_info.js");
+const pilInfo = require("../pil_info/pil_info.js");
 const { compile } = require("pilcom");
 
 const argv = require("yargs")
@@ -22,7 +22,7 @@ async function run() {
     const fflonkInfoFile = typeof(argv.fflonkinfo) === "string" ?  argv.fflonkinfo.trim() : "mycircuit.fflonkinfo.json";
 
     const pil = await compile(F, pilFile, null, pilConfig);
-    const fflonkInfo = fflonkInfoGen(F, pil);
+    const fflonkInfo = pilInfo(F, pil, false);
 
     await fs.promises.writeFile(fflonkInfoFile, JSON.stringify(fflonkInfo, null, 1), "utf8");
 

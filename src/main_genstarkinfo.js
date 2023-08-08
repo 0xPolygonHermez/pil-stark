@@ -2,7 +2,7 @@ const fs = require("fs");
 const version = require("../package").version;
 
 const F3g = require("./helpers/f3g.js");
-const starkInfoGen = require("./stark/stark_info.js");
+const pilInfo = require("./pil_info/pil_info.js");
 const { compile } = require("pilcom");
 
 const argv = require("yargs")
@@ -26,7 +26,7 @@ async function run() {
     const pil = await compile(F, pilFile, null, pilConfig);
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
 
-    const starkInfo = starkInfoGen(F, pil, starkStruct);
+    const starkInfo = pilInfo(F, pil, true, starkStruct);
 
     await fs.promises.writeFile(starkInfoFile, JSON.stringify(starkInfo, null, 1), "utf8");
 

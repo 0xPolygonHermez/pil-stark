@@ -8,9 +8,14 @@ const starkVerify = require("../../src/stark/stark_verify.js");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
+const Logger = require('logplease');
+
 const smSimple = require("../state_machines/sm_simple/sm_simple.js");
 
 async function runTest(pilFile) {
+    const logger = Logger.create("pil-stark", {showTimestamp: false});
+    Logger.setLogLevel("DEBUG");
+
     const starkStruct = {
         "nBits": 3,
         "nBitsExt": 4,

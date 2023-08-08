@@ -5,7 +5,7 @@ const {F1Field, getCurveFromName} = require("ffjavascript");
 const path = require("path");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
-const { fflonkSetup, fflonkProve, fflonkInfoGen, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey, readPilFflonkZkeyFile} = require("pil-stark");
+const { fflonkSetup, fflonkProve, pilInfo, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey, readPilFflonkZkeyFile} = require("pil-stark");
 
 const smGlobal = require("../../test/state_machines/sm/sm_global.js");
 const smSimpleConnection = require("../../test/state_machines/sm_simple_connection/sm_simple_connection.js");
@@ -40,8 +40,8 @@ describe("Fflonk connection sm", async function () {
         const pil = await compile(F, path.join(__dirname, "../../test/state_machines/", "sm_simple_connection", "simple_connection_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
-        const fflonkInfo = fflonkInfoGen(F, pil);
-
+        const fflonkInfo = pilInfo(F, pil, false);
+        
         const N = 2**(fflonkInfo.pilPower);
         await smGlobal.buildConstants(N, constPols.Global);
         await smSimpleConnection.buildConstants(N, constPols.SimpleConnection, F);

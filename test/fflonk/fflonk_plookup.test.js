@@ -4,7 +4,7 @@ const {F1Field} = require("ffjavascript");
 const path = require("path");
 const fflonkSetup  = require("../../src/fflonk/helpers/fflonk_setup.js");
 const fflonkProve = require("../../src/fflonk/helpers/fflonk_prover.js");
-const fflonkInfoGen  = require("../../src/fflonk/helpers/fflonk_info.js");
+const pilInfo = require("../../src/pil_info/pil_info.js");
 const fflonkVerify  = require("../../src/fflonk/helpers/fflonk_verify.js");
 const fflonkVerificationKey = require("../../src/fflonk/helpers/fflonk_verification_key.js");
 const { readPilFflonkZkeyFile } = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
@@ -28,8 +28,8 @@ describe("Fflonk plookup sm", async function () {
         const pil = await compile(F, path.join(__dirname, "../state_machines/", "sm_plookup", "plookup_main.pil"));
         const constPols =  newConstantPolsArray(pil, F);
 
-        const fflonkInfo = fflonkInfoGen(F, pil);
-
+        const fflonkInfo = pilInfo(F, pil, false);
+        
         const N = 2**(fflonkInfo.pilPower);
         await smGlobal.buildConstants(N, constPols.Global);
         await smPlookup.buildConstants(N, constPols.Plookup);

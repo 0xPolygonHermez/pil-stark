@@ -64,9 +64,7 @@ class FRI {
 
             if (si < this.steps.length-1) {
                 const nGroups = 1<< this.steps[si+1].nBits;
-
                 let groupSize = (1 << this.steps[si].nBits) / nGroups;
-
 
                 const pol2_etb = getTransposedBuffer(pol2_e, this.steps[si+1].nBits);
 
@@ -102,7 +100,6 @@ class FRI {
 
             proof[si].polQueries = [];
             for (let i=0; i<ys.length; i++) {
-                const gIdx =
                 proof[si].polQueries.push(queryPol(ys[i]));
             }
 
@@ -124,10 +121,8 @@ class FRI {
     verify(transcript, proof, checkQuery) {
         const self = this;
         const F = this.F;
-        const GMT = [];
 
         assert(proof.length == this.steps.length+1, "Invalid proof size");
-
 
         let special_x = [];
 
@@ -135,9 +130,6 @@ class FRI {
             special_x[si] = transcript.getField();
 
             if (si < this.steps.length-1) {
-                const nGroups = 1<< this.steps[si+1].nBits;
-
-                let groupSize = (1 << this.steps[si].nBits) / nGroups;
                 transcript.put(proof[si+1].root);
             } else {
                 for (let i=0; i<proof[proof.length-1].length; i++) {
@@ -145,7 +137,6 @@ class FRI {
                 }
             }
         }
-
 
         const nQueries = this.nQueries;
         const ys = transcript.getPermutations(this.nQueries, this.steps[0].nBits);
@@ -164,8 +155,6 @@ class FRI {
 
                 const pgroup_c = F.ifft(pgroup_e);
                 const sinv = F.inv(F.mul( shift, F.exp(  F.w[polBits], ys[i])));
-//                polMulAxi(F, pgroup_c, F.one, sinv);    // Multiplies coefs by 1, shiftInv, shiftInv^2, shiftInv^3, ......
-//                const ev = evalPol(F, pgroup_c, special_x[si]);
                 const ev = evalPol(F, pgroup_c, F.mul(special_x[si], sinv));
 
                 if (si < this.steps.length - 1) {
@@ -198,7 +187,7 @@ class FRI {
 
         let maxDeg;
         if (( polBits - (this.inNBits - this.maxDegNBits)) <0) {
-            maxDeg =0;
+            maxDeg = 0;
         } else {
             maxDeg = 1 <<  ( polBits - (this.inNBits - this.maxDegNBits));
         }
@@ -216,51 +205,6 @@ class FRI {
 }
 
 module.exports = FRI;
-
-function createPol(n) {
-    const buff = new BigUint64Array(n*3*64)
-    return new Proxy({
-        buffer: buff,
-        deg: n
-    }, {
-        get( obj, prop) {
-            if (!isNaN(prop)) {
-                prop = Number(prop);
-                assert(prop<obj.deg, "Out of range");
-                return [
-                    obj.buffer[3*prop],
-                    obj.buffer[3*prop+1],
-                    obj.buffer[3*prop+2]
-                ];
-            } else if (prop == "length") {
-                return obj.deg;
-            } else if (prop == "buffer") {
-                return obj.buffer;
-            }
-        },
-        set( obj, prop, v) {
-            if (!isNaN(prop)) {
-                prop = Number(prop);
-                assert(prop<obj.deg, "Out of range");
-                if (Array.isArray(v)) {
-                    [
-                        obj.buffer[3*prop],
-                        obj.buffer[3*prop+1],
-                        obj.buffer[3*prop+2]
-                    ] = v;
-                } else {
-                    [
-                        obj.buffer[3*prop],
-                        obj.buffer[3*prop+1],
-                        obj.buffer[3*prop+2]
-                    ] = [ v, 0n, 0n];
-                }
-                return true;
-            }
-        }
-
-    });
-}
 
 function split3(arr) {
     const res = [];
@@ -290,6 +234,3 @@ function getTransposedBuffer(pol, trasposeBits) {
     }
     return res;
 }
-
-
-

@@ -20,7 +20,7 @@ describe("test All sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
-        const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+        const logger = Logger.create("pil-stark", {showTimestamp: false});
         Logger.setLogLevel("DEBUG");
 
         const starkStruct = {
