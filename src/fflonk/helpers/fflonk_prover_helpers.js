@@ -164,7 +164,7 @@ module.exports.computeQFflonk = async function computeQ(ctx, logger) {
 
     commitsStage4.forEach((com) => console.log(com.index, ctx.curve.G1.toString(com.commit)));
 
-    const nextChallenge = await module.exports.calculateChallengeFflonk(4, ctx, ctx.challenges[4]);
+    const nextChallenge = await module.exports.calculateChallengeFflonk(4, ctx);
     return nextChallenge;
 }
 
@@ -215,7 +215,24 @@ module.exports.genProofFflonk = async function genProof(ctx, logger) {
     return {proof, publics};
 }
 
-module.exports.calculateChallengeFflonk = async function calculateChallenge(stage, ctx, previousChallenge) {
+module.exports.setChallengesFflonk = function setChallengesFflonk(stage, ctx, challenge) {
+    let challengesIndex = ctx.pilInfo["cm" + stage + "_challenges"];
+
+    if(challengesIndex.length === 0) throw new Error("No challenges needed for stage " + stage);
+
+    ctx.challenges[challengesIndex[0]] = challenge;
+    for (let i=1; i<challengesIndex.length; i++) {
+        const previousIndex = challengesIndex[i-1];
+        const index = challengesIndex[i];
+        ctx.transcript.reset();
+        ctx.transcript.addScalar(ctx.challenges[previousIndex]);
+        ctx.challenges[index] = ctx.transcript.getChallenge();
+    }
+    return;
+}
+
+
+module.exports.calculateChallengeFflonk = async function calculateChallengeFflonk(stage, ctx) {
     ctx.transcript.reset();
 
     if(stage === 1) {
@@ -230,8 +247,12 @@ module.exports.calculateChallengeFflonk = async function calculateChallenge(stag
         }
     }
 
-    if(previousChallenge) {
-        ctx.transcript.addScalar(previousChallenge);
+    let challengesIndex = ctx.pilInfo["cm" + stage + "_challenges"];
+
+    if(challengesIndex) {
+        const lastChallengeIndex = challengesIndex[challengesIndex.length - 1];
+        const challenge = ctx.challenges[lastChallengeIndex];
+        ctx.transcript.addScalar(challenge);
     }
 
     const commitsStage = ctx.zkey.f.filter(f => f.stages[0].stage === stage).map(f => `f${f.index}_${stage}`);
@@ -245,7 +266,7 @@ module.exports.calculateChallengeFflonk = async function calculateChallenge(stag
     return nextChallenge;
 }
 
-module.exports.extendAndCommit = async function extendAndCommit(stage, ctx, previousChallenge, logger) {
+module.exports.extendAndCommit = async function extendAndCommit(stage, ctx, logger) {
     
     const buffFrom = ctx["cm" + stage + "_n"];
     const buffCoefs = ctx["cm" + stage + "_coefs"];
@@ -294,7 +315,7 @@ module.exports.extendAndCommit = async function extendAndCommit(stage, ctx, prev
         return 0;
     } 
 
-    const nextChallenge = await module.exports.calculateChallengeFflonk(stage, ctx, previousChallenge);
+    const nextChallenge = await module.exports.calculateChallengeFflonk(stage, ctx);
     return nextChallenge;
 }
 

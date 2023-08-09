@@ -242,11 +242,8 @@ function evalExp(codeCtx, exp, prime) {
         }
     } else if (exp.op == "xDivXSubXi") {
         return {
-            type: "xDivXSubXi"
-        }
-    } else if (exp.op == "xDivXSubWXi") {
-        return {
-            type: "xDivXSubWXi"
+            type: "xDivXSubXi",
+            id: exp.id,
         }
     } else if (exp.op == "x") {
         return {

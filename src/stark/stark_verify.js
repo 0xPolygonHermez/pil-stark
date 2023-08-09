@@ -152,10 +152,25 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         ctxQry.evals = ctx.evals;
         ctxQry.publics = ctx.publics;
         ctxQry.challenges = ctx.challenges;
+        ctxQry.starkInfo = starkInfo;
 
         const x = F.mul(F.shift, F.exp(F.w[nBits + extendBits], idx));
-        ctxQry.xDivXSubXi = F.div(x, F.sub(x, ctxQry.challenges[7]));
-        ctxQry.xDivXSubWXi = F.div(x, F.sub(x, F.mul(F.w[nBits], ctxQry.challenges[7])));
+	
+        ctxQry.xDivXSubXi = {};
+        for(let i = 0; i < starkInfo.nFriOpenings; ++i) {
+            const opening = Number(Object.keys(starkInfo.fri2Id)[i]);
+            const id = starkInfo.fri2Id[opening];
+
+            let w = 1n;
+            for(let j = 0; j < Math.abs(opening); ++j) {
+                w = F.mul(w, F.w[nBits]);
+            }
+            if(opening < 0) {
+                w = F.div(1n, w);
+            }
+
+            ctxQry.xDivXSubXi[id] = F.div(x, F.sub(x, F.mul(ctxQry.challenges[7], w)));
+        }
 
         const vals = [executeCode(F, ctxQry, starkInfo.verifierQueryCode.first)];
 
@@ -200,8 +215,7 @@ function executeCode(F, ctx, code) {
             case "number": return BigInt(r.value);
             case "public": return BigInt(ctx.publics[r.id]);
             case "challenge": return ctx.challenges[r.id];
-            case "xDivXSubXi": return ctx.xDivXSubXi;
-            case "xDivXSubWXi": return ctx.xDivXSubWXi;
+            case "xDivXSubXi": return ctx.xDivXSubXi[ctx.starkInfo.fri2Id[r.id]];
             case "x": return ctx.challenges[7];
             case "Z": return r.prime ? ctx.Zp : ctx.Z;
             default: throw new Error("Invalid reference type get: " + r.type);

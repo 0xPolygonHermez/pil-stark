@@ -6,6 +6,8 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
     const E = new ExpressionOps();
 
     const vc = E.challenge("vc");
+    res.cm4_challenges = [vc.id];
+
     let cExp = null;
     for (let i=0; i<pil.polIdentities.length; i++) {
         const e = E.exp(pil.polIdentities[i].e);
@@ -108,6 +110,8 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
         });
     }
 
+    res.qChallenge = vc.id;
+    
     res.step42ns = buildCode(ctx2ns);
 }
 

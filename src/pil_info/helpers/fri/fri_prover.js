@@ -18,40 +18,30 @@ module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
         }
     }
 
-    let fri1exp = null;
-    let fri2exp = null;
+    let friExps = {};
     for (let i=0; i<res.evMap.length; i++) {
         const ev = res.evMap[i];
-        let friExp = ev.prime ? fri2exp : fri1exp;
         const e = E[ev.type](ev.id);
-        if (friExp) {
-            friExp = E.add(E.mul(friExp, vf2), E.sub(e,  E.eval(i)));
+        if (friExps[ev.prime]) {
+            friExps[ev.prime] = E.add(E.mul(friExps[ev.prime], vf2), E.sub(e,  E.eval(i)));
         } else {
-            friExp = E.sub(e,  E.eval(i));
-        }
-        if (ev.prime) {
-            fri2exp = friExp;
-        } else {
-            fri1exp = friExp;
+            friExps[ev.prime] = E.sub(e,  E.eval(i));
         }
     }
 
+    res.fri2Id = {};
+    res.nFriOpenings = 0;
 
-    if (fri1exp) {
-        fri1exp = E.mul(fri1exp, E.xDivXSubXi() );
-        if (friExp) {
-            friExp = E.add(E.mul(vf1, friExp),  fri1exp );
+    for(let i = 0; i < Object.keys(friExps).length; i++) {
+        const opening = Number(Object.keys(friExps)[i]);
+        if(!res.fri2Id[opening]) {
+            res.fri2Id[opening] = res.nFriOpenings++;
+        }   
+        friExps[opening] = E.mul(friExps[opening], E.xDivXSubXi(opening));
+        if(friExp) {
+            friExp = E.add(E.mul(vf1, friExp), friExps[opening]);
         } else {
-            friExp = fri1exp;
-        }
-    }
-
-    if (fri2exp) {
-        fri2exp =  E.mul(fri2exp, E.xDivXSubWXi() );
-        if (friExp) {
-            friExp = E.add(E.mul(vf1, friExp),  fri2exp );
-        } else {
-            friExp = fri2exp;
+            friExp = friExps[opening];
         }
     }
 

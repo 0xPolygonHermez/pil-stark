@@ -6,10 +6,18 @@ const getKs = require("pilcom").getKs;
 
 module.exports = function generateStep3(F, res, pil, ctx) {
 
+    const E = new ExpressionOps();
+    const gamma = E.challenge("gamma");
+    const delta = E.challenge("delta");
+
     generatePermutationLC(res, pil, ctx);
     generatePlookupZ(res, pil, ctx);
     generatePermutationZ(res, pil, ctx);
     generateConnectionsZ(F, res, pil, ctx);
+
+    
+
+    res.cm3_challenges = [gamma.id, delta.id];
 
     res.step3prev = buildCode(ctx);
     ctx.calculated =  { exps: {}, expsPrime: {} }
@@ -26,20 +34,20 @@ function generatePermutationLC(res, pil, ctx) {
         const pi = pil.permutationIdentities[i];
 
         let tExp = null;
-        const u = E.challenge("u");
-        const defVal = E.challenge("defVal");
+        const alpha = E.challenge("alpha");
+        const beta = E.challenge("beta");
         for (let j=0; j<pi.t.length; j++) {
             const e = E.exp(pi.t[j]);
             if (tExp) {
-                tExp = E.add(E.mul(u, tExp), e);
+                tExp = E.add(E.mul(alpha, tExp), e);
             } else {
                 tExp = e;
             }
         }
         if (pi.selT !== null) {
-            tExp = E.sub(tExp, defVal);
+            tExp = E.sub(tExp, beta);
             tExp = E.mul(tExp, E.exp(pi.selT));
-            tExp = E.add(tExp, defVal);
+            tExp = E.add(tExp, beta);
 
             tExp.idQ = pil.nQ;
             pil.nQ++;
@@ -53,15 +61,15 @@ function generatePermutationLC(res, pil, ctx) {
         for (let j=0; j<pi.f.length; j++) {
             const e = E.exp(pi.f[j]);
             if (fExp) {
-                fExp = E.add(E.mul(fExp, u), e);
+                fExp = E.add(E.mul(fExp, alpha), e);
             } else {
                 fExp = e;
             }
         }
         if (pi.selF !== null) {
-            fExp = E.sub(fExp, defVal);
+            fExp = E.sub(fExp, beta);
             fExp = E.mul(fExp, E.exp(pi.selF));
-            fExp = E.add(fExp, defVal);
+            fExp = E.add(fExp, beta);
 
             fExp.idQ = pil.nQ;
             pil.nQ++;
@@ -103,7 +111,7 @@ function generatePlookupZ(res, pil, ctx) {
         pil.polIdentities.push({e: puCtx.c1Id});
 
         const gamma = E.challenge("gamma");
-        const beta = E.challenge("beta");
+        const delta = E.challenge("delta");
 
         const numExp = E.mul(
             E.mul(
@@ -113,13 +121,13 @@ function generatePlookupZ(res, pil, ctx) {
                         t,
                         E.mul(
                             tp,
-                            beta
+                            delta
                         )
                     ),
-                    E.mul(gamma,E.add(E.number(1), beta))
+                    E.mul(gamma,E.add(E.number(1), delta))
                 )
             ),
-            E.add(E.number(1), beta)
+            E.add(E.number(1), delta)
         );
         numExp.idQ = pil.nQ++;
         puCtx.numId = pil.expressions.length;
@@ -132,20 +140,20 @@ function generatePlookupZ(res, pil, ctx) {
                     h1,
                     E.mul(
                         h2,
-                        beta
+                        delta
                     )
                 ),
-                E.mul(gamma,E.add(E.number(1), beta))
+                E.mul(gamma,E.add(E.number(1), delta))
             ),
             E.add(
                 E.add(
                     h2,
                     E.mul(
                         h1p,
-                        beta
+                        delta
                     )
                 ),
-                E.mul(gamma,E.add(E.number(1), beta))
+                E.mul(gamma,E.add(E.number(1), delta))
             )
         );
         denExp.idQ = pil.nQ++;
@@ -191,14 +199,14 @@ function generatePermutationZ(res, pil, ctx) {
         pil.expressions.push(c1);
         pil.polIdentities.push({e: peCtx.c1Id});
 
-        const beta = E.challenge("beta");
+        const delta = E.challenge("delta");
 
-        const numExp = E.add( f, beta);
+        const numExp = E.add( f, delta);
         peCtx.numId = pil.expressions.length;
         numExp.keep = true;
         pil.expressions.push(numExp);
 
-        const denExp = E.add( t, beta);
+        const denExp = E.add( t, delta);
         peCtx.denId = pil.expressions.length;
         denExp.keep = true;
         pil.expressions.push(denExp);
@@ -223,19 +231,19 @@ function generateConnectionsZ(F, res, pil, ctx) {
 
         ciCtx.zId = pil.nCommitments++;
 
-        const beta = E.challenge("beta");
+        const delta = E.challenge("delta");
         const gamma = E.challenge("gamma");
 
         let numExp = E.add(
             E.add(
                 E.exp(ci.pols[0]),
-                E.mul(beta, E.x())
+                E.mul(delta, E.x())
             ), gamma);
 
         let denExp = E.add(
             E.add(
                 E.exp(ci.pols[0]),
-                E.mul(beta, E.exp(ci.connections[0]))
+                E.mul(delta, E.exp(ci.connections[0]))
             ), gamma);
 
         ciCtx.numId = pil.expressions.length;
@@ -254,7 +262,7 @@ function generateConnectionsZ(F, res, pil, ctx) {
                     E.add(
                         E.add(
                             E.exp(ci.pols[i]),
-                            E.mul(E.mul(beta, E.number(ks[i-1])), E.x())
+                            E.mul(E.mul(delta, E.number(ks[i-1])), E.x())
                         ),
                         gamma
                     )
@@ -267,7 +275,7 @@ function generateConnectionsZ(F, res, pil, ctx) {
                     E.add(
                         E.add(
                             E.exp(ci.pols[i]),
-                            E.mul(beta, E.exp(ci.connections[i]))
+                            E.mul(delta, E.exp(ci.connections[i]))
                         ),
                         gamma
                     )

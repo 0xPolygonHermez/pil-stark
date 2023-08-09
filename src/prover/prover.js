@@ -1,6 +1,6 @@
-const { initProverFflonk, extendAndCommit, computeQFflonk, computeOpeningsFflonk, genProofFflonk } = require("../fflonk/helpers/fflonk_prover_helpers");
+const { initProverFflonk, extendAndCommit, computeQFflonk, computeOpeningsFflonk, genProofFflonk, setChallengesFflonk, calculateChallengeFflonk } = require("../fflonk/helpers/fflonk_prover_helpers");
 const { calculateH1H2, calculateZ } = require("../helpers/polutils");
-const { initProverStark, extendAndMerkelize, computeQStark, computeEvalsStark, computeFRIStark, genProofStark } = require("../stark/stark_gen_helpers");
+const { initProverStark, extendAndMerkelize, computeQStark, computeEvalsStark, computeFRIStark, genProofStark, setChallengesStark } = require("../stark/stark_gen_helpers");
 const { setPol, getPol, calculatePublics, callCalculateExps } = require("./prover_helpers");
 
 module.exports = async function proofGen(cmPols, pilInfo, constTree, constPols, zkey, options) {
@@ -17,7 +17,7 @@ module.exports = async function proofGen(cmPols, pilInfo, constTree, constPols, 
         throw new Error("Invalid parameters");
     }
 
-    let ctx = stark ? await initProverStark(pilInfo, constPols, constTree, logger) : await initProverFflonk(pilInfo, zkey, logger);
+    let ctx = stark ? await initProverStark(pilInfo, constPols, constTree, options) : await initProverFflonk(pilInfo, zkey, logger);
     
     if(ctx.prover === "stark") {
         // Read committed polynomials
@@ -63,7 +63,7 @@ async function stage1(ctx, logger) {
 
     calculatePublics(ctx);
 
-    const nextChallenge = ctx.prover === "stark" ? await extendAndMerkelize(1, ctx) : await extendAndCommit(1, ctx, null, logger);
+    const nextChallenge = ctx.prover === "stark" ? await extendAndMerkelize(1, ctx) : await extendAndCommit(1, ctx, logger);
     
     return nextChallenge; 
 }
@@ -71,25 +71,17 @@ async function stage1(ctx, logger) {
 async function stage2(ctx, challenge, parallelExec, useThreads, logger) {
     if(ctx.prover === "fflonk" && !ctx.pilInfo.nCm2 && ctx.pilInfo.peCtx.length === 0) return challenge;
 
-    // Compute challenge alpha
-    ctx.challenges[0] = challenge;
-    if (logger) logger.debug("··· challenges.alpha: " + ctx.F.toString(ctx.challenges[0]));
-
-    // Compute challenge beta
     if(ctx.prover === "fflonk") {
-        ctx.transcript.reset();
-        ctx.transcript.addScalar(ctx.challenges[0]);
-        ctx.challenges[1] = ctx.transcript.getChallenge();
+        setChallengesFflonk(2, ctx, challenge);
     } else {
-        ctx.challenges[1] = ctx.transcript.getField(); // beta
+        setChallengesStark(2, ctx, challenge);
     }
 
+    if (logger) logger.debug("··· challenges.alpha: " + ctx.F.toString(ctx.challenges[0]));
     if (logger) logger.debug("··· challenges.beta: " + ctx.F.toString(ctx.challenges[1]));        
 
     if (ctx.prover === "fflonk" && !ctx.pilInfo.nCm2) {
-        ctx.transcript.reset();
-        ctx.transcript.addScalar(ctx.challenges[1]);
-        return ctx.transcript.getChallenge();
+        return calculateChallengeFflonk(2, ctx, ctx.challenges[1]);
     }
 
     if (logger) logger.debug("> STAGE 2. Compute Inclusion Polynomials");
@@ -108,7 +100,7 @@ async function stage2(ctx, challenge, parallelExec, useThreads, logger) {
         setPol(ctx, ctx.pilInfo.cm_n[ctx.pilInfo.nCm1 + 2 * i + 1], h2);
     }
 
-    const nextChallenge = ctx.prover === "stark" ? await extendAndMerkelize(2, ctx) : await extendAndCommit(2, ctx, ctx.challenges[1], logger);
+    const nextChallenge = ctx.prover === "stark" ? await extendAndMerkelize(2, ctx) : await extendAndCommit(2, ctx, logger);
     return nextChallenge;
 }
 
@@ -117,16 +109,13 @@ async function stage3(ctx, challenge, parallelExec, useThreads, logger) {
 
     if (logger) logger.debug("> STAGE 3. Compute Grand Product and Intermediate Polynomials");
 
-    ctx.challenges[2] = challenge; // gamma
-    if (logger) logger.debug("··· challenges.gamma: " + ctx.F.toString(ctx.challenges[2]));
-
     if(ctx.prover === "fflonk") {
-        ctx.transcript.reset();
-        ctx.transcript.addScalar(ctx.challenges[2]);
-        ctx.challenges[3] = ctx.transcript.getChallenge();
+        setChallengesFflonk(3, ctx, challenge);
     } else {
-        ctx.challenges[3] = ctx.transcript.getField(); // delta
+        setChallengesStark(3, ctx, challenge);
     }
+
+    if (logger) logger.debug("··· challenges.gamma: " + ctx.F.toString(ctx.challenges[2]));
     if (logger) logger.debug("··· challenges.delta: " + ctx.F.toString(ctx.challenges[3]));
 
 
@@ -174,7 +163,7 @@ async function stage3(ctx, challenge, parallelExec, useThreads, logger) {
 
     await callCalculateExps("step3", "n", ctx, parallelExec, useThreads);
 
-    const nextChallenge = ctx.prover === "stark" ? await extendAndMerkelize(3, ctx) : await extendAndCommit(3, ctx, ctx.challenges[3], logger);
+    const nextChallenge = ctx.prover === "stark" ? await extendAndMerkelize(3, ctx) : await extendAndCommit(3, ctx, logger);
     return nextChallenge;
 } 
 

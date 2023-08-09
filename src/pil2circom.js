@@ -77,7 +77,6 @@ function setDimensions(code) {
             case "public": d=1; break;
             case "challenge": d=3; break;
             case "xDivXSubXi": d=3; break;
-            case "xDivXSubWXi": d=3; break;
             case "x": d=3; break;
             case "Z": d=3; break;
             default: throw new Error("Invalid reference type get: " + r.type);

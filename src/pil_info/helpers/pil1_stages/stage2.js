@@ -7,25 +7,26 @@ module.exports = function generateStep2(res, pil, ctx) {
 
     const E = new ExpressionOps();
 
+    const alpha = E.challenge("alpha");
+    const beta = E.challenge("beta");
+
     for (let i=0; i<pil.plookupIdentities.length; i++) {
         const puCtx = {};
         const pi = pil.plookupIdentities[i];
 
         let tExp = null;
-        const u = E.challenge("u");
-        const defVal = E.challenge("defVal");
         for (let j=0; j<pi.t.length; j++) {
             const e = E.exp(pi.t[j]);
             if (tExp) {
-                tExp = E.add(E.mul(u, tExp), e);
+                tExp = E.add(E.mul(alpha, tExp), e);
             } else {
                 tExp = e;
             }
         }
         if (pi.selT !== null) {
-            tExp = E.sub(tExp, defVal);
+            tExp = E.sub(tExp, beta);
             tExp = E.mul(tExp, E.exp(pi.selT));
-            tExp = E.add(tExp, defVal);
+            tExp = E.add(tExp, beta);
 
             tExp.idQ = pil.nQ;
             pil.nQ++;
@@ -40,7 +41,7 @@ module.exports = function generateStep2(res, pil, ctx) {
         for (let j=0; j<pi.f.length; j++) {
             const e = E.exp(pi.f[j]);
             if (fExp) {
-                fExp = E.add(E.mul(fExp, u), e);
+                fExp = E.add(E.mul(fExp, alpha), e);
             } else {
                 fExp = e;
             }
@@ -71,4 +72,5 @@ module.exports = function generateStep2(res, pil, ctx) {
     ctx.calculated =  { exps: {}, expsPrime: {} }
 
     res.nCm2 = pil.nCommitments - res.nCm1;
+    res.cm2_challenges = [alpha.id, beta.id];
 }

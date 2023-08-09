@@ -112,8 +112,11 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
             case "public": return `ctx.publics[${r.id}]`;
             case "challenge": return `ctx.challenges[${r.id}]`;
             case "eval": return `ctx.evals[${r.id}]`;
-            case "xDivXSubXi": return `[ctx.xDivXSubXi_2ns[3*i], ctx.xDivXSubXi_2ns[3*i+1], ctx.xDivXSubXi_2ns[3*i+2]]`;
-            case "xDivXSubWXi": return `[ctx.xDivXSubWXi_2ns[3*i], ctx.xDivXSubWXi_2ns[3*i+1], ctx.xDivXSubWXi_2ns[3*i+2]]`;
+            case "xDivXSubXi": return `[
+                    ctx.xDivXSubXi_2ns[3*(${ctx.pilInfo.fri2Id[r.id]} + ${ctx.pilInfo.nFriOpenings}*i)], 
+                    ctx.xDivXSubXi_2ns[3*(${ctx.pilInfo.fri2Id[r.id]} + ${ctx.pilInfo.nFriOpenings}*i) + 1], 
+                    ctx.xDivXSubXi_2ns[3*(${ctx.pilInfo.fri2Id[r.id]} + ${ctx.pilInfo.nFriOpenings}*i) + 2]
+                ]`;
             case "x": {
                 if (dom=="n") {
                     return `ctx.x_n[i]`;
@@ -332,7 +335,6 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
         execInfo.inputSections.push({ name: "cm4_2ns" });
         execInfo.inputSections.push({ name: "const_2ns" });
         execInfo.inputSections.push({ name: "xDivXSubXi_2ns" });
-        execInfo.inputSections.push({ name: "xDivXSubWXi_2ns" });
         execInfo.outputSections.push({ name: "f_2ns" });
         dom = "2ns";
     } else {
@@ -346,7 +348,9 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
             section.width = ctx.pilInfo.mapSectionsN[section.name];
         } else if (["x_n", "x_2ns", "Zi_2ns"].indexOf(section.name) >= 0) {
             section.width = 1;
-        } else if (["xDivXSubXi_2ns", "xDivXSubWXi_2ns","f_2ns"].indexOf(section.name) >= 0) {
+        } else if (["xDivXSubXi_2ns"].indexOf(section.name) >= 0) {
+            section.width = 3*ctx.pilInfo.nFriOpenings;
+        } else if (["f_2ns"].indexOf(section.name) >= 0) {
             section.width = 3;
         } else if (["q_2ns"].indexOf(section.name) >= 0) {
             section.width = ctx.pilInfo.qDim;

@@ -26,7 +26,7 @@ template Transcript() {
     signal input finalPol[8][3];
 
     signal output challenges[8][3];  
-    signal output ys[8][11];
+    signal output ys[8][9];
     signal output s0_specialX[3];
     signal output s1_specialX[3];
     signal output s2_specialX[3];
@@ -182,22 +182,22 @@ template Transcript() {
     for(var j = 0; j < 63; j++) {
         ys[q][b] <== transcriptN2b_0[j];
         b++;
-        if(b == 11) {
+        if(b == 9) {
             b = 0; 
             q++;
         }
     }
     _ <== transcriptN2b_0[63]; // Unused last bit
 
-    for(var j = 0; j < 25; j++) {
+    for(var j = 0; j < 9; j++) {
         ys[q][b] <== transcriptN2b_1[j];
         b++;
-        if(b == 11) {
+        if(b == 9) {
             b = 0; 
             q++;
         }
     }
-    for(var j = 25; j < 64; j++) {
+    for(var j = 9; j < 64; j++) {
         _ <== transcriptN2b_1[j]; // Unused bits        
     }
 }
@@ -253,8 +253,8 @@ template parallel VerifyEvaluations() {
     signal input enable;
 
     // zMul stores all the powers of z (which is stored in challenge7) up to nBits, i.e, [z, z^2, ..., z^nBits]
-    signal zMul[10][3];
-    for (var i=0; i< 10 ; i++) {
+    signal zMul[8][3];
+    for (var i=0; i< 8 ; i++) {
         if(i==0){
             zMul[i] <== CMul()(challenges7, challenges7);
         } else {
@@ -263,7 +263,7 @@ template parallel VerifyEvaluations() {
     }
 
     // Store the vanishing polynomial Zg = x^nBits - 1 evaluated at z
-    var Z[3] = [zMul[9][0] -1, zMul[9][1], zMul[9][2]];
+    var Z[3] = [zMul[7][0] -1, zMul[7][1], zMul[7][2]];
 
     // Using the evaluations committed and the challenges,
     // calculate the sum of q_i, i.e, q_0(X) + challenge * q_1(X) + challenge^2 * q_2(X) +  ... + challenge^(l-1) * q_l-1(X) evaluated at z 
@@ -447,7 +447,7 @@ template parallel VerifyEvaluations() {
             xAcc[0] <== [1, 0, 0];
             qAcc[0] <== evals[41+i];
         } else {
-            xAcc[i] <== CMul()(xAcc[i-1], zMul[9]);
+            xAcc[i] <== CMul()(xAcc[i-1], zMul[7]);
             qStep[i-1] <== CMul()(xAcc[i], evals[41+i]);
             qAcc[i][0] <== qAcc[i-1][0] + qStep[i-1][0];
             qAcc[i][1] <== qAcc[i-1][1] + qStep[i-1][1];
@@ -469,7 +469,7 @@ template parallel VerifyEvaluations() {
 */
 template parallel VerifyQuery(currStepBits, nextStepBits) {
     var nextStep = currStepBits - nextStepBits; 
-    signal input ys[11];
+    signal input ys[9];
     signal input challenges5[3];
     signal input challenges6[3];
     signal input challenges7[3];
@@ -492,200 +492,87 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     mapValues.vals3 <== tree3;
     mapValues.vals4 <== tree4;
 
-    signal xacc[11];
-    xacc[0] <== ys[0]*(7 * roots(11)-7) + 7;
-    for (var i=1; i<11; i++) {
-        xacc[i] <== xacc[i-1] * ( ys[i]*(roots(11 - i) - 1) +1);
+    signal xacc[9];
+    xacc[0] <== ys[0]*(7 * roots(9)-7) + 7;
+    for (var i=1; i<9; i++) {
+        xacc[i] <== xacc[i-1] * ( ys[i]*(roots(9 - i) - 1) +1);
     }
 
-    signal den1inv[3] <== CInv()([xacc[10] - challenges7[0], -challenges7[1], -challenges7[2]]);
-    signal xDivXSubXi[3] <== [xacc[10] * den1inv[0], xacc[10] * den1inv[1], xacc[10] * den1inv[2]];
+    signal xDivXSubXi[2][3];
 
-    signal den2inv[3] <== CInv()([xacc[10] - roots(10)*challenges7[0], -roots(10)*challenges7[1],-roots(10)*challenges7[2] ]);
-    signal xDivXSubWXi[3] <== [xacc[10] * den2inv[0], xacc[10] * den2inv[1],  xacc[10] * den2inv[2]];
+    signal den0inv[3] <== CInv()([xacc[8] - 1 * challenges7[0], - 1 * challenges7[1], - 1 * challenges7[2]]);
+    xDivXSubXi[0] <== [xacc[8] * den0inv[0], xacc[8] * den0inv[1],  xacc[8] * den0inv[2]];
+    signal den1inv[3] <== CInv()([xacc[8] - 1 * roots(8) * challenges7[0], - 1 * roots(8) * challenges7[1], - 1 * roots(8) * challenges7[2]]);
+    xDivXSubXi[1] <== [xacc[8] * den1inv[0], xacc[8] * den1inv[1],  xacc[8] * den1inv[2]];
 
-    signal tmp_0[3] <== [challenges5[0] * mapValues.tree1_0 +  mapValues.tree1_1, challenges5[1] * mapValues.tree1_0, challenges5[2] * mapValues.tree1_0];
-    signal tmp_1_mul[3] <== CMul()(challenges5, tmp_0);
-    signal tmp_1[3] <== [tmp_1_mul[0] + mapValues.tree1_2, tmp_1_mul[1], tmp_1_mul[2]];
-    signal tmp_2_mul[3] <== CMul()(challenges5, tmp_1);
-    signal tmp_2[3] <== [tmp_2_mul[0] + mapValues.tree1_3, tmp_2_mul[1], tmp_2_mul[2]];
-    signal tmp_3_mul[3] <== CMul()(challenges5, tmp_2);
-    signal tmp_3[3] <== [tmp_3_mul[0] + mapValues.tree1_4, tmp_3_mul[1], tmp_3_mul[2]];
-    signal tmp_4_mul[3] <== CMul()(challenges5, tmp_3);
-    signal tmp_4[3] <== [tmp_4_mul[0] + mapValues.tree1_5, tmp_4_mul[1], tmp_4_mul[2]];
-    signal tmp_5_mul[3] <== CMul()(challenges5, tmp_4);
-    signal tmp_5[3] <== [tmp_5_mul[0] + mapValues.tree1_6, tmp_5_mul[1], tmp_5_mul[2]];
-    signal tmp_6_mul[3] <== CMul()(challenges5, tmp_5);
-    signal tmp_6[3] <== [tmp_6_mul[0] + mapValues.tree1_7, tmp_6_mul[1], tmp_6_mul[2]];
-    signal tmp_7_mul[3] <== CMul()(challenges5, tmp_6);
-    signal tmp_7[3] <== [tmp_7_mul[0] + mapValues.tree1_8, tmp_7_mul[1], tmp_7_mul[2]];
-    signal tmp_8_mul[3] <== CMul()(challenges5, tmp_7);
-    signal tmp_8[3] <== [tmp_8_mul[0] + mapValues.tree1_9, tmp_8_mul[1], tmp_8_mul[2]];
-    signal tmp_9_mul[3] <== CMul()(challenges5, tmp_8);
-    signal tmp_9[3] <== [tmp_9_mul[0] + mapValues.tree1_10, tmp_9_mul[1], tmp_9_mul[2]];
-    signal tmp_10_mul[3] <== CMul()(challenges5, tmp_9);
-    signal tmp_10[3] <== [tmp_10_mul[0] + mapValues.tree1_11, tmp_10_mul[1], tmp_10_mul[2]];
-    signal tmp_11_mul[3] <== CMul()(challenges5, tmp_10);
-    signal tmp_11[3] <== [tmp_11_mul[0] + mapValues.tree1_12, tmp_11_mul[1], tmp_11_mul[2]];
-    signal tmp_12_mul[3] <== CMul()(challenges5, tmp_11);
-    signal tmp_12[3] <== [tmp_12_mul[0] + mapValues.tree1_13, tmp_12_mul[1], tmp_12_mul[2]];
-    signal tmp_13_mul[3] <== CMul()(challenges5, tmp_12);
-    signal tmp_13[3] <== [tmp_13_mul[0] + mapValues.tree1_14, tmp_13_mul[1], tmp_13_mul[2]];
-    signal tmp_14_mul[3] <== CMul()(challenges5, tmp_13);
-    signal tmp_14[3] <== [tmp_14_mul[0] + mapValues.tree2_0[0], tmp_14_mul[1] + mapValues.tree2_0[1], tmp_14_mul[2] + mapValues.tree2_0[2]];
-    signal tmp_15_mul[3] <== CMul()(challenges5, tmp_14);
-    signal tmp_15[3] <== [tmp_15_mul[0] + mapValues.tree2_1[0], tmp_15_mul[1] + mapValues.tree2_1[1], tmp_15_mul[2] + mapValues.tree2_1[2]];
-    signal tmp_16_mul[3] <== CMul()(challenges5, tmp_15);
-    signal tmp_16[3] <== [tmp_16_mul[0] + mapValues.tree3_0[0], tmp_16_mul[1] + mapValues.tree3_0[1], tmp_16_mul[2] + mapValues.tree3_0[2]];
-    signal tmp_17_mul[3] <== CMul()(challenges5, tmp_16);
-    signal tmp_17[3] <== [tmp_17_mul[0] + mapValues.tree3_1[0], tmp_17_mul[1] + mapValues.tree3_1[1], tmp_17_mul[2] + mapValues.tree3_1[2]];
-    signal tmp_18_mul[3] <== CMul()(challenges5, tmp_17);
-    signal tmp_18[3] <== [tmp_18_mul[0] + mapValues.tree3_2[0], tmp_18_mul[1] + mapValues.tree3_2[1], tmp_18_mul[2] + mapValues.tree3_2[2]];
-    signal tmp_19_mul[3] <== CMul()(challenges5, tmp_18);
-    signal tmp_19[3] <== [tmp_19_mul[0] + mapValues.tree3_3[0], tmp_19_mul[1] + mapValues.tree3_3[1], tmp_19_mul[2] + mapValues.tree3_3[2]];
-    signal tmp_20_mul[3] <== CMul()(challenges5, tmp_19);
-    signal tmp_20[3] <== [tmp_20_mul[0] + mapValues.tree3_4[0], tmp_20_mul[1] + mapValues.tree3_4[1], tmp_20_mul[2] + mapValues.tree3_4[2]];
-    signal tmp_21_mul[3] <== CMul()(challenges5, tmp_20);
-    signal tmp_21[3] <== [tmp_21_mul[0] + mapValues.tree3_5[0], tmp_21_mul[1] + mapValues.tree3_5[1], tmp_21_mul[2] + mapValues.tree3_5[2]];
-    signal tmp_22_mul[3] <== CMul()(challenges5, tmp_21);
-    signal tmp_22[3] <== [tmp_22_mul[0] + mapValues.tree3_6[0], tmp_22_mul[1] + mapValues.tree3_6[1], tmp_22_mul[2] + mapValues.tree3_6[2]];
-    signal tmp_23_mul[3] <== CMul()(challenges5, tmp_22);
-    signal tmp_23[3] <== [tmp_23_mul[0] + mapValues.tree4_0[0], tmp_23_mul[1] + mapValues.tree4_0[1], tmp_23_mul[2] + mapValues.tree4_0[2]];
-    signal tmp_24_mul[3] <== CMul()(challenges5, tmp_23);
-    signal tmp_24[3] <== [tmp_24_mul[0] + mapValues.tree4_1[0], tmp_24_mul[1] + mapValues.tree4_1[1], tmp_24_mul[2] + mapValues.tree4_1[2]];
-    signal tmp_25[3] <== [mapValues.tree1_0 - evals[1][0], -evals[1][1], -evals[1][2]];
-    signal tmp_26[3] <== [consts[2] - evals[2][0], -evals[2][1], -evals[2][2]];
-    signal tmp_27_mul[3] <== CMul()(tmp_25, challenges6);
-    signal tmp_27[3] <== [tmp_27_mul[0] + tmp_26[0], tmp_27_mul[1] + tmp_26[1], tmp_27_mul[2] + tmp_26[2]];
-    signal tmp_28[3] <== [mapValues.tree1_1 - evals[3][0], -evals[3][1], -evals[3][2]];
-    signal tmp_29_mul[3] <== CMul()(tmp_27, challenges6);
-    signal tmp_29[3] <== [tmp_29_mul[0] + tmp_28[0], tmp_29_mul[1] + tmp_28[1], tmp_29_mul[2] + tmp_28[2]];
-    signal tmp_30[3] <== [consts[1] - evals[5][0], -evals[5][1], -evals[5][2]];
-    signal tmp_31_mul[3] <== CMul()(tmp_29, challenges6);
-    signal tmp_31[3] <== [tmp_31_mul[0] + tmp_30[0], tmp_31_mul[1] + tmp_30[1], tmp_31_mul[2] + tmp_30[2]];
-    signal tmp_32[3] <== [mapValues.tree3_0[0] - evals[6][0], mapValues.tree3_0[1] - evals[6][1], mapValues.tree3_0[2] - evals[6][2]];
-    signal tmp_33_mul[3] <== CMul()(tmp_31, challenges6);
-    signal tmp_33[3] <== [tmp_33_mul[0] + tmp_32[0], tmp_33_mul[1] + tmp_32[1], tmp_33_mul[2] + tmp_32[2]];
-    signal tmp_34[3] <== [consts[0] - evals[7][0], -evals[7][1], -evals[7][2]];
-    signal tmp_35_mul[3] <== CMul()(tmp_33, challenges6);
-    signal tmp_35[3] <== [tmp_35_mul[0] + tmp_34[0], tmp_35_mul[1] + tmp_34[1], tmp_35_mul[2] + tmp_34[2]];
-    signal tmp_36[3] <== [mapValues.tree2_1[0] - evals[8][0], mapValues.tree2_1[1] - evals[8][1], mapValues.tree2_1[2] - evals[8][2]];
-    signal tmp_37_mul[3] <== CMul()(tmp_35, challenges6);
-    signal tmp_37[3] <== [tmp_37_mul[0] + tmp_36[0], tmp_37_mul[1] + tmp_36[1], tmp_37_mul[2] + tmp_36[2]];
-    signal tmp_38[3] <== [mapValues.tree2_0[0] - evals[9][0], mapValues.tree2_0[1] - evals[9][1], mapValues.tree2_0[2] - evals[9][2]];
-    signal tmp_39_mul[3] <== CMul()(tmp_37, challenges6);
-    signal tmp_39[3] <== [tmp_39_mul[0] + tmp_38[0], tmp_39_mul[1] + tmp_38[1], tmp_39_mul[2] + tmp_38[2]];
-    signal tmp_40[3] <== [mapValues.tree3_4[0] - evals[12][0], mapValues.tree3_4[1] - evals[12][1], mapValues.tree3_4[2] - evals[12][2]];
-    signal tmp_41_mul[3] <== CMul()(tmp_39, challenges6);
-    signal tmp_41[3] <== [tmp_41_mul[0] + tmp_40[0], tmp_41_mul[1] + tmp_40[1], tmp_41_mul[2] + tmp_40[2]];
-    signal tmp_42[3] <== [mapValues.tree3_1[0] - evals[13][0], mapValues.tree3_1[1] - evals[13][1], mapValues.tree3_1[2] - evals[13][2]];
-    signal tmp_43_mul[3] <== CMul()(tmp_41, challenges6);
-    signal tmp_43[3] <== [tmp_43_mul[0] + tmp_42[0], tmp_43_mul[1] + tmp_42[1], tmp_43_mul[2] + tmp_42[2]];
-    signal tmp_44[3] <== [mapValues.tree1_8 - evals[14][0], -evals[14][1], -evals[14][2]];
-    signal tmp_45_mul[3] <== CMul()(tmp_43, challenges6);
-    signal tmp_45[3] <== [tmp_45_mul[0] + tmp_44[0], tmp_45_mul[1] + tmp_44[1], tmp_45_mul[2] + tmp_44[2]];
-    signal tmp_46[3] <== [mapValues.tree1_10 - evals[15][0], -evals[15][1], -evals[15][2]];
-    signal tmp_47_mul[3] <== CMul()(tmp_45, challenges6);
-    signal tmp_47[3] <== [tmp_47_mul[0] + tmp_46[0], tmp_47_mul[1] + tmp_46[1], tmp_47_mul[2] + tmp_46[2]];
-    signal tmp_48[3] <== [mapValues.tree1_7 - evals[16][0], -evals[16][1], -evals[16][2]];
-    signal tmp_49_mul[3] <== CMul()(tmp_47, challenges6);
-    signal tmp_49[3] <== [tmp_49_mul[0] + tmp_48[0], tmp_49_mul[1] + tmp_48[1], tmp_49_mul[2] + tmp_48[2]];
-    signal tmp_50[3] <== [mapValues.tree1_9 - evals[17][0], -evals[17][1], -evals[17][2]];
-    signal tmp_51_mul[3] <== CMul()(tmp_49, challenges6);
-    signal tmp_51[3] <== [tmp_51_mul[0] + tmp_50[0], tmp_51_mul[1] + tmp_50[1], tmp_51_mul[2] + tmp_50[2]];
-    signal tmp_52[3] <== [mapValues.tree3_2[0] - evals[19][0], mapValues.tree3_2[1] - evals[19][1], mapValues.tree3_2[2] - evals[19][2]];
-    signal tmp_53_mul[3] <== CMul()(tmp_51, challenges6);
-    signal tmp_53[3] <== [tmp_53_mul[0] + tmp_52[0], tmp_53_mul[1] + tmp_52[1], tmp_53_mul[2] + tmp_52[2]];
-    signal tmp_54[3] <== [mapValues.tree3_6[0] - evals[21][0], mapValues.tree3_6[1] - evals[21][1], mapValues.tree3_6[2] - evals[21][2]];
-    signal tmp_55_mul[3] <== CMul()(tmp_53, challenges6);
-    signal tmp_55[3] <== [tmp_55_mul[0] + tmp_54[0], tmp_55_mul[1] + tmp_54[1], tmp_55_mul[2] + tmp_54[2]];
-    signal tmp_56[3] <== [mapValues.tree3_5[0] - evals[22][0], mapValues.tree3_5[1] - evals[22][1], mapValues.tree3_5[2] - evals[22][2]];
-    signal tmp_57_mul[3] <== CMul()(tmp_55, challenges6);
-    signal tmp_57[3] <== [tmp_57_mul[0] + tmp_56[0], tmp_57_mul[1] + tmp_56[1], tmp_57_mul[2] + tmp_56[2]];
-    signal tmp_58[3] <== [mapValues.tree1_12 - evals[23][0], -evals[23][1], -evals[23][2]];
-    signal tmp_59_mul[3] <== CMul()(tmp_57, challenges6);
-    signal tmp_59[3] <== [tmp_59_mul[0] + tmp_58[0], tmp_59_mul[1] + tmp_58[1], tmp_59_mul[2] + tmp_58[2]];
-    signal tmp_60[3] <== [consts[7] - evals[25][0], -evals[25][1], -evals[25][2]];
-    signal tmp_61_mul[3] <== CMul()(tmp_59, challenges6);
-    signal tmp_61[3] <== [tmp_61_mul[0] + tmp_60[0], tmp_61_mul[1] + tmp_60[1], tmp_61_mul[2] + tmp_60[2]];
-    signal tmp_62[3] <== [consts[8] - evals[26][0], -evals[26][1], -evals[26][2]];
-    signal tmp_63_mul[3] <== CMul()(tmp_61, challenges6);
-    signal tmp_63[3] <== [tmp_63_mul[0] + tmp_62[0], tmp_63_mul[1] + tmp_62[1], tmp_63_mul[2] + tmp_62[2]];
-    signal tmp_64[3] <== [mapValues.tree1_14 - evals[27][0], -evals[27][1], -evals[27][2]];
-    signal tmp_65_mul[3] <== CMul()(tmp_63, challenges6);
-    signal tmp_65[3] <== [tmp_65_mul[0] + tmp_64[0], tmp_65_mul[1] + tmp_64[1], tmp_65_mul[2] + tmp_64[2]];
-    signal tmp_66[3] <== [consts[6] - evals[28][0], -evals[28][1], -evals[28][2]];
-    signal tmp_67_mul[3] <== CMul()(tmp_65, challenges6);
-    signal tmp_67[3] <== [tmp_67_mul[0] + tmp_66[0], tmp_67_mul[1] + tmp_66[1], tmp_67_mul[2] + tmp_66[2]];
-    signal tmp_68[3] <== [mapValues.tree1_11 - evals[29][0], -evals[29][1], -evals[29][2]];
-    signal tmp_69_mul[3] <== CMul()(tmp_67, challenges6);
-    signal tmp_69[3] <== [tmp_69_mul[0] + tmp_68[0], tmp_69_mul[1] + tmp_68[1], tmp_69_mul[2] + tmp_68[2]];
-    signal tmp_70[3] <== [mapValues.tree1_2 - evals[34][0], -evals[34][1], -evals[34][2]];
-    signal tmp_71_mul[3] <== CMul()(tmp_69, challenges6);
-    signal tmp_71[3] <== [tmp_71_mul[0] + tmp_70[0], tmp_71_mul[1] + tmp_70[1], tmp_71_mul[2] + tmp_70[2]];
-    signal tmp_72[3] <== [mapValues.tree1_3 - evals[35][0], -evals[35][1], -evals[35][2]];
-    signal tmp_73_mul[3] <== CMul()(tmp_71, challenges6);
-    signal tmp_73[3] <== [tmp_73_mul[0] + tmp_72[0], tmp_73_mul[1] + tmp_72[1], tmp_73_mul[2] + tmp_72[2]];
-    signal tmp_74[3] <== [mapValues.tree1_4 - evals[36][0], -evals[36][1], -evals[36][2]];
-    signal tmp_75_mul[3] <== CMul()(tmp_73, challenges6);
-    signal tmp_75[3] <== [tmp_75_mul[0] + tmp_74[0], tmp_75_mul[1] + tmp_74[1], tmp_75_mul[2] + tmp_74[2]];
-    signal tmp_76[3] <== [consts[3] - evals[37][0], -evals[37][1], -evals[37][2]];
-    signal tmp_77_mul[3] <== CMul()(tmp_75, challenges6);
-    signal tmp_77[3] <== [tmp_77_mul[0] + tmp_76[0], tmp_77_mul[1] + tmp_76[1], tmp_77_mul[2] + tmp_76[2]];
-    signal tmp_78[3] <== [consts[4] - evals[38][0], -evals[38][1], -evals[38][2]];
-    signal tmp_79_mul[3] <== CMul()(tmp_77, challenges6);
-    signal tmp_79[3] <== [tmp_79_mul[0] + tmp_78[0], tmp_79_mul[1] + tmp_78[1], tmp_79_mul[2] + tmp_78[2]];
-    signal tmp_80[3] <== [consts[5] - evals[39][0], -evals[39][1], -evals[39][2]];
-    signal tmp_81_mul[3] <== CMul()(tmp_79, challenges6);
-    signal tmp_81[3] <== [tmp_81_mul[0] + tmp_80[0], tmp_81_mul[1] + tmp_80[1], tmp_81_mul[2] + tmp_80[2]];
-    signal tmp_82[3] <== [mapValues.tree3_3[0] - evals[40][0], mapValues.tree3_3[1] - evals[40][1], mapValues.tree3_3[2] - evals[40][2]];
-    signal tmp_83_mul[3] <== CMul()(tmp_81, challenges6);
-    signal tmp_83[3] <== [tmp_83_mul[0] + tmp_82[0], tmp_83_mul[1] + tmp_82[1], tmp_83_mul[2] + tmp_82[2]];
-    signal tmp_84[3] <== [mapValues.tree4_0[0] - evals[41][0], mapValues.tree4_0[1] - evals[41][1], mapValues.tree4_0[2] - evals[41][2]];
-    signal tmp_85_mul[3] <== CMul()(tmp_83, challenges6);
-    signal tmp_85[3] <== [tmp_85_mul[0] + tmp_84[0], tmp_85_mul[1] + tmp_84[1], tmp_85_mul[2] + tmp_84[2]];
-    signal tmp_86[3] <== [mapValues.tree4_1[0] - evals[42][0], mapValues.tree4_1[1] - evals[42][1], mapValues.tree4_1[2] - evals[42][2]];
-    signal tmp_87_mul[3] <== CMul()(tmp_85, challenges6);
-    signal tmp_87[3] <== [tmp_87_mul[0] + tmp_86[0], tmp_87_mul[1] + tmp_86[1], tmp_87_mul[2] + tmp_86[2]];
-    signal tmp_88[3] <== CMul()(tmp_87, xDivXSubXi);
-    signal tmp_89_mul[3] <== CMul()(challenges5, tmp_24);
-    signal tmp_89[3] <== [tmp_89_mul[0] + tmp_88[0], tmp_89_mul[1] + tmp_88[1], tmp_89_mul[2] + tmp_88[2]];
-    signal tmp_90[3] <== [mapValues.tree1_1 - evals[0][0], -evals[0][1], -evals[0][2]];
-    signal tmp_91[3] <== [mapValues.tree1_0 - evals[4][0], -evals[4][1], -evals[4][2]];
-    signal tmp_92_mul[3] <== CMul()(tmp_90, challenges6);
-    signal tmp_92[3] <== [tmp_92_mul[0] + tmp_91[0], tmp_92_mul[1] + tmp_91[1], tmp_92_mul[2] + tmp_91[2]];
-    signal tmp_93[3] <== [mapValues.tree2_0[0] - evals[10][0], mapValues.tree2_0[1] - evals[10][1], mapValues.tree2_0[2] - evals[10][2]];
-    signal tmp_94_mul[3] <== CMul()(tmp_92, challenges6);
-    signal tmp_94[3] <== [tmp_94_mul[0] + tmp_93[0], tmp_94_mul[1] + tmp_93[1], tmp_94_mul[2] + tmp_93[2]];
-    signal tmp_95[3] <== [mapValues.tree3_0[0] - evals[11][0], mapValues.tree3_0[1] - evals[11][1], mapValues.tree3_0[2] - evals[11][2]];
-    signal tmp_96_mul[3] <== CMul()(tmp_94, challenges6);
-    signal tmp_96[3] <== [tmp_96_mul[0] + tmp_95[0], tmp_96_mul[1] + tmp_95[1], tmp_96_mul[2] + tmp_95[2]];
-    signal tmp_97[3] <== [mapValues.tree3_1[0] - evals[18][0], mapValues.tree3_1[1] - evals[18][1], mapValues.tree3_1[2] - evals[18][2]];
-    signal tmp_98_mul[3] <== CMul()(tmp_96, challenges6);
-    signal tmp_98[3] <== [tmp_98_mul[0] + tmp_97[0], tmp_98_mul[1] + tmp_97[1], tmp_98_mul[2] + tmp_97[2]];
-    signal tmp_99[3] <== [mapValues.tree3_2[0] - evals[20][0], mapValues.tree3_2[1] - evals[20][1], mapValues.tree3_2[2] - evals[20][2]];
-    signal tmp_100_mul[3] <== CMul()(tmp_98, challenges6);
-    signal tmp_100[3] <== [tmp_100_mul[0] + tmp_99[0], tmp_100_mul[1] + tmp_99[1], tmp_100_mul[2] + tmp_99[2]];
-    signal tmp_101[3] <== [mapValues.tree1_13 - evals[24][0], -evals[24][1], -evals[24][2]];
-    signal tmp_102_mul[3] <== CMul()(tmp_100, challenges6);
-    signal tmp_102[3] <== [tmp_102_mul[0] + tmp_101[0], tmp_102_mul[1] + tmp_101[1], tmp_102_mul[2] + tmp_101[2]];
-    signal tmp_103[3] <== [consts[7] - evals[30][0], -evals[30][1], -evals[30][2]];
-    signal tmp_104_mul[3] <== CMul()(tmp_102, challenges6);
-    signal tmp_104[3] <== [tmp_104_mul[0] + tmp_103[0], tmp_104_mul[1] + tmp_103[1], tmp_104_mul[2] + tmp_103[2]];
-    signal tmp_105[3] <== [consts[8] - evals[31][0], -evals[31][1], -evals[31][2]];
-    signal tmp_106_mul[3] <== CMul()(tmp_104, challenges6);
-    signal tmp_106[3] <== [tmp_106_mul[0] + tmp_105[0], tmp_106_mul[1] + tmp_105[1], tmp_106_mul[2] + tmp_105[2]];
-    signal tmp_107[3] <== [mapValues.tree1_14 - evals[32][0], -evals[32][1], -evals[32][2]];
-    signal tmp_108_mul[3] <== CMul()(tmp_106, challenges6);
-    signal tmp_108[3] <== [tmp_108_mul[0] + tmp_107[0], tmp_108_mul[1] + tmp_107[1], tmp_108_mul[2] + tmp_107[2]];
-    signal tmp_109[3] <== [consts[6] - evals[33][0], -evals[33][1], -evals[33][2]];
-    signal tmp_110_mul[3] <== CMul()(tmp_108, challenges6);
-    signal tmp_110[3] <== [tmp_110_mul[0] + tmp_109[0], tmp_110_mul[1] + tmp_109[1], tmp_110_mul[2] + tmp_109[2]];
-    signal tmp_111[3] <== CMul()(tmp_110, xDivXSubWXi);
-    signal tmp_112_mul[3] <== CMul()(challenges5, tmp_89);
-    signal tmp_112[3] <== [tmp_112_mul[0] + tmp_111[0], tmp_112_mul[1] + tmp_111[1], tmp_112_mul[2] + tmp_111[2]];
+    signal tmp_0[3] <== [mapValues.tree1_1 - evals[0][0], -evals[0][1], -evals[0][2]];
+    signal tmp_1[3] <== [mapValues.tree1_0 - evals[4][0], -evals[4][1], -evals[4][2]];
+    signal tmp_2_mul[3] <== CMul()(tmp_0, challenges6);
+    signal tmp_2[3] <== [tmp_2_mul[0] + tmp_1[0], tmp_2_mul[1] + tmp_1[1], tmp_2_mul[2] + tmp_1[2]];
+    signal tmp_3[3] <== [mapValues.tree2_0[0] - evals[10][0], mapValues.tree2_0[1] - evals[10][1], mapValues.tree2_0[2] - evals[10][2]];
+    signal tmp_4_mul[3] <== CMul()(tmp_2, challenges6);
+    signal tmp_4[3] <== [tmp_4_mul[0] + tmp_3[0], tmp_4_mul[1] + tmp_3[1], tmp_4_mul[2] + tmp_3[2]];
+    signal tmp_5[3] <== [mapValues.tree3_0[0] - evals[11][0], mapValues.tree3_0[1] - evals[11][1], mapValues.tree3_0[2] - evals[11][2]];
+    signal tmp_6_mul[3] <== CMul()(tmp_4, challenges6);
+    signal tmp_6[3] <== [tmp_6_mul[0] + tmp_5[0], tmp_6_mul[1] + tmp_5[1], tmp_6_mul[2] + tmp_5[2]];
+    signal tmp_7[3] <== [mapValues.tree3_1[0] - evals[18][0], mapValues.tree3_1[1] - evals[18][1], mapValues.tree3_1[2] - evals[18][2]];
+    signal tmp_8_mul[3] <== CMul()(tmp_6, challenges6);
+    signal tmp_8[3] <== [tmp_8_mul[0] + tmp_7[0], tmp_8_mul[1] + tmp_7[1], tmp_8_mul[2] + tmp_7[2]];
+    signal tmp_9[3] <== [mapValues.tree3_2[0] - evals[20][0], mapValues.tree3_2[1] - evals[20][1], mapValues.tree3_2[2] - evals[20][2]];
+    signal tmp_10_mul[3] <== CMul()(tmp_8, challenges6);
+    signal tmp_10[3] <== [tmp_10_mul[0] + tmp_9[0], tmp_10_mul[1] + tmp_9[1], tmp_10_mul[2] + tmp_9[2]];
+    signal tmp_11[3] <== [mapValues.tree1_13 - evals[24][0], -evals[24][1], -evals[24][2]];
+    signal tmp_12_mul[3] <== CMul()(tmp_10, challenges6);
+    signal tmp_12[3] <== [tmp_12_mul[0] + tmp_11[0], tmp_12_mul[1] + tmp_11[1], tmp_12_mul[2] + tmp_11[2]];
+    signal tmp_13[3] <== [consts[7] - evals[30][0], -evals[30][1], -evals[30][2]];
+    signal tmp_14_mul[3] <== CMul()(tmp_12, challenges6);
+    signal tmp_14[3] <== [tmp_14_mul[0] + tmp_13[0], tmp_14_mul[1] + tmp_13[1], tmp_14_mul[2] + tmp_13[2]];
+    signal tmp_15[3] <== [consts[8] - evals[31][0], -evals[31][1], -evals[31][2]];
+    signal tmp_16_mul[3] <== CMul()(tmp_14, challenges6);
+    signal tmp_16[3] <== [tmp_16_mul[0] + tmp_15[0], tmp_16_mul[1] + tmp_15[1], tmp_16_mul[2] + tmp_15[2]];
+    signal tmp_17[3] <== [mapValues.tree1_14 - evals[32][0], -evals[32][1], -evals[32][2]];
+    signal tmp_18_mul[3] <== CMul()(tmp_16, challenges6);
+    signal tmp_18[3] <== [tmp_18_mul[0] + tmp_17[0], tmp_18_mul[1] + tmp_17[1], tmp_18_mul[2] + tmp_17[2]];
+    signal tmp_19[3] <== [consts[6] - evals[33][0], -evals[33][1], -evals[33][2]];
+    signal tmp_20_mul[3] <== CMul()(tmp_18, challenges6);
+    signal tmp_20[3] <== [tmp_20_mul[0] + tmp_19[0], tmp_20_mul[1] + tmp_19[1], tmp_20_mul[2] + tmp_19[2]];
+    signal tmp_21[3] <== CMul()(tmp_20, xDivXSubXi[1]);
+    signal tmp_22[3] <== [mapValues.tree1_1 - evals[0][0], -evals[0][1], -evals[0][2]];
+    signal tmp_23[3] <== [mapValues.tree1_0 - evals[4][0], -evals[4][1], -evals[4][2]];
+    signal tmp_24_mul[3] <== CMul()(tmp_22, challenges6);
+    signal tmp_24[3] <== [tmp_24_mul[0] + tmp_23[0], tmp_24_mul[1] + tmp_23[1], tmp_24_mul[2] + tmp_23[2]];
+    signal tmp_25[3] <== [mapValues.tree2_0[0] - evals[10][0], mapValues.tree2_0[1] - evals[10][1], mapValues.tree2_0[2] - evals[10][2]];
+    signal tmp_26_mul[3] <== CMul()(tmp_24, challenges6);
+    signal tmp_26[3] <== [tmp_26_mul[0] + tmp_25[0], tmp_26_mul[1] + tmp_25[1], tmp_26_mul[2] + tmp_25[2]];
+    signal tmp_27[3] <== [mapValues.tree3_0[0] - evals[11][0], mapValues.tree3_0[1] - evals[11][1], mapValues.tree3_0[2] - evals[11][2]];
+    signal tmp_28_mul[3] <== CMul()(tmp_26, challenges6);
+    signal tmp_28[3] <== [tmp_28_mul[0] + tmp_27[0], tmp_28_mul[1] + tmp_27[1], tmp_28_mul[2] + tmp_27[2]];
+    signal tmp_29[3] <== [mapValues.tree3_1[0] - evals[18][0], mapValues.tree3_1[1] - evals[18][1], mapValues.tree3_1[2] - evals[18][2]];
+    signal tmp_30_mul[3] <== CMul()(tmp_28, challenges6);
+    signal tmp_30[3] <== [tmp_30_mul[0] + tmp_29[0], tmp_30_mul[1] + tmp_29[1], tmp_30_mul[2] + tmp_29[2]];
+    signal tmp_31[3] <== [mapValues.tree3_2[0] - evals[20][0], mapValues.tree3_2[1] - evals[20][1], mapValues.tree3_2[2] - evals[20][2]];
+    signal tmp_32_mul[3] <== CMul()(tmp_30, challenges6);
+    signal tmp_32[3] <== [tmp_32_mul[0] + tmp_31[0], tmp_32_mul[1] + tmp_31[1], tmp_32_mul[2] + tmp_31[2]];
+    signal tmp_33[3] <== [mapValues.tree1_13 - evals[24][0], -evals[24][1], -evals[24][2]];
+    signal tmp_34_mul[3] <== CMul()(tmp_32, challenges6);
+    signal tmp_34[3] <== [tmp_34_mul[0] + tmp_33[0], tmp_34_mul[1] + tmp_33[1], tmp_34_mul[2] + tmp_33[2]];
+    signal tmp_35[3] <== [consts[7] - evals[30][0], -evals[30][1], -evals[30][2]];
+    signal tmp_36_mul[3] <== CMul()(tmp_34, challenges6);
+    signal tmp_36[3] <== [tmp_36_mul[0] + tmp_35[0], tmp_36_mul[1] + tmp_35[1], tmp_36_mul[2] + tmp_35[2]];
+    signal tmp_37[3] <== [consts[8] - evals[31][0], -evals[31][1], -evals[31][2]];
+    signal tmp_38_mul[3] <== CMul()(tmp_36, challenges6);
+    signal tmp_38[3] <== [tmp_38_mul[0] + tmp_37[0], tmp_38_mul[1] + tmp_37[1], tmp_38_mul[2] + tmp_37[2]];
+    signal tmp_39[3] <== [mapValues.tree1_14 - evals[32][0], -evals[32][1], -evals[32][2]];
+    signal tmp_40_mul[3] <== CMul()(tmp_38, challenges6);
+    signal tmp_40[3] <== [tmp_40_mul[0] + tmp_39[0], tmp_40_mul[1] + tmp_39[1], tmp_40_mul[2] + tmp_39[2]];
+    signal tmp_41[3] <== [consts[6] - evals[33][0], -evals[33][1], -evals[33][2]];
+    signal tmp_42_mul[3] <== CMul()(tmp_40, challenges6);
+    signal tmp_42[3] <== [tmp_42_mul[0] + tmp_41[0], tmp_42_mul[1] + tmp_41[1], tmp_42_mul[2] + tmp_41[2]];
+    signal tmp_43[3] <== CMul()(tmp_42, xDivXSubXi[1]);
+    signal tmp_44_mul[3] <== CMul()(challenges5, tmp_21);
+    signal tmp_44[3] <== [tmp_44_mul[0] + tmp_43[0], tmp_44_mul[1] + tmp_43[1], tmp_44_mul[2] + tmp_43[2]];
 
-    var queryVals[3] = [tmp_112[0], tmp_112[1], tmp_112[2]];
+    var queryVals[3] = [tmp_44[0], tmp_44[1], tmp_44[2]];
 
     var s0_keys_lowValues[nextStep];
     for(var i = 0; i < nextStep; i++) {
@@ -797,7 +684,7 @@ template StarkVerifier() {
 
     // Notice that root2 and root3 can be zero depending on the STARK being verified 
 
-    signal rootC[4] <== [1586467561057753308,1229990203770229397,10559924528244357123,6072090729782730028 ]; // Merkle tree root of the evaluations of constant polynomials
+    signal rootC[4] <== [15547272193149522286,9194771220869109735,14340868669193233465,5317326090416537886 ]; // Merkle tree root of the evaluations of constant polynomials
 
     signal input evals[43][3]; // Evaluations of the set polynomials at a challenge value z and gz
 
@@ -809,11 +696,11 @@ template StarkVerifier() {
     signal input s0_valsC[8][9];
 
     // Merkle proofs for each of the evaluations
-    signal input s0_siblings1[8][11][4];
-    signal input s0_siblings2[8][11][4];
-    signal input s0_siblings3[8][11][4];
-    signal input s0_siblings4[8][11][4];
-    signal input s0_siblingsC[8][11][4];
+    signal input s0_siblings1[8][9][4];
+    signal input s0_siblings2[8][9][4];
+    signal input s0_siblings3[8][9][4];
+    signal input s0_siblings4[8][9][4];
+    signal input s0_siblingsC[8][9][4];
 
     // Contains the root of the original polynomial and all the intermediate FRI polynomials except for the last step
     signal input s1_root[4];
@@ -822,9 +709,9 @@ template StarkVerifier() {
     // For each intermediate FRI polynomial and the last one, we store at vals the values needed to check the queries.
     // Given a query r,  the verifier needs b points to check it out, being b = 2^u, where u is the difference between two consecutive step
     // and the sibling paths for each query.
-    signal input s1_vals[8][48];
-    signal input s1_siblings[8][7][4];
-    signal input s2_vals[8][48];
+    signal input s1_vals[8][24];
+    signal input s1_siblings[8][6][4];
+    signal input s2_vals[8][24];
     signal input s2_siblings[8][3][4];
 
     // Evaluations of the final FRI polynomial over a set of points of size bounded its degree
@@ -850,7 +737,7 @@ template StarkVerifier() {
     signal s2_specialX[3];
 
     // Each of the queries values represented in binary
-    signal ys[8][11];
+    signal ys[8][9];
 
 
     ///////////
@@ -879,8 +766,8 @@ template StarkVerifier() {
     var s0_vals3_p[8][21][1];
     var s0_vals4_p[8][6][1];
     var s0_valsC_p[8][9][1];
-    var s1_vals_p[8][16][3]; 
-    var s2_vals_p[8][16][3]; 
+    var s1_vals_p[8][8][3]; 
+    var s2_vals_p[8][8][3]; 
 
     for (var q=0; q<8; q++) {
         // Preprocess vals for the initial FRI polynomial
@@ -902,56 +789,62 @@ template StarkVerifier() {
 
         // Preprocess vals for each folded polynomial
         for(var e=0; e < 3; e++) {
-            for(var c=0; c < 16; c++) {
+            for(var c=0; c < 8; c++) {
                 s1_vals_p[q][c][e] = s1_vals[q][c*3+e];
             }
-            for(var c=0; c < 16; c++) {
+            for(var c=0; c < 8; c++) {
                 s2_vals_p[q][c][e] = s2_vals[q][c*3+e];
             }
         }
     }
     
     ///////////
-    // FRI
+    // Verify Merkle Roots
     ///////////
 
+    //Calculate merkle root for s0 vals
     for (var q=0; q<8; q++) {
         
-        ///////////
-        // Verify Merkle Roots
-        ///////////
+        VerifyMerkleHash(1, 15, 512)(s0_vals1_p[q], s0_siblings1[q], ys[q], root1, enable);
+    }
+    for (var q=0; q<8; q++) {
+        VerifyMerkleHash(1, 6, 512)(s0_vals2_p[q], s0_siblings2[q], ys[q], root2, enable);
+    }
+    for (var q=0; q<8; q++) {
+        VerifyMerkleHash(1, 21, 512)(s0_vals3_p[q], s0_siblings3[q], ys[q], root3, enable);
+    }
+    for (var q=0; q<8; q++) {
+        VerifyMerkleHash(1, 6, 512)(s0_vals4_p[q], s0_siblings4[q], ys[q], root4, enable);
+    }
 
-        //Check that all that the root obtained using the values and the sibling path is the same as the one being sent as input 
-
-        //Calculate merkle root for s0 vals
-        VerifyMerkleHash(1, 15, 2048)(s0_vals1_p[q], s0_siblings1[q], ys[q], root1, enable);
-        VerifyMerkleHash(1, 6, 2048)(s0_vals2_p[q], s0_siblings2[q], ys[q], root2, enable);
-        VerifyMerkleHash(1, 21, 2048)(s0_vals3_p[q], s0_siblings3[q], ys[q], root3, enable);
-        VerifyMerkleHash(1, 6, 2048)(s0_vals4_p[q], s0_siblings4[q], ys[q], root4, enable);
-        VerifyMerkleHash(1, 9, 2048)(s0_valsC_p[q], s0_siblingsC[q], ys[q], rootC, enable);                                    
-
-    
+    for (var q=0; q<8; q++) {
+        VerifyMerkleHash(1, 9, 512)(s0_valsC_p[q], s0_siblingsC[q], ys[q], rootC, enable);                                    
+    }
+    for (var q=0; q<8; q++) {
         // Calculate merkle root for s1 vals
-        var s1_keys_merkle[7];
-        for(var i = 0; i < 7; i++) { s1_keys_merkle[i] = ys[q][i]; }
-        VerifyMerkleHash(3, 16, 128)(s1_vals_p[q], s1_siblings[q], s1_keys_merkle, s1_root, enable);
-
-    
+        var s1_keys_merkle[6];
+        for(var i = 0; i < 6; i++) { s1_keys_merkle[i] = ys[q][i]; }
+        VerifyMerkleHash(3, 8, 64)(s1_vals_p[q], s1_siblings[q], s1_keys_merkle, s1_root, enable);
+    }
+    for (var q=0; q<8; q++) {
         // Calculate merkle root for s2 vals
         var s2_keys_merkle[3];
         for(var i = 0; i < 3; i++) { s2_keys_merkle[i] = ys[q][i]; }
-        VerifyMerkleHash(3, 16, 8)(s2_vals_p[q], s2_siblings[q], s2_keys_merkle, s2_root, enable);
-
+        VerifyMerkleHash(3, 8, 8)(s2_vals_p[q], s2_siblings[q], s2_keys_merkle, s2_root, enable);
+    }
         
-        ///////////
-        // Verify FRI query
-        ///////////
 
-        // After checking that all merkle roots are properly built, the query and the intermediate 
-        // polynomials need to be verified 
+    ///////////
+    // Verify FRI query
+    ///////////
+
+    for (var q=0; q<8; q++) {
+
+    // After checking that all merkle roots are properly built, the query and the intermediate 
+    // polynomials need to be verified 
         // Verify that the query is properly constructed. This is done by checking that the linear combination of the set of 
         // polynomials committed during the different rounds evaluated at z matches with the commitment of the FRI polynomial (unsure)
-        VerifyQuery(11, 7)(ys[q], challenges[5], challenges[6], challenges[7], evals, s0_vals1[q], s0_vals2[q], s0_vals3[q], s0_vals4[q], s0_valsC[q], s1_vals_p[q], enable);
+        VerifyQuery(9, 6)(ys[q], challenges[5], challenges[6], challenges[7], evals, s0_vals1[q], s0_vals2[q], s0_vals3[q], s0_vals4[q], s0_valsC[q], s1_vals_p[q], enable);
 
         ///////////
         // Verify FRI construction
@@ -961,14 +854,14 @@ template StarkVerifier() {
         // Remember that if the step between polynomials is b = 2^l, the next polynomial p_(i+1) will have degree deg(p_i) / b
 
         // Check S1
-        var s1_ys[7];
-        for(var i = 0; i < 7; i++) { s1_ys[i] = ys[q][i]; }  
-        VerifyFRI(11, 11, 7, 3, 2635249152773512046)(s1_ys, s1_specialX, s1_vals_p[q], s2_vals_p[q], enable);
+        var s1_ys[6];
+        for(var i = 0; i < 6; i++) { s1_ys[i] = ys[q][i]; }  
+        VerifyFRI(9, 9, 6, 3, 2635249152773512046)(s1_ys, s1_specialX, s1_vals_p[q], s2_vals_p[q], enable);
 
         // Check S2
         var s2_ys[3];
         for(var i = 0; i < 3; i++) { s2_ys[i] = ys[q][i]; }  
-        VerifyFRI(11, 7, 3, 0, 11131999729878195124)(s2_ys, s2_specialX, s2_vals_p[q], finalPol, enable);
+        VerifyFRI(9, 6, 3, 0, 12421013511830570338)(s2_ys, s2_specialX, s2_vals_p[q], finalPol, enable);
     }
 
     VerifyFinalPol()(finalPol, enable);

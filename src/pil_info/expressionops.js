@@ -1,15 +1,6 @@
 
-const challengeMap = {
-    "u": 0,
-    "defVal": 1,
-    "gamma": 2,
-    "beta": 3,
-    "vc": 4,
-    "vf1": 5,
-    "vf2": 6,
-    "xi": 7
-};
-
+let challenges = {};
+let nChallenges = 0;
 class ExpressionOps {
 
     add(a, b) {
@@ -79,12 +70,13 @@ class ExpressionOps {
     }
 
     challenge(name) {
-        if (typeof challengeMap[name] == "undefined") {
-            throw new Error("challenge not defined "+name);
+        if (!name) throw new Error("Challenge name not defined");
+        if (challenges[name] === undefined) {
+            challenges[name] = nChallenges++;
         }
         return {
             op: "challenge",
-            id: challengeMap[name]
+            id: challenges[name],
         };
     }
 
@@ -109,15 +101,10 @@ class ExpressionOps {
         }
     }
 
-    xDivXSubXi() {
+    xDivXSubXi(opening) {
         return {
-            op: "xDivXSubXi"
-        }
-    }
-
-    xDivXSubWXi() {
-        return {
-            op: "xDivXSubWXi"
+            op: "xDivXSubXi",
+            id: opening
         }
     }
 

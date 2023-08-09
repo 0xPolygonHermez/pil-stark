@@ -15,8 +15,10 @@ const { interpolate, ifft, fft } = require("../helpers/fft/fft_p.js");
 const {BigBuffer} = require("pilcom");
 const { callCalculateExps, getPolRef } = require("../prover/prover_helpers.js");
 
-module.exports.initProverStark = async function initProverStark(pilInfo, constPols, constTree, logger) {
+module.exports.initProverStark = async function initProverStark(pilInfo, constPols, constTree, options = {}) {
     const ctx = {};
+
+    const logger = options.logger;
 
     ctx.prover = "stark";
 
@@ -57,8 +59,6 @@ module.exports.initProverStark = async function initProverStark(pilInfo, constPo
         logger.debug("-----------------------------");
     }
 
-    assert(1 << ctx.nBits == ctx.N, "N must be a power of 2");
-
     if (ctx.pilInfo.starkStruct.verificationHashType == "GL") {
         const poseidon = await buildPoseidonGL();
         ctx.MH = await buildMerklehashGL(ctx.pilInfo.starkStruct.splitLinearHash);
@@ -92,11 +92,10 @@ module.exports.initProverStark = async function initProverStark(pilInfo, constPo
     ctx.cm4_2ns = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm4_n*ctx.Next), BigBufferHandler);
     ctx.q_2ns = new Proxy(new BigBuffer(ctx.pilInfo.qDim*ctx.Next), BigBufferHandler);
     ctx.f_2ns = new Proxy(new BigBuffer(3*ctx.Next), BigBufferHandler);
-    ctx.x_2ns = new Proxy(new BigBuffer(ctx.N << ctx.extendBits), BigBufferHandler);
-    ctx.Zi_2ns = new Proxy(new BigBuffer(ctx.N << ctx.extendBits), BigBufferHandler);
+    ctx.x_2ns = new Proxy(new BigBuffer(ctx.Next), BigBufferHandler);
+    ctx.Zi_2ns = new Proxy(new BigBuffer(ctx.Next), BigBufferHandler);
 
-    ctx.xDivXSubXi_2ns = new Proxy(new BigBuffer((ctx.N << ctx.extendBits)*3), BigBufferHandler);
-    ctx.xDivXSubWXi_2ns = new Proxy(new BigBuffer((ctx.N << ctx.extendBits)*3), BigBufferHandler);
+    ctx.xDivXSubXi_2ns = new Proxy(new BigBuffer(3*ctx.Next*ctx.pilInfo.nFriOpenings), BigBufferHandler);
 
     // Build x_n
     let xx = ctx.F.one;
@@ -107,14 +106,14 @@ module.exports.initProverStark = async function initProverStark(pilInfo, constPo
 
     // Build x_2ns
     xx = ctx.F.shift;
-    for (let i=0; i<(ctx.N << ctx.extendBits); i++) {
+    for (let i=0; i<ctx.Next; i++) {
         ctx.x_2ns[i] = xx;
         xx = ctx.F.mul(xx, ctx.F.w[ctx.nBitsExt]);
     }
 
     // Build ZHInv
     const zhInv = buildZhInv(ctx.F, ctx.nBits, ctx.extendBits);
-    for (let i=0; i<(ctx.N << ctx.extendBits); i++) {
+    for (let i=0; i<ctx.Next; i++) {
         ctx.Zi_2ns[i] = zhInv(i);
     }
 
@@ -147,8 +146,7 @@ module.exports.computeQStark = async function computeQStark(ctx, logger) {
     await fft(qq2, ctx.pilInfo.qDim * ctx.pilInfo.qDeg, ctx.nBitsExt, ctx.cm4_2ns);
 
     if (logger) logger.debug("··· Merkelizing Q polynomial tree");
-    if (global.gc) {global.gc();}
-    ctx.trees[4] = await ctx.MH.merkelize(ctx.cm4_2ns, ctx.pilInfo.mapSectionsN.cm4_2ns, 1 << ctx.nBitsExt);
+    ctx.trees[4] = await ctx.MH.merkelize(ctx.cm4_2ns, ctx.pilInfo.mapSectionsN.cm4_2ns, ctx.Next);
 
     const nextChallenge = await module.exports.calculateChallengeStark(4, ctx);    
     return nextChallenge;
@@ -160,20 +158,25 @@ module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challen
     ctx.challenges[7] = challenge; // xi
     if (logger) logger.debug("··· challenges.xi: " + ctx.F.toString(ctx.challenges[7]));
 
-    let LEv = new Array(ctx.N);
-    let LpEv = new Array(ctx.N);
-    LEv[0] = 1n;
-    LpEv[0] = 1n;
-    const xis = ctx.F.div(ctx.challenges[7], ctx.F.shift);
-    const wxis = ctx.F.div(ctx.F.mul(ctx.challenges[7], ctx.F.w[ctx.nBits]), ctx.F.shift);
-    for (let k=1; k<ctx.N; k++) {
-        LEv[k] = ctx.F.mul(LEv[k-1], xis);
-        LpEv[k] = ctx.F.mul(LpEv[k-1], wxis);
+    let LEv = [];
+    const friOpenings = Object.keys(ctx.pilInfo.fri2Id);
+    for(let i = 0; i < ctx.pilInfo.nFriOpenings; i++) {
+        const opening = Number(friOpenings[i]);
+        const index = ctx.pilInfo.fri2Id[opening];
+        LEv[index] = new Array(ctx.N);
+        LEv[index][0] = 1n;
+        let w = 1n;
+        for(let j = 0; j < Math.abs(opening); ++j) {
+            w = ctx.F.mul(w, ctx.F.w[ctx.nBits]);
+        }
+        if(opening < 0) w = ctx.F.div(1n, w);
+        const xi = ctx.F.div(ctx.F.mul(ctx.challenges[7], w), ctx.F.shift);
+        for (let k=1; k<ctx.N; k++) {
+            LEv[index][k] = ctx.F.mul(LEv[index][k-1], xi);
+        }
+        LEv[index] = ctx.F.ifft(LEv[index]);
     }
-    LEv = ctx.F.ifft(LEv);
-    LpEv = ctx.F.ifft(LpEv);
 
-    if (global.gc) {global.gc();}
     ctx.evals = [];
     for (let i=0; i<ctx.pilInfo.evMap.length; i++) {
         const ev = ctx.pilInfo.evMap[i];
@@ -181,7 +184,7 @@ module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challen
         if (ev.type == "const") {
             p = {
                 buffer: ctx.const_2ns,
-                deg: 1<<ctx.nBitsExt,
+                deg: ctx.Next,
                 offset: ev.id,
                 size: ctx.pilInfo.nConstants,
                 dim: 1
@@ -191,7 +194,6 @@ module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challen
         } else {
             throw new Error("Invalid ev type: "+ ev.type);
         }
-        l = ev.prime ? LpEv : LEv;
         let acc = 0n;
         for (let k=0; k<ctx.N; k++) {
             let v;
@@ -204,7 +206,7 @@ module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challen
                     p.buffer[(k<<ctx.extendBits)*p.size + p.offset+2]
                 ];
             }
-            acc = ctx.F.add(acc, ctx.F.mul(v, l[k]));
+            acc = ctx.F.add(acc, ctx.F.mul(v, LEv[ctx.pilInfo.fri2Id[ev.prime]][k]));
         }
         ctx.evals[i] = acc;
     }
@@ -226,41 +228,42 @@ module.exports.computeFRIStark = async function computeFRIStark(ctx, challenge, 
     if (logger) logger.debug("··· challenges.v2: " + ctx.F.toString(ctx.challenges[6]));
 
 
-    // Calculate xDivXSubXi, xDivX4SubWXi
-    if (global.gc) {global.gc();}
-    const xi = ctx.challenges[7];
-    const wxi = ctx.F.mul(ctx.challenges[7], ctx.F.w[ctx.nBits]);
+    const friOpenings = Object.keys(ctx.pilInfo.fri2Id);
+    for(let i = 0; i < ctx.pilInfo.nFriOpenings; i++) {
+        const opening = friOpenings[i];
 
-    let tmp_den = new Array(ctx.N << ctx.extendBits);
-    let tmp_denw = new Array(ctx.N << ctx.extendBits);
-    let x = ctx.F.shift;
-    for (let k=0; k< ctx.N<<ctx.extendBits; k++) {
-        tmp_den[k] = ctx.F.sub(x, xi);
-        tmp_denw[k] = ctx.F.sub(x, wxi);
-        x = ctx.F.mul(x, ctx.F.w[ctx.nBits + ctx.extendBits])
-    }
-    tmp_den = ctx.F.batchInverse(tmp_den);
-    tmp_denw = ctx.F.batchInverse(tmp_denw);
-    x = ctx.F.shift;
-    for (let k=0; k< ctx.N<<ctx.extendBits; k++) {
-        const v = ctx.F.mul(tmp_den[k], x);
-        ctx.xDivXSubXi_2ns[3*k] = v[0];
-        ctx.xDivXSubXi_2ns[3*k + 1] = v[1];
-        ctx.xDivXSubXi_2ns[3*k + 2] = v[2];
+        let w = 1n;
+        for(let j = 0; j < Math.abs(opening); ++j) {
+            w = ctx.F.mul(w, ctx.F.w[ctx.nBits]);
+        }
+        if(opening < 0) w = ctx.F.div(1n, w);
 
-        const vw = ctx.F.mul(tmp_denw[k], x);
-        ctx.xDivXSubWXi_2ns[3*k] = vw[0];
-        ctx.xDivXSubWXi_2ns[3*k+1] = vw[1];
-        ctx.xDivXSubWXi_2ns[3*k+2] = vw[2];
+        let xi = ctx.F.mul(ctx.challenges[7], w);
 
-        x = ctx.F.mul(x, ctx.F.w[ctx.nBits + ctx.extendBits])
+        let den = new Array(ctx.Next);
+        let x = ctx.F.shift;
+
+        for (let k=0; k < ctx.Next; k++) {
+            den[k] = ctx.F.sub(x, xi);
+            x = ctx.F.mul(x, ctx.F.w[ctx.nBitsExt])
+        }
+        den = ctx.F.batchInverse(den);
+        x = ctx.F.shift;
+        for (let k=0; k < ctx.Next; k++) {
+            const v = ctx.F.mul(den[k], x);
+            ctx.xDivXSubXi_2ns[3*(k*ctx.pilInfo.nFriOpenings + ctx.pilInfo.fri2Id[opening])] = v[0];
+            ctx.xDivXSubXi_2ns[3*(k*ctx.pilInfo.nFriOpenings + ctx.pilInfo.fri2Id[opening]) + 1] = v[1];
+            ctx.xDivXSubXi_2ns[3*(k*ctx.pilInfo.nFriOpenings + ctx.pilInfo.fri2Id[opening]) + 2] = v[2];
+    
+            x = ctx.F.mul(x, ctx.F.w[ctx.nBitsExt])
+        }
     }
 
     await callCalculateExps("step52ns", "2ns", ctx, parallelExec, useThreads);
 
-    const friPol = new Array(ctx.N<<ctx.extendBits);
+    const friPol = new Array(ctx.Next);
 
-    for (let i=0; i<ctx.N<<ctx.extendBits; i++) {
+    for (let i=0; i<ctx.Next; i++) {
         friPol[i] = [
             ctx.f_2ns[i*3],
             ctx.f_2ns[i*3 + 1],
@@ -278,7 +281,6 @@ module.exports.computeFRIStark = async function computeFRIStark(ctx, challenge, 
         ];
     }
 
-    if (global.gc) {global.gc();}
     ctx.friProof = await ctx.fri.prove(ctx.transcript, friPol, queryPol);
 }
 
@@ -310,13 +312,25 @@ module.exports.extendAndMerkelize = async function  extendAndMerkelize(stage, ct
     await interpolate(buffFrom, nPols, ctx.nBits, buffTo, ctx.nBitsExt);
     
     if (logger) logger.debug("··· Merkelizing Stage " + stage);
-    ctx.trees[stage] = await ctx.MH.merkelize(buffTo, nPols, 1 << ctx.nBitsExt);
+    ctx.trees[stage] = await ctx.MH.merkelize(buffTo, nPols, ctx.Next);
 
     const nextChallenge = await module.exports.calculateChallengeStark(stage, ctx);    
     return nextChallenge;
 
 }
 
+module.exports.setChallengesStark = function setChallengesStark(stage, ctx, challenge) {
+    let challengesIndex = ctx.pilInfo["cm" + stage + "_challenges"];
+
+    if(challengesIndex.length === 0) throw new Error("No challenges needed for stage " + stage);
+
+    ctx.challenges[challengesIndex[0]] = challenge;
+    for (let i=1; i<challengesIndex.length; i++) {
+        const index = challengesIndex[i];
+        ctx.challenges[index] = ctx.transcript.getField();
+    }
+    return;
+}
 
 module.exports.calculateChallengeStark = async function calculateChallengeStark(stage, ctx) {
     if(stage === 1) {

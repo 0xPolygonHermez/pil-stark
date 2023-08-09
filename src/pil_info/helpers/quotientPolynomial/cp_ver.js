@@ -34,7 +34,7 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
             const rf = {
                 type: "cm",
                 id: res.qs[i],
-                prime: false,
+                prime: 0,
             };
             res.evMap.push(rf);
         }
@@ -43,14 +43,14 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
     function fixRef(r, ctx) {
         const p = r.prime ? 1 : 0;
         switch (r.type) {
+            // Check the expressions ids. If it is an intermediate polynomial (can be found in imExpsList) 
+            // modify the type and set it as a commit;
             case "exp":
                 const idx = res.imExpsList.indexOf(r.id);
                 if (idx >= 0) {
-                    r.type = "cm";
+                    r.type = "cm"; 
                     r.id = res.imExp2cm[res.imExpsList[idx]];
-                    // Treat it as a commit.
                 } else {
-                    const p = r.prime ? 1 : 0;
                     if (typeof ctx.expMap[p][r.id] === "undefined") {
                         ctx.expMap[p][r.id] = ctx.code.tmpUsed ++;
                     }
@@ -66,7 +66,7 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
                     const rf = {
                         type: r.type,
                         id: r.id,
-                        prime: r.prime ? true : false,
+                        prime: p
                     };
                     res.evMap.push(rf);
                 }

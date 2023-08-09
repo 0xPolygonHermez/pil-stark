@@ -140,9 +140,7 @@ class Transcript {
         } else if (r.type == "Z") {
             return "Z";
         } else if (r.type == "xDivXSubXi") {
-            return "xDivXSubXi";
-        } else if (r.type == "xDivXSubWXi") {
-            return "xDivXSubWXi";
+            return "xDivXSubXi[" + starkInfo.fri2Id[r.id] + "]";
         } else if (r.type == "tmp") {
             return "tmp_"+r.id;
         } else if (r.type == "tree1") {
@@ -439,11 +437,17 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
         xacc[i] <== xacc[i-1] * ( ys[i]*(roots(<%- starkStruct.steps[0].nBits %> - i) - 1) +1);
     }
 
-    signal den1inv[3] <== CInv()([xacc[<%- starkStruct.steps[0].nBits-1 %>] - challenges7[0], -challenges7[1], -challenges7[2]]);
-    signal xDivXSubXi[3] <== [xacc[<%- starkStruct.steps[0].nBits-1 %>] * den1inv[0], xacc[<%- starkStruct.steps[0].nBits-1 %>] * den1inv[1], xacc[<%- starkStruct.steps[0].nBits-1 %>] * den1inv[2]];
+    signal xDivXSubXi[<%- starkInfo.nFriOpenings %>][3];
 
-    signal den2inv[3] <== CInv()([xacc[<%- starkStruct.steps[0].nBits-1 %>] - roots(<%- starkStruct.nBits %>)*challenges7[0], -roots(<%- starkStruct.nBits %>)*challenges7[1],-roots(<%- starkStruct.nBits %>)*challenges7[2] ]);
-    signal xDivXSubWXi[3] <== [xacc[<%- starkStruct.steps[0].nBits-1 %>] * den2inv[0], xacc[<%- starkStruct.steps[0].nBits-1 %>] * den2inv[1],  xacc[<%- starkStruct.steps[0].nBits-1 %>] * den2inv[2]];
+<%  for(var i=0; i<starkInfo.nFriOpenings; ++i) { -%>
+<%  const opening = Number(Object.keys(starkInfo.fri2Id)[i]); -%>
+<%  let root = "1"; -%>
+<%  for(let j = 0; j < Math.abs(opening); ++j) {
+        root += ` * ${opening > 0 ? "roots" : "invroots"}(${starkStruct.nBits})`; 
+   } -%>
+    signal den<%- i %>inv[3] <== CInv()([xacc[<%- starkStruct.steps[0].nBits-1 %>] - <%- root %> * challenges7[0], - <%- root %> * challenges7[1], - <%- root %> * challenges7[2]]);
+    xDivXSubXi[<%- starkInfo.fri2Id[opening] %>] <== [xacc[<%- starkStruct.steps[0].nBits-1 %>] * den<%- i %>inv[0], xacc[<%- starkStruct.steps[0].nBits-1 %>] * den<%- i %>inv[1],  xacc[<%- starkStruct.steps[0].nBits-1 %>] * den<%- i %>inv[2]];
+<%  } -%>
 
 <% const evalQ = unrollCode(starkInfo.verifierQueryCode.first) -%>
 

@@ -160,7 +160,8 @@ class FRI {
                 if (si < this.steps.length - 1) {
                     const nextNGroups = 1 << this.steps[si+1].nBits
                     const groupIdx  =Math.floor(ys[i] / nextNGroups);
-                    if (!F.eq(get3(proof[si+1].polQueries[i][0], groupIdx), ev)) return false;
+                    const query = proof[si+1].polQueries[i][0];
+                    if (!F.eq([query[groupIdx*3], query[groupIdx*3+1], query[groupIdx*3+2]], ev)) return false;
                 } else {
                     if (!F.eq(proof[si+1][ys[i]], ev)) return false;
                 }
@@ -212,10 +213,6 @@ function split3(arr) {
         res.push([arr[i], arr[i+1], arr[i+2]]);
     }
     return res;
-}
-
-function get3(arr, idx) {
-    return [arr[idx*3], arr[idx*3+1], arr[idx*3+2]];
 }
 
 function getTransposedBuffer(pol, trasposeBits) {

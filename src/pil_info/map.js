@@ -339,7 +339,6 @@ module.exports = function map(res, pil, stark) {
                 case "tmpExp":
                     break;
                 case "xDivXSubXi":
-                case "xDivXSubWXi": 
                 case "f":
                     if(!stark) throw new Error("Invalid reference type" + r.type);
                     break;
@@ -415,7 +414,6 @@ function getExpDim(pil, expId, stark) {
                     return 1;
                 }
             case "xDivXSubXi":
-            case "xDivXSubWXi":
                 if(stark) return 3;
                 throw new Error("Exp op not defined: " + exp.op);
             default: throw new Error("Exp op not defined: " + exp.op);
@@ -489,7 +487,6 @@ function setCodeDimensions(code, pilInfo, dimX, stark) {
                     d=stark ? 3 : 1; 
                     break;
                 case "xDivXSubXi": 
-                case "xDivXSubWXi": 
                     if(stark) {
                         d=dimX; 
                         break;

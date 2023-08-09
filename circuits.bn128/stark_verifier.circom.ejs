@@ -158,9 +158,7 @@ class Transcript {
         } else if (r.type == "Z") {
             return "Z";
         } else if (r.type == "xDivXSubXi") {
-            return "xDivXSubXi";
-        } else if (r.type == "xDivXSubWXi") {
-            return "xDivXSubWXi";
+            return "xDivXSubXi[" + starkInfo.fri2Id[r.id] + "]";
         } else if (r.type == "tmp") {
             return "tmp_"+r.id;
         } else if (r.type == "tree1") {
@@ -475,14 +473,25 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     signal X <== ys[0]*(<%- F.shift %> * roots(<%- starkStruct.steps[0].nBits %>)-<%- F.shift %>) + <%- F.shift %>;
 <% }                                    -%>
 
+    signal xDivXSubXi[<%- starkInfo.nFriOpenings %>][3];
 
-    signal den1inv[3] <== GLCInv()([X - challenges7[0] + p, -challenges7[1] + p, -challenges7[2] + p]);
-    signal xDivXSubXi[3] <== GLCMul()([X, 0, 0], den1inv);
-    
-    signal wXi[3] <== GLCMul()([roots(<%- starkStruct.nBits %>), 0, 0], challenges7);
-    signal den2inv[3] <== GLCInv()([X - wXi[0] + p, -wXi[1] + p, -wXi[2] + p]);
-    signal xDivXSubWXi[3] <== GLCMul()([X, 0, 0], den2inv);
-   
+<%  for(var i=0; i<starkInfo.nFriOpenings; ++i) { -%>
+<%  const opening = Number(Object.keys(starkInfo.fri2Id)[i]); -%>
+<%  if (opening) { -%>
+    signal w<%- i %>[<%- opening %>][3];
+    w<%- i %>[0] <== GLCMul()([roots(<%- starkStruct.nBits %>), 0, 0], challenges7);
+<%      for(let j = 1; j < Math.abs(opening); ++j) { -%>
+<%  let rootsFunction = opening > 0 ? 'roots' : 'rootsInv'; -%>
+    w<%- i %>[<%- j %>] <== GLCMul()([<%- rootsFunction %>(<%- starkStruct.nBits %>), 0, 0], w<%- i %>[<%- j-1 %>]);
+<%      } -%>
+    signal den<%- i %>inv[3] <== GLCInv()([X - w<%- i %>[<%- opening - 1 %>][0] + p, -w<%- i %>[<%- opening - 1 %>][1] + p, -w<%- i %>[<%- opening - 1 %>][2] + p]);
+<%  } else { -%>
+    signal den<%- i %>inv[3] <== GLCInv()([X - challenges7[0] + p, -challenges7[1] + p, -challenges7[2] + p]);
+<%  } -%>
+    xDivXSubXi[<%- starkInfo.fri2Id[opening] %>] <== GLCMul()([X, 0, 0], den<%- i %>inv);
+
+<%  } -%>
+
 <% const evalQ = unrollCode(starkInfo.verifierQueryCode.first) -%>
 
     // Final Normalization

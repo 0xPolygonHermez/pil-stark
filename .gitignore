@@ -3,5 +3,10 @@ node_modules
 dist
 tmp/*
 
-test/compressor/verifier.r1cs
-test/final/verifier.r1cs
+test/compressor/verifier*
+!test/compressor/verifier.circom
+!test/compressor/verifier.proof.zkin.json
+
+test/final/verifier*
+!test/final/verifier.circom
+!test/final/verifier.proof.zkin.json
