@@ -149,8 +149,8 @@ class Transcript {
             return "mapValues.tree2_" + (r.id - starkInfo.nCm1);
         } else if (r.type == "tree3") {
             return "mapValues.tree3_" + (r.id - starkInfo.nCm1 - starkInfo.nCm2);
-        } else if (r.type == "tree4") {
-            return "mapValues.tree4_" + (r.id - starkInfo.nCm1 - starkInfo.nCm2 - starkInfo.nCm3 );
+        } else if (r.type == "treeQ") {
+            return "mapValues.treeQ_" + (r.id - starkInfo.nCm1 - starkInfo.nCm2 - starkInfo.nCm3 );
         } else if (r.type == "const") {
             return "consts[" + r.id + "]";
         } else if (r.type == "number") {
@@ -253,7 +253,7 @@ template Transcript() {
     signal input root1[4]; 
     signal input root2[4]; 
     signal input root3[4]; 
-    signal input root4[4];
+    signal input rootQ[4];
     signal input evals[<%- starkInfo.evMap.length %>][3]; 
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
     signal input s<%- s %>_root[4];
@@ -277,7 +277,7 @@ template Transcript() {
     transcript.getField("challenges[3]", 3);
     transcript.put("root3", 4);
     transcript.getField("challenges[4]", 3);
-    transcript.put("root4", 4);
+    transcript.put("rootQ", 4);
     transcript.getField("challenges[7]", 3);
     for (let i=0; i<starkInfo.evMap.length; i++) {
         transcript.put(`evals[${i}]`, 3);
@@ -412,7 +412,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
     signal input tree3[<%- starkInfo.mapSectionsN.cm3_2ns %>];
 <% }                                         -%>
-    signal input tree4[<%- starkInfo.mapSectionsN.cm4_2ns %>];
+    signal input treeQ[<%- starkInfo.mapSectionsN.cmQ_2ns %>];
     signal input consts[<%- starkInfo.nConstants %>];
     signal input s0_vals[1<< nextStep][3];
     signal input enable;
@@ -429,7 +429,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
     mapValues.vals3 <== tree3;
 <% }                                         -%>
-    mapValues.vals4 <== tree4;
+    mapValues.valsQ <== treeQ;
 
     signal xacc[<%- starkStruct.steps[0].nBits %>];
     xacc[0] <== ys[0]*(<%- F.shift %> * roots(<%- starkStruct.steps[0].nBits %>)-<%- F.shift %>) + <%- F.shift %>;
@@ -478,27 +478,28 @@ template MapValues() {
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
     signal input vals3[<%- starkInfo.mapSectionsN.cm3_2ns %>];
 <% }                                         -%>
-    signal input vals4[<%- starkInfo.mapSectionsN.cm4_2ns  %>];
+    signal input valsQ[<%- starkInfo.mapSectionsN.cmQ_2ns  %>];
 
-<% const sNames = [null, "cm1_2ns", "cm2_2ns", "cm3_2ns", "cm4_2ns"];              -%>
-<% for (let t = 1; t<=4; t++) {                                                  -%>
-<%      for (let i=0; i< starkInfo.mapSections[sNames[t]].length; i++) {        -%>
-<%          const p = starkInfo.varPolMap[starkInfo.mapSections[sNames[t]][i]];  -%>
+<% for (let t = 1; t<=starkInfo.nStages + 2; t++) {                              -%>
+<%      let index = t === starkInfo.nStages + 2 ? "Q" : t;                       -%>
+<%      for (let i=0; i< starkInfo.mapSections["cm" + index + "_2ns"].length; i++) {        -%>
+<%          const p = starkInfo.varPolMap[starkInfo.mapSections["cm" + index + "_2ns"][i]];  -%>
 <%          if (p.dim == 1) {                                                    -%>
-    signal output tree<%- t %>_<%- i %>;
+    signal output tree<%- index %>_<%- i %>;
 <%          } else if (p.dim == 3) {                                             -%>
-    signal output tree<%- t %>_<%- i %>[3];
+    signal output tree<%- index %>_<%- i %>[3];
 <%          } else throw new Error("Invalid dim")                                -%>
 <%      }                                                                        -%>
 <% }                                                                             -%>
 
-<% for (let t = 1; t<=4; t++) {                                                   -%>
-<%      for (let i=0; i< starkInfo.mapSections[sNames[t]].length; i++) {        -%>
-<%          const p = starkInfo.varPolMap[starkInfo.mapSections[sNames[t]][i]];  -%>
+<% for (let t = 1; t<=starkInfo.nStages + 2; t++) {                              -%>
+<%      let index = t === starkInfo.nStages + 2 ? "Q" : t;                       -%>
+<%      for (let i=0; i< starkInfo.mapSections["cm" + index + "_2ns"].length; i++) {         -%>
+<%          const p = starkInfo.varPolMap[starkInfo.mapSections["cm" + index + "_2ns"][i]];  -%>
 <%          if (p.dim == 1) {                                                    -%>
-    tree<%- t %>_<%- i %> <== vals<%- t %>[<%- p.sectionPos %>];
+    tree<%- index %>_<%- i %> <== vals<%- index %>[<%- p.sectionPos %>];
 <%          } else if (p.dim == 3) {                                             -%>
-    tree<%- t %>_<%- i %> <== [vals<%- t %>[<%- p.sectionPos %>],vals<%- t %>[<%- p.sectionPos + 1 %>] , vals<%- t %>[<%- p.sectionPos + 2 %>]];
+    tree<%- index %>_<%- i %> <== [vals<%- index %>[<%- p.sectionPos %>],vals<%- index %>[<%- p.sectionPos + 1 %>] , vals<%- index %>[<%- p.sectionPos + 2 %>]];
 <%          } else throw new Error("Invalid dim")                                -%>
 <%      }                                                                        -%>
 <% }                                                                             -%>
@@ -536,7 +537,7 @@ template StarkVerifier() {
     signal input root1[4]; // Merkle tree root of the evaluations of all trace polynomials
     signal input root2[4]; // Merkle tree root of the evaluations of polynomials h1 and h2 used for the plookup
     signal input root3[4]; // Merkle tree root of the evaluations of the grand product polynomials (Z) 
-    signal input root4[4]; // Merkle tree root of the evaluations of the quotient Q1 and Q2 polynomials
+    signal input rootQ[4]; // Merkle tree root of the evaluations of the quotient Q1 and Q2 polynomials
 
     // Notice that root2 and root3 can be zero depending on the STARK being verified 
 
@@ -557,7 +558,7 @@ template StarkVerifier() {
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
     signal input s0_vals3[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm3_2ns %>];
 <% }                                         -%>
-    signal input s0_vals4[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm4_2ns %>];
+    signal input s0_valsQ[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cmQ_2ns %>];
     signal input s0_valsC[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants %>];
 
     // Merkle proofs for each of the evaluations
@@ -623,7 +624,7 @@ template StarkVerifier() {
     // Calculate challenges, s_i special and queries
     ///////////
 
-    (challenges,ys,<%- si_specials.join(",") %>) <== Transcript()(publics,root1,root2,root3,root4,evals, <%- si_roots.join(",") %>,finalPol);
+    (challenges,ys,<%- si_specials.join(",") %>) <== Transcript()(publics,root1,root2,root3,rootQ,evals, <%- si_roots.join(",") %>,finalPol);
 
     ///////////
     // Check constraints polynomial in the evaluation point
@@ -651,7 +652,7 @@ template StarkVerifier() {
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
     var s0_vals3_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm3_2ns %>][1];
 <% } -%>
-    var s0_vals4_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm4_2ns %>][1];
+    var s0_valsQ_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cmQ_2ns %>][1];
     var s0_valsC_p[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants %>][1];
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
     var s<%- s %>_vals_p[<%- starkStruct.nQueries %>][<%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits)) %>][3]; 
@@ -672,8 +673,8 @@ template StarkVerifier() {
             s0_vals3_p[q][i][0] = s0_vals3[q][i];
         }
 <% } -%>
-        for (var i = 0; i < <%- starkInfo.mapSectionsN.cm4_2ns %>; i++) {
-            s0_vals4_p[q][i][0] = s0_vals4[q][i];
+        for (var i = 0; i < <%- starkInfo.mapSectionsN.cmQ_2ns %>; i++) {
+            s0_valsQ_p[q][i][0] = s0_valsQ[q][i];
         }
         for (var i = 0; i < <%- starkInfo.nConstants %>; i++) {
             s0_valsC_p[q][i][0] = s0_valsC[q][i];
@@ -709,7 +710,7 @@ template StarkVerifier() {
     }
 <% }     -%>
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm4_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals4_p[q], s0_siblings4[q], ys[q], root4, enable);
+        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cmQ_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_valsQ_p[q], s0_siblings4[q], ys[q], rootQ, enable);
     }
 
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
@@ -742,7 +743,7 @@ template StarkVerifier() {
     if(starkInfo.mapSectionsN.cm3_2ns > 0) {
         queryVals.push("s0_vals3[q]");
     }
-    queryVals.push("s0_vals4[q]");
+    queryVals.push("s0_valsQ[q]");
     queryVals.push("s0_valsC[q]");
 -%>
         // Verify that the query is properly constructed. This is done by checking that the linear combination of the set of 

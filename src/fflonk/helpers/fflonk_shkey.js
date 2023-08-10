@@ -24,7 +24,7 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
         3: {},
     };
 
-    const nStages = 4;
+    const nStages = fflonkInfo.nStages + 2;
     let fiNames = {};
     let fiIndex = 0;
 

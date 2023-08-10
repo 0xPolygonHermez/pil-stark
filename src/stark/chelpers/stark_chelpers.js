@@ -83,31 +83,31 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_42ns(starkInfo, "step42ns_first", starkInfo.step42ns.first, "2ns"));
-        result.step42ns_parser = code.join("\n\n") + "\n";
+        code.push(compileCode_42ns(starkInfo, "stepQ2ns_first", starkInfo.stepQ2ns.first, "2ns"));
+        result.stepQ2ns_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
-    code.push(compileCode("step42ns_first", starkInfo.step42ns.first, "2ns"));
-    code.push(compileCode("step42ns_i", starkInfo.step42ns.first, "2ns"));
-    code.push(compileCode("step42ns_last", starkInfo.step42ns.first, "2ns"));
+    code.push(compileCode("stepQ2ns_first", starkInfo.stepQ2ns.first, "2ns"));
+    code.push(compileCode("stepQ2ns_i", starkInfo.stepQ2ns.first, "2ns"));
+    code.push(compileCode("stepQ2ns_last", starkInfo.stepQ2ns.first, "2ns"));
 
     if (multipleCodeFiles) {
-        result.step42ns = code.join("\n\n") + "\n";
+        result.stepQ2ns = code.join("\n\n") + "\n";
         code.length = 0;
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_52ns(starkInfo, "step52ns_first", starkInfo.step52ns.first, "2ns"));
-        result.step52ns_parser = code.join("\n\n") + "\n";
+        code.push(compileCode_52ns(starkInfo, "stepEv2ns_first", starkInfo.stepEv2ns.first, "2ns"));
+        result.stepEv2ns_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
 
-    code.push(compileCode("step52ns_first", starkInfo.step52ns.first, "2ns"));
-    code.push(compileCode("step52ns_i", starkInfo.step52ns.first, "2ns"));
-    code.push(compileCode("step52ns_last", starkInfo.step52ns.first, "2ns"));
+    code.push(compileCode("stepEv2ns_first", starkInfo.stepEv2ns.first, "2ns"));
+    code.push(compileCode("stepEv2ns_i", starkInfo.stepEv2ns.first, "2ns"));
+    code.push(compileCode("stepEv2ns_last", starkInfo.stepEv2ns.first, "2ns"));
 
     if (multipleCodeFiles) {
-        result.step52ns = code.join("\n\n") + "\n";
+        result.stepEv2ns = code.join("\n\n") + "\n";
         return result;
     }
 

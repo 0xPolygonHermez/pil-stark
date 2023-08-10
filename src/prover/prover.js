@@ -50,10 +50,10 @@ module.exports = async function proofGen(cmPols, pilInfo, constTree, constPols, 
         challenge = await getChallenge(3, ctx);
     }
 
-    // STAGE 4. Trace Quotient Polynomials
-    await stage4(ctx, challenge, parallelExec, useThreads, logger);
-
-    challenge = await getChallenge(4, ctx);
+    // STAGE Q. Trace Quotient Polynomials
+    await stageQ(ctx, challenge, parallelExec, useThreads, logger);
+    
+    challenge = await getChallenge("Q", ctx);
 
     if(ctx.prover === "stark") {
         // STAGE 5. Compute Evaluations
@@ -83,11 +83,8 @@ async function stage1(ctx, logger) {
 async function stage2(ctx, challenge, parallelExec, useThreads, logger) {
     if(ctx.prover === "fflonk" && !ctx.pilInfo.nCm2 && ctx.pilInfo.peCtx.length === 0) return;
 
-    setChallenges(2, ctx, challenge);
-
-    if (logger) logger.debug("··· challenges.alpha: " + ctx.F.toString(ctx.challenges[0]));
-    if (logger) logger.debug("··· challenges.beta: " + ctx.F.toString(ctx.challenges[1]));        
-
+    setChallenges(2, ctx, challenge, logger);
+    
     if (ctx.prover === "fflonk" && !ctx.pilInfo.nCm2) return;
 
     if (logger) logger.debug("> STAGE 2. Compute Inclusion Polynomials");
@@ -114,10 +111,7 @@ async function stage3(ctx, challenge, parallelExec, useThreads, logger) {
 
     if (logger) logger.debug("> STAGE 3. Compute Grand Product and Intermediate Polynomials");
 
-    setChallenges(3, ctx, challenge);
-
-    if (logger) logger.debug("··· challenges.gamma: " + ctx.F.toString(ctx.challenges[2]));
-    if (logger) logger.debug("··· challenges.delta: " + ctx.F.toString(ctx.challenges[3]));
+    setChallenges(3, ctx, challenge, logger);
 
     // STEP 3.2 - Compute stage 3 polynomials --> Plookup Z, Permutations Z & ConnectionZ polynomials
     const nPlookups = ctx.pilInfo.puCtx.length;
@@ -161,21 +155,19 @@ async function stage3(ctx, challenge, parallelExec, useThreads, logger) {
         setPol(ctx, ctx.pilInfo.cm_n[nCm3 + nPlookups + nPermutations + i], z);
     }
 
-    await callCalculateExps("step3", "n", ctx, parallelExec, useThreads);
+    await callCalculateExps("stepQprev", "n", ctx, parallelExec, useThreads);
 
     ctx.prover === "stark" ? await extendAndMerkelize(3, ctx) : await extendAndCommit(3, ctx, logger);
 } 
 
-async function stage4(ctx, challenge, parallelExec, useThreads, logger) {
+async function stageQ(ctx, challenge, parallelExec, useThreads, logger) {
     if (logger) logger.debug("> STAGE 4. Compute Trace Quotient Polynomials");
 
     // Compute challenge a
-    setChallengesStark(4, ctx, challenge);
+    setChallenges("Q", ctx, challenge, logger);
     
-    if (logger) logger.debug("··· challenges.a: " + ctx.F.toString(ctx.challenges[4]));
-
     // STEP 4.2 - Compute stage 4 polynomial --> Q polynomial
-    await callCalculateExps("step42ns", "2ns", ctx, parallelExec, useThreads);
+    await callCalculateExps("stepQ2ns", "2ns", ctx, parallelExec, useThreads);
 
     ctx.prover === "stark" ? await computeQStark(ctx, logger) : await computeQFflonk(ctx, logger);    
 }
@@ -188,10 +180,10 @@ async function getChallenge(stage, ctx) {
     }
 }
 
-async function setChallenges(stage, ctx, challenge) {
+async function setChallenges(stage, ctx, challenge, logger) {
     if(ctx.prover === "stark") {
-        setChallengesStark(stage, ctx, challenge);
+        setChallengesStark(stage, ctx, challenge, logger);
     } else {
-        setChallengesFflonk(stage, ctx, challenge);
+        setChallengesFflonk(stage, ctx, challenge, logger);
     }
 }

@@ -1128,7 +1128,7 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
     argsString += "};"
 
     // join operations
-    if (functionName == "step42ns_first") {
+    if (functionName == "stepQ2ns_first") {
         assert(0);
         //Not suported at this moment due to 2ns
     } else if (functionName == "step3_first") {

@@ -70,7 +70,7 @@ function setDimensions(code) {
             case "tree1": d=r.dim; break;
             case "tree2": d=r.dim; break;
             case "tree3": d=r.dim; break;
-            case "tree4": d=r.dim; break;
+            case "treeQ": d=r.dim; break;
             case "const": d=1; break;
             case "eval": d=3; break;
             case "number": d=1; break;

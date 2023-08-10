@@ -55,7 +55,7 @@ module.exports.initProverFflonk = async function initProver(pilInfo, zkey, logge
         logger.debug(`  Stage 1 pols:   ${ctx.pilInfo.nCm1}`);
         logger.debug(`  Stage 2 pols:   ${ctx.pilInfo.nCm2}`);
         logger.debug(`  Stage 3 pols:   ${ctx.pilInfo.nCm3}`);
-        logger.debug(`  Stage 4 pols:   ${nQ}`);
+        logger.debug(`  Stage Q pols:   ${nQ}`);
         logger.debug(`  Temp exp pols: ${ctx.pilInfo.mapSectionsN.tmpExp_n}`);
         logger.debug("-----------------------------");
     }
@@ -158,14 +158,12 @@ module.exports.computeQFflonk = async function computeQ(ctx, logger) {
         ctx.nonCommittedPols.push("Q");
     }
 
-    // STEP 4.3 - Commit stage 4 polynomials
-    let commitsStage4 = await commit(4, ctx.zkey, ctx, ctx.zkey.pTau, ctx.curve, { multiExp: true, logger });
-    commitsStage4.forEach((com) => ctx.committedPols[`${com.index}`] = { commit: com.commit, pol: com.pol });
+    const stage = ctx.pilInfo.nStages + 2;
 
-    commitsStage4.forEach((com) => console.log(com.index, ctx.curve.G1.toString(com.commit)));
+    let commitsStageQ = await commit(stage, ctx.zkey, ctx, ctx.zkey.pTau, ctx.curve, { multiExp: true, logger });
+    commitsStageQ.forEach((com) => ctx.committedPols[`${com.index}`] = { commit: com.commit, pol: com.pol });
 
-    const nextChallenge = await module.exports.calculateChallengeFflonk(4, ctx);
-    return nextChallenge;
+    commitsStageQ.forEach((com) => console.log(com.index, ctx.curve.G1.toString(com.commit)));
 }
 
 module.exports.computeOpeningsFflonk = async function computeOpenings(ctx,challenge, logger) {
@@ -215,18 +213,20 @@ module.exports.genProofFflonk = async function genProof(ctx, logger) {
     return {proof, publics};
 }
 
-module.exports.setChallengesFflonk = function setChallengesFflonk(stage, ctx, challenge) {
+module.exports.setChallengesFflonk = function setChallengesFflonk(stage, ctx, challenge, logger) {
     let challengesIndex = ctx.pilInfo["cm" + stage + "_challenges"];
 
     if(challengesIndex.length === 0) throw new Error("No challenges needed for stage " + stage);
 
     ctx.challenges[challengesIndex[0]] = challenge;
+    if (logger) logger.debug("··· challenges[" + challengesIndex[0] + "]: " + ctx.F.toString(ctx.challenges[challengesIndex[0]]));
     for (let i=1; i<challengesIndex.length; i++) {
         const previousIndex = challengesIndex[i-1];
         const index = challengesIndex[i];
         ctx.transcript.reset();
         ctx.transcript.addScalar(ctx.challenges[previousIndex]);
         ctx.challenges[index] = ctx.transcript.getChallenge();
+        if (logger) logger.debug("··· challenges[" + challengesIndex[i] + "]: " + ctx.F.toString(ctx.challenges[challengesIndex[i]]));
     }
     return;
 }
@@ -248,12 +248,14 @@ module.exports.calculateChallengeFflonk = async function calculateChallengeFflon
     }
 
     let challengesIndex = ctx.pilInfo["cm" + stage + "_challenges"];
-
+    
     if(challengesIndex) {
         const lastChallengeIndex = challengesIndex[challengesIndex.length - 1];
         const challenge = ctx.challenges[lastChallengeIndex];
         ctx.transcript.addScalar(challenge);
     }
+
+    if(stage === "Q") stage = ctx.pilInfo.nStages + 2;
 
     const commitsStage = ctx.zkey.f.filter(f => f.stages[0].stage === stage).map(f => `f${f.index}_${stage}`);
     for(let i = 0; i < commitsStage.length; i++) {

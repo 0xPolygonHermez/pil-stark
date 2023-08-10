@@ -4,7 +4,7 @@ module.exports.proof2zkin = function proof2zkin(p) {
     zkin.root1 = p.root1;
     zkin.root2 = p.root2;
     zkin.root3 = p.root3;
-    zkin.root4 = p.root4;
+    zkin.rootQ = p.rootQ;
     zkin.evals = p.evals;
 
     const friProof = p.fri;
@@ -26,7 +26,7 @@ module.exports.proof2zkin = function proof2zkin(p) {
     if (friProof[0].polQueries[0][2][0].length) {
         zkin.s0_vals3 = [];
     }
-    zkin.s0_vals4 = [];
+    zkin.s0_valsQ = [];
     zkin.s0_valsC = [];
     zkin.s0_siblings1 = [];
     if (friProof[0].polQueries[0][1][0].length) {
@@ -60,7 +60,7 @@ module.exports.proof2zkin = function proof2zkin(p) {
             zkin.s0_siblings3[i] = friProof[0].polQueries[i][2][1];
         }
 
-        zkin.s0_vals4[i] = friProof[0].polQueries[i][3][0];
+        zkin.s0_valsQ[i] = friProof[0].polQueries[i][3][0];
         zkin.s0_siblings4[i] = friProof[0].polQueries[i][3][1];
 
         zkin.s0_valsC[i] = friProof[0].polQueries[i][4][0];

@@ -19,7 +19,7 @@ template Transcript() {
     signal input root1[4]; 
     signal input root2[4]; 
     signal input root3[4]; 
-    signal input root4[4];
+    signal input rootQ[4];
     signal input evals[43][3]; 
     signal input s1_root[4];
     signal input s2_root[4];
@@ -53,7 +53,7 @@ template Transcript() {
         _ <== transcriptHash_2[i]; // Unused transcript values 
     }
     
-    signal transcriptHash_3[12] <== Poseidon(12)([root4[0],root4[1],root4[2],root4[3],0,0,0,0], [transcriptHash_2[0],transcriptHash_2[1],transcriptHash_2[2],transcriptHash_2[3]]);
+    signal transcriptHash_3[12] <== Poseidon(12)([rootQ[0],rootQ[1],rootQ[2],rootQ[3],0,0,0,0], [transcriptHash_2[0],transcriptHash_2[1],transcriptHash_2[2],transcriptHash_2[3]]);
     challenges[7] <== [transcriptHash_3[0], transcriptHash_3[1], transcriptHash_3[2]];
     for(var i = 4; i < 12; i++){
         _ <== transcriptHash_3[i]; // Unused transcript values 
@@ -477,7 +477,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     signal input tree1[15];
     signal input tree2[6];
     signal input tree3[21];
-    signal input tree4[6];
+    signal input treeQ[6];
     signal input consts[9];
     signal input s0_vals[1<< nextStep][3];
     signal input enable;
@@ -490,7 +490,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     mapValues.vals1 <== tree1;
     mapValues.vals2 <== tree2;
     mapValues.vals3 <== tree3;
-    mapValues.vals4 <== tree4;
+    mapValues.valsQ <== treeQ;
 
     signal xacc[9];
     xacc[0] <== ys[0]*(7 * roots(9)-7) + 7;
@@ -595,7 +595,7 @@ template MapValues() {
     signal input vals1[15];
     signal input vals2[6];
     signal input vals3[21];
-    signal input vals4[6];
+    signal input valsQ[6];
 
     signal output tree1_0;
     signal output tree1_1;
@@ -621,8 +621,8 @@ template MapValues() {
     signal output tree3_4[3];
     signal output tree3_5[3];
     signal output tree3_6[3];
-    signal output tree4_0[3];
-    signal output tree4_1[3];
+    signal output treeQ_0[3];
+    signal output treeQ_1[3];
 
     tree1_0 <== vals1[0];
     tree1_1 <== vals1[1];
@@ -648,8 +648,8 @@ template MapValues() {
     tree3_4 <== [vals3[12],vals3[13] , vals3[14]];
     tree3_5 <== [vals3[15],vals3[16] , vals3[17]];
     tree3_6 <== [vals3[18],vals3[19] , vals3[20]];
-    tree4_0 <== [vals4[0],vals4[1] , vals4[2]];
-    tree4_1 <== [vals4[3],vals4[4] , vals4[5]];
+    treeQ_0 <== [valsQ[0],valsQ[1] , valsQ[2]];
+    treeQ_1 <== [valsQ[3],valsQ[4] , valsQ[5]];
 }
 
 template parallel VerifyFinalPol() {
@@ -680,7 +680,7 @@ template StarkVerifier() {
     signal input root1[4]; // Merkle tree root of the evaluations of all trace polynomials
     signal input root2[4]; // Merkle tree root of the evaluations of polynomials h1 and h2 used for the plookup
     signal input root3[4]; // Merkle tree root of the evaluations of the grand product polynomials (Z) 
-    signal input root4[4]; // Merkle tree root of the evaluations of the quotient Q1 and Q2 polynomials
+    signal input rootQ[4]; // Merkle tree root of the evaluations of the quotient Q1 and Q2 polynomials
 
     // Notice that root2 and root3 can be zero depending on the STARK being verified 
 
@@ -692,7 +692,7 @@ template StarkVerifier() {
     signal input s0_vals1[8][15];
     signal input s0_vals2[8][6];
     signal input s0_vals3[8][21];
-    signal input s0_vals4[8][6];
+    signal input s0_valsQ[8][6];
     signal input s0_valsC[8][9];
 
     // Merkle proofs for each of the evaluations
@@ -744,7 +744,7 @@ template StarkVerifier() {
     // Calculate challenges, s_i special and queries
     ///////////
 
-    (challenges,ys,s0_specialX,s1_specialX,s2_specialX) <== Transcript()(publics,root1,root2,root3,root4,evals, s1_root,s2_root,finalPol);
+    (challenges,ys,s0_specialX,s1_specialX,s2_specialX) <== Transcript()(publics,root1,root2,root3,rootQ,evals, s1_root,s2_root,finalPol);
 
     ///////////
     // Check constraints polynomial in the evaluation point
@@ -764,7 +764,7 @@ template StarkVerifier() {
     var s0_vals1_p[8][15][1];
     var s0_vals2_p[8][6][1];
     var s0_vals3_p[8][21][1];
-    var s0_vals4_p[8][6][1];
+    var s0_valsQ_p[8][6][1];
     var s0_valsC_p[8][9][1];
     var s1_vals_p[8][8][3]; 
     var s2_vals_p[8][8][3]; 
@@ -781,7 +781,7 @@ template StarkVerifier() {
             s0_vals3_p[q][i][0] = s0_vals3[q][i];
         }
         for (var i = 0; i < 6; i++) {
-            s0_vals4_p[q][i][0] = s0_vals4[q][i];
+            s0_valsQ_p[q][i][0] = s0_valsQ[q][i];
         }
         for (var i = 0; i < 9; i++) {
             s0_valsC_p[q][i][0] = s0_valsC[q][i];
@@ -814,7 +814,7 @@ template StarkVerifier() {
         VerifyMerkleHash(1, 21, 512)(s0_vals3_p[q], s0_siblings3[q], ys[q], root3, enable);
     }
     for (var q=0; q<8; q++) {
-        VerifyMerkleHash(1, 6, 512)(s0_vals4_p[q], s0_siblings4[q], ys[q], root4, enable);
+        VerifyMerkleHash(1, 6, 512)(s0_valsQ_p[q], s0_siblings4[q], ys[q], rootQ, enable);
     }
 
     for (var q=0; q<8; q++) {
@@ -844,7 +844,7 @@ template StarkVerifier() {
     // polynomials need to be verified 
         // Verify that the query is properly constructed. This is done by checking that the linear combination of the set of 
         // polynomials committed during the different rounds evaluated at z matches with the commitment of the FRI polynomial (unsure)
-        VerifyQuery(9, 6)(ys[q], challenges[5], challenges[6], challenges[7], evals, s0_vals1[q], s0_vals2[q], s0_vals3[q], s0_vals4[q], s0_valsC[q], s1_vals_p[q], enable);
+        VerifyQuery(9, 6)(ys[q], challenges[5], challenges[6], challenges[7], evals, s0_vals1[q], s0_vals2[q], s0_vals3[q], s0_valsQ[q], s0_valsC[q], s1_vals_p[q], enable);
 
         ///////////
         // Verify FRI construction

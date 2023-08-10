@@ -3,7 +3,7 @@ const {pilCodeGen, buildCode} = require("../../codegen.js");
 const ExpressionOps = require("../../expressionops");
 
 
-module.exports = function generateStep2(res, pil, ctx) {
+module.exports = function generateStage2(res, pil, ctx) {
 
     const E = new ExpressionOps();
 
@@ -73,4 +73,5 @@ module.exports = function generateStep2(res, pil, ctx) {
 
     res.nCm2 = pil.nCommitments - res.nCm1;
     res.cm2_challenges = [alpha.id, beta.id];
+    res.nStages++;
 }

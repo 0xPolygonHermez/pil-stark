@@ -4,7 +4,7 @@ const ExpressionOps = require("../../expressionops");
 
 const getKs = require("pilcom").getKs;
 
-module.exports = function generateStep3(F, res, pil, ctx) {
+module.exports = function generateStage3(F, res, pil, ctx) {
 
     const E = new ExpressionOps();
     const gamma = E.challenge("gamma");
@@ -15,12 +15,12 @@ module.exports = function generateStep3(F, res, pil, ctx) {
     generatePermutationZ(res, pil, ctx);
     generateConnectionsZ(F, res, pil, ctx);
 
-    
-
     res.cm3_challenges = [gamma.id, delta.id];
 
     res.step3prev = buildCode(ctx);
     ctx.calculated =  { exps: {}, expsPrime: {} }
+    res.nStages++;
+
 }
 
 

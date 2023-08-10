@@ -1,7 +1,7 @@
 
 const generatePublicCalculators = require("./helpers/publics.js");
-const generateStep2 = require("./helpers/pil1_stages/stage2");
-const generateStep3 = require("./helpers/pil1_stages/stage3");
+const generateStage2 = require("./helpers/pil1_stages/stage2");
+const generateStage3 = require("./helpers/pil1_stages/stage3");
 
 const generateConstraintPolynomial = require("./helpers/quotientPolynomial/cp_prover");
 const generateConstraintPolynomialVerifier = require("./helpers/quotientPolynomial/cp_ver");
@@ -48,6 +48,7 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
     res.nConstants = pil.nConstants;
     res.nPublics = pil.publics.length;
     res.publics = pil.publics;
+    res.nStages = 0;
 
     generatePublicCalculators(res, pil);
     res.nCm1 = pil.nCommitments;
@@ -72,9 +73,9 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
         code: []
     };
 
-    generateStep2(res, pil, ctx);  // H1, H2
+    generateStage2(res, pil, ctx);  // H1, H2
 
-    generateStep3(F, res, pil, ctx);  // Z Polynomials and LC of permutation checks.
+    generateStage3(F, res, pil, ctx);  // Z Polynomials and LC of permutation checks.
 
     generateConstraintPolynomial(res, pil, ctx, ctx_2ns, stark);            // Step4
 

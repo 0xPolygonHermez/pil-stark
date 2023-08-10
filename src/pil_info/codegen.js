@@ -87,10 +87,6 @@ function pilCodeGen(ctx, expId, prime, resType, resId, addMul) {
 
 function evalExp(codeCtx, exp, prime) {
     prime = prime || false;
-    let a = [];
-    let b = [];
-    let c;
-    let r = [];
     if (exp.op == "add") {
         const a = evalExp(codeCtx, exp.values[0], prime);
         const b = evalExp(codeCtx, exp.values[1], prime);

@@ -106,16 +106,16 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_42ns(fflonkInfo, "step42ns_first", fflonkInfo.step42ns.first, "2ns"));
-        result.step42ns_parser = code.join("\n\n") + "\n";
+        code.push(compileCode_42ns(fflonkInfo, "stepQ2ns_first", fflonkInfo.stepQ2ns.first, "2ns"));
+        result.stepQ2ns_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
-    code.push(compileCode("step42ns_first", fflonkInfo.step42ns.first, "2ns", false));
-    code.push(compileCode("step42ns_i", fflonkInfo.step42ns.first, "2ns", false));
-    code.push(compileCode("step42ns_last", fflonkInfo.step42ns.first, "2ns", false));
+    code.push(compileCode("stepQ2ns_first", fflonkInfo.stepQ2ns.first, "2ns", false));
+    code.push(compileCode("stepQ2ns_i", fflonkInfo.stepQ2ns.first, "2ns", false));
+    code.push(compileCode("stepQ2ns_last", fflonkInfo.stepQ2ns.first, "2ns", false));
 
     if (multipleCodeFiles) {
-        result.step42ns = code.join("\n\n") + "\n";
+        result.stepQ2ns = code.join("\n\n") + "\n";
         result.constValues =  [
             `u_int64_t PilFflonkSteps::getNumConstValues() { return ${vIndex}; }\n`,
             `void PilFflonkSteps::setConstValues(AltBn128::Engine &E, PilFflonkStepsParams &params) {`,

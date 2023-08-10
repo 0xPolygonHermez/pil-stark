@@ -21,7 +21,7 @@ template Transcript() {
     signal input root1; 
     signal input root2; 
     signal input root3; 
-    signal input root4;
+    signal input rootQ;
     signal input evals[83][3]; 
     signal input s1_root;
     signal input s2_root;
@@ -65,7 +65,7 @@ template Transcript() {
         _ <== transcriptHash_2[i]; // Unused transcript values        
     }
     
-    signal transcriptHash_3[17] <== PoseidonEx(16, 17)([root4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], transcriptHash_2[0]);
+    signal transcriptHash_3[17] <== PoseidonEx(16, 17)([rootQ,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], transcriptHash_2[0]);
     signal bn1togl3_5[3] <== BN1toGL3()(transcriptHash_3[0]);
     challenges[7] <== [bn1togl3_5[0], bn1togl3_5[1], bn1togl3_5[2]];
     for(var i = 1; i < 17; i++){
@@ -2928,7 +2928,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     signal input tree1[12];
 
     signal input tree3[21];
-    signal input tree4[21];
+    signal input treeQ[21];
     signal input consts[36];
     signal input s0_vals[1 << nextStep][3];
     signal input enable;
@@ -2938,7 +2938,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     component mapValues = MapValues();
     mapValues.vals1 <== tree1;
     mapValues.vals3 <== tree3;
-    mapValues.vals4 <== tree4;
+    mapValues.valsQ <== treeQ;
 
     var p = 0xFFFFFFFF00000001;
 
@@ -2991,13 +2991,13 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     signal tmp_23[3] <== GLCMulAdd()(challenges5, tmp_22, [mapValues.tree3_12,0,0]);
     signal tmp_24[3] <== GLCMulAdd()(challenges5, tmp_23, mapValues.tree3_13);
     signal tmp_25[3] <== GLCMulAdd()(challenges5, tmp_24, mapValues.tree3_14);
-    signal tmp_26[3] <== GLCMulAdd()(challenges5, tmp_25, mapValues.tree4_0);
-    signal tmp_27[3] <== GLCMulAdd()(challenges5, tmp_26, mapValues.tree4_1);
-    signal tmp_28[3] <== GLCMulAdd()(challenges5, tmp_27, mapValues.tree4_2);
-    signal tmp_29[3] <== GLCMulAdd()(challenges5, tmp_28, mapValues.tree4_3);
-    signal tmp_30[3] <== GLCMulAdd()(challenges5, tmp_29, mapValues.tree4_4);
-    signal tmp_31[3] <== GLCMulAdd()(challenges5, tmp_30, mapValues.tree4_5);
-    signal tmp_32[3] <== GLCMulAdd()(challenges5, tmp_31, mapValues.tree4_6);
+    signal tmp_26[3] <== GLCMulAdd()(challenges5, tmp_25, mapValues.treeQ_0);
+    signal tmp_27[3] <== GLCMulAdd()(challenges5, tmp_26, mapValues.treeQ_1);
+    signal tmp_28[3] <== GLCMulAdd()(challenges5, tmp_27, mapValues.treeQ_2);
+    signal tmp_29[3] <== GLCMulAdd()(challenges5, tmp_28, mapValues.treeQ_3);
+    signal tmp_30[3] <== GLCMulAdd()(challenges5, tmp_29, mapValues.treeQ_4);
+    signal tmp_31[3] <== GLCMulAdd()(challenges5, tmp_30, mapValues.treeQ_5);
+    signal tmp_32[3] <== GLCMulAdd()(challenges5, tmp_31, mapValues.treeQ_6);
     signal tmp_33[3] <== [mapValues.tree1_0 - evals[0][0] + p, -evals[0][1] + p, -evals[0][2] + p];
     signal tmp_34[3] <== [consts[0] - evals[1][0] + p, -evals[1][1] + p, -evals[1][2] + p];
     signal tmp_35[3] <== GLCMulAdd()(tmp_33, challenges6, tmp_34);
@@ -3123,19 +3123,19 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     signal tmp_155[3] <== GLCMulAdd()(tmp_153, challenges6, tmp_154);
     signal tmp_156[3] <== [consts[8] - evals[75][0] + p, -evals[75][1] + p, -evals[75][2] + p];
     signal tmp_157[3] <== GLCMulAdd()(tmp_155, challenges6, tmp_156);
-    signal tmp_158[3] <== [mapValues.tree4_0[0] - evals[76][0] + p, mapValues.tree4_0[1] - evals[76][1] + p, mapValues.tree4_0[2] - evals[76][2] + p];
+    signal tmp_158[3] <== [mapValues.treeQ_0[0] - evals[76][0] + p, mapValues.treeQ_0[1] - evals[76][1] + p, mapValues.treeQ_0[2] - evals[76][2] + p];
     signal tmp_159[3] <== GLCMulAdd()(tmp_157, challenges6, tmp_158);
-    signal tmp_160[3] <== [mapValues.tree4_1[0] - evals[77][0] + p, mapValues.tree4_1[1] - evals[77][1] + p, mapValues.tree4_1[2] - evals[77][2] + p];
+    signal tmp_160[3] <== [mapValues.treeQ_1[0] - evals[77][0] + p, mapValues.treeQ_1[1] - evals[77][1] + p, mapValues.treeQ_1[2] - evals[77][2] + p];
     signal tmp_161[3] <== GLCMulAdd()(tmp_159, challenges6, tmp_160);
-    signal tmp_162[3] <== [mapValues.tree4_2[0] - evals[78][0] + p, mapValues.tree4_2[1] - evals[78][1] + p, mapValues.tree4_2[2] - evals[78][2] + p];
+    signal tmp_162[3] <== [mapValues.treeQ_2[0] - evals[78][0] + p, mapValues.treeQ_2[1] - evals[78][1] + p, mapValues.treeQ_2[2] - evals[78][2] + p];
     signal tmp_163[3] <== GLCMulAdd()(tmp_161, challenges6, tmp_162);
-    signal tmp_164[3] <== [mapValues.tree4_3[0] - evals[79][0] + p, mapValues.tree4_3[1] - evals[79][1] + p, mapValues.tree4_3[2] - evals[79][2] + p];
+    signal tmp_164[3] <== [mapValues.treeQ_3[0] - evals[79][0] + p, mapValues.treeQ_3[1] - evals[79][1] + p, mapValues.treeQ_3[2] - evals[79][2] + p];
     signal tmp_165[3] <== GLCMulAdd()(tmp_163, challenges6, tmp_164);
-    signal tmp_166[3] <== [mapValues.tree4_4[0] - evals[80][0] + p, mapValues.tree4_4[1] - evals[80][1] + p, mapValues.tree4_4[2] - evals[80][2] + p];
+    signal tmp_166[3] <== [mapValues.treeQ_4[0] - evals[80][0] + p, mapValues.treeQ_4[1] - evals[80][1] + p, mapValues.treeQ_4[2] - evals[80][2] + p];
     signal tmp_167[3] <== GLCMulAdd()(tmp_165, challenges6, tmp_166);
-    signal tmp_168[3] <== [mapValues.tree4_5[0] - evals[81][0] + p, mapValues.tree4_5[1] - evals[81][1] + p, mapValues.tree4_5[2] - evals[81][2] + p];
+    signal tmp_168[3] <== [mapValues.treeQ_5[0] - evals[81][0] + p, mapValues.treeQ_5[1] - evals[81][1] + p, mapValues.treeQ_5[2] - evals[81][2] + p];
     signal tmp_169[3] <== GLCMulAdd()(tmp_167, challenges6, tmp_168);
-    signal tmp_170[3] <== [mapValues.tree4_6[0] - evals[82][0] + p, mapValues.tree4_6[1] - evals[82][1] + p, mapValues.tree4_6[2] - evals[82][2] + p];
+    signal tmp_170[3] <== [mapValues.treeQ_6[0] - evals[82][0] + p, mapValues.treeQ_6[1] - evals[82][1] + p, mapValues.treeQ_6[2] - evals[82][2] + p];
     signal tmp_171[3] <== GLCMulAdd()(tmp_169, challenges6, tmp_170);
     signal tmp_172[3] <== GLCMul()(tmp_171, xDivXSubXi[0]);
     signal tmp_173[3] <== GLCMulAdd()(challenges5, tmp_32, tmp_172);
@@ -3190,7 +3190,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
 template MapValues() {
     signal input vals1[12];
     signal input vals3[21];
-    signal input vals4[21];
+    signal input valsQ[21];
 
     signal output tree1_0;
     signal output tree1_1;
@@ -3219,13 +3219,13 @@ template MapValues() {
     signal output tree3_12;
     signal output tree3_13[3];
     signal output tree3_14[3];
-    signal output tree4_0[3];
-    signal output tree4_1[3];
-    signal output tree4_2[3];
-    signal output tree4_3[3];
-    signal output tree4_4[3];
-    signal output tree4_5[3];
-    signal output tree4_6[3];
+    signal output treeQ_0[3];
+    signal output treeQ_1[3];
+    signal output treeQ_2[3];
+    signal output treeQ_3[3];
+    signal output treeQ_4[3];
+    signal output treeQ_5[3];
+    signal output treeQ_6[3];
 
     tree1_0 <== vals1[0];
     tree1_1 <== vals1[1];
@@ -3254,13 +3254,13 @@ template MapValues() {
     tree3_12 <== vals3[11];
     tree3_13 <== [vals3[15],vals3[16] , vals3[17]];
     tree3_14 <== [vals3[18],vals3[19] , vals3[20]];
-    tree4_0 <== [vals4[0],vals4[1] , vals4[2]];
-    tree4_1 <== [vals4[3],vals4[4] , vals4[5]];
-    tree4_2 <== [vals4[6],vals4[7] , vals4[8]];
-    tree4_3 <== [vals4[9],vals4[10] , vals4[11]];
-    tree4_4 <== [vals4[12],vals4[13] , vals4[14]];
-    tree4_5 <== [vals4[15],vals4[16] , vals4[17]];
-    tree4_6 <== [vals4[18],vals4[19] , vals4[20]];
+    treeQ_0 <== [valsQ[0],valsQ[1] , valsQ[2]];
+    treeQ_1 <== [valsQ[3],valsQ[4] , valsQ[5]];
+    treeQ_2 <== [valsQ[6],valsQ[7] , valsQ[8]];
+    treeQ_3 <== [valsQ[9],valsQ[10] , valsQ[11]];
+    treeQ_4 <== [valsQ[12],valsQ[13] , valsQ[14]];
+    treeQ_5 <== [valsQ[15],valsQ[16] , valsQ[17]];
+    treeQ_6 <== [valsQ[18],valsQ[19] , valsQ[20]];
 }
 
 template parallel VerifyFinalPol() {
@@ -3292,7 +3292,7 @@ template StarkVerifier() {
     signal input root1; // Merkle tree root of the evaluations of all trace polynomials
     signal input root2; // Merkle tree root of the evaluations of polynomials h1 and h2 used for the plookup
     signal input root3; // Merkle tree root of the evaluations of the grand product polynomials (Z) 
-    signal input root4; // Merkle tree root of the evaluations of the quotient Q1 and Q2 polynomials
+    signal input rootQ; // Merkle tree root of the evaluations of the quotient Q1 and Q2 polynomials
 
     // Notice that root2 and root3 can be zero depending on the STARK being verified 
 
@@ -3303,7 +3303,7 @@ template StarkVerifier() {
     // Leaves values of the merkle tree used to check all the queries
     signal input s0_vals1[32][12];
     signal input s0_vals3[32][21];
-    signal input s0_vals4[32][21];
+    signal input s0_valsQ[32][21];
     signal input s0_valsC[32][36];
     
     // Merkle proofs for each of the evaluations
@@ -3364,7 +3364,7 @@ template StarkVerifier() {
     // Calculate challenges, s_i special and queries
     ///////////
 
-    (challenges,ys,s0_specialX,s1_specialX,s2_specialX,s3_specialX,s4_specialX) <== Transcript()(publics,root1,root2,root3,root4,evals, s1_root,s2_root,s3_root,s4_root,finalPol);
+    (challenges,ys,s0_specialX,s1_specialX,s2_specialX,s3_specialX,s4_specialX) <== Transcript()(publics,root1,root2,root3,rootQ,evals, s1_root,s2_root,s3_root,s4_root,finalPol);
 
     ///////////
     // Check constraints polynomial in the evaluation point
@@ -3384,7 +3384,7 @@ template StarkVerifier() {
     
     var s0_vals1_p[32][12][1];
     var s0_vals3_p[32][21][1];
-    var s0_vals4_p[32][21][1];
+    var s0_valsQ_p[32][21][1];
     var s0_valsC_p[32][36][1];
     var s1_vals_p[32][8][3]; 
     var s2_vals_p[32][8][3]; 
@@ -3400,7 +3400,7 @@ template StarkVerifier() {
             s0_vals3_p[q][i][0] = s0_vals3[q][i];
         }
         for (var i = 0; i < 21; i++) {
-            s0_vals4_p[q][i][0] = s0_vals4[q][i];
+            s0_valsQ_p[q][i][0] = s0_valsQ[q][i];
         }
         for (var i = 0; i < 36; i++) {
             s0_valsC_p[q][i][0] = s0_valsC[q][i];
@@ -3435,7 +3435,7 @@ template StarkVerifier() {
         VerifyMerkleHash(1, 21, 17, 4)(s0_vals3_p[q], s0_siblings3[q], ys[q], root3, enable);
     }
     for (var q=0; q<32; q++) {
-        VerifyMerkleHash(1, 21, 17,4)(s0_vals4_p[q], s0_siblings4[q], ys[q], root4, enable);
+        VerifyMerkleHash(1, 21, 17,4)(s0_valsQ_p[q], s0_siblings4[q], ys[q], rootQ, enable);
     }
 
     for (var q=0; q<32; q++) {
@@ -3476,7 +3476,7 @@ template StarkVerifier() {
     for (var q=0; q<32; q++) {
         // Verify that the query is properly constructed. This is done by checking that the linear combination of the set of 
         // polynomials committed during the different rounds evaluated at z matches with the commitment of the FRI polynomial (unsure)
-        VerifyQuery(17, 14)(ys[q], challenges[5], challenges[6], challenges[7], evals, s0_vals1[q], s0_vals3[q], s0_vals4[q], s0_valsC[q], s1_vals_p[q], enable);
+        VerifyQuery(17, 14)(ys[q], challenges[5], challenges[6], challenges[7], evals, s0_vals1[q], s0_vals3[q], s0_valsQ[q], s0_valsC[q], s1_vals_p[q], enable);
 
         ///////////
         // Verify FRI construction
@@ -3518,12 +3518,12 @@ template Main() {
     signal input root1;
     signal input root2;
     signal input root3;
-    signal input root4;
+    signal input rootQ;
     signal input evals[83][3];
 
     signal input s0_vals1[32][12];
     signal input s0_vals3[32][21];
-    signal input s0_vals4[32][21];
+    signal input s0_valsQ[32][21];
     signal input s0_valsC[32][36];
     signal input s0_siblings1[32][9][4];
     signal input s0_siblings3[32][9][4];
@@ -3553,13 +3553,13 @@ template Main() {
     sv.root1 <== root1;
     sv.root2 <== root2;
     sv.root3 <== root3;
-    sv.root4 <== root4;
+    sv.rootQ <== rootQ;
     sv.evals <== evals;
 
 
     sv.s0_vals1 <== s0_vals1;
     sv.s0_vals3 <== s0_vals3;
-    sv.s0_vals4 <== s0_vals4;
+    sv.s0_valsQ <== s0_valsQ;
     sv.s0_valsC <== s0_valsC;
     sv.s0_siblings1 <== s0_siblings1;
     sv.s0_siblings3 <== s0_siblings3;

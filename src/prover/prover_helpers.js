@@ -308,7 +308,7 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
         execInfo.outputSections.push({ name: "cm3_n" });
         execInfo.outputSections.push({ name: "tmpExp_n" });
         dom = "n";
-    } else if (execPart == "step3") {
+    } else if (execPart == "stepQprev") {
         execInfo.inputSections.push({ name: "cm1_n" });
         execInfo.inputSections.push({ name: "cm2_n" });
         execInfo.inputSections.push({ name: "cm3_n" });
@@ -317,7 +317,7 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
         execInfo.outputSections.push({ name: "cm3_n" });
         execInfo.outputSections.push({ name: "tmpExp_n" });
         dom = "n";
-    } else if (execPart == "step42ns") {
+    } else if (execPart == "stepQ2ns") {
         execInfo.inputSections.push({ name: "cm1_2ns" });
         execInfo.inputSections.push({ name: "cm2_2ns" });
         execInfo.inputSections.push({ name: "cm3_2ns" });
@@ -328,11 +328,11 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
             execInfo.inputSections.push({ name: "Zi_2ns" });
         }
         dom = "2ns";
-    } else if (execPart == "step52ns") {
+    } else if (execPart == "stepEv2ns") {
         execInfo.inputSections.push({ name: "cm1_2ns" });
         execInfo.inputSections.push({ name: "cm2_2ns" });
         execInfo.inputSections.push({ name: "cm3_2ns" });
-        execInfo.inputSections.push({ name: "cm4_2ns" });
+        execInfo.inputSections.push({ name: "cmQ_2ns" });
         execInfo.inputSections.push({ name: "const_2ns" });
         execInfo.inputSections.push({ name: "xDivXSubXi_2ns" });
         execInfo.outputSections.push({ name: "f_2ns" });

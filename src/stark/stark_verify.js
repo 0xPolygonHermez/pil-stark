@@ -49,7 +49,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         logger.debug(`  Stage 1 pols:   ${starkInfo.nCm1}`);
         logger.debug(`  Stage 2 pols:   ${starkInfo.nCm2}`);
         logger.debug(`  Stage 3 pols:   ${starkInfo.nCm3}`);
-        logger.debug(`  Stage 4 pols:   ${starkInfo.nCm4}`);
+        logger.debug(`  Stage Q pols:   ${starkInfo.nCmQ}`);
         logger.debug(`  Temp exp pols: ${starkInfo.mapSectionsN.tmpExp_n}`);
         logger.debug("-----------------------------");
     }
@@ -70,41 +70,41 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
 
     // Compute challenge alpha
     ctx.challenges[0] = transcript.getField(); 
-    if (logger) logger.debug("··· challenges.alpha: " + F.toString(ctx.challenges[0]));
+    if (logger) logger.debug("··· challenges[0]: " + F.toString(ctx.challenges[0]));
 
     // Compute challenge beta
     ctx.challenges[1] = transcript.getField();
-    if (logger) logger.debug("··· challenges.beta: " + F.toString(ctx.challenges[1]));
+    if (logger) logger.debug("··· challenges[1]: " + F.toString(ctx.challenges[1]));
 
     transcript.put(proof.root2);
 
     // Compute challenge gamma
     ctx.challenges[2] = transcript.getField();
-    if (logger) logger.debug("··· challenges.gamma: " + F.toString(ctx.challenges[2]));
+    if (logger) logger.debug("··· challenges[2]: " + F.toString(ctx.challenges[2]));
 
     // Compute challenge delta
     ctx.challenges[3] = transcript.getField();
-    if (logger) logger.debug("··· challenges.delta: " + F.toString(ctx.challenges[3]));
+    if (logger) logger.debug("··· challenges[3]: " + F.toString(ctx.challenges[3]));
 
     // Compute challenge a
     transcript.put(proof.root3);
     ctx.challenges[4] = transcript.getField();
-    if (logger) logger.debug("··· challenges.a: " + F.toString(ctx.challenges[4]));
+    if (logger) logger.debug("··· challenges[4]: " + F.toString(ctx.challenges[4]));
 
 
-    transcript.put(proof.root4);
+    transcript.put(proof.rootQ);
     ctx.challenges[7] = transcript.getField();
-    if (logger) logger.debug("··· challenges.xi: " + F.toString(ctx.challenges[7]));
+    if (logger) logger.debug("··· challenges[7]: " + F.toString(ctx.challenges[7]));
 
     for (let i=0; i<ctx.evals.length; i++) {
         transcript.put(ctx.evals[i]);
     }
 
     ctx.challenges[5] = transcript.getField();
-    if (logger) logger.debug("··· challenges.v1: " + F.toString(ctx.challenges[5]));
+    if (logger) logger.debug("··· challenges[5]: " + F.toString(ctx.challenges[5]));
 
     ctx.challenges[6] = transcript.getField(); // v2
-    if (logger) logger.debug("··· challenges.v2: " + F.toString(ctx.challenges[6]));
+    if (logger) logger.debug("··· challenges[6]: " + F.toString(ctx.challenges[6]));
 
     if (logger) logger.debug("Verifying evaluations");
 
@@ -134,20 +134,31 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
 
     const checkQuery = (query, idx) => {
         if(logger) logger.debug("Verifying query: " + idx);
-        for(let i = 0; i < 5; ++i) {
-            const root = i < 4 ? proof[`root${i + 1}`] : constRoot;
-            let res = MH.verifyGroupProof(root, query[i][1], idx, query[i][0]);
+        for(let i = 0; i < starkInfo.nStages + 1; ++i) {
+            let res = MH.verifyGroupProof(proof[`root${i + 1}`], query[i][1], idx, query[i][0]);
             if (!res) {
                 if(logger) logger.warn(`Invalid root${i + 1}`);
                 return false;
             }
         }
         
+        let res = MH.verifyGroupProof(proof.rootQ, query[starkInfo.nStages + 1][1], idx, query[starkInfo.nStages + 1][0]);
+        if (!res) {
+            if(logger) logger.warn(`Invalid rootQ`);
+            return false;
+        }
+
+        res = MH.verifyGroupProof(constRoot, query[starkInfo.nStages + 2][1], idx, query[starkInfo.nStages + 2][0]);
+        if (!res) {
+            if(logger) logger.warn(`Invalid constRoot`);
+            return false;
+        }
+        
         const ctxQry = {};
         ctxQry.tree1 = query[0][0];
         ctxQry.tree2 = query[1][0];
         ctxQry.tree3 = query[2][0];
-        ctxQry.tree4 = query[3][0];
+        ctxQry.treeQ = query[3][0];
         ctxQry.consts = query[4][0];
         ctxQry.evals = ctx.evals;
         ctxQry.publics = ctx.publics;
@@ -209,7 +220,7 @@ function executeCode(F, ctx, code) {
             case "tree1": return extractVal(ctx.tree1, r.treePos, r.dim);
             case "tree2": return extractVal(ctx.tree2, r.treePos, r.dim);
             case "tree3": return extractVal(ctx.tree3, r.treePos, r.dim);
-            case "tree4": return extractVal(ctx.tree4, r.treePos, r.dim);
+            case "treeQ": return extractVal(ctx.treeQ, r.treePos, r.dim);
             case "const": return ctx.consts[r.id];
             case "eval": return ctx.evals[r.id];
             case "number": return BigInt(r.value);

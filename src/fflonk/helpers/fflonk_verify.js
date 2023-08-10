@@ -65,13 +65,13 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     if(fflonkInfo.nCm2 > 0 || fflonkInfo.peCtx.length > 0) {
         // Compute challenge alpha
         ctx.challenges[0] = transcript.getChallenge();
-        if (logger) logger.debug("··· challenges.alpha: " + Fr.toString(ctx.challenges[0]));
+        if (logger) logger.debug("··· challenges[0]: " + Fr.toString(ctx.challenges[0]));
         
         // Compute challenge beta
         transcript.reset();
         transcript.addScalar(ctx.challenges[0]);
         ctx.challenges[1] = transcript.getChallenge();
-        if (logger) logger.debug("··· challenges.beta: " + Fr.toString(ctx.challenges[1]));
+        if (logger) logger.debug("··· challenges[1]: " + Fr.toString(ctx.challenges[1]));
         transcript.reset();
 
         transcript.addScalar(ctx.challenges[1]);
@@ -85,13 +85,13 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     if(fflonkInfo.nCm3 > 0) {
         // Compute challenge gamma
         ctx.challenges[2] = transcript.getChallenge();
-        if (logger) logger.debug("··· challenges.gamma: " + Fr.toString(ctx.challenges[2]));
+        if (logger) logger.debug("··· challenges[2]: " + Fr.toString(ctx.challenges[2]));
 
         // Compute challenge delta
         transcript.reset();
         transcript.addScalar(ctx.challenges[2]);
         ctx.challenges[3] = transcript.getChallenge();
-        if (logger) logger.debug("··· challenges.delta: " + Fr.toString(ctx.challenges[3]));
+        if (logger) logger.debug("··· challenges[3]: " + Fr.toString(ctx.challenges[3]));
         transcript.reset();
 
         transcript.addScalar(ctx.challenges[3]);
@@ -104,19 +104,20 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
 
     // Compute challenge a
     ctx.challenges[4] = transcript.getChallenge();
-    if (logger) logger.debug("··· challenges.a: " + Fr.toString(ctx.challenges[4]));
+    if (logger) logger.debug("··· challenges[4]: " + Fr.toString(ctx.challenges[4]));
 
     // Compute challenge xi seed
     transcript.reset();
     transcript.addScalar(ctx.challenges[4]);
 
-    const stage4CommitPols = vk.f.filter(fi => fi.stages[0].stage === 4).map(fi => proof.polynomials[`f${fi.index}`]);
-    for(let i = 0; i < stage4CommitPols.length; i++) {
-        transcript.addPolCommitment(stage4CommitPols[i]);
+    const stageQCommitPols = vk.f.filter(fi => fi.stages[0].stage === 4).map(fi => proof.polynomials[`f${fi.index}`]);
+    for(let i = 0; i < stageQCommitPols.length; i++) {
+        console.log(ctx.curve.G1.toString(stageQCommitPols[i]));
+        transcript.addPolCommitment(stageQCommitPols[i]);
     }
 
     let challengeXiSeed = transcript.getChallenge();
-    if (logger) logger.debug("··· challenges.xiSeed: " + Fr.toString(challengeXiSeed));
+    if (logger) logger.debug("··· challengesXiSeed: " + Fr.toString(challengeXiSeed));
 
     // Store the polynomial commits to its corresponding fi
     for(let i = 0; i < vk.f.length; ++i) {
