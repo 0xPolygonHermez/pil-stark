@@ -1,6 +1,6 @@
 const { initProverFflonk, extendAndCommit, computeQFflonk, computeOpeningsFflonk, genProofFflonk, setChallengesFflonk, calculateChallengeFflonk } = require("../fflonk/helpers/fflonk_prover_helpers");
 const { calculateH1H2, calculateZ } = require("../helpers/polutils");
-const { initProverStark, extendAndMerkelize, computeQStark, computeEvalsStark, computeFRIStark, genProofStark, setChallengesStark } = require("../stark/stark_gen_helpers");
+const { initProverStark, extendAndMerkelize, computeQStark, computeEvalsStark, computeFRIStark, genProofStark, setChallengesStark, calculateChallengeStark } = require("../stark/stark_gen_helpers");
 const { setPol, getPol, calculatePublics, callCalculateExps } = require("./prover_helpers");
 
 module.exports = async function proofGen(cmPols, pilInfo, constTree, constPols, zkey, options) {
@@ -32,20 +32,34 @@ module.exports = async function proofGen(cmPols, pilInfo, constTree, constPols, 
     };
 
     // STAGE 1. Compute Trace Column Polynomials
-    let challenge = await stage1(ctx, logger);
+    await stage1(ctx, logger);
 
+    let challenge = await getChallenge(1, ctx);
+    
     // STAGE 2. Compute Inclusion Polynomials
-    challenge = await stage2(ctx, challenge, parallelExec, useThreads, logger);
+    await stage2(ctx, challenge, parallelExec, useThreads, logger);
+
+    if(ctx.prover === "stark" || ctx.pilInfo.nCm2 > 0 || ctx.pilInfo.peCtx.length > 0) {
+        challenge = await getChallenge(2, ctx);
+    }
 
     // STAGE 3. Compute Grand Product and Intermediate Polynomials
-    challenge = await stage3(ctx, challenge, parallelExec, useThreads, logger);
+    await stage3(ctx, challenge, parallelExec, useThreads, logger);
+    
+    if(ctx.prover === "stark" || ctx.pilInfo.nCm3 > 0) {
+        challenge = await getChallenge(3, ctx);
+    }
 
     // STAGE 4. Trace Quotient Polynomials
-    challenge = await stage4(ctx, challenge, parallelExec, useThreads, logger);
+    await stage4(ctx, challenge, parallelExec, useThreads, logger);
+
+    challenge = await getChallenge(4, ctx);
 
     if(ctx.prover === "stark") {
         // STAGE 5. Compute Evaluations
-        challenge = await computeEvalsStark(ctx, challenge, logger);
+        await computeEvalsStark(ctx, challenge, logger);
+
+        challenge = await calculateChallengeStark("evals", ctx);
 
         // STAGE 6. Compute FRI
         await computeFRIStark(ctx, challenge, parallelExec, useThreads, logger);
@@ -63,26 +77,18 @@ async function stage1(ctx, logger) {
 
     calculatePublics(ctx);
 
-    const nextChallenge = ctx.prover === "stark" ? await extendAndMerkelize(1, ctx) : await extendAndCommit(1, ctx, logger);
-    
-    return nextChallenge; 
+    ctx.prover === "stark" ? await extendAndMerkelize(1, ctx) : await extendAndCommit(1, ctx, logger);
 }
 
 async function stage2(ctx, challenge, parallelExec, useThreads, logger) {
-    if(ctx.prover === "fflonk" && !ctx.pilInfo.nCm2 && ctx.pilInfo.peCtx.length === 0) return challenge;
+    if(ctx.prover === "fflonk" && !ctx.pilInfo.nCm2 && ctx.pilInfo.peCtx.length === 0) return;
 
-    if(ctx.prover === "fflonk") {
-        setChallengesFflonk(2, ctx, challenge);
-    } else {
-        setChallengesStark(2, ctx, challenge);
-    }
+    setChallenges(2, ctx, challenge);
 
     if (logger) logger.debug("··· challenges.alpha: " + ctx.F.toString(ctx.challenges[0]));
     if (logger) logger.debug("··· challenges.beta: " + ctx.F.toString(ctx.challenges[1]));        
 
-    if (ctx.prover === "fflonk" && !ctx.pilInfo.nCm2) {
-        return calculateChallengeFflonk(2, ctx, ctx.challenges[1]);
-    }
+    if (ctx.prover === "fflonk" && !ctx.pilInfo.nCm2) return;
 
     if (logger) logger.debug("> STAGE 2. Compute Inclusion Polynomials");
 
@@ -100,24 +106,18 @@ async function stage2(ctx, challenge, parallelExec, useThreads, logger) {
         setPol(ctx, ctx.pilInfo.cm_n[ctx.pilInfo.nCm1 + 2 * i + 1], h2);
     }
 
-    const nextChallenge = ctx.prover === "stark" ? await extendAndMerkelize(2, ctx) : await extendAndCommit(2, ctx, logger);
-    return nextChallenge;
+    ctx.prover === "stark" ? await extendAndMerkelize(2, ctx) : await extendAndCommit(2, ctx, logger);
 }
 
 async function stage3(ctx, challenge, parallelExec, useThreads, logger) {
-    if (ctx.prover === "fflonk" && !ctx.pilInfo.nCm3) return challenge;
+    if (ctx.prover === "fflonk" && !ctx.pilInfo.nCm3) return;
 
     if (logger) logger.debug("> STAGE 3. Compute Grand Product and Intermediate Polynomials");
 
-    if(ctx.prover === "fflonk") {
-        setChallengesFflonk(3, ctx, challenge);
-    } else {
-        setChallengesStark(3, ctx, challenge);
-    }
+    setChallenges(3, ctx, challenge);
 
     if (logger) logger.debug("··· challenges.gamma: " + ctx.F.toString(ctx.challenges[2]));
     if (logger) logger.debug("··· challenges.delta: " + ctx.F.toString(ctx.challenges[3]));
-
 
     // STEP 3.2 - Compute stage 3 polynomials --> Plookup Z, Permutations Z & ConnectionZ polynomials
     const nPlookups = ctx.pilInfo.puCtx.length;
@@ -163,20 +163,35 @@ async function stage3(ctx, challenge, parallelExec, useThreads, logger) {
 
     await callCalculateExps("step3", "n", ctx, parallelExec, useThreads);
 
-    const nextChallenge = ctx.prover === "stark" ? await extendAndMerkelize(3, ctx) : await extendAndCommit(3, ctx, logger);
-    return nextChallenge;
+    ctx.prover === "stark" ? await extendAndMerkelize(3, ctx) : await extendAndCommit(3, ctx, logger);
 } 
 
 async function stage4(ctx, challenge, parallelExec, useThreads, logger) {
     if (logger) logger.debug("> STAGE 4. Compute Trace Quotient Polynomials");
 
     // Compute challenge a
-    ctx.challenges[4] = challenge;
+    setChallengesStark(4, ctx, challenge);
+    
     if (logger) logger.debug("··· challenges.a: " + ctx.F.toString(ctx.challenges[4]));
 
     // STEP 4.2 - Compute stage 4 polynomial --> Q polynomial
     await callCalculateExps("step42ns", "2ns", ctx, parallelExec, useThreads);
 
-    const nextChallenge = ctx.prover === "stark" ? await computeQStark(ctx, logger) : await computeQFflonk(ctx, logger);    
-    return nextChallenge;
+    ctx.prover === "stark" ? await computeQStark(ctx, logger) : await computeQFflonk(ctx, logger);    
+}
+
+async function getChallenge(stage, ctx) {
+    if(ctx.prover === "stark") {
+        return calculateChallengeStark(stage, ctx);
+    } else {
+        return calculateChallengeFflonk(stage, ctx);
+    }
+}
+
+async function setChallenges(stage, ctx, challenge) {
+    if(ctx.prover === "stark") {
+        setChallengesStark(stage, ctx, challenge);
+    } else {
+        setChallengesFflonk(stage, ctx, challenge);
+    }
 }

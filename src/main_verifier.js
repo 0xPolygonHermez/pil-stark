@@ -30,7 +30,7 @@ async function run() {
 
     proof = str2bigInt(proof);
 
-    const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+    const logger = Logger.create("pil-stark", {showTimestamp: false});
     Logger.setLogLevel("DEBUG");
 
     let options = {logger};

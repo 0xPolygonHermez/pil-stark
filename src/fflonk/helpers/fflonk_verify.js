@@ -38,9 +38,9 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         logger.debug(`  Curve:         ${curve.name}`);
         logger.debug(`  Domain size:   ${domainSize} (2^${power})`);
         logger.debug(`  Const  pols:   ${fflonkInfo.nConstants}`);
-        logger.debug(`  Step 1 pols:   ${fflonkInfo.mapSectionsN.cm1_n}`);
-        logger.debug(`  Step 2 pols:   ${fflonkInfo.mapSectionsN.cm2_n}`);
-        logger.debug(`  Step 3 pols:   ${fflonkInfo.mapSectionsN.cm3_n}`);
+        logger.debug(`  Step 1 pols:   ${fflonkInfo.nCm1}`);
+        logger.debug(`  Step 2 pols:   ${fflonkInfo.nCm2}`);
+        logger.debug(`  Step 3 pols:   ${fflonkInfo.nCm3}`);
         logger.debug(`  Step 4 pols:   ${nPolsQ.length}`);
         logger.debug(`  Temp exp pols: ${fflonkInfo.mapSectionsN.tmpExp_n}`);
         logger.debug("------------------------------");
@@ -62,7 +62,7 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         transcript.addPolCommitment(stage1CommitPols[i]);
     }
     
-    if(fflonkInfo.mapSectionsN.cm2_n > 0 || fflonkInfo.peCtx.length > 0) {
+    if(fflonkInfo.nCm2 > 0 || fflonkInfo.peCtx.length > 0) {
         // Compute challenge alpha
         ctx.challenges[0] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.alpha: " + Fr.toString(ctx.challenges[0]));
@@ -82,7 +82,7 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         transcript.addPolCommitment(stage2CommitPols[i]);
     }
 
-    if(fflonkInfo.mapSectionsN.cm3_n > 0) {
+    if(fflonkInfo.nCm3 > 0) {
         // Compute challenge gamma
         ctx.challenges[2] = transcript.getChallenge();
         if (logger) logger.debug("··· challenges.gamma: " + Fr.toString(ctx.challenges[2]));

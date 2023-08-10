@@ -144,38 +144,6 @@ function evalExp(codeCtx, exp, prime) {
             src: [a, b, c]
         });
         return r;
-    } else if (exp.op == "addc") {
-        const a = evalExp(codeCtx, exp.values[0], prime);
-        const b = {
-            type: "number",
-            value: exp.const
-        }
-        const r = {
-            type: "tmp",
-            id: codeCtx.tmpUsed++
-        };
-        codeCtx.code.push({
-            op: "add",
-            dest: r,
-            src: [a, b]
-        });
-        return r;
-    } else if (exp.op == "mulc") {
-        const a = evalExp(codeCtx, exp.values[0], prime);
-        const b = {
-            type: "number",
-            value: exp.const.toString()
-        }
-        const r = {
-            type: "tmp",
-            id: codeCtx.tmpUsed++
-        };
-        codeCtx.code.push({
-            op: "mul",
-            dest: r,
-            src: [a, b]
-        });
-        return r;
     } else if (exp.op == "neg") {
         const a = {
             type: "number",
@@ -243,7 +211,7 @@ function evalExp(codeCtx, exp, prime) {
     } else if (exp.op == "xDivXSubXi") {
         return {
             type: "xDivXSubXi",
-            id: exp.id,
+            opening: exp.opening,
         }
     } else if (exp.op == "x") {
         return {
@@ -425,8 +393,6 @@ function buildLinearCode(ctx, loopPos) {
 function buildCode(ctx) {
     res = {};
     res.first = buildLinearCode(ctx, "first");
-    res.i = buildLinearCode(ctx, "i");
-    res.last = buildLinearCode(ctx, "last");
     res.tmpUsed = ctx.tmpUsed;
 
     // Expressions that are not saved, cannot be reused later on
@@ -443,8 +409,6 @@ function buildCode(ctx) {
 
 function iterateCode(code, f, ctx) {
     _iterate(code.first, f);
-    _iterate(code.i, f);
-    _iterate(code.last, f);
 
     function _iterate(subCode, f) {
         for (let i=0; i<subCode.length; i++) {

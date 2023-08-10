@@ -140,7 +140,7 @@ class Transcript {
         } else if (r.type == "Z") {
             return "Z";
         } else if (r.type == "xDivXSubXi") {
-            return "xDivXSubXi[" + starkInfo.fri2Id[r.id] + "]";
+            return "xDivXSubXi[" + starkInfo.fri2Id[r.opening] + "]";
         } else if (r.type == "tmp") {
             return "tmp_"+r.id;
         } else if (r.type == "tree1") {

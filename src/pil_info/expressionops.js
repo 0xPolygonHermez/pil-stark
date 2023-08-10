@@ -104,7 +104,7 @@ class ExpressionOps {
     xDivXSubXi(opening) {
         return {
             op: "xDivXSubXi",
-            id: opening
+            opening: opening
         }
     }
 

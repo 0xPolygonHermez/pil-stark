@@ -10,6 +10,7 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
 
     let cExp = null;
     for (let i=0; i<pil.polIdentities.length; i++) {
+        calculateDegreeExpressions(pil, pil.expressions[pil.polIdentities[i].e]);
         const e = E.exp(pil.polIdentities[i].e);
         if (cExp) {
             cExp = E.add(E.mul(vc, cExp), e);
@@ -131,7 +132,7 @@ function calculateImPols(pil, _exp, maxDeg) {
         if (imExpressions === false) {
             return [false, -1];
         }
-        if (["add", "sub", "addc", "mulc", "neg"].indexOf(exp.op) >=0 ) {
+        if (["add", "sub", "neg"].indexOf(exp.op) >=0 ) {
             let md =0;
             for (let i=0; i<exp.values.length; i++) {
                 [imExpressions , d] = _calculateImPols(pil, exp.values[i], imExpressions, maxDeg);
@@ -154,7 +155,7 @@ function calculateImPols(pil, _exp, maxDeg) {
             if (["number", "public", "challenge"].indexOf(exp.values[1].op) >= 0 ) {
                 return _calculateImPols(pil, exp.values[0], imExpressions, maxDeg);
             }
-            const maxDegHere = getExpDim(pil, exp, maxDeg);
+            const maxDegHere = exp.expDeg;
             if (maxDegHere <= maxDeg) {
                 return [imExpressions, maxDegHere];
             }
@@ -210,36 +211,25 @@ function calculateImPols(pil, _exp, maxDeg) {
 
 }
 
+function calculateDegreeExpressions(pil, exp) {
+    if(exp.expDeg) return exp.expDeg;
 
-function getExpDim(pil, exp, maxDeg) {
-    switch (exp.op) {
-        case "add":
-        case "sub":
-        case "addc":
-        case "mulc":
-        case "neg":
-            let md = 1;
-            for (let i=0; i<exp.values.length; i++) {
-                const d = getExpDim(pil, exp.values[i]);
-                if (d>md) md=d;
-            }
-            return md;
-        case "mul":
-            return getExpDim(pil, exp.values[0]) + getExpDim(pil, exp.values[1])
-        case "muladd":
-            return Math.max(getExpDim(pil, exp.values[0]) + getExpDim(pil, exp.values[1]), getExpDim(pil, exp.values[2]));
-        case "cm": return 1;
-        case "const": return 1;
-        case "exp": 
-            if(exp.dim && exp.dim[maxDeg] >= 0) return exp.dim[maxDeg];
-            if(!exp.dim) exp.dim = {};
-            exp.dim[maxDeg] = getExpDim(pil, pil.expressions[exp.id]);
-            return exp.dim[maxDeg];
-        case "number": return 0;
-        case "public": return 0;
-        case "challenge": return 0;
-        case "eval": return 0;
-        case "x": return 1;
-        default: throw new Error("Exp op not defined: " + exp.op);
+    if (exp.op == "exp") {
+        if (pil.expressions[exp.id].expDeg) exp.expDeg = pil.expressions[exp.id].expDeg;
+        if (!exp.expDeg) exp.expDeg = calculateDegreeExpressions(pil, pil.expressions[exp.id]);
+    } else if (["x", "cm", "const"].includes(exp.op)) {
+        exp.expDeg = 1;
+    } else if (["number", "challenge", "public", "eval"].includes(exp.op)) {
+        exp.expDeg = 0;
+    } else if(exp.op == "neg") {
+        exp.expDeg = calculateDegreeExpressions(pil, exp.values[0]);
+    } else if(["add", "sub"].includes(exp.op)) {
+        exp.expDeg = Math.max(calculateDegreeExpressions(pil, exp.values[0]), calculateDegreeExpressions(pil, exp.values[1]));
+    } else if (exp.op == "mul") {
+        exp.expDeg = calculateDegreeExpressions(pil, exp.values[0]) + calculateDegreeExpressions(pil, exp.values[1]);
+    } else {
+        throw new Error("Exp op not defined: "+ exp.op);
     }
+
+    return exp.expDeg;
 }

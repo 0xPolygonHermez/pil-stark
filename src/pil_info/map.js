@@ -387,8 +387,6 @@ function getExpDim(pil, expId, stark) {
             case "sub":
             case "mul":
             case "muladd":
-            case "addc":
-            case "mulc":
             case "neg":
                 let md = 1;
                 for (let i=0; i<exp.values.length; i++) {
@@ -425,8 +423,6 @@ function setCodeDimensions(code, pilInfo, dimX, stark) {
     const tmpDim = [];
 
     _setCodeDimensions(code.first);
-    _setCodeDimensions(code.i);
-    _setCodeDimensions(code.last);
 
 
     function _setCodeDimensions(code) {

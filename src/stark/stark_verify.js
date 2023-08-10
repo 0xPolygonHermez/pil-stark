@@ -215,7 +215,7 @@ function executeCode(F, ctx, code) {
             case "number": return BigInt(r.value);
             case "public": return BigInt(ctx.publics[r.id]);
             case "challenge": return ctx.challenges[r.id];
-            case "xDivXSubXi": return ctx.xDivXSubXi[ctx.starkInfo.fri2Id[r.id]];
+            case "xDivXSubXi": return ctx.xDivXSubXi[ctx.starkInfo.fri2Id[r.opening]];
             case "x": return ctx.challenges[7];
             case "Z": return r.prime ? ctx.Zp : ctx.Z;
             default: throw new Error("Invalid reference type get: " + r.type);

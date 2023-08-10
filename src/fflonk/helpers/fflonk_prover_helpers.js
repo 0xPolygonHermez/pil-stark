@@ -314,9 +314,6 @@ module.exports.extendAndCommit = async function extendAndCommit(stage, ctx, logg
         }
         return 0;
     } 
-
-    const nextChallenge = await module.exports.calculateChallengeFflonk(stage, ctx);
-    return nextChallenge;
 }
 
 const BigBufferHandler = {

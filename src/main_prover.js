@@ -54,7 +54,7 @@ async function run() {
     const cmPols =  newCommitPolsArray(pil, F);
     await cmPols.loadFromFile(commitFile);
 
-    const logger = Logger.create("pil-fflonk", {showTimestamp: false});
+    const logger = Logger.create("pil-stark", {showTimestamp: false});
     Logger.setLogLevel("DEBUG");
 
     let options = {logger};

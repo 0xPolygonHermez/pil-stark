@@ -147,9 +147,6 @@ module.exports.computeQStark = async function computeQStark(ctx, logger) {
 
     if (logger) logger.debug("··· Merkelizing Q polynomial tree");
     ctx.trees[4] = await ctx.MH.merkelize(ctx.cm4_2ns, ctx.pilInfo.mapSectionsN.cm4_2ns, ctx.Next);
-
-    const nextChallenge = await module.exports.calculateChallengeStark(4, ctx);    
-    return nextChallenge;
 }
 
 module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challenge, logger) {
@@ -210,12 +207,6 @@ module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challen
         }
         ctx.evals[i] = acc;
     }
-
-    for (let i=0; i<ctx.evals.length; i++) {
-        ctx.transcript.put(ctx.evals[i]);
-    }
-
-    return ctx.transcript.getField();
 }
 
 module.exports.computeFRIStark = async function computeFRIStark(ctx, challenge, parallelExec, useThreads, logger) {
@@ -313,10 +304,6 @@ module.exports.extendAndMerkelize = async function  extendAndMerkelize(stage, ct
     
     if (logger) logger.debug("··· Merkelizing Stage " + stage);
     ctx.trees[stage] = await ctx.MH.merkelize(buffTo, nPols, ctx.Next);
-
-    const nextChallenge = await module.exports.calculateChallengeStark(stage, ctx);    
-    return nextChallenge;
-
 }
 
 module.exports.setChallengesStark = function setChallengesStark(stage, ctx, challenge) {
@@ -333,6 +320,14 @@ module.exports.setChallengesStark = function setChallengesStark(stage, ctx, chal
 }
 
 module.exports.calculateChallengeStark = async function calculateChallengeStark(stage, ctx) {
+    if(stage === "evals") {
+        for (let i=0; i<ctx.evals.length; i++) {
+            ctx.transcript.put(ctx.evals[i]);
+        }
+    
+        return ctx.transcript.getField();
+    }
+
     if(stage === 1) {
         for (let i=0; i<ctx.pilInfo.publics.length; i++) {
             ctx.transcript.put(ctx.publics[i]);

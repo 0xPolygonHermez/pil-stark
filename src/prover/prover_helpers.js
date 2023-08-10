@@ -113,9 +113,9 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
             case "challenge": return `ctx.challenges[${r.id}]`;
             case "eval": return `ctx.evals[${r.id}]`;
             case "xDivXSubXi": return `[
-                    ctx.xDivXSubXi_2ns[3*(${ctx.pilInfo.fri2Id[r.id]} + ${ctx.pilInfo.nFriOpenings}*i)], 
-                    ctx.xDivXSubXi_2ns[3*(${ctx.pilInfo.fri2Id[r.id]} + ${ctx.pilInfo.nFriOpenings}*i) + 1], 
-                    ctx.xDivXSubXi_2ns[3*(${ctx.pilInfo.fri2Id[r.id]} + ${ctx.pilInfo.nFriOpenings}*i) + 2]
+                    ctx.xDivXSubXi_2ns[3*(${ctx.pilInfo.fri2Id[r.opening]} + ${ctx.pilInfo.nFriOpenings}*i)], 
+                    ctx.xDivXSubXi_2ns[3*(${ctx.pilInfo.fri2Id[r.opening]} + ${ctx.pilInfo.nFriOpenings}*i) + 1], 
+                    ctx.xDivXSubXi_2ns[3*(${ctx.pilInfo.fri2Id[r.opening]} + ${ctx.pilInfo.nFriOpenings}*i) + 2]
                 ]`;
             case "x": {
                 if (dom=="n") {
