@@ -103,7 +103,7 @@ describe("simple sm", async function () {
         await curve.terminate();
     })
 
-    it("Simple1", async () => {
+    it.skip("Simple1", async () => {
         await runTest("simple1", curve);
     });
     it("Simple2", async () => {

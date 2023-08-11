@@ -10,7 +10,6 @@ const fflonkVerificationKey = require("../../src/fflonk/helpers/fflonk_verificat
 const { readPilFflonkZkeyFile } = require("../../src/fflonk/zkey/zkey_pilfflonk.js");
 
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
-const {log2} = require("pilcom/src/utils");
 
 const smFibonacci = require("../state_machines/sm_fibonacci/sm_fibonacci.js");
 

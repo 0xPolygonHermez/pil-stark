@@ -134,7 +134,7 @@ jobs:
       - name: Fflonk prover tests
         run: npm run test:fflonk:sc
 
-  c15-test:
+  c12-test:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3

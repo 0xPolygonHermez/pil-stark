@@ -9,6 +9,7 @@ const starkVerify = require("../../src/stark/stark_verify.js");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 const {log2} = require("pilcom/src/utils");
 
+
 const smFibonacci = require("../state_machines/sm_fibonacci/sm_fibonacci.js");
 
 describe("test fibonacci sm", async function () {

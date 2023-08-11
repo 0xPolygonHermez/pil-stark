@@ -15,32 +15,31 @@ function getBits(idx, nBits) {
     return res;
 }
 
-describe("Linear Hash Circuit Test", function () {
+describe("Merkle Hash Circuit Test", function () {
     let circuit;
-    let MH;
     let poseidon;
-    const arity = 16;
 
 
     this.timeout(10000000);
 
     before( async() => {
         poseidon = await buildPoseidon();
-        MH = new MerkleHash(poseidon, arity, false);
 
         circuit = await wasm_tester(path.join(__dirname, "circom", "merklehash.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
     });
 
     it("Should calculate linear hash of 9 complex elements", async () => {
-        const NPols = 9;
-        const nBits = 5;
-        const idx = 9;
+        const arity = 16;
+        const nPols = 9;
+        const N = 512;
+        const idx = 34;
 
-        const poseidon = await buildPoseidon();
-        const N = 1<<nBits;
+        const nBits = Math.ceil(Math.log2(N));
+
+        let MH = new MerkleHash(poseidon, arity, false);
 
         const pols = [];
-        for (let i=0; i<NPols;i++) {
+        for (let i=0; i<nPols;i++) {
             pols[i] = [];
             for (let j=0; j<N; j++) {
                 pols[i][j] = [];
@@ -50,7 +49,7 @@ describe("Linear Hash Circuit Test", function () {
             }
         }
 
-        const tree = await MH.merkelize(pols, 3, NPols, N);
+        const tree = await MH.merkelize(pols, 3, nPols, N);
 
         proof = MH.getGroupProof(tree, idx);
 
