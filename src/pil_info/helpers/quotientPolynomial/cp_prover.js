@@ -6,7 +6,10 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
     const E = new ExpressionOps();
 
     const vc = E.challenge("vc");
-    res.cmQ_challenges = [vc.id];
+    res.qChallenge = vc.id;
+
+    const xi = E.challenge("xi");
+    res.xiChallenge = xi.id;
 
     let cExp = null;
     for (let i=0; i<pil.polIdentities.length; i++) {

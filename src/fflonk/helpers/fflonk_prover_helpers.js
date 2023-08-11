@@ -214,7 +214,9 @@ module.exports.genProofFflonk = async function genProof(ctx, logger) {
 }
 
 module.exports.setChallengesFflonk = function setChallengesFflonk(stage, ctx, challenge, logger) {
-    let challengesIndex = ctx.pilInfo["cm" + stage + "_challenges"];
+    let challengesIndex = stage === "Q" 
+        ? [ctx.pilInfo.qChallenge] 
+        : ctx.pilInfo["cm" + stage + "_challenges"];
 
     if(challengesIndex.length === 0) throw new Error("No challenges needed for stage " + stage);
 
@@ -247,7 +249,7 @@ module.exports.calculateChallengeFflonk = async function calculateChallengeFflon
         }
     }
 
-    let challengesIndex = ctx.pilInfo["cm" + stage + "_challenges"];
+    let challengesIndex = stage === "Q" ? [ctx.pilInfo.qChallenge] : ctx.pilInfo["cm" + stage + "_challenges"];
     
     if(challengesIndex) {
         const lastChallengeIndex = challengesIndex[challengesIndex.length - 1];

@@ -152,8 +152,8 @@ module.exports.computeQStark = async function computeQStark(ctx, logger) {
 module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challenge, logger) {
     if (logger) logger.debug("Compute Evals");
 
-    ctx.challenges[7] = challenge; // xi
-    if (logger) logger.debug("··· challenges[7]: " + ctx.F.toString(ctx.challenges[7]));
+    ctx.challenges[ctx.pilInfo.xiChallenge] = challenge; // xi
+    if (logger) logger.debug("··· challenges[" + ctx.pilInfo.xiChallenge + "]: " + ctx.F.toString(ctx.challenges[ctx.pilInfo.xiChallenge]));
 
     let LEv = [];
     const friOpenings = Object.keys(ctx.pilInfo.fri2Id);
@@ -167,7 +167,7 @@ module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challen
             w = ctx.F.mul(w, ctx.F.w[ctx.nBits]);
         }
         if(opening < 0) w = ctx.F.div(1n, w);
-        const xi = ctx.F.div(ctx.F.mul(ctx.challenges[7], w), ctx.F.shift);
+        const xi = ctx.F.div(ctx.F.mul(ctx.challenges[ctx.pilInfo.xiChallenge], w), ctx.F.shift);
         for (let k=1; k<ctx.N; k++) {
             LEv[index][k] = ctx.F.mul(LEv[index][k-1], xi);
         }
@@ -212,12 +212,7 @@ module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challen
 module.exports.computeFRIStark = async function computeFRIStark(ctx, challenge, parallelExec, useThreads, logger) {
     if (logger) logger.debug("Compute FRI");
 
-    ctx.challenges[5] = challenge; // v1
-    if (logger) logger.debug("··· challenges[5]: " + ctx.F.toString(ctx.challenges[5]));
-
-    ctx.challenges[6] = ctx.transcript.getField(); // v2
-    if (logger) logger.debug("··· challenges[6]: " + ctx.F.toString(ctx.challenges[6]));
-
+    module.exports.setChallengesStark("fri", ctx, challenge, logger);
 
     const friOpenings = Object.keys(ctx.pilInfo.fri2Id);
     for(let i = 0; i < ctx.pilInfo.nFriOpenings; i++) {
@@ -229,7 +224,7 @@ module.exports.computeFRIStark = async function computeFRIStark(ctx, challenge, 
         }
         if(opening < 0) w = ctx.F.div(1n, w);
 
-        let xi = ctx.F.mul(ctx.challenges[7], w);
+        let xi = ctx.F.mul(ctx.challenges[ctx.pilInfo.xiChallenge], w);
 
         let den = new Array(ctx.Next);
         let x = ctx.F.shift;
@@ -307,7 +302,11 @@ module.exports.extendAndMerkelize = async function  extendAndMerkelize(stage, ct
 }
 
 module.exports.setChallengesStark = function setChallengesStark(stage, ctx, challenge, logger) {
-    let challengesIndex = ctx.pilInfo["cm" + stage + "_challenges"];
+    let challengesIndex = stage === "Q" 
+        ? [ctx.pilInfo.qChallenge] 
+        : stage === "fri" 
+            ? ctx.pilInfo.friChallenges
+            : ctx.pilInfo["cm" + stage + "_challenges"];
 
     if(challengesIndex.length === 0) throw new Error("No challenges needed for stage " + stage);
 

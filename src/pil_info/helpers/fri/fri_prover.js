@@ -8,6 +8,8 @@ module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
 
     const vf1 = E.challenge("vf1");
     const vf2 = E.challenge("vf2");
+    
+    res.friChallenges = [vf1.id, vf2.id];
 
     let friExp = null;
     for (let i=0; i<pil.nCommitments; i++) {

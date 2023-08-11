@@ -154,7 +154,7 @@ class Transcript {
         } else if (r.type == "public") {
             return "publics[" + r.id + "]";
         } else if (r.type == "x") {
-            return "challenges7";
+            return "challenges" + starkInfo.xiChallenge;
         } else if (r.type == "Z") {
             return "Z";
         } else if (r.type == "xDivXSubXi") {
@@ -252,6 +252,8 @@ class Transcript {
 <% return ref(code[code.length-1].dest);                                                -%>
 <% }                                                                                    -%>
 
+<%  let nChallenges = 4 + starkInfo.cm2_challenges.length + starkInfo.cm3_challenges.length; -%>
+
 /* 
     Calculate the transcript
 */ 
@@ -268,7 +270,7 @@ template Transcript() {
 <% }                                                     -%>
     signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
 
-    signal output challenges[8][3];  
+    signal output challenges[<%- nChallenges %>][3];  
     signal output ys[<%- starkStruct.nQueries %>][<%- starkStruct.steps[0].nBits %>];
 <% for (let s=0; s<starkStruct.steps.length; s++) {   -%>
     signal output s<%- s %>_specialX[3];
@@ -278,20 +280,23 @@ template Transcript() {
 const transcript = new Transcript();
 transcript.put("publics", pil.publics.length);
 transcript.put("root1");
-transcript.getField("challenges[0]", 3);
-transcript.getField("challenges[1]", 3);
-transcript.put("root2");
-transcript.getField("challenges[2]", 3);
-transcript.getField("challenges[3]", 3);
-transcript.put("root3");
-transcript.getField("challenges[4]", 3);
+for(let i=0; i < starkInfo.nStages; i++) {
+    for(let j = 0; j < starkInfo["cm" + (i + 2) + "_challenges"].length; ++j) {
+        const index = starkInfo["cm" + (i + 2) + "_challenges"][j];
+        transcript.getField("challenges[" + index + "]", 3);
+    }
+    transcript.put("root" + (i + 2));
+}    
+
+transcript.getField("challenges[" + starkInfo.qChallenge + "]", 3);
 transcript.put("rootQ");
-transcript.getField("challenges[7]", 3);
+
+transcript.getField("challenges[" + starkInfo.xiChallenge + "]", 3);
 for (let i=0; i<starkInfo.evMap.length; i++) {
     transcript.put(`evals[${i}]`, 3);
 }
-transcript.getField("challenges[5]", 3);
-transcript.getField("challenges[6]", 3);
+transcript.getField("challenges[" + starkInfo.friChallenges[0] + "]", 3);
+transcript.getField("challenges[" + starkInfo.friChallenges[1] + "]", 3);
 for (let si=0; si<starkStruct.steps.length; si++) {
     transcript.getField(`s${si}_specialX`, 3);
     if (si < starkStruct.steps.length-1) {
@@ -356,26 +361,22 @@ template parallel VerifyFRI(prevStepBits, currStepBits, nextStepBits, e0, e1) {
 /* 
     Verify that all committed polynomials are calculated correctly
 */
+<%  const challengeIndexes = [...starkInfo.cm2_challenges, ...starkInfo.cm3_challenges, starkInfo.qChallenge, starkInfo.xiChallenge]; -%>
 template parallel VerifyEvaluations() {
-<% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
-    signal input challenges0[3];
-    signal input challenges1[3];
-<% } -%>   
-    signal input challenges2[3];
-    signal input challenges3[3];
-    signal input challenges4[3];
-    signal input challenges7[3];
+<%  for(let i = 0; i < challengeIndexes.length; ++i) { -%>
+    signal input challenges<%- challengeIndexes[i] %>[3];
+<%  } -%>
     signal input evals[<%- starkInfo.evMap.length %>][3];
     signal input publics[<%- pil.publics.length %>];
     signal input enable;
 
     var p = 0xFFFFFFFF00000001;
 
-    // zMul stores all the powers of z (which is stored in challenge7) up to nBits, i.e, [z, z^2, ..., z^nBits]
+    // zMul stores all the powers of z (which is stored in challenges<%- starkInfo.xiChallenge %>) up to nBits, i.e, [z, z^2, ..., z^nBits]
     signal zMul[<%- starkStruct.nBits %>][3];
     for (var i=0; i< <%- starkStruct.nBits %> ; i++) {
         if(i==0){
-            zMul[i] <== GLCMul()(challenges7, challenges7);
+            zMul[i] <== GLCMul()(challenges<%- starkInfo.xiChallenge %>, challenges<%- starkInfo.xiChallenge %>);
         } else {
             zMul[i] <== GLCMul()(zMul[i-1], zMul[i-1]);
         }
@@ -427,9 +428,9 @@ template parallel VerifyEvaluations() {
 template parallel VerifyQuery(currStepBits, nextStepBits) {
     var nextStep = currStepBits - nextStepBits;
     signal input ys[<%- starkStruct.steps[0].nBits %>];
-    signal input challenges5[3];
-    signal input challenges6[3];
-    signal input challenges7[3];
+    signal input challenges<%- starkInfo.xiChallenge %>[3];
+    signal input challenges<%- starkInfo.friChallenges[0] %>[3];
+    signal input challenges<%- starkInfo.friChallenges[1] %>[3];
     signal input evals[<%- starkInfo.evMap.length %>][3];
     signal input tree1[<%- starkInfo.mapSectionsN.cm1_2ns %>];
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
@@ -479,14 +480,14 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
 <%  const opening = Number(Object.keys(starkInfo.fri2Id)[i]); -%>
 <%  if (opening) { -%>
     signal w<%- i %>[<%- opening %>][3];
-    w<%- i %>[0] <== GLCMul()([roots(<%- starkStruct.nBits %>), 0, 0], challenges7);
+    w<%- i %>[0] <== GLCMul()([roots(<%- starkStruct.nBits %>), 0, 0], challenges<%- starkInfo.xiChallenge %>);
 <%      for(let j = 1; j < Math.abs(opening); ++j) { -%>
 <%  let rootsFunction = opening > 0 ? 'roots' : 'rootsInv'; -%>
     w<%- i %>[<%- j %>] <== GLCMul()([<%- rootsFunction %>(<%- starkStruct.nBits %>), 0, 0], w<%- i %>[<%- j-1 %>]);
 <%      } -%>
     signal den<%- i %>inv[3] <== GLCInv()([X - w<%- i %>[<%- opening - 1 %>][0] + p, -w<%- i %>[<%- opening - 1 %>][1] + p, -w<%- i %>[<%- opening - 1 %>][2] + p]);
 <%  } else { -%>
-    signal den<%- i %>inv[3] <== GLCInv()([X - challenges7[0] + p, -challenges7[1] + p, -challenges7[2] + p]);
+    signal den<%- i %>inv[3] <== GLCInv()([X - challenges<%- starkInfo.xiChallenge %>[0] + p, -challenges<%- starkInfo.xiChallenge %>[1] + p, -challenges<%- starkInfo.xiChallenge %>[2] + p]);
 <%  } -%>
     xDivXSubXi[<%- starkInfo.fri2Id[opening] %>] <== GLCMul()([X, 0, 0], den<%- i %>inv);
 
@@ -651,7 +652,7 @@ template StarkVerifier() {
     // Challenge 7 -> Used to compute the evaluation challenge z (uses previous output + root committed in round 4)
     // Challenge 5 + 6 -> Used to compute combination challenge required for FRI (uses the evaluations values. 
     // Remember that each evaluation has three values since we are in an extended field GF(p^3))
-    signal challenges[8][3];
+    signal challenges[<%- nChallenges %>][3];
 
     //(s_i)_special contains the random value provided by the verifier at each step of the folding so that 
     // the prover can commit the polynomial.
@@ -678,11 +679,7 @@ template StarkVerifier() {
     // Check constraints polynomial in the evaluation point
     ///////////
 
-<%  const challengesEvaluations = ["challenges[2]", "challenges[3]", "challenges[4]", "challenges[7]"];
-    if (starkInfo.mapSectionsN.cm2_2ns > 0) { 
-        challengesEvaluations.unshift(...["challenges[0]", "challenges[1]"]);
-    }
--%> 
+<%  const challengesEvaluations = challengeIndexes.map(c => `challenges[${c}]`);-%> 
     VerifyEvaluations()(<%- challengesEvaluations.join(", ") %>, evals, publics, enable);
 
     ///////////
@@ -795,7 +792,7 @@ template StarkVerifier() {
 -%>
         // Verify that the query is properly constructed. This is done by checking that the linear combination of the set of 
         // polynomials committed during the different rounds evaluated at z matches with the commitment of the FRI polynomial (unsure)
-        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges[5], challenges[6], challenges[7], evals, <%- queryVals.join(", ") %>, <%- nextValsPol %>, enable);
+        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges[<%- starkInfo.xiChallenge %>], challenges[<%- starkInfo.friChallenges[0] %>], challenges[<%- starkInfo.friChallenges[1] %>], evals, <%- queryVals.join(", ") %>, <%- nextValsPol %>, enable);
 
         ///////////
         // Verify FRI construction
