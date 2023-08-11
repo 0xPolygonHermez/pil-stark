@@ -38,10 +38,12 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         logger.debug(`  Curve:         ${curve.name}`);
         logger.debug(`  Domain size:   ${domainSize} (2^${power})`);
         logger.debug(`  Const  pols:   ${fflonkInfo.nConstants}`);
-        logger.debug(`  Step 1 pols:   ${fflonkInfo.nCm1}`);
-        logger.debug(`  Step 2 pols:   ${fflonkInfo.nCm2}`);
-        logger.debug(`  Step 3 pols:   ${fflonkInfo.nCm3}`);
-        logger.debug(`  Step 4 pols:   ${nPolsQ.length}`);
+        logger.debug(`  Stage 1 pols:   ${fflonkInfo.nCm[1]}`);
+        for(let i = 0; i < ctx.pilInfo.nStages; i++) {
+            const stage = i + 2;
+            logger.debug(`  Stage ${stage} pols:   ${ctx.pilInfo.nCm[stage]}`);
+        }
+        logger.debug(`  Stage 4 pols:   ${nPolsQ.length}`);
         logger.debug(`  Temp exp pols: ${fflonkInfo.mapSectionsN.tmpExp_n}`);
         logger.debug("------------------------------");
     }
@@ -62,9 +64,9 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         transcript.addPolCommitment(stage1CommitPols[i]);
     }
     
-    if(fflonkInfo.nCm2 > 0 || fflonkInfo.peCtx.length > 0) {
-        for(let j = 0; j < fflonkInfo.cm2_challenges.length; ++j) {
-            const index = fflonkInfo.cm2_challenges[j];
+    if(fflonkInfo.nCm[2] > 0 || fflonkInfo.peCtx.length > 0) {
+        for(let j = 0; j < fflonkInfo.challenges[stage].length; ++j) {
+            const index = fflonkInfo.challenges[stage][j];
             ctx.challenges[index] = transcript.getChallenge();
             if (logger) logger.debug("··· challenges[" + index + "]: " + Fr.toString(ctx.challenges[index]));
             transcript.reset();
@@ -77,9 +79,9 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         transcript.addPolCommitment(stage2CommitPols[i]);
     }
 
-    if(fflonkInfo.nCm3 > 0) {
-        for(let j = 0; j < fflonkInfo.cm3_challenges.length; ++j) {
-            const index = fflonkInfo.cm3_challenges[j];
+    if(fflonkInfo.nCm[3] > 0) {
+        for(let j = 0; j < fflonkInfo.challenges[stage].length; ++j) {
+            const index = fflonkInfo.challenges[stage][j];
             ctx.challenges[index] = transcript.getChallenge();
             if (logger) logger.debug("··· challenges[" + index + "]: " + Fr.toString(ctx.challenges[index]));
             transcript.reset();

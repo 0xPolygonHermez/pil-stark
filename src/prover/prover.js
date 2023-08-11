@@ -27,8 +27,8 @@ module.exports = async function proofGen(cmPols, pilInfo, constTree, constPols, 
         await cmPols.writeToBigBufferFr(ctx.cm1_n, ctx.F);
     }
    
-    if (cmPols.$$nPols != ctx.pilInfo.nCm1) {
-        throw new Error(`Number of Commited Polynomials: ${cmPols.length} do not match with the pilInfo definition: ${ctx.pilInfo.nCm1} `)
+    if (cmPols.$$nPols != ctx.pilInfo.nCm[1]) {
+        throw new Error(`Number of Commited Polynomials: ${cmPols.length} do not match with the pilInfo definition: ${ctx.pilInfo.nCm[1]} `)
     };
 
     // STAGE 1. Compute Trace Column Polynomials
@@ -39,14 +39,14 @@ module.exports = async function proofGen(cmPols, pilInfo, constTree, constPols, 
     // STAGE 2. Compute Inclusion Polynomials
     await stage2(ctx, challenge, parallelExec, useThreads, logger);
 
-    if(ctx.prover === "stark" || ctx.pilInfo.nCm2 > 0 || ctx.pilInfo.peCtx.length > 0) {
+    if(ctx.prover === "stark" || ctx.pilInfo.nCm[2] > 0 || ctx.pilInfo.peCtx.length > 0) {
         challenge = await getChallenge(2, ctx);
     }
 
     // STAGE 3. Compute Grand Product and Intermediate Polynomials
     await stage3(ctx, challenge, parallelExec, useThreads, logger);
     
-    if(ctx.prover === "stark" || ctx.pilInfo.nCm3 > 0) {
+    if(ctx.prover === "stark" || ctx.pilInfo.nCm[3] > 0) {
         challenge = await getChallenge(3, ctx);
     }
 
@@ -81,81 +81,60 @@ async function stage1(ctx, logger) {
 }
 
 async function stage2(ctx, challenge, parallelExec, useThreads, logger) {
-    if(ctx.prover === "fflonk" && !ctx.pilInfo.nCm2 && ctx.pilInfo.peCtx.length === 0) return;
+    if(ctx.prover === "fflonk" && !ctx.pilInfo.nCm[2] && ctx.pilInfo.peCtx.length === 0) return;
 
     setChallenges(2, ctx, challenge, logger);
     
-    if (ctx.prover === "fflonk" && !ctx.pilInfo.nCm2) return;
+    if (ctx.prover === "fflonk" && !ctx.pilInfo.nCm[2]) return;
 
     if (logger) logger.debug("> STAGE 2. Compute Inclusion Polynomials");
 
     // STEP 2.2 - Compute stage 2 polynomials --> h1, h2
-    await callCalculateExps("step2prev", "n", ctx, parallelExec, useThreads);
+    await callCalculateExps("2", "n", ctx, parallelExec, useThreads);
 
     for (let i = 0; i < ctx.pilInfo.puCtx.length; i++) {
-        const puCtx = ctx.pilInfo.puCtx[i];
+        const pu = ctx.pilInfo.puCtx[i];
 
-        const fPol = getPol(ctx, ctx.pilInfo.exp2pol[puCtx.fExpId]);
-        const tPol = getPol(ctx, ctx.pilInfo.exp2pol[puCtx.tExpId]);
+        const fPol = getPol(ctx, ctx.pilInfo.exp2pol[pu.fExpId]);
+        const tPol = getPol(ctx, ctx.pilInfo.exp2pol[pu.tExpId]);
 
         const [h1, h2] = calculateH1H2(ctx.F, fPol, tPol);
-        setPol(ctx, ctx.pilInfo.cm_n[ctx.pilInfo.nCm1 + 2 * i], h1);
-        setPol(ctx, ctx.pilInfo.cm_n[ctx.pilInfo.nCm1 + 2 * i + 1], h2);
+        setPol(ctx, ctx.pilInfo.cm_n[pu.h1Id], h1);
+        setPol(ctx, ctx.pilInfo.cm_n[pu.h2Id], h2);
     }
 
     ctx.prover === "stark" ? await extendAndMerkelize(2, ctx) : await extendAndCommit(2, ctx, logger);
 }
 
 async function stage3(ctx, challenge, parallelExec, useThreads, logger) {
-    if (ctx.prover === "fflonk" && !ctx.pilInfo.nCm3) return;
+    if (ctx.prover === "fflonk" && !ctx.pilInfo.nCm[3]) return;
 
     if (logger) logger.debug("> STAGE 3. Compute Grand Product and Intermediate Polynomials");
 
     setChallenges(3, ctx, challenge, logger);
 
     // STEP 3.2 - Compute stage 3 polynomials --> Plookup Z, Permutations Z & ConnectionZ polynomials
-    const nPlookups = ctx.pilInfo.puCtx.length;
-    const nPermutations = ctx.pilInfo.peCtx.length;
-    const nConnections = ctx.pilInfo.ciCtx.length;
+    const polsCtx = [];
+    if(ctx.pilInfo.puCtx.length > 0) polsCtx.push({name: "Plookup", ctx: ctx.pilInfo.puCtx});
+    if(ctx.pilInfo.peCtx.length > 0) polsCtx.push({name: "Permutation", ctx: ctx.pilInfo.peCtx});
+    if(ctx.pilInfo.ciCtx.length > 0) polsCtx.push({name: "Connection", ctx: ctx.pilInfo.ciCtx});
 
-    await callCalculateExps("step3prev", "n", ctx, parallelExec, useThreads);
+    await callCalculateExps("3", "n", ctx, parallelExec, useThreads);
+    
+    for (let i = 0; i < polsCtx.length; ++i) {
+        for(let j = 0; j < polsCtx[i].ctx.length; ++j) {
+            if (logger) logger.debug(`··· Calculating z for ${polsCtx[i].name} ${j}`);
+            
+            const polCtx = polsCtx[i].ctx[j];
+            const pNum = getPol(ctx, ctx.pilInfo.exp2pol[polCtx.numId]);
+            const pDen = getPol(ctx, ctx.pilInfo.exp2pol[polCtx.denId]);
+            const z = await calculateZ(ctx.F, pNum, pDen);
 
-    let nCm3 = ctx.pilInfo.nCm1 + ctx.pilInfo.nCm2;
-
-    for (let i = 0; i < nPlookups; i++) {
-        if (logger) logger.debug(`··· Calculating z for plookup ${i}`);
-
-        const pu = ctx.pilInfo.puCtx[i];
-        const pNum = getPol(ctx, ctx.pilInfo.exp2pol[pu.numId]);
-        const pDen = getPol(ctx, ctx.pilInfo.exp2pol[pu.denId]);
-        const z = await calculateZ(ctx.F, pNum, pDen);
-
-        setPol(ctx, ctx.pilInfo.cm_n[nCm3 + i], z);
+            setPol(ctx, ctx.pilInfo.cm_n[polCtx.zId], z);
+        }
     }
 
-    for (let i = 0; i < nPermutations; i++) {
-        if (logger) logger.debug(`··· Calculating z for permutation check ${i}`);
-
-        const pe = ctx.pilInfo.peCtx[i];
-        const pNum = getPol(ctx, ctx.pilInfo.exp2pol[pe.numId]);
-        const pDen = getPol(ctx, ctx.pilInfo.exp2pol[pe.denId]);
-        const z = await calculateZ(ctx.F, pNum, pDen);
-
-        setPol(ctx, ctx.pilInfo.cm_n[nCm3 + nPlookups + i], z);
-    }
-
-    for (let i = 0; i < nConnections; i++) {
-        if (logger) logger.debug(`··· Calculating z for connection ${i}`);
-
-        const ci = ctx.pilInfo.ciCtx[i];
-        const pNum = getPol(ctx, ctx.pilInfo.exp2pol[ci.numId]);
-        const pDen = getPol(ctx, ctx.pilInfo.exp2pol[ci.denId]);
-        const z = await calculateZ(ctx.F, pNum, pDen);
-
-        setPol(ctx, ctx.pilInfo.cm_n[nCm3 + nPlookups + nPermutations + i], z);
-    }
-
-    await callCalculateExps("stepQprev", "n", ctx, parallelExec, useThreads);
+    await callCalculateExps("imPols", "n", ctx, parallelExec, useThreads);
 
     ctx.prover === "stark" ? await extendAndMerkelize(3, ctx) : await extendAndCommit(3, ctx, logger);
 } 
@@ -167,7 +146,7 @@ async function stageQ(ctx, challenge, parallelExec, useThreads, logger) {
     setChallenges("Q", ctx, challenge, logger);
     
     // STEP 4.2 - Compute stage 4 polynomial --> Q polynomial
-    await callCalculateExps("stepQ2ns", "2ns", ctx, parallelExec, useThreads);
+    await callCalculateExps("Q", "2ns", ctx, parallelExec, useThreads);
 
     ctx.prover === "stark" ? await computeQStark(ctx, logger) : await computeQFflonk(ctx, logger);    
 }

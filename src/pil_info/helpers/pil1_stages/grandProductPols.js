@@ -4,26 +4,29 @@ const ExpressionOps = require("../../expressionops");
 
 const getKs = require("pilcom").getKs;
 
-module.exports = function generateStage3(F, res, pil, ctx) {
+module.exports = function generateGrandProductPols(stage, F, res, pil, ctx) {
 
     const E = new ExpressionOps();
     const gamma = E.challenge("gamma");
     const delta = E.challenge("delta");
 
-    res.cm3_challenges = [gamma.id, delta.id];
+    res.nChallenges += 2;
+    res.challenges[stage] = [gamma.id, delta.id];
+    res.nCm[stage] = 0;
 
     if (pil.permutationIdentities.length > 0) {
         const epsilon = E.challenge("epsilon");
-        res.cm3_challenges.push(epsilon.id);
+        res.challenges[stage].push(epsilon.id);
+        res.nChallenges++;
     }
 
     generatePermutationLC(res, pil, ctx);
-    generatePlookupZ(res, pil, ctx);
-    generatePermutationZ(res, pil, ctx);
-    generateConnectionsZ(F, res, pil, ctx);
+    generatePlookupZ(stage, res, pil, ctx);
+    generatePermutationZ(stage, res, pil, ctx);
+    generateConnectionsZ(stage, F, res, pil, ctx);
 
 
-    res.step3prev = buildCode(ctx);
+    res.steps[stage] = buildCode(ctx);
     ctx.calculated =  { exps: {}, expsPrime: {} }
     res.nStages++;
 
@@ -89,13 +92,13 @@ function generatePermutationLC(res, pil) {
 }
 
 
-function generatePlookupZ(res, pil, ctx) {
+function generatePlookupZ(stage, res, pil, ctx) {
     const E = new ExpressionOps();
 
     for (let i=0; i<pil.plookupIdentities.length; i++) {
         const puCtx = res.puCtx[i];
         puCtx.zId = pil.nCommitments++;
-
+        res.nCm[stage]++;
 
         const h1 = E.cm(puCtx.h1Id);
         const h2 =  E.cm(puCtx.h2Id);
@@ -182,13 +185,14 @@ function generatePlookupZ(res, pil, ctx) {
 }
 
 
-function generatePermutationZ(res, pil, ctx) {
+function generatePermutationZ(stage, res, pil, ctx) {
     const E = new ExpressionOps();
 
     for (let i=0; i<pil.permutationIdentities.length; i++) {
         peCtx = res.peCtx[i];
 
         peCtx.zId = pil.nCommitments++;
+        res.nCm[stage]++;
 
         const f = E.exp(peCtx.fExpId);
         const t = E.exp(peCtx.tExpId);
@@ -228,7 +232,7 @@ function generatePermutationZ(res, pil, ctx) {
     }
 }
 
-function generateConnectionsZ(F, res, pil, ctx) {
+function generateConnectionsZ(stage, F, res, pil, ctx) {
     const E = new ExpressionOps();
 
     for (let i=0; i<pil.connectionIdentities.length; i++) {
@@ -236,6 +240,7 @@ function generateConnectionsZ(F, res, pil, ctx) {
         const ciCtx = {};
 
         ciCtx.zId = pil.nCommitments++;
+        res.nCm[stage]++;
 
         const gamma = E.challenge("gamma");
         const delta = E.challenge("delta");

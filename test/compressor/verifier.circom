@@ -699,7 +699,7 @@ template StarkVerifier() {
     signal input s0_siblings1[8][9][4];
     signal input s0_siblings2[8][9][4];
     signal input s0_siblings3[8][9][4];
-    signal input s0_siblings4[8][9][4];
+    signal input s0_siblingsQ[8][9][4];
     signal input s0_siblingsC[8][9][4];
 
     // Contains the root of the original polynomial and all the intermediate FRI polynomials except for the last step
@@ -814,7 +814,7 @@ template StarkVerifier() {
         VerifyMerkleHash(1, 21, 512)(s0_vals3_p[q], s0_siblings3[q], ys[q], root3, enable);
     }
     for (var q=0; q<8; q++) {
-        VerifyMerkleHash(1, 6, 512)(s0_valsQ_p[q], s0_siblings4[q], ys[q], rootQ, enable);
+        VerifyMerkleHash(1, 6, 512)(s0_valsQ_p[q], s0_siblingsQ[q], ys[q], rootQ, enable);
     }
 
     for (var q=0; q<8; q++) {

@@ -3,13 +3,16 @@ const {pilCodeGen, buildCode} = require("../../codegen.js");
 const ExpressionOps = require("../../expressionops");
 
 
-module.exports = function generateStage2(res, pil, ctx) {
+module.exports = function generateInclusionPols(stage, res, pil, ctx) {
 
     const E = new ExpressionOps();
 
     const alpha = E.challenge("alpha");
     const beta = E.challenge("beta");
 
+    res.nChallenges += 2;
+
+    res.nCm[stage] = 0;
     for (let i=0; i<pil.plookupIdentities.length; i++) {
         const puCtx = {};
         const pi = pil.plookupIdentities[i];
@@ -66,12 +69,13 @@ module.exports = function generateStage2(res, pil, ctx) {
         puCtx.h2Id = pil.nCommitments++;
 
         res.puCtx.push(puCtx);
+
+        res.nCm[stage] += 2;
     }
 
-    res.step2prev = buildCode(ctx);
+    res.challenges[stage] = [alpha.id, beta.id];
+    res.steps[stage] = buildCode(ctx);
     ctx.calculated =  { exps: {}, expsPrime: {} }
 
-    res.nCm2 = pil.nCommitments - res.nCm1;
-    res.cm2_challenges = [alpha.id, beta.id];
     res.nStages++;
 }

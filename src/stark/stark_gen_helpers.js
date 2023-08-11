@@ -1,5 +1,4 @@
 
-const assert = require("assert");
 const buildMerklehashGL = require("../helpers/hash/merklehash/merklehash_p.js");
 const buildMerkleHashBN128 = require("../helpers/hash/merklehash/merklehash_bn128_p.js");
 const Transcript = require("../helpers/transcript/transcript");
@@ -51,10 +50,12 @@ module.exports.initProverStark = async function initProverStark(pilInfo, constPo
         logger.debug(`  Domain size: ${ctx.N} (2^${ctx.nBits})`);
         logger.debug(`  Domain size ext: ${ctx.Next} (2^${ctx.nBitsExt})`);
         logger.debug(`  Const  pols:   ${ctx.pilInfo.nConstants}`);
-        logger.debug(`  Stage 1 pols:   ${ctx.pilInfo.nCm1}`);
-        logger.debug(`  Stage 2 pols:   ${ctx.pilInfo.nCm2}`);
-        logger.debug(`  Stage 3 pols:   ${ctx.pilInfo.nCm3}`);
-        logger.debug(`  Stage Q pols:   ${ctx.pilInfo.nCmQ}`);
+        logger.debug(`  Stage 1 pols:   ${ctx.pilInfo.nCm[1]}`);
+        for(let i = 0; i < ctx.pilInfo.nStages; i++) {
+            const stage = i + 2;
+            logger.debug(`  Stage ${stage} pols:   ${ctx.pilInfo.nCm[stage]}`);
+        }
+        logger.debug(`  Stage Q pols:   ${ctx.pilInfo.qDeg}`);
         logger.debug(`  Temp exp pols: ${ctx.pilInfo.mapSectionsN.tmpExp_n}`);
         logger.debug("-----------------------------");
     }
@@ -79,16 +80,20 @@ module.exports.initProverStark = async function initProverStark(pilInfo, constPo
 
     ctx.const_n = new Proxy(new BigBuffer(ctx.pilInfo.nConstants*ctx.N), BigBufferHandler);
     ctx.cm1_n = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm1_n*ctx.N), BigBufferHandler);
-    ctx.cm2_n = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm2_n*ctx.N), BigBufferHandler);
-    ctx.cm3_n = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm3_n*ctx.N), BigBufferHandler);
+    for(let i = 0; i < ctx.pilInfo.nStages; i++) {
+        const stage = i + 2;
+        ctx[`cm${stage}_n`] = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN[`cm${stage}_n`]*ctx.N), BigBufferHandler);
+    }
     ctx.tmpExp_n = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.tmpExp_n*ctx.N), BigBufferHandler);
     ctx.x_n = new Proxy(new BigBuffer(ctx.N), BigBufferHandler);
 
     
     ctx.const_2ns = new Proxy(constTree.elements, BigBufferHandler);
     ctx.cm1_2ns = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm1_n*ctx.Next), BigBufferHandler);
-    ctx.cm2_2ns = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm2_n*ctx.Next), BigBufferHandler);
-    ctx.cm3_2ns = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm3_n*ctx.Next), BigBufferHandler);
+    for(let i = 0; i < ctx.pilInfo.nStages; i++) {
+        const stage = i + 2;
+        ctx[`cm${stage}_2ns`] = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN[`cm${stage}_2ns`]*ctx.Next), BigBufferHandler);
+    }
     ctx.cmQ_2ns = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cmQ_n*ctx.Next), BigBufferHandler);
     ctx.q_2ns = new Proxy(new BigBuffer(ctx.pilInfo.qDim*ctx.Next), BigBufferHandler);
     ctx.f_2ns = new Proxy(new BigBuffer(3*ctx.Next), BigBufferHandler);
@@ -245,7 +250,7 @@ module.exports.computeFRIStark = async function computeFRIStark(ctx, challenge, 
         }
     }
 
-    await callCalculateExps("stepEv2ns", "2ns", ctx, parallelExec, useThreads);
+    await callCalculateExps("fri", "2ns", ctx, parallelExec, useThreads);
 
     const friPol = new Array(ctx.Next);
 
@@ -258,13 +263,17 @@ module.exports.computeFRIStark = async function computeFRIStark(ctx, challenge, 
     }
 
     const queryPol = (idx) => {
-        return [
-            ctx.MH.getGroupProof(ctx.trees[1], idx),
-            ctx.MH.getGroupProof(ctx.trees[2], idx),
-            ctx.MH.getGroupProof(ctx.trees[3], idx),
-            ctx.MH.getGroupProof(ctx.trees[ctx.pilInfo.nStages + 2], idx),
-            ctx.MH.getGroupProof(ctx.constTree, idx),
-        ];
+        const queriesPols = [];
+
+        queriesPols.push(ctx.MH.getGroupProof(ctx.constTree, idx));
+        queriesPols.push(ctx.MH.getGroupProof(ctx.trees[1], idx));
+        for(let i = 0; i < ctx.pilInfo.nStages; ++i) {
+            const stage = i + 2;
+            queriesPols.push(ctx.MH.getGroupProof(ctx.trees[stage], idx));
+        }
+        queriesPols.push(ctx.MH.getGroupProof(ctx.trees[ctx.pilInfo.nStages + 2], idx));
+       
+        return queriesPols;
     }
 
     ctx.friProof = await ctx.fri.prove(ctx.transcript, friPol, queryPol);
@@ -275,12 +284,15 @@ module.exports.genProofStark = async function genProof(ctx, logger) {
 
     const proof = {
         root1: ctx.MH.root(ctx.trees[1]),
-        root2: ctx.MH.root(ctx.trees[2]),
-        root3: ctx.MH.root(ctx.trees[3]),
         rootQ: ctx.MH.root(ctx.trees[ctx.pilInfo.nStages + 2]),
         evals: ctx.evals,
         fri: ctx.friProof
     };
+
+    for(let i = 0; i < ctx.pilInfo.nStages; ++i) {
+        const stage = i + 2;
+        proof["root" + stage] = ctx.MH.root(ctx.trees[stage]);
+    }
 
     const publics = ctx.publics;
 
@@ -306,7 +318,7 @@ module.exports.setChallengesStark = function setChallengesStark(stage, ctx, chal
         ? [ctx.pilInfo.qChallenge] 
         : stage === "fri" 
             ? ctx.pilInfo.friChallenges
-            : ctx.pilInfo["cm" + stage + "_challenges"];
+            : ctx.pilInfo.challenges[stage];
 
     if(challengesIndex.length === 0) throw new Error("No challenges needed for stage " + stage);
 

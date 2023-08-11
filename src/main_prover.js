@@ -79,7 +79,7 @@ async function run() {
 
     await fs.promises.writeFile(proofFile, JSONbig.stringify(resP.proof, null, 1), "utf8");
 
-    const zkIn = proof2zkin(resP.proof);
+    const zkIn = proof2zkin(resP.proof, starkInfo);
     zkIn.publics = resP.publics;
 
     await fs.promises.writeFile(publicFile, JSONbig.stringify(resP.publics, null, 1), "utf8");

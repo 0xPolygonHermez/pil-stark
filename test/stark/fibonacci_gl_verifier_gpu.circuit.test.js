@@ -50,7 +50,7 @@ describe("Stark Verification Circuit Test", function () {
         console.log("End compiling...");
 
         const proof= JSONbig.parse( await fs.promises.readFile(proofFile, "utf8") );
-        const input = proof2zkin(proof);
+        const input = proof2zkin(proof, starkInfo);
         input.publics = publics;
 
         console.log("Start wc...");

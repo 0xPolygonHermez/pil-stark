@@ -27,7 +27,7 @@ module.exports.callCalculateExps = async function callCalculateExps(step, dom, c
     if (parallelExec) {
         await module.exports.calculateExpsParallel(ctx, step, useThreads);
     } else {
-        module.exports.calculateExps(ctx, ctx.pilInfo[step], dom);
+        module.exports.calculateExps(ctx, ctx.pilInfo.steps[step], dom);
     }
 }
 
@@ -77,6 +77,7 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
         body.push(`  return ${getRef(code[code.length-1].dest)};`);
     }
 
+    console.log(body);
     return body.join("\n");
 
     function getRef(r) {
@@ -287,19 +288,19 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
     const pool = workerpool.pool(__dirname + '/prover_worker.js');
 
     let dom;
-    let code = ctx.pilInfo[execPart];
+    let code = ctx.pilInfo.steps[execPart];
     let execInfo = {
         inputSections: [],
         outputSections: []
     };
-    if (execPart == "step2prev") {
+    if (execPart == "2") {
         execInfo.inputSections.push({ name: "cm1_n" });
         execInfo.inputSections.push({ name: "const_n" });
         execInfo.outputSections.push({ name: "cm2_n" });
         execInfo.outputSections.push({ name: "cm3_n" });
         execInfo.outputSections.push({ name: "tmpExp_n" });
         dom = "n";
-    } else if (execPart == "step3prev") {
+    } else if (execPart == "3") {
         execInfo.inputSections.push({ name: "cm1_n" });
         execInfo.inputSections.push({ name: "cm2_n" });
         execInfo.inputSections.push({ name: "cm3_n" });
@@ -308,7 +309,7 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
         execInfo.outputSections.push({ name: "cm3_n" });
         execInfo.outputSections.push({ name: "tmpExp_n" });
         dom = "n";
-    } else if (execPart == "stepQprev") {
+    } else if (execPart == "imPols") {
         execInfo.inputSections.push({ name: "cm1_n" });
         execInfo.inputSections.push({ name: "cm2_n" });
         execInfo.inputSections.push({ name: "cm3_n" });
@@ -317,10 +318,12 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
         execInfo.outputSections.push({ name: "cm3_n" });
         execInfo.outputSections.push({ name: "tmpExp_n" });
         dom = "n";
-    } else if (execPart == "stepQ2ns") {
+    } else if (execPart == "Q") {
         execInfo.inputSections.push({ name: "cm1_2ns" });
-        execInfo.inputSections.push({ name: "cm2_2ns" });
-        execInfo.inputSections.push({ name: "cm3_2ns" });
+        for(let i = 0; i < ctx.pilInfo.nStages; i++) {
+            const stage = i + 2;
+            execInfo.inputSections.push({ name: `cm${stage}_2ns` });
+        }
         execInfo.inputSections.push({ name: "const_2ns" });
         execInfo.inputSections.push({ name: "x_2ns" });
         execInfo.outputSections.push({ name: "q_2ns" });
@@ -328,10 +331,12 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
             execInfo.inputSections.push({ name: "Zi_2ns" });
         }
         dom = "2ns";
-    } else if (execPart == "stepEv2ns") {
+    } else if (execPart == "fri") {
         execInfo.inputSections.push({ name: "cm1_2ns" });
-        execInfo.inputSections.push({ name: "cm2_2ns" });
-        execInfo.inputSections.push({ name: "cm3_2ns" });
+        for(let i = 0; i < ctx.pilInfo.nStages; i++) {
+            const stage = i + 2;
+            execInfo.inputSections.push({ name: `cm${stage}_2ns` });
+        }
         execInfo.inputSections.push({ name: "cmQ_2ns" });
         execInfo.inputSections.push({ name: "const_2ns" });
         execInfo.inputSections.push({ name: "xDivXSubXi_2ns" });
