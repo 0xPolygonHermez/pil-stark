@@ -74,7 +74,7 @@ module.exports = function generateInclusionPols(stage, res, pil, ctx) {
     }
 
     res.challenges[stage] = [alpha.id, beta.id];
-    res.steps[stage] = buildCode(ctx);
+    res.steps["stage" + stage] = buildCode(ctx);
     ctx.calculated =  { exps: {}, expsPrime: {} }
 
     res.nStages++;

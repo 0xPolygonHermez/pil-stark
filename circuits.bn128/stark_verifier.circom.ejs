@@ -740,7 +740,7 @@ template StarkVerifier() {
 <% for(let i = 0; i < starkInfo.nStages; ++i) { -%>
 <%  const stage = i + 2; -%>
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN[`cm${stage}_2ns`] %>, <%- 1 << starkStruct.steps[0].nBits %>,<%- arity %>)(s0_vals<%- stage %>_p[q], s0_siblings<%- stage %>[q], ys[q], root<%- stage %>, enable);
+        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN[`cm${stage}_2ns`] %>, <%- starkStruct.steps[0].nBits %>,<%- arity %>)(s0_vals<%- stage %>_p[q], s0_siblings<%- stage %>[q], ys[q], root<%- stage %>, enable);
     }
 <% } -%>
 

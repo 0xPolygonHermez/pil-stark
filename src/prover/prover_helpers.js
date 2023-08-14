@@ -77,7 +77,6 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
         body.push(`  return ${getRef(code[code.length-1].dest)};`);
     }
 
-    console.log(body);
     return body.join("\n");
 
     function getRef(r) {
@@ -248,10 +247,13 @@ module.exports.setPol = function setPol(ctx, idPol, pol) {
 
 module.exports.getPolRef = function getPolRef(ctx, idPol) {
     let p = ctx.pilInfo.varPolMap[idPol];
+    let dom = p.section.split("_")[1];
+    if(!["n", "2ns"].includes(dom)) throw new Error("invalid section");
+    const deg = dom === "2ns" ? ctx.Next : ctx.N;
     let polRef = {
         section: p.section,
         buffer: ctx[p.section],
-        deg: ctx.pilInfo.mapDeg[p.section],
+        deg: deg,
         offset: p.sectionPos,
         size: ctx.pilInfo.mapSectionsN[p.section],
         dim: p.dim
@@ -293,38 +295,42 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
         inputSections: [],
         outputSections: []
     };
-    if (execPart == "2") {
-        execInfo.inputSections.push({ name: "cm1_n" });
+
+    const execStages = [];
+    for(let i = 0; i < ctx.pilInfo.nStages; ++i) {
+        const stage = 2 + i;
+        execStages.push(`stage${stage}`);
+    }
+    
+    if (execStages.includes(execPart)) {
         execInfo.inputSections.push({ name: "const_n" });
-        execInfo.outputSections.push({ name: "cm2_n" });
-        execInfo.outputSections.push({ name: "cm3_n" });
-        execInfo.outputSections.push({ name: "tmpExp_n" });
-        dom = "n";
-    } else if (execPart == "3") {
         execInfo.inputSections.push({ name: "cm1_n" });
-        execInfo.inputSections.push({ name: "cm2_n" });
-        execInfo.inputSections.push({ name: "cm3_n" });
-        execInfo.inputSections.push({ name: "const_n" });
         execInfo.inputSections.push({ name: "x_n" });
-        execInfo.outputSections.push({ name: "cm3_n" });
+        for(let j = 0; j < ctx.pilInfo.nStages; j++) {
+            const stage = j + 2;
+            execInfo.inputSections.push({ name: `cm${stage}_n` });
+            execInfo.outputSections.push({ name: `cm${stage}_n` });
+        }
         execInfo.outputSections.push({ name: "tmpExp_n" });
         dom = "n";
     } else if (execPart == "imPols") {
-        execInfo.inputSections.push({ name: "cm1_n" });
-        execInfo.inputSections.push({ name: "cm2_n" });
-        execInfo.inputSections.push({ name: "cm3_n" });
         execInfo.inputSections.push({ name: "const_n" });
+        execInfo.inputSections.push({ name: "cm1_n" });
+        for(let i = 0; i < ctx.pilInfo.nStages; i++) {
+            const stage = i + 2;
+            execInfo.inputSections.push({ name: `cm${stage}_n` });
+        }
         execInfo.inputSections.push({ name: "x_n" });
-        execInfo.outputSections.push({ name: "cm3_n" });
+        execInfo.outputSections.push({ name: `cm${ctx.pilInfo.nStages + 1}_n` });
         execInfo.outputSections.push({ name: "tmpExp_n" });
         dom = "n";
     } else if (execPart == "Q") {
+        execInfo.inputSections.push({ name: "const_2ns" });
         execInfo.inputSections.push({ name: "cm1_2ns" });
         for(let i = 0; i < ctx.pilInfo.nStages; i++) {
             const stage = i + 2;
             execInfo.inputSections.push({ name: `cm${stage}_2ns` });
         }
-        execInfo.inputSections.push({ name: "const_2ns" });
         execInfo.inputSections.push({ name: "x_2ns" });
         execInfo.outputSections.push({ name: "q_2ns" });
         if(ctx.prover === "stark") {
@@ -332,13 +338,13 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
         }
         dom = "2ns";
     } else if (execPart == "fri") {
+        execInfo.inputSections.push({ name: "const_2ns" });
         execInfo.inputSections.push({ name: "cm1_2ns" });
         for(let i = 0; i < ctx.pilInfo.nStages; i++) {
             const stage = i + 2;
             execInfo.inputSections.push({ name: `cm${stage}_2ns` });
         }
         execInfo.inputSections.push({ name: "cmQ_2ns" });
-        execInfo.inputSections.push({ name: "const_2ns" });
         execInfo.inputSections.push({ name: "xDivXSubXi_2ns" });
         execInfo.outputSections.push({ name: "f_2ns" });
         dom = "2ns";

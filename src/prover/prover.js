@@ -90,7 +90,7 @@ async function stage2(ctx, challenge, parallelExec, useThreads, logger) {
     if (logger) logger.debug("> STAGE 2. Compute Inclusion Polynomials");
 
     // STEP 2.2 - Compute stage 2 polynomials --> h1, h2
-    await callCalculateExps("2", "n", ctx, parallelExec, useThreads);
+    await callCalculateExps("stage2", "n", ctx, parallelExec, useThreads);
 
     for (let i = 0; i < ctx.pilInfo.puCtx.length; i++) {
         const pu = ctx.pilInfo.puCtx[i];
@@ -119,7 +119,7 @@ async function stage3(ctx, challenge, parallelExec, useThreads, logger) {
     if(ctx.pilInfo.peCtx.length > 0) polsCtx.push({name: "Permutation", ctx: ctx.pilInfo.peCtx});
     if(ctx.pilInfo.ciCtx.length > 0) polsCtx.push({name: "Connection", ctx: ctx.pilInfo.ciCtx});
 
-    await callCalculateExps("3", "n", ctx, parallelExec, useThreads);
+    await callCalculateExps("stage3", "n", ctx, parallelExec, useThreads);
     
     for (let i = 0; i < polsCtx.length; ++i) {
         for(let j = 0; j < polsCtx[i].ctx.length; ++j) {

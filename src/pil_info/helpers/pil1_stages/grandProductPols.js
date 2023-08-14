@@ -26,7 +26,7 @@ module.exports = function generateGrandProductPols(stage, F, res, pil, ctx) {
     generateConnectionsZ(stage, F, res, pil, ctx);
 
 
-    res.steps[stage] = buildCode(ctx);
+    res.steps["stage" + stage] = buildCode(ctx);
     ctx.calculated =  { exps: {}, expsPrime: {} }
     res.nStages++;
 
@@ -115,9 +115,8 @@ function generatePlookupZ(stage, res, pil, ctx) {
 
         const c1 = E.mul(l1,  E.sub(z, E.number(1)));
         c1.deg=2;
-        puCtx.c1Id = pil.expressions.length;
         pil.expressions.push(c1);
-        pil.polIdentities.push({e: puCtx.c1Id});
+        pil.polIdentities.push({e: pil.expressions.length - 1});
 
         const gamma = E.challenge("gamma");
         const delta = E.challenge("delta");
@@ -175,9 +174,8 @@ function generatePlookupZ(stage, res, pil, ctx) {
 
         const c2 = E.sub(  E.mul(zp, den), E.mul(z, num)  );
         c2.deg=2;
-        puCtx.c2Id = pil.expressions.length;
         pil.expressions.push(c2);
-        pil.polIdentities.push({e: puCtx.c2Id});
+        pil.polIdentities.push({e: pil.expressions.length - 1});
 
         pilCodeGen(ctx, puCtx.numId, false);
         pilCodeGen(ctx, puCtx.denId, false);
@@ -205,27 +203,25 @@ function generatePermutationZ(stage, res, pil, ctx) {
 
         const c1 = E.mul(l1,  E.sub(z, E.number(1)));
         c1.deg=2;
-        peCtx.c1Id = pil.expressions.length;
         pil.expressions.push(c1);
-        pil.polIdentities.push({e: peCtx.c1Id});
+        pil.polIdentities.push({e: pil.expressions.length - 1});
 
         const epsilon = E.challenge("epsilon");
 
-        const numExp = E.add( f, epsilon);
+        const numExp = E.add(f, epsilon);
         peCtx.numId = pil.expressions.length;
         numExp.keep = true;
         pil.expressions.push(numExp);
 
-        const denExp = E.add( t, epsilon);
+        const denExp = E.add(t, epsilon);
         peCtx.denId = pil.expressions.length;
         denExp.keep = true;
         pil.expressions.push(denExp);
 
         const c2 = E.sub(  E.mul(zp,  E.exp( peCtx.denId )), E.mul(z, E.exp( peCtx.numId )));
         c2.deg=2;
-        peCtx.c2Id = pil.expressions.length;
         pil.expressions.push(c2);
-        pil.polIdentities.push({e: peCtx.c2Id});
+        pil.polIdentities.push({e: pil.expressions.length - 1});
 
         pilCodeGen(ctx, peCtx.numId, false);
         pilCodeGen(ctx, peCtx.denId, false);
@@ -309,16 +305,14 @@ function generateConnectionsZ(stage, F, res, pil, ctx) {
 
         const c1 = E.mul(l1,  E.sub(z, E.number(1)));
         c1.deg=2;
-        ciCtx.c1Id = pil.expressions.length;
         pil.expressions.push(c1);
-        pil.polIdentities.push({e: ciCtx.c1Id});
+        pil.polIdentities.push({e: pil.expressions.length - 1});
 
 
         const c2 = E.sub(  E.mul(zp,  E.exp( ciCtx.denId )), E.mul(z, E.exp( ciCtx.numId )));
         c2.deg=2;
-        ciCtx.c2Id = pil.expressions.length;
         pil.expressions.push(c2);
-        pil.polIdentities.push({e: ciCtx.c2Id});
+        pil.polIdentities.push({e: pil.expressions.length - 1});
 
         pilCodeGen(ctx, ciCtx.numId, false);
         pilCodeGen(ctx, ciCtx.denId, false);
