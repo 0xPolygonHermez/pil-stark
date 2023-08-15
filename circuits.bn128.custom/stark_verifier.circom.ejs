@@ -440,12 +440,12 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     signal input challenges<%- starkInfo.friChallenges[0] %>[3];
     signal input challenges<%- starkInfo.friChallenges[1] %>[3];
     signal input evals[<%- starkInfo.evMap.length %>][3];
-    signal input tree1[<%- starkInfo.mapSectionsN.cm1_2ns %>];
+    signal input tree1[<%- starkInfo.mapSectionsN.cm1_n %>];
 <% for(let i = 0; i < starkInfo.nStages; ++i) { -%>
 <%  const stage = i + 2; -%>
-    signal input tree<%- stage %>[<%- starkInfo.mapSectionsN[`cm${stage}_2ns`] %>];
+    signal input tree<%- stage %>[<%- starkInfo.mapSectionsN[`cm${stage}_n`] %>];
 <% } -%>
-    signal input treeQ[<%- starkInfo.mapSectionsN.cmQ_2ns %>];
+    signal input treeQ[<%- starkInfo.mapSectionsN.cmQ_n %>];
     signal input consts[<%- starkInfo.nConstants %>];
     signal input s0_vals[1 << nextStep][3];
     signal input enable;
@@ -520,17 +520,17 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
 // This function processes the values, which are stored in an array vals[n] and splits them in multiple signals of size 1 (vals_i) 
 // or 3 (vals_i[3]) depending on its dimension.
 template MapValues() {
-    signal input vals1[<%- starkInfo.mapSectionsN.cm1_2ns %>];
+    signal input vals1[<%- starkInfo.mapSectionsN.cm1_n %>];
 <% for(let i = 0; i < starkInfo.nStages; ++i) { -%>
 <%  const stage = i + 2; -%>
-    signal input vals<%- stage %>[<%- starkInfo.mapSectionsN[`cm${stage}_2ns`] %>];
+    signal input vals<%- stage %>[<%- starkInfo.mapSectionsN[`cm${stage}_n`] %>];
 <% } -%>
-    signal input valsQ[<%- starkInfo.mapSectionsN.cmQ_2ns  %>];
+    signal input valsQ[<%- starkInfo.mapSectionsN.cmQ_n  %>];
 
 <% for (let t = 1; t<=starkInfo.nStages + 2; t++) {                              -%>
 <%      let index = t === starkInfo.nStages + 2 ? "Q" : t;                       -%>
-<%      for (let i=0; i< starkInfo.mapSections["cm" + index + "_2ns"].length; i++) {        -%>
-<%          const p = starkInfo.varPolMap[starkInfo.mapSections["cm" + index + "_2ns"][i]];  -%>
+<%      for (let i=0; i< starkInfo.mapSections["cm" + index + "_n"].length; i++) {        -%>
+<%          const p = starkInfo.varPolMap[starkInfo.mapSections["cm" + index + "_n"][i]];  -%>
 <%          if (p.dim == 1) {                                                    -%>
     signal output tree<%- index %>_<%- i %>;
 <%          } else if (p.dim == 3) {                                             -%>
@@ -541,12 +541,12 @@ template MapValues() {
 
 <% for (let t = 1; t<=starkInfo.nStages + 2; t++) {                              -%>
 <%      let index = t === starkInfo.nStages + 2 ? "Q" : t;                       -%>
-<%      for (let i=0; i< starkInfo.mapSections["cm" + index + "_2ns"].length; i++) {         -%>
-<%          const p = starkInfo.varPolMap[starkInfo.mapSections["cm" + index + "_2ns"][i]];  -%>
+<%      for (let i=0; i< starkInfo.mapSections["cm" + index + "_n"].length; i++) {         -%>
+<%          const p = starkInfo.varPolMap[starkInfo.mapSections["cm" + index + "_n"][i]];  -%>
 <%          if (p.dim == 1) {                                                    -%>
-    tree<%- index %>_<%- i %> <== vals<%- index %>[<%- p.sectionPos %>];
+    tree<%- index %>_<%- i %> <== vals<%- index %>[<%- p.stagePos %>];
 <%          } else if (p.dim == 3) {                                             -%>
-    tree<%- index %>_<%- i %> <== [vals<%- index %>[<%- p.sectionPos %>],vals<%- index %>[<%- p.sectionPos + 1 %>] , vals<%- index %>[<%- p.sectionPos + 2 %>]];
+    tree<%- index %>_<%- i %> <== [vals<%- index %>[<%- p.stagePos %>],vals<%- index %>[<%- p.stagePos + 1 %>] , vals<%- index %>[<%- p.stagePos + 2 %>]];
 <%          } else throw new Error("Invalid dim")                                -%>
 <%      }                                                                        -%>
 <% }                                                                             -%>
@@ -600,12 +600,12 @@ template StarkVerifier() {
     signal input evals[<%- starkInfo.evMap.length %>][3]; // Evaluations of the set polynomials at a challenge value z and gz
 
     // Leaves values of the merkle tree used to check all the queries
-    signal input s0_vals1[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_2ns %>];
+    signal input s0_vals1[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_n %>];
 <% for(let i = 0; i < starkInfo.nStages; ++i) { -%>
 <%  const stage = i + 2; -%>
-    signal input s0_vals<%- stage %>[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN[`cm${stage}_2ns`] %>];
+    signal input s0_vals<%- stage %>[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN[`cm${stage}_n`] %>];
 <% } -%>
-    signal input s0_valsQ[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cmQ_2ns %>];
+    signal input s0_valsQ[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cmQ_n %>];
     signal input s0_valsC[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants%>];
     
     // Merkle proofs for each of the evaluations
@@ -691,12 +691,12 @@ template StarkVerifier() {
     // For s0_vals, the arrays are transposed so that they fit MerkleHash template
     // For (s_i)_vals, the values are passed all together in a single array of length nVals*3. We convert them to vals[nVals][3]
     
-    var s0_vals1_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_2ns %>][1];
+    var s0_vals1_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_n %>][1];
 <% for(let i = 0; i < starkInfo.nStages; ++i) { -%>
 <%  const stage = i + 2; -%>
-    var s0_vals<%- stage %>_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN[`cm${stage}_2ns`] %>][1];
+    var s0_vals<%- stage %>_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN[`cm${stage}_n`] %>][1];
 <% } -%> 
-    var s0_valsQ_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cmQ_2ns %>][1];
+    var s0_valsQ_p[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cmQ_n %>][1];
     var s0_valsC_p[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants %>][1];
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
     var s<%- s %>_vals_p[<%- starkStruct.nQueries %>][<%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits)) %>][3]; 
@@ -704,16 +704,16 @@ template StarkVerifier() {
 
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         // Preprocess vals for the initial FRI polynomial
-        for (var i = 0; i < <%- starkInfo.mapSectionsN.cm1_2ns %>; i++) {
+        for (var i = 0; i < <%- starkInfo.mapSectionsN.cm1_n %>; i++) {
             s0_vals1_p[q][i][0] = s0_vals1[q][i];
         }
 <% for(let i = 0; i < starkInfo.nStages; ++i) { -%>
 <%  const stage = i + 2; -%>
-        for (var i = 0; i < <%- starkInfo.mapSectionsN[`cm${stage}_2ns`] %>; i++) {
+        for (var i = 0; i < <%- starkInfo.mapSectionsN[`cm${stage}_n`] %>; i++) {
             s0_vals<%- stage %>_p[q][i][0] = s0_vals<%- stage %>[q][i];
         }
 <% } -%> 
-        for (var i = 0; i < <%- starkInfo.mapSectionsN.cmQ_2ns %>; i++) {
+        for (var i = 0; i < <%- starkInfo.mapSectionsN.cmQ_n %>; i++) {
             s0_valsQ_p[q][i][0] = s0_valsQ[q][i];
         }
         for (var i = 0; i < <%- starkInfo.nConstants %>; i++) {
@@ -736,18 +736,18 @@ template StarkVerifier() {
         
     //Calculate merkle root for s0 vals
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm1_2ns %>, <%- starkStruct.steps[0].nBits %>, <%- arity %>)(s0_vals1_p[q], s0_siblings1[q], ys[q], root1, enable);
+        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm1_n %>, <%- starkStruct.steps[0].nBits %>, <%- arity %>)(s0_vals1_p[q], s0_siblings1[q], ys[q], root1, enable);
     }
 
 <% for(let i = 0; i < starkInfo.nStages; ++i) { -%>
 <%  const stage = i + 2; -%>
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN[`cm${stage}_2ns`] %>, <%- 1 << starkStruct.steps[0].nBits %>,<%- arity %>)(s0_vals<%- stage %>_p[q], s0_siblings<%- stage %>[q], ys[q], root<%- stage %>, enable);
+        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN[`cm${stage}_n`] %>, <%- 1 << starkStruct.steps[0].nBits %>,<%- arity %>)(s0_vals<%- stage %>_p[q], s0_siblings<%- stage %>[q], ys[q], root<%- stage %>, enable);
     }
 <% } -%>
 
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cmQ_2ns %>, <%- starkStruct.steps[0].nBits %>,<%- arity %>)(s0_valsQ_p[q], s0_siblingsQ[q], ys[q], rootQ, enable);
+        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cmQ_n %>, <%- starkStruct.steps[0].nBits %>,<%- arity %>)(s0_valsQ_p[q], s0_siblingsQ[q], ys[q], rootQ, enable);
     }
 
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
@@ -826,12 +826,12 @@ template Main() {
     signal input rootQ;
     signal input evals[<%- starkInfo.evMap.length %>][3];
 
-    signal input s0_vals1[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_2ns %>];
+    signal input s0_vals1[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_n %>];
 <% for(let i=0; i < starkInfo.nStages; i++) {  -%>
 <%  const stage = 2 + i; -%>
-    signal input s0_vals<%- stage %>[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN[`cm${stage}_2ns`] %>];
+    signal input s0_vals<%- stage %>[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN[`cm${stage}_n`] %>];
 <% } -%>
-    signal input s0_valsQ[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cmQ_2ns %>];
+    signal input s0_valsQ[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cmQ_n %>];
     signal input s0_valsC[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants%>];
     signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
 <% for(let i=0; i < starkInfo.nStages; i++) {  -%>

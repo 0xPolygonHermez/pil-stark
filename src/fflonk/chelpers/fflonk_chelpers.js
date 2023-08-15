@@ -294,10 +294,10 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
             if (!p) {
                 console.log("xx");
             }
-            let offset = p.sectionPos;
+            let offset = p.stagePos;
             let index = prime ? `((i + ${next})%${N})` : "i";
-            let size = fflonkInfo.mapSectionsN[p.section];
-            return `params.${p.section}[${offset} + ${index}*${size}]`;
+            let size = fflonkInfo.mapSectionsN[p.stage];
+            return `params.${p.stage}[${offset} + ${index}*${size}]`;
         }
     }
 

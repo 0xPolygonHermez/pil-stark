@@ -1345,18 +1345,18 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
         if (!p) {
             console.log("xx");
         }
-        let offset = p.sectionPos;
-        let size = fflonkInfo.mapSectionsN[p.section];
+        let offset = p.stagePos;
+        let size = fflonkInfo.mapSectionsN[p.stage];
         if (p.dim == 1) {
             if (prime) {
                 range_pols_1.add(size);
-                range_polsseq_1.add(p.section);
-                return `params.${p.section}[${offset} + ((i + ${next})%${N})*${size}]`;
+                range_polsseq_1.add(p.stage);
+                return `params.${p.stage}[${offset} + ((i + ${next})%${N})*${size}]`;
 
             } else {
                 range_pols_2.add(size);
-                range_polsseq_2.add(p.section);
-                return `params.${p.section}[${offset} + i*${size}]`;
+                range_polsseq_2.add(p.stage);
+                return `params.${p.stage}[${offset} + i*${size}]`;
             }
         } else {
             throw new Error("invalid dim");
@@ -1454,8 +1454,8 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
 
     function evalMap_(polId, prime) {
         let p = fflonkInfo.varPolMap[polId];
-        let offset = p.sectionPos;
-        let size = fflonkInfo.mapSectionsN[p.section];
+        let offset = p.stagePos;
+        let size = fflonkInfo.mapSectionsN[p.stage];
         if (p.dim == 1) {
             if (prime) {
                 args.push(Number(offset));

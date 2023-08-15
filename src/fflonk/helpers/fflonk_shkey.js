@@ -138,9 +138,10 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
     }
 
     
-    for(let i = 0; i < fflonkInfo.imExpsList.length; ++i) {
-        const nameImPol = `Im${fflonkInfo.imExpsList[i]}`;
-        const idImPol = fflonkInfo.imExp2cm[fflonkInfo.imExpsList[i]];
+    for(let i = 0; i < Object.keys(fflonkInfo.imPolsMap).length; ++i) {
+        const imPol = Object.keys(fflonkInfo.imPolsMap)[i];
+        const nameImPol = `Im${imPol}`;
+        const idImPol = fflonkInfo.imPolsMap[imPol];
         pil.references[nameImPol] = {
             name: nameImPol,
             isArray: false,

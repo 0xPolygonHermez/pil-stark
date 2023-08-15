@@ -4,8 +4,8 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
     const ctxC = {
         pil: pil,
         calculated: {
-            exps: Object.assign({}, res.imExps),
-            expsPrime: Object.assign({}, res.imExps)
+            exps: Object.assign({}, res.imPolsMap),
+            expsPrime: Object.assign({}, res.imPolsMap)
         },
         tmpUsed: 0,
         code: []
@@ -43,13 +43,12 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
     function fixRef(r, ctx) {
         const p = r.prime ? 1 : 0;
         switch (r.type) {
-            // Check the expressions ids. If it is an intermediate polynomial (can be found in imExpsList) 
+            // Check the expressions ids. If it is an intermediate polynomial
             // modify the type and set it as a commit;
             case "exp":
-                const idx = res.imExpsList.indexOf(r.id);
-                if (idx >= 0) {
-                    r.type = "cm"; 
-                    r.id = res.imExp2cm[res.imExpsList[idx]];
+                if (res.imPolsMap[r.id]) {
+                    r.type = "cm";
+                    r.id = res.imPolsMap[r.id];
                 } else {
                     if (typeof ctx.expMap[p][r.id] === "undefined") {
                         ctx.expMap[p][r.id] = ctx.code.tmpUsed ++;

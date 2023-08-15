@@ -68,7 +68,7 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
         code: []
     };
 
-    const ctx_2ns = {
+    const ctx_ext = {
         pil: pil,
         calculated: {
             exps: {},
@@ -84,12 +84,12 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
 
     generateGrandProductPols(stage++, F, res, pil, ctx);  // Z Polynomials and LC of permutation checks.
 
-    generateConstraintPolynomial(res, pil, ctx, ctx_2ns, stark);            // Step4
+    generateConstraintPolynomial(res, pil, ctx, ctx_ext, stark);            // Step4
 
     generateConstraintPolynomialVerifier(res, pil, stark);
 
     if(stark) {
-        generateFRIPolynomial(res, pil, ctx_2ns);
+        generateFRIPolynomial(res, pil, ctx_ext);
         generateVerifierQuery(res, pil);
     } else {
         // Calculate maxPolsOpenings

@@ -13,7 +13,7 @@ module.exports.calculatePublics = async function calculatePublics(ctx) {
         const publicPol = ctx.pilInfo.publics[i];
 
         if ("cmP" === publicPol.polType) {
-            const offset = (ctx.pilInfo.publics[i].idx * ctx.pilInfo.mapSectionsN.cm1_n + ctx.pilInfo.publics[i].polId);
+            const offset = (ctx.pilInfo.publics[i].idx * ctx.pilInfo.mapSectionsN.cm1 + ctx.pilInfo.publics[i].polId);
             ctx.publics[i] = ctx.cm1_n[offset];
         } else if ("imP" === publicPol.polType) {
             ctx.publics[i] = module.exports.calculateExpAtPoint(ctx, ctx.pilInfo.publicsCode[i], publicPol.idx);
@@ -86,24 +86,24 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
                 const index = r.prime ? `((i + ${next})%${N})` : "i"
                 if (dom === "n") {
                     return `ctx.const_n[${r.id} + ${index} * ${ctx.pilInfo.nConstants}]`;
-                } else if (dom === "2ns") {
-                    return `ctx.const_2ns[${r.id} + ${index} * ${ctx.pilInfo.nConstants}]`;
+                } else if (dom === "ext") {
+                    return `ctx.const_ext[${r.id} + ${index} * ${ctx.pilInfo.nConstants}]`;
                 } else {
                     throw new Error("Invalid dom");
                 }
             }
             case "cm": {
                 if (dom=="n") {
-                    return evalMap(ctx.pilInfo.cm_n[r.id], r.prime)
-                } else if (dom=="2ns") {
-                    return evalMap(ctx.pilInfo.cm_2ns[r.id], r.prime)
+                    return evalMap(ctx.pilInfo.cm[r.id], r.prime, false)
+                } else if (dom=="ext") {
+                    return evalMap(ctx.pilInfo.cm[r.id], r.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
             }
             case "tmpExp": {
                 if (dom=="n") {
-                    return evalMap(ctx.pilInfo.tmpExp_n[r.id], r.prime)
+                    return evalMap(ctx.pilInfo.mapSections.tmpExp[r.id], r.prime, false)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -113,20 +113,20 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
             case "challenge": return `ctx.challenges[${r.id}]`;
             case "eval": return `ctx.evals[${r.id}]`;
             case "xDivXSubXi": return `[
-                    ctx.xDivXSubXi_2ns[3*(${ctx.pilInfo.fri2Id[r.opening]} + ${ctx.pilInfo.nFriOpenings}*i)], 
-                    ctx.xDivXSubXi_2ns[3*(${ctx.pilInfo.fri2Id[r.opening]} + ${ctx.pilInfo.nFriOpenings}*i) + 1], 
-                    ctx.xDivXSubXi_2ns[3*(${ctx.pilInfo.fri2Id[r.opening]} + ${ctx.pilInfo.nFriOpenings}*i) + 2]
+                    ctx.xDivXSubXi_ext[3*(${ctx.pilInfo.fri2Id[r.opening]} + ${ctx.pilInfo.nFriOpenings}*i)], 
+                    ctx.xDivXSubXi_ext[3*(${ctx.pilInfo.fri2Id[r.opening]} + ${ctx.pilInfo.nFriOpenings}*i) + 1], 
+                    ctx.xDivXSubXi_ext[3*(${ctx.pilInfo.fri2Id[r.opening]} + ${ctx.pilInfo.nFriOpenings}*i) + 2]
                 ]`;
             case "x": {
                 if (dom=="n") {
                     return `ctx.x_n[i]`;
-                } else if (dom === "2ns") {
-                    return `ctx.x_2ns[i]`;
+                } else if (dom === "ext") {
+                    return `ctx.x_ext[i]`;
                 } else {
                     throw new Error("Invalid dom");
                 }
             }
-            case "Zi": return `ctx.Zi_2ns[i]`;
+            case "Zi": return `ctx.Zi_ext[i]`;
             default: throw new Error("Invalid reference type get: " + r.type);
         }
     }
@@ -140,11 +140,11 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
             case "q":
                 if (dom=="n") {
                     throw new Error("Accessing q in domain n");
-                } else if (dom=="2ns") {
+                } else if (dom=="ext") {
                     if (ctx.pilInfo.qDim == 3) {
-                        body.push(` [ ctx.q_2ns[i*3], ctx.q_2ns[i*3+1], ctx.q_2ns[i*3+2]] = ${val}; `);
+                        body.push(` [ ctx.q_ext[i*3], ctx.q_ext[i*3+1], ctx.q_ext[i*3+2]] = ${val}; `);
                     } else if (ctx.pilInfo.qDim == 1) {
-                        body.push(`ctx.q_2ns[i] = ${val}`);
+                        body.push(`ctx.q_ext[i] = ${val}`);
                     } else {
                         throw new Error("qDim not defined");
                     }
@@ -155,25 +155,25 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
             case "f":
                 if (dom=="n") {
                     throw new Error("Accessing q in domain n");
-                } else if (dom=="2ns") {
-                    body.push(`[ ctx.f_2ns[i*3], ctx.f_2ns[i*3+1], ctx.f_2ns[i*3+2]] = ${val};`);
+                } else if (dom=="ext") {
+                    body.push(`[ ctx.f_ext[i*3], ctx.f_ext[i*3+1], ctx.f_ext[i*3+2]] = ${val};`);
                 } else {
                     throw new Error("Invalid dom");
                 }
                 break;
             case "cm":
                 if (dom=="n") {
-                    body.push(` ${evalMap( ctx.pilInfo.cm_n[r.id], r.prime, val)};`);
-                } else if (dom=="2ns") {
-                    body.push(` ${evalMap( ctx.pilInfo.cm_2ns[r.id], r.prime, val)};`);
+                    body.push(` ${evalMap( ctx.pilInfo.cm[r.id], r.prime, false, val)};`);
+                } else if (dom=="ext") {
+                    body.push(` ${evalMap( ctx.pilInfo.cm[r.id], r.prime, true, val)};`);
                 } else {
                     throw new Error("Invalid dom");
                 }
                 break;
             case "tmpExp":
                 if (dom=="n") {
-                    body.push(`  ${evalMap(ctx.pilInfo.tmpExp_n[r.id], r.prime, val)};`);
-                } else if (dom=="2ns") {
+                    body.push(`  ${evalMap(ctx.pilInfo.mapSections.tmpExp[r.id], r.prime, false, val)};`);
+                } else if (dom=="ext") {
                     throw new Error("Invalid dom");
                 } else {
                     throw new Error("Invalid dom");
@@ -183,32 +183,33 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
         }
     }
 
-    function evalMap(polId, prime, val) {
+    function evalMap(polId, prime, extended, val) {
         let p = ctx.pilInfo.varPolMap[polId];
-        offset = p.sectionPos;
+        offset = p.stagePos;
         let index = prime ? `((i + ${next})%${N})` : "i";
-        let size = ctx.pilInfo.mapSectionsN[p.section];
+        let size = ctx.pilInfo.mapSectionsN[p.stage];
+        let stage = extended ? p.stage + "_ext" : p.stage + "_n";
         let pos = `${offset} + ${index} * ${size}`;
         if(val) {
             if (p.dim == 1) {
-                return `ctx.${p.section}[${pos}] = ${val};`;
+                return `ctx.${stage}[${pos}] = ${val};`;
             } else if (p.dim == 3) {
                 return `[` +
-                    ` ctx.${p.section}[${pos}] ,`+
-                    ` ctx.${p.section}[${pos} + 1],`+
-                    ` ctx.${p.section}[${pos} + 2] `+
+                    ` ctx.${stage}[${pos}],`+
+                    ` ctx.${stage}[${pos} + 1],`+
+                    ` ctx.${stage}[${pos} + 2] `+
                     `] = ${val};`;
             } else {
                 throw new Error("invalid dim");
             }
         } else {
             if (p.dim == 1) {
-                return `ctx.${p.section}[${pos}]`;
+                return `ctx.${stage}[${pos}]`;
             } else if (p.dim == 3) {
                 return `[` +
-                    ` ctx.${p.section}[${pos}] ,`+
-                    ` ctx.${p.section}[${pos} + 1],`+
-                    ` ctx.${p.section}[${pos} + 2] `+
+                    ` ctx.${stage}[${pos}] ,`+
+                    ` ctx.${stage}[${pos} + 1],`+
+                    ` ctx.${stage}[${pos} + 2] `+
                     `]`;
             } else {
                 throw new Error("invalid dim");
@@ -217,19 +218,19 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
     }
 }
 
-module.exports.setPol = function setPol(ctx, idPol, pol) {
-    const p = module.exports.getPolRef(ctx, idPol);
+module.exports.setPol = function setPol(ctx, idPol, pol, dom) {
+    const p = module.exports.getPolRef(ctx, idPol, dom);
 
     if (p.dim == 1) {
-        let buildPol = new Function("ctx", "i", "pol", [`ctx.${p.section}[${p.offset} + i * ${p.size}] = pol;`]);
+        let buildPol = new Function("ctx", "i", "pol", [`ctx.${p.stage}[${p.offset} + i * ${p.size}] = pol;`]);
         for (let i=0; i<p.deg; i++) {
             buildPol(ctx, i, pol[i]);
         }
     } else if (p.dim == 3) {
         const buildPolCode = [];
-        buildPolCode.push(`ctx.${p.section}[${p.offset} + i * ${p.size}] = pol[0];`);
-        buildPolCode.push(`ctx.${p.section}[${p.offset} + i * ${p.size} + 1] = pol[1];`);
-        buildPolCode.push(`ctx.${p.section}[${p.offset} + i * ${p.size} + 2] = pol[2];`);
+        buildPolCode.push(`ctx.${p.stage}[${p.offset} + i * ${p.size}] = pol[0];`);
+        buildPolCode.push(`ctx.${p.stage}[${p.offset} + i * ${p.size} + 1] = pol[1];`);
+        buildPolCode.push(`ctx.${p.stage}[${p.offset} + i * ${p.size} + 2] = pol[2];`);
     
         let buildPol = new Function("ctx", "i", "pol", buildPolCode.join("\n"));
     
@@ -245,33 +246,33 @@ module.exports.setPol = function setPol(ctx, idPol, pol) {
     }
 }
 
-module.exports.getPolRef = function getPolRef(ctx, idPol) {
+module.exports.getPolRef = function getPolRef(ctx, idPol, dom) {
+    if(!["n", "ext"].includes(dom)) throw new Error("invalid stage");
+    const deg = dom === "ext" ? ctx.Next : ctx.N;
     let p = ctx.pilInfo.varPolMap[idPol];
-    let dom = p.section.split("_")[1];
-    if(!["n", "2ns"].includes(dom)) throw new Error("invalid section");
-    const deg = dom === "2ns" ? ctx.Next : ctx.N;
+    let stage = p.stage + "_" + dom;
     let polRef = {
-        section: p.section,
-        buffer: ctx[p.section],
+        stage: stage,
+        buffer: ctx[stage],
         deg: deg,
-        offset: p.sectionPos,
-        size: ctx.pilInfo.mapSectionsN[p.section],
+        offset: p.stagePos,
+        size: ctx.pilInfo.mapSectionsN[p.stage],
         dim: p.dim
     };
     return polRef;
 }
 
-module.exports.getPol = function getPol(ctx, idPol) {
-    const p = module.exports.getPolRef(ctx, idPol);
+module.exports.getPol = function getPol(ctx, idPol, dom) {
+    const p = module.exports.getPolRef(ctx, idPol, dom);
     const res = new Array(p.deg);
     if (p.dim == 1) {
-        let buildPol = new Function("ctx", "i", "res", [`res[i] = ctx.${p.section}[${p.offset} + i * ${p.size}];`]);
+        let buildPol = new Function("ctx", "i", "res", [`res[i] = ctx.${p.stage}[${p.offset} + i * ${p.size}];`]);
         for (let i=0; i<p.deg; i++) {
             buildPol(ctx, i, res);
         }
     } else if (p.dim == 3) {
         const buildPolCode = [];
-        buildPolCode.push(`res[i] = [ctx.${p.section}[${p.offset} + i * ${p.size}], ctx.${p.section}[${p.offset} + i * ${p.size} + 1],ctx.${p.section}[${p.offset} + i * ${p.size} + 2]];`);
+        buildPolCode.push(`res[i] = [ctx.${p.stage}[${p.offset} + i * ${p.size}], ctx.${p.stage}[${p.offset} + i * ${p.size} + 1],ctx.${p.stage}[${p.offset} + i * ${p.size} + 2]];`);
     
         let buildPol = new Function("ctx", "i", "res", buildPolCode.join("\n"));
 
@@ -325,50 +326,52 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
         execInfo.outputSections.push({ name: "tmpExp_n" });
         dom = "n";
     } else if (execPart == "Q") {
-        execInfo.inputSections.push({ name: "const_2ns" });
-        execInfo.inputSections.push({ name: "cm1_2ns" });
+        execInfo.inputSections.push({ name: "const_ext" });
+        execInfo.inputSections.push({ name: "cm1_ext" });
         for(let i = 0; i < ctx.pilInfo.nStages; i++) {
             const stage = i + 2;
-            execInfo.inputSections.push({ name: `cm${stage}_2ns` });
+            execInfo.inputSections.push({ name: `cm${stage}_ext` });
         }
-        execInfo.inputSections.push({ name: "x_2ns" });
-        execInfo.outputSections.push({ name: "q_2ns" });
+        execInfo.inputSections.push({ name: "x_ext" });
+        execInfo.outputSections.push({ name: "q_ext" });
         if(ctx.prover === "stark") {
-            execInfo.inputSections.push({ name: "Zi_2ns" });
+            execInfo.inputSections.push({ name: "Zi_ext" });
         }
-        dom = "2ns";
+        dom = "ext";
     } else if (execPart == "fri") {
-        execInfo.inputSections.push({ name: "const_2ns" });
-        execInfo.inputSections.push({ name: "cm1_2ns" });
+        execInfo.inputSections.push({ name: "const_ext" });
+        execInfo.inputSections.push({ name: "cm1_ext" });
         for(let i = 0; i < ctx.pilInfo.nStages; i++) {
             const stage = i + 2;
-            execInfo.inputSections.push({ name: `cm${stage}_2ns` });
+            execInfo.inputSections.push({ name: `cm${stage}_ext` });
         }
-        execInfo.inputSections.push({ name: "cmQ_2ns" });
-        execInfo.inputSections.push({ name: "xDivXSubXi_2ns" });
-        execInfo.outputSections.push({ name: "f_2ns" });
-        dom = "2ns";
+        execInfo.inputSections.push({ name: "cmQ_ext" });
+        execInfo.inputSections.push({ name: "xDivXSubXi_ext" });
+        execInfo.outputSections.push({ name: "f_ext" });
+        dom = "ext";
     } else {
         throw new Error("Exec type not defined" + execPart);
     }
 
-    function setWidth(section) {
-        if ((section.name == "const_n") || (section.name == "const_2ns")) {
-            section.width = ctx.pilInfo.nConstants;
-        } else if (typeof ctx.pilInfo.mapSectionsN[section.name] != "undefined") {
-            section.width = ctx.pilInfo.mapSectionsN[section.name];
-        } else if (["x_n", "x_2ns", "Zi_2ns"].indexOf(section.name) >= 0) {
-            section.width = 1;
-        } else if (["xDivXSubXi_2ns"].indexOf(section.name) >= 0) {
-            section.width = 3*ctx.pilInfo.nFriOpenings;
-        } else if (["f_2ns"].indexOf(section.name) >= 0) {
-            section.width = 3;
-        } else if (["q_2ns"].indexOf(section.name) >= 0) {
-            section.width = ctx.pilInfo.qDim;
+    function setWidth(stage) {
+        if (["cm1_ext", "cm2_ext", "cm3_ext", "cmQ_ext"].includes(stage.name)) {
+        } else if ((stage.name == "const_n") || (stage.name == "const_ext")) {
+            stage.width = ctx.pilInfo.nConstants;
+        } else if (typeof ctx.pilInfo.mapSectionsN[stage.name] != "undefined") {
+            stage.width = ctx.pilInfo.mapSectionsN[stage.name];
+        } else if (["x_n", "x_ext", "Zi_ext"].indexOf(stage.name) >= 0) {
+            stage.width = 1;
+        } else if (["xDivXSubXi_ext"].indexOf(stage.name) >= 0) {
+            stage.width = 3*ctx.pilInfo.nFriOpenings;
+        } else if (["f_ext"].indexOf(stage.name) >= 0) {
+            stage.width = 3;
+        } else if (["q_ext"].indexOf(stage.name) >= 0) {
+            stage.width = ctx.pilInfo.qDim;
         } else {
-            throw new Error("Invalid section name " + section.name);
+            throw new Error("Invalid stage name " + stage.name);
         }
     }
+
     for (let i = 0; i < execInfo.inputSections.length; i++) setWidth(execInfo.inputSections[i]);
     for (let i = 0; i < execInfo.outputSections.length; i++) setWidth(execInfo.outputSections[i]);
 

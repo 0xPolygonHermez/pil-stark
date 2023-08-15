@@ -56,7 +56,7 @@ module.exports.initProverStark = async function initProverStark(pilInfo, constPo
             logger.debug(`  Stage ${stage} pols:   ${ctx.pilInfo.nCm[stage]}`);
         }
         logger.debug(`  Stage Q pols:   ${ctx.pilInfo.qDeg}`);
-        logger.debug(`  Temp exp pols: ${ctx.pilInfo.mapSectionsN.tmpExp_n}`);
+        logger.debug(`  Temp exp pols: ${ctx.pilInfo.mapSectionsN.tmpExp}`);
         logger.debug("-----------------------------");
     }
 
@@ -79,28 +79,28 @@ module.exports.initProverStark = async function initProverStark(pilInfo, constPo
     ctx.fri = new FRI( ctx.pilInfo.starkStruct, ctx.MH );
 
     ctx.const_n = new Proxy(new BigBuffer(ctx.pilInfo.nConstants*ctx.N), BigBufferHandler);
-    ctx.cm1_n = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm1_n*ctx.N), BigBufferHandler);
+    ctx.cm1_n = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm1*ctx.N), BigBufferHandler);
     for(let i = 0; i < ctx.pilInfo.nStages; i++) {
         const stage = i + 2;
-        ctx[`cm${stage}_n`] = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN[`cm${stage}_n`]*ctx.N), BigBufferHandler);
+        ctx[`cm${stage}_n`] = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN[`cm${stage}`]*ctx.N), BigBufferHandler);
     }
-    ctx.tmpExp_n = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.tmpExp_n*ctx.N), BigBufferHandler);
+    ctx.tmpExp_n = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.tmpExp*ctx.N), BigBufferHandler);
     ctx.x_n = new Proxy(new BigBuffer(ctx.N), BigBufferHandler);
 
     
-    ctx.const_2ns = new Proxy(constTree.elements, BigBufferHandler);
-    ctx.cm1_2ns = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm1_n*ctx.Next), BigBufferHandler);
+    ctx.const_ext = new Proxy(constTree.elements, BigBufferHandler);
+    ctx.cm1_ext = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm1*ctx.Next), BigBufferHandler);
     for(let i = 0; i < ctx.pilInfo.nStages; i++) {
         const stage = i + 2;
-        ctx[`cm${stage}_2ns`] = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN[`cm${stage}_2ns`]*ctx.Next), BigBufferHandler);
+        ctx[`cm${stage}_ext`] = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN[`cm${stage}`]*ctx.Next), BigBufferHandler);
     }
-    ctx.cmQ_2ns = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cmQ_n*ctx.Next), BigBufferHandler);
-    ctx.q_2ns = new Proxy(new BigBuffer(ctx.pilInfo.qDim*ctx.Next), BigBufferHandler);
-    ctx.f_2ns = new Proxy(new BigBuffer(3*ctx.Next), BigBufferHandler);
-    ctx.x_2ns = new Proxy(new BigBuffer(ctx.Next), BigBufferHandler);
-    ctx.Zi_2ns = new Proxy(new BigBuffer(ctx.Next), BigBufferHandler);
+    ctx.cmQ_ext = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cmQ*ctx.Next), BigBufferHandler);
+    ctx.q_ext = new Proxy(new BigBuffer(ctx.pilInfo.qDim*ctx.Next), BigBufferHandler);
+    ctx.f_ext = new Proxy(new BigBuffer(3*ctx.Next), BigBufferHandler);
+    ctx.x_ext = new Proxy(new BigBuffer(ctx.Next), BigBufferHandler);
+    ctx.Zi_ext = new Proxy(new BigBuffer(ctx.Next), BigBufferHandler);
 
-    ctx.xDivXSubXi_2ns = new Proxy(new BigBuffer(3*ctx.Next*ctx.pilInfo.nFriOpenings), BigBufferHandler);
+    ctx.xDivXSubXi_ext = new Proxy(new BigBuffer(3*ctx.Next*ctx.pilInfo.nFriOpenings), BigBufferHandler);
 
     // Build x_n
     let xx = ctx.F.one;
@@ -109,17 +109,17 @@ module.exports.initProverStark = async function initProverStark(pilInfo, constPo
         xx = ctx.F.mul(xx, ctx.F.w[ctx.nBits])
     }
 
-    // Build x_2ns
+    // Build x_ext
     xx = ctx.F.shift;
     for (let i=0; i<ctx.Next; i++) {
-        ctx.x_2ns[i] = xx;
+        ctx.x_ext[i] = xx;
         xx = ctx.F.mul(xx, ctx.F.w[ctx.nBitsExt]);
     }
 
     // Build ZHInv
     const zhInv = buildZhInv(ctx.F, ctx.nBits, ctx.extendBits);
     for (let i=0; i<ctx.Next; i++) {
-        ctx.Zi_2ns[i] = zhInv(i);
+        ctx.Zi_ext[i] = zhInv(i);
     }
 
     // Read const coefs
@@ -133,7 +133,7 @@ module.exports.computeQStark = async function computeQStark(ctx, logger) {
 
     const qq1 = new Proxy(new BigBuffer(ctx.pilInfo.qDim*ctx.Next), BigBufferHandler);
     const qq2 = new Proxy(new BigBuffer(ctx.pilInfo.qDim*ctx.pilInfo.qDeg*ctx.Next), BigBufferHandler);
-    await ifft(ctx.q_2ns, ctx.pilInfo.qDim, ctx.nBitsExt, qq1);
+    await ifft(ctx.q_ext, ctx.pilInfo.qDim, ctx.nBitsExt, qq1);
 
     let curS = 1n;
     const shiftIn = ctx.F.exp(ctx.F.inv(ctx.F.shift), ctx.N);
@@ -148,10 +148,10 @@ module.exports.computeQStark = async function computeQStark(ctx, logger) {
         curS = ctx.F.mul(curS, shiftIn);
     }
 
-    await fft(qq2, ctx.pilInfo.qDim * ctx.pilInfo.qDeg, ctx.nBitsExt, ctx.cmQ_2ns);
+    await fft(qq2, ctx.pilInfo.qDim * ctx.pilInfo.qDeg, ctx.nBitsExt, ctx.cmQ_ext);
 
     if (logger) logger.debug("··· Merkelizing Q polynomial tree");
-    ctx.trees[ctx.pilInfo.nStages + 2] = await ctx.MH.merkelize(ctx.cmQ_2ns, ctx.pilInfo.mapSectionsN.cmQ_2ns, ctx.Next);
+    ctx.trees[ctx.pilInfo.nStages + 2] = await ctx.MH.merkelize(ctx.cmQ_ext, ctx.pilInfo.mapSectionsN.cmQ, ctx.Next);
 }
 
 module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challenge, logger) {
@@ -185,14 +185,14 @@ module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challen
         let p;
         if (ev.type == "const") {
             p = {
-                buffer: ctx.const_2ns,
+                buffer: ctx.const_ext,
                 deg: ctx.Next,
                 offset: ev.id,
                 size: ctx.pilInfo.nConstants,
                 dim: 1
             };
         } else if (ev.type == "cm") {
-            p = getPolRef(ctx, ctx.pilInfo.cm_2ns[ev.id]);
+            p = getPolRef(ctx, ctx.pilInfo.cm[ev.id], "ext");
         } else {
             throw new Error("Invalid ev type: "+ ev.type);
         }
@@ -242,23 +242,23 @@ module.exports.computeFRIStark = async function computeFRIStark(ctx, challenge, 
         x = ctx.F.shift;
         for (let k=0; k < ctx.Next; k++) {
             const v = ctx.F.mul(den[k], x);
-            ctx.xDivXSubXi_2ns[3*(k*ctx.pilInfo.nFriOpenings + ctx.pilInfo.fri2Id[opening])] = v[0];
-            ctx.xDivXSubXi_2ns[3*(k*ctx.pilInfo.nFriOpenings + ctx.pilInfo.fri2Id[opening]) + 1] = v[1];
-            ctx.xDivXSubXi_2ns[3*(k*ctx.pilInfo.nFriOpenings + ctx.pilInfo.fri2Id[opening]) + 2] = v[2];
+            ctx.xDivXSubXi_ext[3*(k*ctx.pilInfo.nFriOpenings + ctx.pilInfo.fri2Id[opening])] = v[0];
+            ctx.xDivXSubXi_ext[3*(k*ctx.pilInfo.nFriOpenings + ctx.pilInfo.fri2Id[opening]) + 1] = v[1];
+            ctx.xDivXSubXi_ext[3*(k*ctx.pilInfo.nFriOpenings + ctx.pilInfo.fri2Id[opening]) + 2] = v[2];
     
             x = ctx.F.mul(x, ctx.F.w[ctx.nBitsExt])
         }
     }
 
-    await callCalculateExps("fri", "2ns", ctx, parallelExec, useThreads);
+    await callCalculateExps("fri", "ext", ctx, parallelExec, useThreads);
 
     const friPol = new Array(ctx.Next);
 
     for (let i=0; i<ctx.Next; i++) {
         friPol[i] = [
-            ctx.f_2ns[i*3],
-            ctx.f_2ns[i*3 + 1],
-            ctx.f_2ns[i*3 + 2],
+            ctx.f_ext[i*3],
+            ctx.f_ext[i*3 + 1],
+            ctx.f_ext[i*3 + 2],
         ];
     }
 
@@ -302,9 +302,9 @@ module.exports.genProofStark = async function genProof(ctx, logger) {
 module.exports.extendAndMerkelize = async function  extendAndMerkelize(stage, ctx, logger) {
 
     const buffFrom = ctx["cm" + stage + "_n"];
-    const buffTo = ctx["cm" + stage + "_2ns"];
+    const buffTo = ctx["cm" + stage + "_ext"];
 
-    const nPols = ctx.pilInfo.mapSectionsN["cm" + stage + "_n"];
+    const nPols = ctx.pilInfo.mapSectionsN["cm" + stage];
     
     if (logger) logger.debug("··· Interpolating " + stage);
     await interpolate(buffFrom, nPols, ctx.nBits, buffTo, ctx.nBitsExt);

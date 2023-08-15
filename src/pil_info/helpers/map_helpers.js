@@ -1,6 +1,7 @@
 const { iterateCode } = require("../codegen");
 
-module.exports.addPol = function addPol(res, polType) {
+module.exports.addPol = function addPol(res, stage, dim, imPol = false) {
+    const polType = { stage, dim, imPol };
     res.varPolMap.push(polType);
     return res.varPolMap.length-1;
 }
@@ -81,14 +82,14 @@ module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, sta
                 case "tmpExp": d=r.dim; break;
                 case "cm": 
                     if(stark) {
-                        d=pilInfo.varPolMap[pilInfo.cm_2ns[r.id]].dim; break;
+                        d=pilInfo.varPolMap[pilInfo.cm[r.id]].dim; break;
                     } else {
                         d=1;
                     }
                     break;
                 case "q": {
                     if(stark) {
-                        d=pilInfo.varPolMap[pilInfo.cm_2ns[r.id]].dim;
+                        d=pilInfo.varPolMap[pilInfo.cm[r.id]].dim;
                     } else {
                         throw new Error("Invalid reference type: " + r.type);
                     }
@@ -151,36 +152,33 @@ module.exports.fixProverCode = function fixProverCode(res, code, tmpExps, pil, d
     function fixRef(r, ctx) {
         switch (r.type) {
             case "cm":
-                if (ctx.dom == "n") {
-                    r.p = res.cm_n[r.id];
-                } else if (ctx.dom == "2ns") {
-                    r.p = res.cm_2ns[r.id];
+                if (["n", "ext"].includes(dom)) {
+                    r.p = res.cm[r.id];
                 } else {
                     throw ("Invalid domain", ctx.dom);
                 }
 
                 if (verifierQuery) {
-                    const p1 = res.varPolMap[res.cm_2ns[r.id]];
-                    let index =  Number(p1.section.substr(2).split("_")[0]);
-                    if (p1.section === "cmQ_2ns") {
+                    const p1 = res.varPolMap[res.cm[r.id]];
+                    let index = Number(p1.stage.substr(2));
+                    if (p1.stage === "cmQ") {
                         r.type = "treeQ";
                         index = res.nStages + 2;
                     } else {
-                        if(index < 1 || index > res.nStages + 1) throw new Error("Invalid cm section");
+                        if(index < 1 || index > res.nStages + 1) throw new Error("Invalid cm stage");
                         r.type = "tree" + index;
                     }
                     
                     r.stageId = r.id;
                     for(let i = index - 1; i > 0; --i) r.stageId -= res.nCm[i];
-                    r.treePos = p1.sectionPos;
+                    r.treePos = p1.stagePos;
                     r.dim = p1.dim;
                 }
                 break;
             case "exp":
-                const idx = res.imExpsList.indexOf(r.id);
-                if (idx >= 0) {
+                if (res.imPolsMap[r.id]) {
                     r.type = "cm";
-                    r.id = res.imExp2cm[res.imExpsList[idx]];
+                    r.id = res.imPolsMap[r.id];
                 } else if ((typeof tmpExps[r.id] != "undefined")&&(ctx.dom == "n")) {
                     r.type = "tmpExp";
                     r.dim = module.exports.getExpDim(pil, r.id, stark);

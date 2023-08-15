@@ -52,7 +52,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
             logger.debug(`  Stage ${stage} pols:   ${starkInfo.nCm[stage]}`);
         }
         logger.debug(`  Stage Q pols:   ${starkInfo.qDeg}`);
-        logger.debug(`  Temp exp pols: ${starkInfo.mapSectionsN.tmpExp_n}`);
+        logger.debug(`  Temp exp pols: ${starkInfo.mapSectionsN.tmpExp}`);
         logger.debug("-----------------------------");
     }
 

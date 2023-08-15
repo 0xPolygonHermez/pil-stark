@@ -1079,10 +1079,8 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                 }
             }
             case "cm": {
-                if (dom == "n") {
-                    return evalMap(starkInfo.cm_n[r.id], r.prime)
-                } else if (dom == "2ns") {
-                    return evalMap(starkInfo.cm_2ns[r.id], r.prime)
+                if (["n", "2ns"].includes(dom)) {
+                    return evalMap(starkInfo.cm_n[r.id], r.prime);
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -1212,28 +1210,28 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
         if (!p) {
             console.log("xx");
         }
-        let offset = starkInfo.mapOffsets[p.section];
-        offset += p.sectionPos;
-        let size = starkInfo.mapSectionsN[p.section];
+        let offset = starkInfo.mapOffsets[p.stage];
+        offset += p.stagePos;
+        let size = starkInfo.mapSectionsN[p.stage];
         if (p.dim == 1) {
             if (prime) {
                 range_pols_1.add(size);
-                range_polsseq_1.add(p.section);
+                range_polsseq_1.add(p.stage);
                 return `params.pols[${offset} + ((i + ${next})%${N})*${size}]`;
 
             } else {
                 range_pols_2.add(size);
-                range_polsseq_2.add(p.section);
+                range_polsseq_2.add(p.stage);
                 return `params.pols[${offset} + i*${size}]`;
             }
         } else if (p.dim == 3) {
             if (prime) {
                 range_pols_3.add(size);
-                range_polsseq_3.add(p.section);
+                range_polsseq_3.add(p.stage);
                 return `(Goldilocks3::Element &)(params.pols[${offset} + ((i + ${next})%${N})*${size}])`;
             } else {
                 range_pols_4.add(size);
-                range_polsseq_4.add(p.section);
+                range_polsseq_4.add(p.stage);
                 return `(Goldilocks3::Element &)(params.pols[${offset} + i*${size}])`;
             }
         } else {
@@ -1351,9 +1349,9 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
 
     function evalMap_(polId, prime) {
         let p = starkInfo.varPolMap[polId];
-        let offset = starkInfo.mapOffsets[p.section];
-        offset += p.sectionPos;
-        let size = starkInfo.mapSectionsN[p.section];
+        let offset = starkInfo.mapOffsets[p.stage];
+        offset += p.stagePos;
+        let size = starkInfo.mapSectionsN[p.stage];
         if (p.dim == 1) {
             if (prime) {
                 args.push(Number(offset));

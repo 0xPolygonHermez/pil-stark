@@ -371,9 +371,9 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
             if (!p) {
                 console.log("xx");
             }
-            let offset = starkInfo.mapOffsets[p.section];
-            offset += p.sectionPos;
-            let size = starkInfo.mapSectionsN[p.section];
+            let offset = starkInfo.mapOffsets[p.stage];
+            offset += p.stagePos;
+            let size = starkInfo.mapSectionsN[p.stage];
             if (p.dim == 1) {
                 if (prime) {
                     return `params.pols[${offset} + ((i + ${next})%${N})*${size}]`;
