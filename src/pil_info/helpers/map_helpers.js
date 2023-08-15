@@ -1,12 +1,17 @@
 const { iterateCode } = require("../codegen");
 
-module.exports.addPol = function addPol(res, stage, dim, imPol = false) {
-    const polType = { stage, dim, imPol };
+module.exports.addPol = function addPol(res, stage, dim) {
+    const polsStage = res.varPolMap.filter((p) => p.stage == stage);
+    const polPos = polsStage.length;
+    const stagePos = polsStage.reduce((acc, p) => acc + p.dim, 0);
+    const polType = { stage, dim, stagePos, polPos };
     res.varPolMap.push(polType);
+    if(!res.mapSectionsN[stage]) res.mapSectionsN[stage] = 0;
+    res.mapSectionsN[stage] += dim;
     return res.varPolMap.length-1;
 }
 
-module.exports.getExpDim = function getExpDim(pil, expId, stark) {
+module.exports.getExpDim = function getExpDim(res, pil, expId, stark) {
 
     return _getExpDim(pil.expressions[expId]);
 
@@ -24,7 +29,7 @@ module.exports.getExpDim = function getExpDim(pil, expId, stark) {
                     if (d>md) md=d;
                 }
                 return md;
-            case "cm": return pil.cmDims[exp.id];
+            case "cm": return res.varPolMap[exp.id].dim;
             case "exp":
                 exp.dimMap = _getExpDim(pil.expressions[exp.id]);
                 return exp.dimMap;
@@ -143,7 +148,12 @@ module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, sta
 
 module.exports.fixProverCode = function fixProverCode(res, code, tmpExps, pil, dom, stark, verifierQuery = false) {
     const ctx = {};
-    ctx.expMap = [{}, {}];
+    ctx.expMap = [];
+    
+    let openings = stark ? res.nFriOpenings : 2;
+    for(let i = 0; i < openings; ++i) {
+        ctx.expMap[i] = {};
+    }
     ctx.code = code;
     ctx.dom = dom;
 
@@ -169,8 +179,7 @@ module.exports.fixProverCode = function fixProverCode(res, code, tmpExps, pil, d
                         r.type = "tree" + index;
                     }
                     
-                    r.stageId = r.id;
-                    for(let i = index - 1; i > 0; --i) r.stageId -= res.nCm[i];
+                    r.stageId = p1.polPos;
                     r.treePos = p1.stagePos;
                     r.dim = p1.dim;
                 }
@@ -181,7 +190,7 @@ module.exports.fixProverCode = function fixProverCode(res, code, tmpExps, pil, d
                     r.id = res.imPolsMap[r.id];
                 } else if ((typeof tmpExps[r.id] != "undefined")&&(ctx.dom == "n")) {
                     r.type = "tmpExp";
-                    r.dim = module.exports.getExpDim(pil, r.id, stark);
+                    r.dim = module.exports.getExpDim(res, pil, r.id, stark);
                     r.id = tmpExps[r.id];
                 } else {
                     const p = r.prime ? 1 : 0;

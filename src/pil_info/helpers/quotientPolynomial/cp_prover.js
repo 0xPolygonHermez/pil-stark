@@ -49,7 +49,6 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
     res.imPolsMap = {}
     for (let i=0; i<imExpsList.length; i++) {
         res.imPolsMap[imExpsList[i]] = pil.nCommitments++;
-        res.nCm[3]++;
         const e = {
             op: "sub",
             values: [

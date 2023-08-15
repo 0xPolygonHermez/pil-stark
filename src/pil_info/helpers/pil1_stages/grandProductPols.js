@@ -12,7 +12,6 @@ module.exports = function generateGrandProductPols(stage, F, res, pil, ctx) {
 
     res.nChallenges += 2;
     res.challenges[stage] = [gamma.id, delta.id];
-    res.nCm[stage] = 0;
 
     if (pil.permutationIdentities.length > 0) {
         const epsilon = E.challenge("epsilon");
@@ -98,7 +97,6 @@ function generatePlookupZ(stage, res, pil, ctx) {
     for (let i=0; i<pil.plookupIdentities.length; i++) {
         const puCtx = res.puCtx[i];
         puCtx.zId = pil.nCommitments++;
-        res.nCm[stage]++;
 
         const h1 = E.cm(puCtx.h1Id);
         const h2 =  E.cm(puCtx.h2Id);
@@ -190,7 +188,6 @@ function generatePermutationZ(stage, res, pil, ctx) {
         peCtx = res.peCtx[i];
 
         peCtx.zId = pil.nCommitments++;
-        res.nCm[stage]++;
 
         const f = E.exp(peCtx.fExpId);
         const t = E.exp(peCtx.tExpId);
@@ -236,7 +233,6 @@ function generateConnectionsZ(stage, F, res, pil, ctx) {
         const ciCtx = {};
 
         ciCtx.zId = pil.nCommitments++;
-        res.nCm[stage]++;
 
         const gamma = E.challenge("gamma");
         const delta = E.challenge("delta");

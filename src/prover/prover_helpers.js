@@ -103,7 +103,7 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
             }
             case "tmpExp": {
                 if (dom=="n") {
-                    return evalMap(ctx.pilInfo.mapSections.tmpExp[r.id], r.prime, false)
+                    return evalMap(ctx.pilInfo.tmpExp[r.id], r.prime, false)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -172,7 +172,7 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
                 break;
             case "tmpExp":
                 if (dom=="n") {
-                    body.push(`  ${evalMap(ctx.pilInfo.mapSections.tmpExp[r.id], r.prime, false, val)};`);
+                    body.push(`  ${evalMap(ctx.pilInfo.tmpExp[r.id], r.prime, false, val)};`);
                 } else if (dom=="ext") {
                     throw new Error("Invalid dom");
                 } else {

@@ -27,8 +27,8 @@ module.exports = async function proofGen(cmPols, pilInfo, constTree, constPols, 
         await cmPols.writeToBigBufferFr(ctx.cm1_n, ctx.F);
     }
    
-    if (cmPols.$$nPols != ctx.pilInfo.nCm[1]) {
-        throw new Error(`Number of Commited Polynomials: ${cmPols.length} do not match with the pilInfo definition: ${ctx.pilInfo.nCm[1]} `)
+    if (cmPols.$$nPols != ctx.pilInfo.nCommitments) {
+        throw new Error(`Number of Commited Polynomials: ${cmPols.length} do not match with the pilInfo definition: ${ctx.pilInfo.nCommitments} `)
     };
 
     // STAGE 1. Compute Trace Column Polynomials
@@ -39,14 +39,14 @@ module.exports = async function proofGen(cmPols, pilInfo, constTree, constPols, 
     // STAGE 2. Compute Inclusion Polynomials
     await stage2(ctx, challenge, parallelExec, useThreads, logger);
 
-    if(ctx.prover === "stark" || ctx.pilInfo.nCm[2] > 0 || ctx.pilInfo.peCtx.length > 0) {
+    if(ctx.prover === "stark" || ctx.pilInfo.varPolMap.filter(p => p.stage == "cm2").length > 0 || ctx.pilInfo.peCtx.length > 0) {
         challenge = await getChallenge(2, ctx);
     }
 
     // STAGE 3. Compute Grand Product and Intermediate Polynomials
     await stage3(ctx, challenge, parallelExec, useThreads, logger);
     
-    if(ctx.prover === "stark" || ctx.pilInfo.nCm[3] > 0) {
+    if(ctx.prover === "stark" || ctx.pilInfo.varPolMap.filter(p => p.stage == "cm3").length > 0) {
         challenge = await getChallenge(3, ctx);
     }
 
@@ -81,11 +81,11 @@ async function stage1(ctx, logger) {
 }
 
 async function stage2(ctx, challenge, parallelExec, useThreads, logger) {
-    if(ctx.prover === "fflonk" && !ctx.pilInfo.nCm[2] && ctx.pilInfo.peCtx.length === 0) return;
+    if(ctx.prover === "fflonk" && !ctx.pilInfo.varPolMap.filter(p => p.stage == "cm2").length && ctx.pilInfo.peCtx.length === 0) return;
 
     setChallenges(2, ctx, challenge, logger);
     
-    if (ctx.prover === "fflonk" && !ctx.pilInfo.nCm[2]) return;
+    if (ctx.prover === "fflonk" && !ctx.pilInfo.varPolMap.filter(p => p.stage == "cm2").length) return;
 
     if (logger) logger.debug("> STAGE 2. Compute Inclusion Polynomials");
 
@@ -107,7 +107,7 @@ async function stage2(ctx, challenge, parallelExec, useThreads, logger) {
 }
 
 async function stage3(ctx, challenge, parallelExec, useThreads, logger) {
-    if (ctx.prover === "fflonk" && !ctx.pilInfo.nCm[3]) return;
+    if (ctx.prover === "fflonk" && !ctx.pilInfo.varPolMap.filter(p => p.stage == "cm3").length) return;
 
     if (logger) logger.debug("> STAGE 3. Compute Grand Product and Intermediate Polynomials");
 

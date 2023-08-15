@@ -46,13 +46,13 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         logger.debug(`  VerificationType: ${starkStruct.verificationHashType}`);
         logger.debug(`  Domain size: ${N} (2^${nBits})`);
         logger.debug(`  Const  pols:   ${starkInfo.nConstants}`);
-        logger.debug(`  Stage 1 pols:   ${starkInfo.nCm[1]}`);
+        logger.debug(`  Stage 1 pols:   ${starkInfo.varPolMap.filter(p => p.stage == "cm1").length}`);
         for(let i = 0; i < starkInfo.nStages; i++) {
             const stage = i + 2;
-            logger.debug(`  Stage ${stage} pols:   ${starkInfo.nCm[stage]}`);
+            logger.debug(`  Stage ${stage} pols:   ${starkInfo.varPolMap.filter(p => p.stage == "cm" + stage).length}`);
         }
-        logger.debug(`  Stage Q pols:   ${starkInfo.qDeg}`);
-        logger.debug(`  Temp exp pols: ${starkInfo.mapSectionsN.tmpExp}`);
+        logger.debug(`  Stage Q pols:   ${starkInfo.varPolMap.filter(p => p.stage == "cmQ").length}`);
+        logger.debug(`  Temp exp pols: ${starkInfo.varPolMap.filter(p => p.stage == "tmpExp").length}`);
         logger.debug("-----------------------------");
     }
 

@@ -46,17 +46,15 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
     }
    
     res.nConstants = pil.nConstants;
+    res.nCommitments = pil.nCommitments;
     res.nPublics = pil.publics.length;
     res.publics = pil.publics;
     res.nStages = 0;
     res.nChallenges = 0;
     res.challenges = {};
-    res.nCm = {};
     res.steps = {};
 
     generatePublicCalculators(res, pil);
-
-    res.nCm[1] = pil.nCommitments;
     
     const ctx = {
         pil: pil,

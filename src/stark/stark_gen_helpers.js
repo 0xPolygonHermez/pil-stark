@@ -50,13 +50,13 @@ module.exports.initProverStark = async function initProverStark(pilInfo, constPo
         logger.debug(`  Domain size: ${ctx.N} (2^${ctx.nBits})`);
         logger.debug(`  Domain size ext: ${ctx.Next} (2^${ctx.nBitsExt})`);
         logger.debug(`  Const  pols:   ${ctx.pilInfo.nConstants}`);
-        logger.debug(`  Stage 1 pols:   ${ctx.pilInfo.nCm[1]}`);
+        logger.debug(`  Stage 1 pols:   ${ctx.pilInfo.varPolMap.filter(p => p.stage == "cm1").length}`);
         for(let i = 0; i < ctx.pilInfo.nStages; i++) {
             const stage = i + 2;
-            logger.debug(`  Stage ${stage} pols:   ${ctx.pilInfo.nCm[stage]}`);
+            logger.debug(`  Stage ${stage} pols:   ${ctx.pilInfo.varPolMap.filter(p => p.stage == "cm" + stage).length}`);
         }
-        logger.debug(`  Stage Q pols:   ${ctx.pilInfo.qDeg}`);
-        logger.debug(`  Temp exp pols: ${ctx.pilInfo.mapSectionsN.tmpExp}`);
+        logger.debug(`  Stage Q pols:   ${ctx.pilInfo.varPolMap.filter(p => p.stage == "cmQ").length}`);
+        logger.debug(`  Temp exp pols: ${ctx.pilInfo.varPolMap.filter(p => p.stage == "tmpExp").length}`);
         logger.debug("-----------------------------");
     }
 
@@ -151,7 +151,9 @@ module.exports.computeQStark = async function computeQStark(ctx, logger) {
     await fft(qq2, ctx.pilInfo.qDim * ctx.pilInfo.qDeg, ctx.nBitsExt, ctx.cmQ_ext);
 
     if (logger) logger.debug("··· Merkelizing Q polynomial tree");
-    ctx.trees[ctx.pilInfo.nStages + 2] = await ctx.MH.merkelize(ctx.cmQ_ext, ctx.pilInfo.mapSectionsN.cmQ, ctx.Next);
+
+    const nPolsQ = ctx.pilInfo.mapSectionsN.cmQ || 0;
+    ctx.trees[ctx.pilInfo.nStages + 2] = await ctx.MH.merkelize(ctx.cmQ_ext, nPolsQ, ctx.Next);
 }
 
 module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challenge, logger) {
@@ -304,7 +306,7 @@ module.exports.extendAndMerkelize = async function  extendAndMerkelize(stage, ct
     const buffFrom = ctx["cm" + stage + "_n"];
     const buffTo = ctx["cm" + stage + "_ext"];
 
-    const nPols = ctx.pilInfo.mapSectionsN["cm" + stage];
+    const nPols = ctx.pilInfo.mapSectionsN["cm" + stage] || 0;
     
     if (logger) logger.debug("··· Interpolating " + stage);
     await interpolate(buffFrom, nPols, ctx.nBits, buffTo, ctx.nBitsExt);

@@ -12,7 +12,6 @@ module.exports = function generateInclusionPols(stage, res, pil, ctx) {
 
     res.nChallenges += 2;
 
-    res.nCm[stage] = 0;
     for (let i=0; i<pil.plookupIdentities.length; i++) {
         const puCtx = {};
         const pi = pil.plookupIdentities[i];
@@ -69,8 +68,6 @@ module.exports = function generateInclusionPols(stage, res, pil, ctx) {
         puCtx.h2Id = pil.nCommitments++;
 
         res.puCtx.push(puCtx);
-
-        res.nCm[stage] += 2;
     }
 
     res.challenges[stage] = [alpha.id, beta.id];

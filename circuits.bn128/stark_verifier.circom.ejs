@@ -527,8 +527,9 @@ template MapValues() {
 
 <% for (let t = 1; t<=starkInfo.nStages + 2; t++) {                              -%>
 <%      let index = t === starkInfo.nStages + 2 ? "Q" : t;                       -%>
-<%      for (let i=0; i< starkInfo.mapSections["cm" + index + "_n"].length; i++) {        -%>
-<%          const p = starkInfo.varPolMap[starkInfo.mapSections["cm" + index + "_n"][i]];  -%>
+<%      let sectionsStage = starkInfo.varPolMap.filter(p => p.stage === "cm" + index);  -%>
+<%      for (let i=0; i< sectionsStage.length; i++) {         -%>
+<%          const p = sectionsStage[i];  -%>
 <%          if (p.dim == 1) {                                                    -%>
     signal output tree<%- index %>_<%- i %>;
 <%          } else if (p.dim == 3) {                                             -%>
@@ -539,8 +540,9 @@ template MapValues() {
 
 <% for (let t = 1; t<=starkInfo.nStages + 2; t++) {                              -%>
 <%      let index = t === starkInfo.nStages + 2 ? "Q" : t;                       -%>
-<%      for (let i=0; i< starkInfo.mapSections["cm" + index + "_n"].length; i++) {         -%>
-<%          const p = starkInfo.varPolMap[starkInfo.mapSections["cm" + index + "_n"][i]];  -%>
+<%      let sectionsStage = starkInfo.varPolMap.filter(p => p.stage === "cm" + index);  -%>
+<%      for (let i=0; i< sectionsStage.length; i++) {         -%>
+<%          const p = sectionsStage[i];  -%>
 <%          if (p.dim == 1) {                                                    -%>
     tree<%- index %>_<%- i %> <== vals<%- index %>[<%- p.stagePos %>];
 <%          } else if (p.dim == 3) {                                             -%>
