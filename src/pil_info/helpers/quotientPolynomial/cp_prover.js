@@ -46,9 +46,9 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
     res.qDeg = qDeg;
 
     let imExpsList = Object.keys(imExps).map(Number);
-    res.imPolsMap = {}
+    let imPolsMap = {}
     for (let i=0; i<imExpsList.length; i++) {
-        res.imPolsMap[imExpsList[i]] = pil.nCommitments++;
+        imPolsMap[imExpsList[i]] = pil.nCommitments++;
         const e = {
             op: "sub",
             values: [
@@ -83,8 +83,8 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
     res.steps["imPols"] = buildCode(ctx);
 
     // This variables are already calculated by expanding the ones in deg n
-    ctx2ns.calculated.exps = Object.assign({}, res.imPolsMap);
-    ctx2ns.calculated.expsPrime= Object.assign({}, res.imPolsMap);
+    ctx2ns.calculated.exps = Object.assign({}, imPolsMap);
+    ctx2ns.calculated.expsPrime= Object.assign({}, imPolsMap);
 
     pilCodeGen(ctx2ns, res.cExp);
     const code = ctx2ns.code[ctx2ns.code.length-1].code;
@@ -115,6 +115,8 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
     }
     
     res.steps["Q"] = buildCode(ctx2ns);
+
+    return imPolsMap;
 }
 
 function calculateImPols(pil, _exp, maxDeg) {

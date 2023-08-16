@@ -354,11 +354,10 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
     }
 
     function setWidth(stage) {
-        if (["cm1_ext", "cm2_ext", "cm3_ext", "cmQ_ext"].includes(stage.name)) {
-        } else if ((stage.name == "const_n") || (stage.name == "const_ext")) {
+        if ((stage.name == "const_n") || (stage.name == "const_ext")) {
             stage.width = ctx.pilInfo.nConstants;
-        } else if (typeof ctx.pilInfo.mapSectionsN[stage.name] != "undefined") {
-            stage.width = ctx.pilInfo.mapSectionsN[stage.name];
+        } else if (typeof ctx.pilInfo.mapSectionsN[stage.name.split("_")[0]] != "undefined") {
+            stage.width = ctx.pilInfo.mapSectionsN[stage.name.split("_")[0]];
         } else if (["x_n", "x_ext", "Zi_ext"].indexOf(stage.name) >= 0) {
             stage.width = 1;
         } else if (["xDivXSubXi_ext"].indexOf(stage.name) >= 0) {

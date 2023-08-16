@@ -1,11 +1,11 @@
 const {pilCodeGen, buildCode, iterateCode} = require("../../codegen.js");
 
-module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark) {
+module.exports  = function generateConstraintPolynomialVerifier(res, imPolsMap, pil, stark) {
     const ctxC = {
         pil: pil,
         calculated: {
-            exps: Object.assign({}, res.imPolsMap),
-            expsPrime: Object.assign({}, res.imPolsMap)
+            exps: Object.assign({}, imPolsMap),
+            expsPrime: Object.assign({}, imPolsMap)
         },
         tmpUsed: 0,
         code: []
@@ -46,9 +46,9 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
             // Check the expressions ids. If it is an intermediate polynomial
             // modify the type and set it as a commit;
             case "exp":
-                if (res.imPolsMap[r.id]) {
+                if (imPolsMap[r.id]) {
                     r.type = "cm";
-                    r.id = res.imPolsMap[r.id];
+                    r.id = imPolsMap[r.id];
                 } else {
                     if (typeof ctx.expMap[p][r.id] === "undefined") {
                         ctx.expMap[p][r.id] = ctx.code.tmpUsed ++;

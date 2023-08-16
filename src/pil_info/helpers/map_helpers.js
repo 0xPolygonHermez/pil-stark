@@ -6,8 +6,14 @@ module.exports.addPol = function addPol(res, stage, dim) {
     const stagePos = polsStage.reduce((acc, p) => acc + p.dim, 0);
     const polType = { stage, dim, stagePos, polPos };
     res.varPolMap.push(polType);
-    if(!res.mapSectionsN[stage]) res.mapSectionsN[stage] = 0;
     res.mapSectionsN[stage] += dim;
+
+    if(stage === "tmpExp") {
+        res.tmpExp.push(res.varPolMap.length-1);
+    } else if(stage !== "q_ext") {
+        res.cm.push(res.varPolMap.length-1);
+    }
+
     return res.varPolMap.length-1;
 }
 
@@ -146,7 +152,7 @@ module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, sta
 }
 
 
-module.exports.fixProverCode = function fixProverCode(res, code, tmpExps, pil, dom, stark, verifierQuery = false) {
+module.exports.fixProverCode = function fixProverCode(res, code, imPolsMap, tmpExps, pil, dom, stark, verifierQuery = false) {
     const ctx = {};
     ctx.expMap = [];
     
@@ -162,12 +168,6 @@ module.exports.fixProverCode = function fixProverCode(res, code, tmpExps, pil, d
     function fixRef(r, ctx) {
         switch (r.type) {
             case "cm":
-                if (["n", "ext"].includes(dom)) {
-                    r.p = res.cm[r.id];
-                } else {
-                    throw ("Invalid domain", ctx.dom);
-                }
-
                 if (verifierQuery) {
                     const p1 = res.varPolMap[res.cm[r.id]];
                     let index = Number(p1.stage.substr(2));
@@ -185,9 +185,9 @@ module.exports.fixProverCode = function fixProverCode(res, code, tmpExps, pil, d
                 }
                 break;
             case "exp":
-                if (res.imPolsMap[r.id]) {
+                if (imPolsMap[r.id]) {
                     r.type = "cm";
-                    r.id = res.imPolsMap[r.id];
+                    r.id = imPolsMap[r.id];
                 } else if ((typeof tmpExps[r.id] != "undefined")&&(ctx.dom == "n")) {
                     r.type = "tmpExp";
                     r.dim = module.exports.getExpDim(res, pil, r.id, stark);

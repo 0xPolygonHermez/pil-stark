@@ -95,8 +95,8 @@ async function stage2(ctx, challenge, parallelExec, useThreads, logger) {
     for (let i = 0; i < ctx.pilInfo.puCtx.length; i++) {
         const pu = ctx.pilInfo.puCtx[i];
 
-        const fPol = getPol(ctx, ctx.pilInfo.exp2pol[pu.fExpId], "n");
-        const tPol = getPol(ctx, ctx.pilInfo.exp2pol[pu.tExpId], "n");
+        const fPol = getPol(ctx, pu.fExpId, "n");
+        const tPol = getPol(ctx, pu.tExpId, "n");
 
         const [h1, h2] = calculateH1H2(ctx.F, fPol, tPol);
         setPol(ctx, ctx.pilInfo.cm[pu.h1Id], h1, "n");
@@ -126,8 +126,8 @@ async function stage3(ctx, challenge, parallelExec, useThreads, logger) {
             if (logger) logger.debug(`··· Calculating z for ${polsCtx[i].name} ${j}`);
             
             const polCtx = polsCtx[i].ctx[j];
-            const pNum = getPol(ctx, ctx.pilInfo.exp2pol[polCtx.numId], "n");
-            const pDen = getPol(ctx, ctx.pilInfo.exp2pol[polCtx.denId], "n");
+            const pNum = getPol(ctx, polCtx.numId, "n");
+            const pDen = getPol(ctx, polCtx.denId, "n");
             const z = await calculateZ(ctx.F, pNum, pDen);
 
             setPol(ctx, ctx.pilInfo.cm[polCtx.zId], z, "n");

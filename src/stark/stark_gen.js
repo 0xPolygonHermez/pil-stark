@@ -1,7 +1,7 @@
 const proofGen  = require("../prover/prover.js")
 
-const parallelExec = false;
-const useThreads = false;
+const parallelExec = true;
+const useThreads = true;
 
 module.exports = async function starkGen(cmPols, constPols, constTree, pilInfo, options = {}) {
     options.parallelExec = parallelExec;

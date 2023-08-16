@@ -82,9 +82,9 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
 
     generateGrandProductPols(stage++, F, res, pil, ctx);  // Z Polynomials and LC of permutation checks.
 
-    generateConstraintPolynomial(res, pil, ctx, ctx_ext, stark);            // Step4
+    const imPolsMap = generateConstraintPolynomial(res, pil, ctx, ctx_ext, stark);            // Step4
 
-    generateConstraintPolynomialVerifier(res, pil, stark);
+    generateConstraintPolynomialVerifier(res, imPolsMap, pil, stark);
 
     if(stark) {
         generateFRIPolynomial(res, pil, ctx_ext);
@@ -104,7 +104,7 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
         res.nBitsZK = Math.ceil(Math.log2((res.pilPower + res.maxPolsOpenings) / res.pilPower));
     }
     
-    map(res, pil, stark);
+    map(res, imPolsMap, pil, stark);
 
     return res;
 
