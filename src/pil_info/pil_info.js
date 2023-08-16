@@ -13,6 +13,13 @@ const map = require("./map.js");
 
 const { log2 } = require("pilcom/src/utils.js");
 
+const ExpressionOps = require("./expressionops.js");
+
+const { grandProductPlookup } = require("./helpers/pil1_stages/grandProductPlookup.js");
+const { grandProductConnection } = require("./helpers/pil1_stages/grandProductConnection.js");
+const { grandProductPermutation } = require("./helpers/pil1_stages/grandProductPermutation.js");
+
+
 module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
 
@@ -76,11 +83,33 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
         code: []
     };
 
-    let stage = 2;
+    const E = new ExpressionOps();
 
-    generateInclusionPols(stage++, res, pil, ctx);  // H1, H2
+    const alpha = E.challenge("alpha");
+    const beta = E.challenge("beta");
 
-    generateGrandProductPols(stage++, F, res, pil, ctx);  // Z Polynomials and LC of permutation checks.
+    res.challenges[2] = [alpha.id, beta.id];
+    res.nChallenges += 2;
+
+    const gamma = E.challenge("gamma");
+    const delta = E.challenge("delta");
+
+    res.nChallenges += 2;
+    res.challenges[3] = [gamma.id, delta.id];
+
+    if (pil.permutationIdentities.length > 0) {
+        const epsilon = E.challenge("epsilon");
+        res.challenges[3].push(epsilon.id);
+        res.nChallenges++;
+    }
+
+    grandProductPlookup(res, pil);
+    grandProductPermutation(res, pil);
+    grandProductConnection(F, res, pil);
+
+    generateInclusionPols(res, ctx);  // H1, H2
+
+    generateGrandProductPols(res, ctx);
 
     const imPolsMap = generateConstraintPolynomial(res, pil, ctx, ctx_ext, stark);            // Step4
 
