@@ -49,7 +49,7 @@ module.exports.getExpDim = function getExpDim(res, pil, expId, stark) {
 }
 
 
-module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, stark, dimX = 1) {
+module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, stark) {
     const tmpDim = [];
 
     _setCodeDimensions(code.first);
@@ -87,10 +87,9 @@ module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, sta
                 case "eval": 
                 case "challenge": 
                 case "Z":
-                    r.dim = stark ? 3 : 1; break
                 case "xDivXSubXi": 
                 case "x": 
-                    r.dim=dimX; break;
+                    r.dim= stark ? 3 : 1; break;
                 default: throw new Error("Invalid reference type: " + r.type);
             }
             return r.dim;

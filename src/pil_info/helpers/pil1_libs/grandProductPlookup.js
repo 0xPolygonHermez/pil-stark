@@ -66,15 +66,15 @@ module.exports.grandProductPlookup = function grandProductPlookup(res, pil) {
         
         const stage1 = {
             pols: {
-                fExpId: {id: puCtx.fExpId, tmp: true},
-                tExpId: {id: puCtx.tExpId, tmp: true},
-                h1Id: {id: puCtx.h1Id},
-                h2Id: {id: puCtx.h2Id},
+                f: {id: puCtx.fExpId, tmp: true},
+                t: {id: puCtx.tExpId, tmp: true},
+                h1: {id: puCtx.h1Id},
+                h2: {id: puCtx.h2Id},
             },
             hints: [
                 {
-                    inputs: ["fExpId", "tExpId"], 
-                    outputs: ["h1Id", "h2Id"], 
+                    inputs: ["f", "t"], 
+                    outputs: ["h1", "h2"], 
                     lib: "calculateH1H2"
                 }
             ]
@@ -160,14 +160,14 @@ module.exports.grandProductPlookup = function grandProductPlookup(res, pil) {
 
         const stage2 = {
             pols: {
-                numId: {id: puCtx.numId, tmp: true},
-                denId: {id: puCtx.denId, tmp: true},
-                zId: {id: puCtx.zId},
+                num: {id: puCtx.numId, tmp: true},
+                den: {id: puCtx.denId, tmp: true},
+                z: {id: puCtx.zId},
             },
             hints: [
                 {
-                    inputs: ["numId", "denId"], 
-                    outputs: ["zId"], 
+                    inputs: ["num", "den"], 
+                    outputs: ["z"], 
                     lib: "calculateZ"
                 }
             ]

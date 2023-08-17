@@ -9,7 +9,7 @@ module.exports = function generateFRIPolynomial(res, pil, ctxExt) {
     const vf1 = E.challenge("vf1");
     const vf2 = E.challenge("vf2");
     
-    res.friChallenges = [vf1.id, vf2.id];
+    res.challenges["fri"] = [vf1.id, vf2.id];
     res.nChallenges += 2;
 
 
@@ -59,6 +59,6 @@ module.exports = function generateFRIPolynomial(res, pil, ctxExt) {
 
     code[code.length-1].dest = { type: "f", id: 0 };
 
-    res.steps["fri"] = buildCode(ctxExt);
+    res.code["fri"] = buildCode(ctxExt);
 
 }

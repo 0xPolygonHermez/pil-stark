@@ -159,8 +159,8 @@ module.exports.computeQStark = async function computeQStark(ctx, logger) {
 module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challenge, logger) {
     if (logger) logger.debug("Compute Evals");
 
-    ctx.challenges[ctx.pilInfo.xiChallenge] = challenge; // xi
-    if (logger) logger.debug("··· challenges[" + ctx.pilInfo.xiChallenge + "]: " + ctx.F.toString(ctx.challenges[ctx.pilInfo.xiChallenge]));
+    ctx.challenges[ctx.pilInfo.challenges["xi"][0]] = challenge; // xi
+    if (logger) logger.debug("··· challenges[" + ctx.pilInfo.challenges["xi"][0] + "]: " + ctx.F.toString(ctx.challenges[ctx.pilInfo.challenges["xi"][0]]));
 
     let LEv = [];
     const friOpenings = Object.keys(ctx.pilInfo.fri2Id);
@@ -174,7 +174,7 @@ module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challen
             w = ctx.F.mul(w, ctx.F.w[ctx.nBits]);
         }
         if(opening < 0) w = ctx.F.div(1n, w);
-        const xi = ctx.F.div(ctx.F.mul(ctx.challenges[ctx.pilInfo.xiChallenge], w), ctx.F.shift);
+        const xi = ctx.F.div(ctx.F.mul(ctx.challenges[ctx.pilInfo.challenges["xi"][0]], w), ctx.F.shift);
         for (let k=1; k<ctx.N; k++) {
             LEv[index][k] = ctx.F.mul(LEv[index][k-1], xi);
         }
@@ -233,7 +233,7 @@ module.exports.computeFRIStark = async function computeFRIStark(ctx, challenge, 
         }
         if(opening < 0) w = ctx.F.div(1n, w);
 
-        let xi = ctx.F.mul(ctx.challenges[ctx.pilInfo.xiChallenge], w);
+        let xi = ctx.F.mul(ctx.challenges[ctx.pilInfo.challenges["xi"][0]], w);
 
         let den = new Array(ctx.Next);
         let x = ctx.F.shift;
@@ -318,11 +318,7 @@ module.exports.extendAndMerkelize = async function  extendAndMerkelize(stage, ct
 }
 
 module.exports.setChallengesStark = function setChallengesStark(stage, ctx, challenge, logger) {
-    let challengesIndex = stage === "Q" 
-        ? [ctx.pilInfo.qChallenge] 
-        : stage === "fri" 
-            ? ctx.pilInfo.friChallenges
-            : ctx.pilInfo.challenges[stage];
+    let challengesIndex = ctx.pilInfo.challenges[stage];
 
     if(challengesIndex.length === 0) throw new Error("No challenges needed for stage " + stage);
 

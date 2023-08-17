@@ -80,30 +80,30 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         transcript.put(proof["root" + stage]);
     }
     
-    ctx.challenges[starkInfo.qChallenge] = transcript.getField();
-    if (logger) logger.debug("··· challenges[" + starkInfo.qChallenge + "]: " + F.toString(ctx.challenges[starkInfo.qChallenge]));
+    ctx.challenges[starkInfo.challenges["Q"][0]] = transcript.getField();
+    if (logger) logger.debug("··· challenges[" + starkInfo.challenges["Q"][0] + "]: " + F.toString(ctx.challenges[starkInfo.challenges["Q"][0]]));
     transcript.put(proof.rootQ);
 
 
-    ctx.challenges[starkInfo.xiChallenge] = transcript.getField();
-    if (logger) logger.debug("··· challenges[" + starkInfo.xiChallenge + "]: " + F.toString(ctx.challenges[starkInfo.xiChallenge]));
+    ctx.challenges[starkInfo.challenges["xi"][0]] = transcript.getField();
+    if (logger) logger.debug("··· challenges[" + starkInfo.challenges["xi"][0] + "]: " + F.toString(ctx.challenges[starkInfo.challenges["xi"][0]]));
     for (let i=0; i<ctx.evals.length; i++) {
         transcript.put(ctx.evals[i]);
     }
 
-    ctx.challenges[starkInfo.friChallenges[0]] = transcript.getField();
-    if (logger) logger.debug("··· challenges[" + starkInfo.friChallenges[0] + "]: " + F.toString(ctx.challenges[starkInfo.friChallenges[0]]));
+    ctx.challenges[starkInfo.challenges["fri"][0]] = transcript.getField();
+    if (logger) logger.debug("··· challenges[" + starkInfo.challenges["fri"][0] + "]: " + F.toString(ctx.challenges[starkInfo.challenges["fri"][0]]));
 
-    ctx.challenges[starkInfo.friChallenges[1]] = transcript.getField();
-    if (logger) logger.debug("··· challenges[" + starkInfo.friChallenges[1] + "]: " + F.toString(ctx.challenges[starkInfo.friChallenges[1]]));
+    ctx.challenges[starkInfo.challenges["fri"][1]] = transcript.getField();
+    if (logger) logger.debug("··· challenges[" + starkInfo.challenges["fri"][1] + "]: " + F.toString(ctx.challenges[starkInfo.challenges["fri"][1]]));
 
     if (logger) logger.debug("Verifying evaluations");
 
-    const xN = F.exp(ctx.challenges[starkInfo.xiChallenge], N)
+    const xN = F.exp(ctx.challenges[starkInfo.challenges["xi"][0]], N)
     ctx.Z = F.sub(xN, 1n);
-    ctx.Zp = F.sub(F.exp(F.mul(ctx.challenges[starkInfo.xiChallenge], F.w[nBits]), N), 1n);
+    ctx.Zp = F.sub(F.exp(F.mul(ctx.challenges[starkInfo.challenges["xi"][0]], F.w[nBits]), N), 1n);
 
-    const res=executeCode(F, ctx, starkInfo.verifierCode.first);
+    const res=executeCode(F, ctx, starkInfo.code.qVerifier.first);
 
     let xAcc = 1n;
     let q = 0n;
@@ -181,10 +181,10 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
                 w = F.div(1n, w);
             }
 
-            ctxQry.xDivXSubXi[id] = F.div(x, F.sub(x, F.mul(ctxQry.challenges[starkInfo.xiChallenge], w)));
+            ctxQry.xDivXSubXi[id] = F.div(x, F.sub(x, F.mul(ctxQry.challenges[starkInfo.challenges["xi"][0]], w)));
         }
 
-        const vals = [executeCode(F, ctxQry, starkInfo.verifierQueryCode.first)];
+        const vals = [executeCode(F, ctxQry, starkInfo.code.queryVerifier.first)];
 
         return vals;
     }
@@ -229,7 +229,7 @@ function executeCode(F, ctx, code) {
             case "public": return BigInt(ctx.publics[r.id]);
             case "challenge": return ctx.challenges[r.id];
             case "xDivXSubXi": return ctx.xDivXSubXi[ctx.starkInfo.fri2Id[r.opening]];
-            case "x": return ctx.challenges[ctx.starkInfo.xiChallenge];
+            case "x": return ctx.challenges[ctx.starkInfo.challenges["xi"][0]];
             case "Z": return r.prime ? ctx.Zp : ctx.Z;
             default: throw new Error("Invalid reference type get: " + r.type);
         }

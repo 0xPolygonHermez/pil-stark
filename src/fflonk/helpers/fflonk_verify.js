@@ -93,10 +93,10 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         transcript.addPolCommitment(stage3CommitPols[i]);
     }
 
-    ctx.challenges[fflonkInfo.qChallenge] = transcript.getChallenge();
-    if (logger) logger.debug("··· challenges[" + fflonkInfo.qChallenge + "]: " + Fr.toString(ctx.challenges[fflonkInfo.qChallenge]));
+    ctx.challenges[fflonkInfo.challenges["Q"][0]] = transcript.getChallenge();
+    if (logger) logger.debug("··· challenges[" + fflonkInfo.challenges["Q"][0] + "]: " + Fr.toString(ctx.challenges[fflonkInfo.challenges["Q"][0]]));
     transcript.reset();
-    transcript.addScalar(ctx.challenges[fflonkInfo.qChallenge]);
+    transcript.addScalar(ctx.challenges[fflonkInfo.challenges["Q"][0]]);
 
     const stageQCommitPols = vk.f.filter(fi => fi.stages[0].stage === 4).map(fi => proof.polynomials[`f${fi.index}`]);
     for(let i = 0; i < stageQCommitPols.length; i++) {
@@ -136,7 +136,7 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     let challengeXi = curve.Fr.exp(challengeXiSeed, vk.powerW);
     ctx.x = challengeXi;
 
-    const execCode = executeCode(curve.Fr, ctx, fflonkInfo.verifierCode.first);
+    const execCode = executeCode(curve.Fr, ctx, fflonkInfo.code.qVerifier.first);
 
     const xN = curve.Fr.exp(challengeXi, ctx.N);
     ctx.Z = curve.Fr.sub(xN, curve.Fr.one);   

@@ -11,8 +11,6 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     for (let i = 0; i < starkInfo.nPublics; i++) {
         if (starkInfo.publicsCode[i]) {
             code.push(compileCode("publics_" + i + "_first", starkInfo.publicsCode[i].first, "n", true));
-            code.push(compileCode("publics_" + i + "_i", starkInfo.publicsCode[i].first, "n", true));
-            code.push(compileCode("publics_" + i + "_last", starkInfo.publicsCode[i].first, "n", true));
         }
     }
 

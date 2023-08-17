@@ -1,11 +1,11 @@
 const {pilCodeGen, buildCode, iterateCode} = require("../../codegen.js");
 
-module.exports  = function generateConstraintPolynomialVerifier(res, imPolsMap, pil, stark) {
+module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark) {
     const ctxC = {
         pil: pil,
         calculated: {
-            exps: Object.assign({}, imPolsMap),
-            expsPrime: Object.assign({}, imPolsMap)
+            exps: Object.assign({}, res.imPolsMap),
+            expsPrime: Object.assign({}, res.imPolsMap)
         },
         tmpUsed: 0,
         code: []
@@ -13,7 +13,7 @@ module.exports  = function generateConstraintPolynomialVerifier(res, imPolsMap, 
 
     pilCodeGen(ctxC, res.cExp, false, null, null, true);
 
-    res.verifierCode = buildCode(ctxC);
+    res.code.qVerifier = buildCode(ctxC);
 
     res.evIdx = {
         cm: [{}, {}],
@@ -24,9 +24,9 @@ module.exports  = function generateConstraintPolynomialVerifier(res, imPolsMap, 
 
     const ctxF = {};
     ctxF.expMap = [{}, {}];
-    ctxF.code = res.verifierCode;
+    ctxF.code = res.code.qVerifier;
 
-    iterateCode(res.verifierCode, fixRef, ctxF);
+    iterateCode(res.code.qVerifier, fixRef, ctxF);
 
     if (stark) {
         for (let i = 0; i < res.qDeg; i++) {
@@ -46,9 +46,9 @@ module.exports  = function generateConstraintPolynomialVerifier(res, imPolsMap, 
             // Check the expressions ids. If it is an intermediate polynomial
             // modify the type and set it as a commit;
             case "exp":
-                if (imPolsMap[r.id]) {
+                if (res.imPolsMap[r.id]) {
                     r.type = "cm";
-                    r.id = imPolsMap[r.id];
+                    r.id = res.imPolsMap[r.id];
                 } else {
                     if (typeof ctx.expMap[p][r.id] === "undefined") {
                         ctx.expMap[p][r.id] = ctx.code.tmpUsed ++;

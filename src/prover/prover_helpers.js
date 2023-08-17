@@ -28,7 +28,7 @@ module.exports.callCalculateExps = async function callCalculateExps(step, dom, c
     if (parallelExec) {
         await module.exports.calculateExpsParallel(ctx, step, useThreads);
     } else {
-        module.exports.calculateExps(ctx, ctx.pilInfo.steps[step], dom);
+        module.exports.calculateExps(ctx, ctx.pilInfo.code[step], dom);
     }
 }
 
@@ -135,12 +135,12 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
                 if (dom=="n") {
                     throw new Error("Accessing q in domain n");
                 } else if (dom=="ext") {
-                    if (ctx.pilInfo.qDim == 3) {
+                    if (r.dim == 3) {
                         body.push(` [ ctx.q_ext[i*3], ctx.q_ext[i*3+1], ctx.q_ext[i*3+2]] = ${val}; `);
-                    } else if (ctx.pilInfo.qDim == 1) {
+                    } else if (r.dim == 1) {
                         body.push(`ctx.q_ext[i] = ${val}`);
                     } else {
-                        throw new Error("qDim not defined");
+                        throw new Error("Invalid dom");
                     }
                 } else {
                     throw new Error("Invalid dom");
@@ -276,7 +276,7 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
     const pool = workerpool.pool(__dirname + '/prover_worker.js');
 
     let dom;
-    let code = ctx.pilInfo.steps[execPart];
+    let code = ctx.pilInfo.code[execPart];
     let execInfo = {
         inputSections: [],
         outputSections: []

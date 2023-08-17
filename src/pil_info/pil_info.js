@@ -10,25 +10,28 @@ const generateVerifierQuery = require("./helpers/fri/fri_verifier");
 const map = require("./map.js");
 
 const { log2 } = require("pilcom/src/utils.js");
-
-const ExpressionOps = require("./expressionops.js");
-
-const { grandProductPlookup } = require("./helpers/pil1_libs/grandProductPlookup.js");
-const { grandProductConnection } = require("./helpers/pil1_libs/grandProductConnection.js");
-const { grandProductPermutation } = require("./helpers/pil1_libs/grandProductPermutation.js");
-const { pilCodeGen, buildCode } = require("./codegen.js");
-
+const generateLibsCode = require("./helpers/generateLibsCode.js");
 
 module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
 
     const res = {
         varPolMap: [],
-        libs: {}
+        libs: {},
+        code: {},
+        nConstants: pil.nConstants,
+        nCommitments: pil.nCommitments,
+        nPublics: pil.publics.length,
+        publics: pil.publics,
+        nLibStages: 0,
+        nChallenges: 0,
+        challenges: {},
     };
 
+    const pilDeg = Object.values(pil.references)[0].polDeg;
+    res.pilPower = log2(pilDeg - 1) + 1;
+
     if(stark) {
-        const pilDeg = Object.values(pil.references)[0].polDeg;
         const starkDeg = 2 ** starkStruct.nBits;
 
         if (starkDeg != pilDeg) {
@@ -40,24 +43,8 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
         }
 
         res.starkStruct = starkStruct;
-    } else {
-        let maxPilPolDeg = 0;
-        for (const polRef in pil.references) {
-            maxPilPolDeg = Math.max(maxPilPolDeg, pil.references[polRef].polDeg);
-        }
-        
-        res.pilPower = log2(maxPilPolDeg - 1) + 1;
     }
    
-    res.nConstants = pil.nConstants;
-    res.nCommitments = pil.nCommitments;
-    res.nPublics = pil.publics.length;
-    res.publics = pil.publics;
-    res.nLibStages = 0;
-    res.nChallenges = 0;
-    res.challenges = {};
-    res.steps = {};
-
     generatePublicCalculators(res, pil);
     
     const ctx = {
@@ -80,75 +67,11 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
         code: []
     };
 
-    const E = new ExpressionOps();
-
-    let pilLibs = [];
-
-    if(pil.plookupIdentities.length > 0) {
-        pilLibs.push({
-            nChallenges: [2,2],
-            lib: function() { grandProductPlookup(res, pil) },
-        });
-    }
-
-    if(pil.connectionIdentities.length > 0) {
-        pilLibs.push({
-            nChallenges: [2],
-            lib: function() { grandProductConnection(res, pil, F)},
-        });
-    }
-
-    if(pil.permutationIdentities.length > 0) {
-        pilLibs.push({
-            nChallenges: [3],
-            lib: function() { grandProductPermutation(res, pil, F)},
-        });
-    }
-
-    if(pilLibs.length > 0) {
-        res.nLibStages = Math.max(...pilLibs.map(lib => lib.nChallenges.length));
-    }
+    generateLibsCode(F, res, pil, ctx);
     
-    for(let i = 0; i < res.nLibStages; ++i) {
-        const stage = 2 + i;
-        for(let j = 0; j < pilLibs.length; ++j) {
-            const lib = pilLibs[j];
-            if(lib.nChallenges <= res.nLibStages) continue;
-            if(!res.challenges[stage]) res.challenges[stage] = [];
-            const nChallenges = res.challenges[stage].length;
-            for(let k = nChallenges; k < lib.nChallenges[i]; ++k) {
-                res.challenges[stage].push(res.nChallenges++);
-                E.challenge(`stage${i+1}_challenge${k}`);
-            }    
-        }
-    }
+    generateConstraintPolynomial(res, pil, ctx, ctx_ext, stark);
 
-    for(let i = 0; i < pilLibs.length; ++i) {
-        pilLibs[i].lib();
-    }
-
-    for(let i = 0; i < res.nLibStages; ++i) {
-        for(let j = 0; j < Object.keys(res.libs).length; ++j) {
-            const libName = Object.keys(res.libs)[j];
-            const lib = res.libs[libName];
-            if(lib.length > i) {
-                const polsStage = lib[i].pols;
-                for(let k = 0; k < Object.keys(polsStage).length; ++k) {
-                    let name = Object.keys(polsStage)[k];
-                    if(polsStage[name].tmp) {
-                        pilCodeGen(ctx, polsStage[name].id, false);
-                    }                    
-                }
-            }
-        }
-        const stage = 2 + i;
-        res.steps[`stage${stage}`] = buildCode(ctx);
-        ctx.calculated =  { exps: {}, expsPrime: {} }
-    }
-
-    const imPolsMap = generateConstraintPolynomial(res, pil, ctx, ctx_ext, stark);
-
-    generateConstraintPolynomialVerifier(res, imPolsMap, pil, stark);
+    generateConstraintPolynomialVerifier(res, pil, stark);
 
     if(stark) {
         generateFRIPolynomial(res, pil, ctx_ext);
@@ -168,7 +91,11 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
         res.nBitsZK = Math.ceil(Math.log2((res.pilPower + res.maxPolsOpenings) / res.pilPower));
     }
     
-    map(res, imPolsMap, pil, stark);
+    map(res, pil, stark);
+
+    delete res.imPolsMap;
+    delete res.cExp;
+    delete res.friExpId;
 
     return res;
 

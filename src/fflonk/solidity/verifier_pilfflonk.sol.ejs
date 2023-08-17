@@ -399,7 +399,7 @@ contract PilFflonkVerifier {
                 let challengeXiN := mload(add(pMem, pXiN))
 <% } -%>
                 
-<% unrollCode(fflonkInfo.verifierCode.first); -%>
+<% unrollCode(fflonkInfo.code.qVerifier.first); -%>
 
 <%  if(vk.maxQDegree > 0) { -%>
                 tmp := 0

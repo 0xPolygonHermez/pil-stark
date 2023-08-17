@@ -90,16 +90,16 @@ module.exports.grandProductPermutation = function grandProductPermutation(res, p
 
         const stage1 = {
             pols: {
-                fExpId: {id: peCtx.fExpId, tmp: true},
-                tExpId: {id: peCtx.tExpId, tmp: true},
-                numId: {id: peCtx.numId, tmp: true},
-                denId: {id: peCtx.denId, tmp: true},
-                zId: {id: peCtx.zId},
+                f: {id: peCtx.fExpId, tmp: true},
+                t: {id: peCtx.tExpId, tmp: true},
+                num: {id: peCtx.numId, tmp: true},
+                den: {id: peCtx.denId, tmp: true},
+                z: {id: peCtx.zId},
             },
             hints: [
                 {
-                    inputs: ["numId", "denId"], 
-                    outputs: ["zId"], 
+                    inputs: ["num", "den"], 
+                    outputs: ["z"], 
                     lib: "calculateZ"
                 }
             ]

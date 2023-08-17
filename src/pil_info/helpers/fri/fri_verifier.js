@@ -14,11 +14,10 @@ module.exports = function generateVerifierQuery(res, pil) {
     };
 
     pilCodeGen(ctxFri, res.friExpId, false, null, null, true);
-    res.verifierQueryCode = buildCode(ctxFri);
-    res.nExps = pil.expressions.length;
+    res.code.queryVerifier = buildCode(ctxFri);
 
     const ctxF = {};
     ctxF.expMap = [{}, {}];
-    ctxF.code = res.verifierQueryCode;
+    ctxF.code = res.code.queryVerifier;
 }
 

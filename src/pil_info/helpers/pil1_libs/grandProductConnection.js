@@ -93,14 +93,14 @@ module.exports.grandProductConnection = function grandProductConnection(res, pil
 
         const stage1 = {
             pols: {
-                numId: {id: ciCtx.numId, tmp: true},
-                denId: {id: ciCtx.denId, tmp: true},
-                zId: {id: ciCtx.zId},
+                num: {id: ciCtx.numId, tmp: true},
+                den: {id: ciCtx.denId, tmp: true},
+                z: {id: ciCtx.zId},
             },
             hints: [
                 {
-                    inputs: ["numId", "denId"], 
-                    outputs: ["zId"], 
+                    inputs: ["num", "den"], 
+                    outputs: ["z"], 
                     lib: "calculateZ"
                 }
             ]

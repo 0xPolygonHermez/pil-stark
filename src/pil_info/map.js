@@ -1,7 +1,7 @@
 
 const { addPol, getExpDim, setCodeDimensions, fixProverCode } = require("./helpers/map_helpers.js");
 
-module.exports = function map(res, imPolsMap, pil, stark) {  
+module.exports = function map(res, pil, stark) {  
     res.varPolMap = [];
     
     res.mapSectionsN = {};
@@ -17,9 +17,9 @@ module.exports = function map(res, imPolsMap, pil, stark) {
 
     const imPols = {};
 
-    for(let i = 0; i < Object.keys(imPolsMap).length; ++i) {
-        let key = Object.keys(imPolsMap)[i];
-        imPols[key] = {libName: "", id: imPolsMap[key], imPol: true};
+    for(let i = 0; i < Object.keys(res.imPolsMap).length; ++i) {
+        let key = Object.keys(res.imPolsMap)[i];
+        imPols[key] = {libName: "", id: res.imPolsMap[key], imPol: true};
     }
 
     for (let i=0; i<res.nCommitments; i++) {
@@ -39,13 +39,11 @@ module.exports = function map(res, imPolsMap, pil, stark) {
         }
     }
 
-    if(stark) {
-        setMapOffsets(res);
-    } 
-
     fixCode(res, imPols, pil, stark);
 
     setDimensions(res, stark);
+
+    if(stark) setMapOffsets(res); 
 }
 
 function setMapOffsets(res) {
@@ -75,20 +73,10 @@ function setDimensions(res, stark) {
     for (let i=0; i<res.nPublics; i++) {
         if (res.publicsCode[i]) setCodeDimensions(res.publicsCode[i], res, stark);
     }
-
-    for (let i=0; i < res.nLibStages; i++) {
-        setCodeDimensions(res.steps["stage" + (2 + i)], res, stark);
-    }
-
-    setCodeDimensions(res.steps["imPols"], res, stark);
-    setCodeDimensions(res.steps["Q"], res, stark);
     
-    if(stark) {
-        setCodeDimensions(res.verifierCode, res, stark, 3);
-        setCodeDimensions(res.steps["fri"], res, stark);
-	    setCodeDimensions(res.verifierQueryCode, res, stark);
-    } else {
-        setCodeDimensions(res.verifierCode, res, false);
+    for(let i = 0; i < Object.keys(res.code).length; ++i) {
+        const name = Object.keys(res.code)[i];
+        setCodeDimensions(res.code[name], res, stark);
     }
 }
 
@@ -97,18 +85,11 @@ function fixCode(res, imPols, pil, stark) {
         fixProverCode(res, res.publicsCode[i], imPols, pil, "n", stark);
     }
 
-    for (let i=0; i < res.nLibStages; i++) {
-        const stage = 2 + i;
-        fixProverCode(res, res.steps["stage" + stage], imPols, pil, "n", stark);
-    }
-
-    
-    fixProverCode(res, res.steps["imPols"], imPols, pil, "n", stark);
-    fixProverCode(res, res.steps["Q"], imPols, pil, "ext", stark);
-
-    if(stark) {
-        fixProverCode(res, res.steps["fri"], imPols, pil, "ext", stark);
-        fixProverCode(res, res.verifierQueryCode, imPols, pil, "ext", stark, true);
+    for(let i = 0; i < Object.keys(res.code).length; ++i) {
+        const name = Object.keys(res.code)[i];
+        const dom = ["Q", "fri", "queryVerifier"].includes(name) ? "ext" : "n";
+        const verifier = name === "queryVerifier" ? true : false;
+        fixProverCode(res, res.code[name], imPols, pil, dom, stark, verifier);
     }
 }
 

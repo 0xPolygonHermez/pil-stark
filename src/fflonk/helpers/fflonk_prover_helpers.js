@@ -87,7 +87,7 @@ module.exports.initProverFflonk = async function initProver(pilInfo, zkey, logge
         const stage = i + 2;
         ctx[`cm${stage}_ext`] = new Proxy(new BigBuffer(ctx.pilInfo.varPolMap.filter(p => p.stage == "cm" + stage).length * ctx.Next * ctx.F.n8), BigBufferHandler);
     }
-    ctx.q_ext = new Proxy(new BigBuffer(ctx.pilInfo.qDim * ctx.Next * ctx.F.n8), BigBufferHandler);
+    ctx.q_ext = new Proxy(new BigBuffer(ctx.Next * ctx.F.n8), BigBufferHandler);
     ctx.x_ext = new Proxy(new BigBuffer(ctx.Next * ctx.F.n8), BigBufferHandler); // Omegas a l'extès
 
     // Read const coefs and extended evals
@@ -222,9 +222,7 @@ module.exports.genProofFflonk = async function genProof(ctx, logger) {
 }
 
 module.exports.setChallengesFflonk = function setChallengesFflonk(stage, ctx, challenge, logger) {
-    let challengesIndex = stage === "Q" 
-        ? [ctx.pilInfo.qChallenge] 
-        : ctx.pilInfo.challenges[stage];
+    let challengesIndex = ctx.pilInfo.challenges[stage];
 
     if(challengesIndex.length === 0) throw new Error("No challenges needed for stage " + stage);
 
@@ -257,7 +255,7 @@ module.exports.calculateChallengeFflonk = async function calculateChallengeFflon
         }
     }
 
-    let challengesIndex = stage === "Q" ? [ctx.pilInfo.qChallenge] : ctx.pilInfo.challenges[stage];
+    let challengesIndex = ctx.pilInfo.challenges[stage];
     
     if(challengesIndex) {
         const lastChallengeIndex = challengesIndex[challengesIndex.length - 1];

@@ -6,11 +6,11 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctxExt, st
     const E = new ExpressionOps();
 
     const vc = E.challenge("vc");
-    res.qChallenge = vc.id;
+    res.challenges["Q"] = [vc.id];
     res.nChallenges++;
 
     const xi = E.challenge("xi");
-    res.xiChallenge = xi.id;
+    res.challenges["xi"] = [xi.id];
     res.nChallenges++;
 
     let cExp = null;
@@ -46,9 +46,9 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctxExt, st
     res.qDeg = qDeg;
 
     let imExpsList = Object.keys(imExps).map(Number);
-    let imPolsMap = {}
+    res.imPolsMap = {}
     for (let i=0; i<imExpsList.length; i++) {
-        imPolsMap[imExpsList[i]] = pil.nCommitments++;
+        res.imPolsMap[imExpsList[i]] = pil.nCommitments++;
         const e = {
             op: "sub",
             values: [
@@ -80,11 +80,11 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctxExt, st
         pilCodeGen(ctx, imExpsList[i]);
     }
 
-    res.steps["imPols"] = buildCode(ctx);
+    res.code["imPols"] = buildCode(ctx);
 
     // This variables are already calculated by expanding the ones in deg n
-    ctxExt.calculated.exps = Object.assign({}, imPolsMap);
-    ctxExt.calculated.expsPrime= Object.assign({}, imPolsMap);
+    ctxExt.calculated.exps = Object.assign({}, res.imPolsMap);
+    ctxExt.calculated.expsPrime= Object.assign({}, res.imPolsMap);
 
     pilCodeGen(ctxExt, res.cExp);
     const code = ctxExt.code[ctxExt.code.length-1].code;
@@ -114,9 +114,7 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctxExt, st
         });
     }
     
-    res.steps["Q"] = buildCode(ctxExt);
-
-    return imPolsMap;
+    res.code["Q"] = buildCode(ctxExt);
 }
 
 function calculateImPols(pil, _exp, maxDeg) {
