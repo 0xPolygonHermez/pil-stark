@@ -59,9 +59,9 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
         }
     }
 
-    // Precalculate x_n and x_2ns
+    // Precalculate x_n and x_ext
     zkey.x_n = new BigBuffer(domainSize * curve.Fr.n8); // Omegas de field extension
-    zkey.x_2ns = new BigBuffer(domainSizeExt * curve.Fr.n8); // Omegas a l'extès
+    zkey.x_ext = new BigBuffer(domainSizeExt * curve.Fr.n8); // Omegas a l'extès
         
     let w = curve.Fr.one;
     for (let i = 0; i < domainSize; i++) {
@@ -75,7 +75,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     for (let i = 0; i < domainSizeExt; i++) {
         const i_n8r = i * curve.Fr.n8;
 
-        zkey.x_2ns.set(w, i_n8r);
+        zkey.x_ext.set(w, i_n8r);
         w = curve.Fr.mul(w, curve.Fr.w[nBitsExt]);
     }
 

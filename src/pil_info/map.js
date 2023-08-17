@@ -3,37 +3,39 @@ const { addPol, getExpDim, setCodeDimensions, fixProverCode } = require("./helpe
 
 module.exports = function map(res, imPolsMap, pil, stark) {  
     res.varPolMap = [];
-
-    res.cm  = [];
-    res.tmpExp = [];
     
     res.mapSectionsN = {};
-    res.mapSectionsN["tmpExp"] = 0;
     
     const tmpExps = {};
+    const imPols = {};
+
+    for(let i = 0; i < Object.keys(imPolsMap).length; ++i) {
+        let key = Object.keys(imPolsMap)[i];
+        imPols[key] = {libId: -1, name: "", id: imPolsMap[key]};
+    }
 
     mapCommitPols(res);
 
-    mapInclusionPols(res, imPolsMap, tmpExps, pil, 2, stark);
+    mapInclusionPols(res, imPols, tmpExps, pil, 2, stark);
 
-    mapGrandProductPols(res, imPolsMap, tmpExps, 3, stark);
+    mapGrandProductPols(res, imPols, tmpExps, 3, stark);
 
-    mapImPols(res, imPolsMap, pil, stark);
+    mapImPols(res, imPols, pil, stark);
+
+    mapTmpExpPols(res, tmpExps, pil, stark);
 
     res.qDim = getExpDim(res, pil, res.cExp, stark);
-    res.mapSectionsN["q_ext"] = 0;
-    addPol(res, "q_ext", res.qDim);
+    res.mapSectionsN["q_ext"] = res.qDim;
 
     if(stark) {
         mapFriPols(res);
     }
-    
+
     if(stark) {
         setMapOffsets(res);
     } 
 
-   
-    fixCode(res, imPolsMap, tmpExps, pil, stark);
+    fixCode(res, imPols, tmpExps, pil, stark);
 
     setDimensions(res, stark);
 }
@@ -82,23 +84,23 @@ function setDimensions(res, stark) {
     }
 }
 
-function fixCode(res, imPolsMap, tmpExps, pil, stark) {
+function fixCode(res, imPols, tmpExps, pil, stark) {
     for (let i=0; i< res.publicsCode.length; i++) {
-        fixProverCode(res, res.publicsCode[i], imPolsMap, tmpExps, pil, "n", stark);
+        fixProverCode(res, res.publicsCode[i], imPols, tmpExps, pil, "n", stark);
     }
 
     for (let i=0; i < res.nStages; i++) {
         const stage = 2 + i;
-        fixProverCode(res, res.steps["stage" + stage], imPolsMap, tmpExps, pil, "n", stark);
+        fixProverCode(res, res.steps["stage" + stage], imPols, tmpExps, pil, "n", stark);
     }
 
     
-    fixProverCode(res, res.steps["imPols"], imPolsMap, tmpExps, pil, "n", stark);
-    fixProverCode(res, res.steps["Q"], imPolsMap, tmpExps, pil, "ext", stark);
+    fixProverCode(res, res.steps["imPols"], imPols, tmpExps, pil, "n", stark);
+    fixProverCode(res, res.steps["Q"], imPols, tmpExps, pil, "ext", stark);
 
     if(stark) {
-        fixProverCode(res, res.steps["fri"], imPolsMap, tmpExps, pil, "ext", stark);
-        fixProverCode(res, res.verifierQueryCode, imPolsMap, tmpExps, pil, "ext", stark, true);
+        fixProverCode(res, res.steps["fri"], imPols, tmpExps, pil, "ext", stark);
+        fixProverCode(res, res.verifierQueryCode, imPols, tmpExps, pil, "ext", stark, true);
     }
 }
 
@@ -108,7 +110,7 @@ function mapCommitPols(res) {
     const dim = 1;
     res.mapSectionsN[section] = 0;
     for (let i=0; i<res.nCommitments; i++) {
-        addPol(res, section, dim);
+        addPol(res, section, dim, i);
     }
 }
 
@@ -116,82 +118,90 @@ function mapFriPols(res) {
     const section = "cmQ";
     res.mapSectionsN[section] = 0;
     for (let i=0; i<res.qDeg; i++) {
-        addPol(res, section, res.qDim);
+        addPol(res, section, res.qDim, res.qs[i]);
     }
-    res.mapSectionsN["f_ext"] = 0;
-    addPol(res, "f_ext", 3);
+    res.mapSectionsN["f_ext"] = 3;
 }
 
-function mapGrandProductPols(res, imPolsMap, tmpExps, stage, stark) {
+function mapGrandProductPols(res, imPols, tmpExps, stage, stark) {
     const dim = stark ? 3 : 1;
     const section = "cm3";
     res.mapSectionsN[section] = 0;
     const grandProductPols = [...res.puCtx, ...res.peCtx, ...res.ciCtx];
     for (let i=0; i<grandProductPols.length; i++) {
         const gPol = grandProductPols[i];
-        addPol(res, section, dim);
+        addPol(res, section, dim, gPol.zId);
 
-        if (!imPolsMap[gPol.numId]) {
-            if ( typeof tmpExps[gPol.numId] === "undefined") {
-                tmpExps[gPol.numId] = Object.keys(tmpExps).length;
-                const ppNum = addPol(res, "tmpExp", dim);
-                gPol.numId = ppNum;
-            }
+        if (!imPols[gPol.numId] && typeof tmpExps[gPol.numId] === "undefined") {
+            tmpExps[gPol.numId] = {libId: i, name: "numId", id:Object.keys(tmpExps).length};
+        } else if (imPols[gPol.numId] && imPols[gPol.numId].libId === -1) {
+            imPols[gPol.numId].libId = i;
+            imPols[gPol.numId].name = "numId";
         }
 
-        if (!imPolsMap[gPol.denId]) {
-            if ( typeof tmpExps[gPol.denId] === "undefined") {
-                tmpExps[gPol.denId] = Object.keys(tmpExps).length;
-                const ppDen = addPol(res, "tmpExp", dim);
-                gPol.denId = ppDen;
-            }
+        if (!imPols[gPol.denId] && typeof tmpExps[gPol.denId] === "undefined") {
+            tmpExps[gPol.denId] = {libId: i, name: "denId", id: Object.keys(tmpExps).length};
+        } else if (imPols[gPol.denId] && imPols[gPol.denId].libId === -1) {
+            imPols[gPol.denId].libId = i;
+            imPols[gPol.denId].name = "denId";
         }
     }
 }
 
 
-function mapInclusionPols(res, imPolsMap, tmpExps, pil, stage, stark) {
+function mapInclusionPols(res, imPols, tmpExps, pil, stage, stark) {
     const section = "cm2";
     res.mapSectionsN[section] = 0;
     for (let i=0; i<res.puCtx.length; i++) {
         const pPol = res.puCtx[i]; 
         const dim = Math.max(getExpDim(res, pil, pPol.fExpId, stark), getExpDim(res, pil, pPol.tExpId, stark));
-        addPol(res, section, dim);
-        addPol(res, section, dim);
+        addPol(res, section, dim, pPol.h1Id);
+        addPol(res, section, dim, pPol.h2Id);
 
-        if (!imPolsMap[pPol.fExpId]) {
-            if ( typeof tmpExps[pPol.fExpId] === "undefined") {
-                tmpExps[pPol.fExpId] = Object.keys(tmpExps).length;
-                const ppf = addPol(res, "tmpExp", dim);
-                pPol.fExpId = ppf;
-            }
+        if (!imPols[pPol.fExpId] && typeof tmpExps[pPol.fExpId] === "undefined") {
+            tmpExps[pPol.fExpId] = {libId: i, name: "fExpId", id: Object.keys(tmpExps).length};
+        } else if (imPols[pPol.fExpId] && imPols[pPol.fExpId].libId === -1) {
+            imPols[pPol.fExpId].libId = i;
+            imPols[pPol.fExpId].name = "fExpId";
         }
 
-        if (!imPolsMap[pPol.tExpId]) {
-            if ( typeof tmpExps[pPol.tExpId] === "undefined") {
-                tmpExps[pPol.tExpId] = Object.keys(tmpExps).length;
-                const ppt = addPol(res, "tmpExp", dim);
-                pPol.tExpId = ppt;
-            }
+        if (!imPols[pPol.tExpId] && typeof tmpExps[pPol.tExpId] === "undefined") {
+            tmpExps[pPol.tExpId] = {libId: i, name: "tExpId", id: Object.keys(tmpExps).length};
+        } else if (imPols[pPol.tExpId] && imPols[pPol.tExpId].libId === -1) {
+            imPols[pPol.tExpId].libId = i;
+            imPols[pPol.tExpId].name = "tExpId";
         }
     }
 }
 
-function mapImPols(res, imPolsMap, pil, stark) {
+function mapImPols(res, imPols, pil, stark) {
     const section = "cm" + (res.nStages + 1);
-    for (let i=0; i<Object.keys(imPolsMap).length; i++) {
-        let imId = Object.keys(imPolsMap)[i];
+    const libs = [...res.puCtx, ...res.peCtx, ...res.ciCtx];
+    for (let i=0; i<Object.keys(imPols).length; i++) {
+        let imId = Object.keys(imPols)[i];
         const dim = getExpDim(res, pil, imId, stark);
-        const ppIm = addPol(res, section, dim);
+        addPol(res, section, dim, imPols[imId].id);
+        res.varPolMap[imPols[imId].id].imPol = true;
         
-        const libs = [...res.puCtx, ...res.peCtx, ...res.ciCtx];
-        for(let i = 0; i < libs.length; i++) {
-            for(let j = 0; j < Object.keys(libs[i]).length; j++) {
-                const name = Object.keys(libs[i])[j];
-                if(libs[i][name] === Number(imId)) {
-                    libs[i][name] = ppIm;
-                }
-            }
-        }
+        if(imPols[imId].libId !== -1) {
+            const t = imPols[imId];
+            libs[t.libId][t.name] = imPols[imId].id;
+        } 
+    }
+}
+
+function mapTmpExpPols(res, tmpExps, pil, stark) {  
+    res.mapSectionsN["tmpExp"] = 0;
+    const libs = [...res.puCtx, ...res.peCtx, ...res.ciCtx];
+    for (let i=0; i<Object.keys(tmpExps).length; i++) { 
+        let tmpExpId = Object.keys(tmpExps)[i];
+        const t = tmpExps[tmpExpId];
+        const dim = getExpDim(res, pil, tmpExpId, stark);
+        const cmId = pil.nCommitments + t.id;
+        tmpExps[tmpExpId].id = cmId;
+
+        addPol(res, "tmpExp", dim, cmId);
+
+        libs[t.libId][t.name] = cmId;
     }
 }

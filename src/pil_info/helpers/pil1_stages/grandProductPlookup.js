@@ -60,12 +60,6 @@ module.exports.grandProductPlookup = function grandProductPlookup(res, pil) {
 
         puCtx.h1Id = pil.nCommitments++;
         puCtx.h2Id = pil.nCommitments++;
-
-        res.puCtx.push(puCtx);
-    }
-
-    for (let i=0; i<pil.plookupIdentities.length; i++) {
-        const puCtx = res.puCtx[i];
         
         puCtx.zId = pil.nCommitments++;
 
@@ -143,5 +137,7 @@ module.exports.grandProductPlookup = function grandProductPlookup(res, pil) {
         c2.deg=2;
         pil.expressions.push(c2);
         pil.polIdentities.push({e: pil.expressions.length - 1});
+
+        res.puCtx.push(puCtx);
     }
 }

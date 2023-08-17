@@ -194,7 +194,7 @@ module.exports.computeEvalsStark = async function computeEvalsStark(ctx, challen
                 dim: 1
             };
         } else if (ev.type == "cm") {
-            p = getPolRef(ctx, ctx.pilInfo.cm[ev.id], "ext");
+            p = getPolRef(ctx, ev.id, "ext");
         } else {
             throw new Error("Invalid ev type: "+ ev.type);
         }

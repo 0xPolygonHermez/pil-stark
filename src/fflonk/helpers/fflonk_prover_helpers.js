@@ -58,7 +58,7 @@ module.exports.initProverFflonk = async function initProver(pilInfo, zkey, logge
             logger.debug(`  Stage ${stage} pols:   ${ctx.pilInfo.varPolMap.filter(p => p.stage == "cm" + stage).length}`);
         }
         logger.debug(`  Stage Q pols:   ${nQ}`);
-        logger.debug(`  Temp exp pols: ${ctx.pilInfo.mapSectionsN.tmpExp_n}`);
+        logger.debug(`  Temp exp pols: ${ctx.pilInfo.mapSectionsN.tmpExp}`);
         logger.debug("-----------------------------");
     }
 
@@ -69,7 +69,7 @@ module.exports.initProverFflonk = async function initProver(pilInfo, zkey, logge
         const stage = i + 2;
         ctx[`cm${stage}_n`] = new Proxy(new BigBuffer(ctx.pilInfo.varPolMap.filter(p => p.stage == "cm" + stage).length * ctx.N * ctx.F.n8), BigBufferHandler);
     }    
-    ctx.tmpExp_n = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.tmpExp_n * ctx.N * ctx.F.n8), BigBufferHandler); // Expression polynomials
+    ctx.tmpExp_n = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.tmpExp * ctx.N * ctx.F.n8), BigBufferHandler); // Expression polynomials
     ctx.x_n = new Proxy(new BigBuffer(ctx.N * ctx.F.n8), BigBufferHandler); // Omegas de field extension
 
     // Reserve big buffers for the polynomial coefficients
@@ -81,23 +81,23 @@ module.exports.initProverFflonk = async function initProver(pilInfo, zkey, logge
     }  
 
     // Reserve big buffers for the polynomial evaluations in the extended
-    ctx.const_2ns = new Proxy(new BigBuffer(ctx.pilInfo.nConstants * ctx.Next * ctx.F.n8), BigBufferHandler);
-    ctx.cm1_2ns = new Proxy(new BigBuffer(ctx.pilInfo.nCommitments * ctx.Next * ctx.F.n8), BigBufferHandler);
+    ctx.const_ext = new Proxy(new BigBuffer(ctx.pilInfo.nConstants * ctx.Next * ctx.F.n8), BigBufferHandler);
+    ctx.cm1_ext = new Proxy(new BigBuffer(ctx.pilInfo.nCommitments * ctx.Next * ctx.F.n8), BigBufferHandler);
     for(let i = 0; i < ctx.pilInfo.nStages; i++) {
         const stage = i + 2;
-        ctx[`cm${stage}_2ns`] = new Proxy(new BigBuffer(ctx.pilInfo.varPolMap.filter(p => p.stage == "cm" + stage).length * ctx.Next * ctx.F.n8), BigBufferHandler);
+        ctx[`cm${stage}_ext`] = new Proxy(new BigBuffer(ctx.pilInfo.varPolMap.filter(p => p.stage == "cm" + stage).length * ctx.Next * ctx.F.n8), BigBufferHandler);
     }
-    ctx.q_2ns = new Proxy(new BigBuffer(ctx.pilInfo.qDim * ctx.Next * ctx.F.n8), BigBufferHandler);
-    ctx.x_2ns = new Proxy(new BigBuffer(ctx.Next * ctx.F.n8), BigBufferHandler); // Omegas a l'extès
+    ctx.q_ext = new Proxy(new BigBuffer(ctx.pilInfo.qDim * ctx.Next * ctx.F.n8), BigBufferHandler);
+    ctx.x_ext = new Proxy(new BigBuffer(ctx.Next * ctx.F.n8), BigBufferHandler); // Omegas a l'extès
 
     // Read const coefs and extended evals
     ctx.const_n.set(ctx.zkey.constPolsEvals);
     ctx.const_coefs.set(ctx.zkey.constPolsCoefs);
-    ctx.const_2ns.set(ctx.zkey.constPolsEvalsExt);
+    ctx.const_ext.set(ctx.zkey.constPolsEvalsExt);
 
-    // Read x_n and x_2ns
+    // Read x_n and x_ext
     ctx.x_n.set(ctx.zkey.x_n);
-    ctx.x_2ns.set(ctx.zkey.x_2ns);
+    ctx.x_ext.set(ctx.zkey.x_ext);
 
     ctx.transcript = new Keccak256Transcript(ctx.curve);
 
@@ -126,7 +126,7 @@ module.exports.initProverFflonk = async function initProver(pilInfo, zkey, logge
 module.exports.computeQFflonk = async function computeQ(ctx, logger) {
     if (logger) logger.debug("Compute Trace Quotient Polynomials");
 
-    ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_2ns, ctx.curve, logger);
+    ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_ext, ctx.curve, logger);
     ctx["Q"].divZh(ctx.N, 1 << ctx.extendBits);
 
     if(ctx.zkey.maxQDegree) {
@@ -282,7 +282,7 @@ module.exports.extendAndCommit = async function extendAndCommit(stage, ctx, logg
     
     const buffFrom = ctx["cm" + stage + "_n"];
     const buffCoefs = ctx["cm" + stage + "_coefs"];
-    const buffTo = ctx["cm" + stage + "_2ns"];
+    const buffTo = ctx["cm" + stage + "_ext"];
 
     const nPols = ctx.pilInfo.varPolMap.filter(p => p.stage == "cm" + stage).length;
 

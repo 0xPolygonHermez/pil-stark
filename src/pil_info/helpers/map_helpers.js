@@ -1,20 +1,12 @@
 const { iterateCode } = require("../codegen");
 
-module.exports.addPol = function addPol(res, stage, dim) {
+module.exports.addPol = function addPol(res, stage, dim, pos) {
     const polsStage = res.varPolMap.filter((p) => p.stage == stage);
     const polPos = polsStage.length;
     const stagePos = polsStage.reduce((acc, p) => acc + p.dim, 0);
     const polType = { stage, dim, stagePos, polPos };
-    res.varPolMap.push(polType);
+    res.varPolMap[pos] = polType;
     res.mapSectionsN[stage] += dim;
-
-    if(stage === "tmpExp") {
-        res.tmpExp.push(res.varPolMap.length-1);
-    } else if(stage !== "q_ext") {
-        res.cm.push(res.varPolMap.length-1);
-    }
-
-    return res.varPolMap.length-1;
 }
 
 module.exports.getExpDim = function getExpDim(res, pil, expId, stark) {
@@ -93,19 +85,11 @@ module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, sta
                 case "tmpExp": d=r.dim; break;
                 case "cm": 
                     if(stark) {
-                        d=pilInfo.varPolMap[pilInfo.cm[r.id]].dim; break;
+                        d=pilInfo.varPolMap[r.id].dim; break;
                     } else {
                         d=1;
                     }
                     break;
-                case "q": {
-                    if(stark) {
-                        d=pilInfo.varPolMap[pilInfo.cm[r.id]].dim;
-                    } else {
-                        throw new Error("Invalid reference type: " + r.type);
-                    }
-                    break;
-                }
                 case "x": d=dimX; break;
                 case "const": 
                 case "number": 
@@ -121,6 +105,7 @@ module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, sta
                 case "xDivXSubXi": 
                     if(stark) {
                         d=dimX; 
+                        break;
                         break;
                     } else {
                         throw new Error("Invalid reference type: " + r.type);
@@ -152,7 +137,7 @@ module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, sta
 }
 
 
-module.exports.fixProverCode = function fixProverCode(res, code, imPolsMap, tmpExps, pil, dom, stark, verifierQuery = false) {
+module.exports.fixProverCode = function fixProverCode(res, code, imPols, tmpExps, pil, dom, stark, verifierQuery = false) {
     const ctx = {};
     ctx.expMap = [];
     
@@ -169,7 +154,7 @@ module.exports.fixProverCode = function fixProverCode(res, code, imPolsMap, tmpE
         switch (r.type) {
             case "cm":
                 if (verifierQuery) {
-                    const p1 = res.varPolMap[res.cm[r.id]];
+                    const p1 = res.varPolMap[r.id];
                     let index = Number(p1.stage.substr(2));
                     if (p1.stage === "cmQ") {
                         r.type = "treeQ";
@@ -185,13 +170,13 @@ module.exports.fixProverCode = function fixProverCode(res, code, imPolsMap, tmpE
                 }
                 break;
             case "exp":
-                if (imPolsMap[r.id]) {
+                if (imPols[r.id]) {
                     r.type = "cm";
-                    r.id = imPolsMap[r.id];
+                    r.id = imPols[r.id].id;
                 } else if ((typeof tmpExps[r.id] != "undefined")&&(ctx.dom == "n")) {
-                    r.type = "tmpExp";
+                    r.type = "cm";
                     r.dim = module.exports.getExpDim(res, pil, r.id, stark);
-                    r.id = tmpExps[r.id];
+                    r.id = tmpExps[r.id].id;
                 } else {
                     const p = r.prime ? 1 : 0;
                     if (typeof ctx.expMap[p][r.id] === "undefined") {

@@ -1,7 +1,7 @@
 const {pilCodeGen, buildCode} = require("../../codegen.js");
 const ExpressionOps = require("../../expressionops");
 
-module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, stark) {
+module.exports = function generateConstraintPolynomial(res, pil, ctx, ctxExt, stark) {
 
     const E = new ExpressionOps();
 
@@ -83,11 +83,11 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
     res.steps["imPols"] = buildCode(ctx);
 
     // This variables are already calculated by expanding the ones in deg n
-    ctx2ns.calculated.exps = Object.assign({}, imPolsMap);
-    ctx2ns.calculated.expsPrime= Object.assign({}, imPolsMap);
+    ctxExt.calculated.exps = Object.assign({}, imPolsMap);
+    ctxExt.calculated.expsPrime= Object.assign({}, imPolsMap);
 
-    pilCodeGen(ctx2ns, res.cExp);
-    const code = ctx2ns.code[ctx2ns.code.length-1].code;
+    pilCodeGen(ctxExt, res.cExp);
+    const code = ctxExt.code[ctxExt.code.length-1].code;
     if(stark) {
         code.push({
             op: "mul",
@@ -114,7 +114,7 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns, st
         });
     }
     
-    res.steps["Q"] = buildCode(ctx2ns);
+    res.steps["Q"] = buildCode(ctxExt);
 
     return imPolsMap;
 }

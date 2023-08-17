@@ -39,12 +39,11 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         logger.debug(`  Domain size:   ${domainSize} (2^${power})`);
         logger.debug(`  Const  pols:   ${fflonkInfo.nConstants}`);
         logger.debug(`  Stage 1 pols:   ${fflonkInfo.nCommitments}`);
-        for(let i = 0; i < ctx.pilInfo.nStages; i++) {
+        for(let i = 0; i < fflonkInfo.nStages; i++) {
             const stage = i + 2;
             logger.debug(`  Stage ${stage} pols:   ${fflonkInfo.varPolMap.filter(p => p.stage == "cm" + stage).length}`);
         }
         logger.debug(`  Stage 4 pols:   ${nPolsQ.length}`);
-        logger.debug(`  Temp exp pols: ${fflonkInfo.mapSectionsN.tmpExp_n}`);
         logger.debug("------------------------------");
     }
 
@@ -65,8 +64,8 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     }
     
     if(fflonkInfo.varPolMap.filter(p => p.stage == "cm2").length > 0 || fflonkInfo.peCtx.length > 0) {
-        for(let j = 0; j < fflonkInfo.challenges[stage].length; ++j) {
-            const index = fflonkInfo.challenges[stage][j];
+        for(let j = 0; j < fflonkInfo.challenges[2].length; ++j) {
+            const index = fflonkInfo.challenges[2][j];
             ctx.challenges[index] = transcript.getChallenge();
             if (logger) logger.debug("··· challenges[" + index + "]: " + Fr.toString(ctx.challenges[index]));
             transcript.reset();
@@ -80,8 +79,8 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     }
 
     if(fflonkInfo.varPolMap.filter(p => p.stage == "cm3").length > 0 > 0) {
-        for(let j = 0; j < fflonkInfo.challenges[stage].length; ++j) {
-            const index = fflonkInfo.challenges[stage][j];
+        for(let j = 0; j < fflonkInfo.challenges[3].length; ++j) {
+            const index = fflonkInfo.challenges[3][j];
             ctx.challenges[index] = transcript.getChallenge();
             if (logger) logger.debug("··· challenges[" + index + "]: " + Fr.toString(ctx.challenges[index]));
             transcript.reset();

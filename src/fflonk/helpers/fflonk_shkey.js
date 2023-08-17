@@ -1,4 +1,3 @@
-const {log2} = require("pilcom/src/utils");
 const {setup} = require("shplonkjs");
 const {Scalar} = require("ffjavascript");
 
@@ -137,11 +136,10 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
         setPolDefs("cm", 3, nameConnectionZ, idConnectionZ, domainSize);
     }
 
-    
-    for(let i = 0; i < Object.keys(fflonkInfo.imPolsMap).length; ++i) {
-        const imPol = Object.keys(fflonkInfo.imPolsMap)[i];
-        const nameImPol = `Im${imPol}`;
-        const idImPol = fflonkInfo.imPolsMap[imPol];
+    const imPols = fflonkInfo.varPolMap.filter(p => p.imPol === true);
+    for(let i = 0; i < imPols.length; ++i) {
+        const nameImPol = `Im${i}`;
+        const idImPol = fflonkInfo.varPolMap.indexOf(imPols[i]);
         pil.references[nameImPol] = {
             name: nameImPol,
             isArray: false,

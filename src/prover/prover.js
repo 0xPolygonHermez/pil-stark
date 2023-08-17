@@ -99,8 +99,9 @@ async function stage2(ctx, challenge, parallelExec, useThreads, logger) {
         const tPol = getPol(ctx, pu.tExpId, "n");
 
         const [h1, h2] = calculateH1H2(ctx.F, fPol, tPol);
-        setPol(ctx, ctx.pilInfo.cm[pu.h1Id], h1, "n");
-        setPol(ctx, ctx.pilInfo.cm[pu.h2Id], h2, "n");
+
+        setPol(ctx, pu.h1Id, h1, "n");
+        setPol(ctx, pu.h2Id, h2, "n");
     }
 
     ctx.prover === "stark" ? await extendAndMerkelize(2, ctx) : await extendAndCommit(2, ctx, logger);
@@ -130,14 +131,14 @@ async function stage3(ctx, challenge, parallelExec, useThreads, logger) {
             const pDen = getPol(ctx, polCtx.denId, "n");
             const z = await calculateZ(ctx.F, pNum, pDen);
 
-            setPol(ctx, ctx.pilInfo.cm[polCtx.zId], z, "n");
+            setPol(ctx, polCtx.zId, z, "n");
         }
     }
 
     await callCalculateExps("imPols", "n", ctx, parallelExec, useThreads);
 
     ctx.prover === "stark" ? await extendAndMerkelize(3, ctx) : await extendAndCommit(3, ctx, logger);
-} 
+}
 
 async function stageQ(ctx, challenge, parallelExec, useThreads, logger) {
     if (logger) logger.debug("> STAGE 4. Compute Trace Quotient Polynomials");

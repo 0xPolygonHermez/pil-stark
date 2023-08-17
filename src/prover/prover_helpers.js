@@ -94,16 +94,9 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
             }
             case "cm": {
                 if (dom=="n") {
-                    return evalMap(ctx.pilInfo.cm[r.id], r.prime, false)
+                    return evalMap(r.id, r.prime, false)
                 } else if (dom=="ext") {
-                    return evalMap(ctx.pilInfo.cm[r.id], r.prime, true)
-                } else {
-                    throw new Error("Invalid dom");
-                }
-            }
-            case "tmpExp": {
-                if (dom=="n") {
-                    return evalMap(ctx.pilInfo.tmpExp[r.id], r.prime, false)
+                    return evalMap(r.id, r.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -163,18 +156,9 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
                 break;
             case "cm":
                 if (dom=="n") {
-                    body.push(` ${evalMap( ctx.pilInfo.cm[r.id], r.prime, false, val)};`);
+                    body.push(` ${evalMap( r.id, r.prime, false, val)};`);
                 } else if (dom=="ext") {
-                    body.push(` ${evalMap( ctx.pilInfo.cm[r.id], r.prime, true, val)};`);
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            case "tmpExp":
-                if (dom=="n") {
-                    body.push(`  ${evalMap(ctx.pilInfo.tmpExp[r.id], r.prime, false, val)};`);
-                } else if (dom=="ext") {
-                    throw new Error("Invalid dom");
+                    body.push(` ${evalMap( r.id, r.prime, true, val)};`);
                 } else {
                     throw new Error("Invalid dom");
                 }

@@ -367,7 +367,7 @@ function buildLinearCode(ctx, loopPos) {
         for (let i=0; i<ctx.code.length; i++) {
             if ((typeof ctx.pil.expressions[ctx.code[i].expId].idQ !== "undefined") ||
                 ctx.pil.expressions[ctx.code[i].expId].keep ||
-                ctx.pil.expressions[ctx.code[i].expId].keep2ns)
+                ctx.pil.expressions[ctx.code[i].expId].keepExt)
             {
                 const mask =  ctx.code[i].prime ? 2 : 1;
                 calcExps[ctx.code[i].expId] = (calcExps[ctx.code[i].expId] || 0) | mask;

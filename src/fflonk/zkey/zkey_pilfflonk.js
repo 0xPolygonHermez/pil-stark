@@ -68,7 +68,7 @@ exports.writePilFflonkZkeyFile = async function (zkey, zkeyFilename, pTau, curve
     if (globalThis.gc) globalThis.gc();
 
     if (logger) logger.info(`··· Writing Section ${ZKEY_PF_X_EXT_SECTION}. X_Ext evaluations`);
-    await writeX2nsSection(fdZKey,zkey);
+    await writeXExtSection(fdZKey,zkey);
     if (globalThis.gc) globalThis.gc();
 
     if (logger) logger.info(`··· Writing Section ${ZKEY_PF_OMEGAS_SECTION}. Omegas Section`);
@@ -238,9 +238,9 @@ async function writeXnSection(fdZkey, zkey) {
     await endWriteSection(fdZkey);
 }
 
-async function writeX2nsSection(fdZkey, zkey) {
+async function writeXExtSection(fdZkey, zkey) {
     await startWriteSection(fdZkey, ZKEY_PF_X_EXT_SECTION);
-    await fdZkey.write(zkey.x_2ns);
+    await fdZkey.write(zkey.x_ext);
     await endWriteSection(fdZkey);
 }
 
@@ -328,8 +328,8 @@ exports.readPilFflonkZkeyFile = async function (zkeyFilename, options) {
         await readXnSection(fdZKey, sections, zkey);
         if (globalThis.gc) globalThis.gc();
 
-        if (logger) logger.info(`··· Reading Section ${ZKEY_PF_X_EXT_SECTION}.  X_2ns Evaluations`);
-        await readX2nsSection(fdZKey, sections, zkey);
+        if (logger) logger.info(`··· Reading Section ${ZKEY_PF_X_EXT_SECTION}.  X_Ext Evaluations`);
+        await readXExtSection(fdZKey, sections, zkey);
         if (globalThis.gc) globalThis.gc();
 
         if (logger) logger.info(`··· Reading Section ${ZKEY_PF_PTAU_SECTION}. Powers of Tau Section`);
@@ -495,9 +495,9 @@ async function readXnSection(fdZKey, sections, zkey) {
     await endReadSection(fdZKey);
 }
 
-async function readX2nsSection(fdZKey, sections, zkey) {
+async function readXExtSection(fdZKey, sections, zkey) {
     await startReadUniqueSection(fdZKey, sections, ZKEY_PF_X_EXT_SECTION);
-    zkey.x_2ns = await fdZKey.read(sections[ZKEY_PF_X_EXT_SECTION][0].size);
+    zkey.x_ext = await fdZKey.read(sections[ZKEY_PF_X_EXT_SECTION][0].size);
     await endReadSection(fdZKey);
 }
 
