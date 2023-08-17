@@ -23,7 +23,7 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
         3: {},
     };
 
-    const nStages = fflonkInfo.nStages + 2;
+    const nStages = fflonkInfo.nLibStages + 2;
     let fiNames = {};
     let fiIndex = 0;
 

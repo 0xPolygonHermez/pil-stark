@@ -70,53 +70,30 @@ module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, sta
 
 
         function getDim(r) {
-            let d;
+            
+            if (r.type.startsWith("tree") && stark) {
+                return r.dim;
+            }
+
             switch (r.type) {
-                case "tmp": d=tmpDim[r.id]; break;
-		        case "tree1":
-                case "tree2": 
-                case "tree3": 
-                case "treeQ": 
-                    if(stark) {
-                        d=r.dim; 
-                        break;
-                    }
-                    throw new Error("Invalid reference type get: " + r.type);
-                case "tmpExp": d=r.dim; break;
-                case "cm": 
-                    if(stark) {
-                        d=pilInfo.varPolMap[r.id].dim; break;
-                    } else {
-                        d=1;
-                    }
-                    break;
-                case "x": d=dimX; break;
+                case "tmp": r.dim = tmpDim[r.id]; break;
+                case "tmpExp": break;
+                case "cm": r.dim = pilInfo.varPolMap[r.id].dim; break;
                 case "const": 
                 case "number": 
                 case "public": 
-                case "Zi": 
-                    d=1; 
-                    break;
+                case "Zi":
+                    r.dim = 1; break;
                 case "eval": 
                 case "challenge": 
                 case "Z":
-                    d=stark ? 3 : 1; 
-                    break;
+                    r.dim = stark ? 3 : 1; break
                 case "xDivXSubXi": 
-                    if(stark) {
-                        d=dimX; 
-                        break;
-                        break;
-                    } else {
-                        throw new Error("Invalid reference type: " + r.type);
-                    }
+                case "x": 
+                    r.dim=dimX; break;
                 default: throw new Error("Invalid reference type: " + r.type);
             }
-            if (!d) {
-                throw new Error("Invalid dim");
-            }
-            r.dim = d;
-            return d;
+            return r.dim;
         }
 
         function setDim(r, dim) {
@@ -137,7 +114,7 @@ module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, sta
 }
 
 
-module.exports.fixProverCode = function fixProverCode(res, code, imPols, tmpExps, pil, dom, stark, verifierQuery = false) {
+module.exports.fixProverCode = function fixProverCode(res, code, imPols, pil, dom, stark, verifierQuery = false) {
     const ctx = {};
     ctx.expMap = [];
     
@@ -158,9 +135,9 @@ module.exports.fixProverCode = function fixProverCode(res, code, imPols, tmpExps
                     let index = Number(p1.stage.substr(2));
                     if (p1.stage === "cmQ") {
                         r.type = "treeQ";
-                        index = res.nStages + 2;
+                        index = res.nLibStages + 2;
                     } else {
-                        if(index < 1 || index > res.nStages + 1) throw new Error("Invalid cm stage");
+                        if(index < 1 || index > res.nLibStages + 1) throw new Error("Invalid cm stage");
                         r.type = "tree" + index;
                     }
                     
@@ -170,13 +147,9 @@ module.exports.fixProverCode = function fixProverCode(res, code, imPols, tmpExps
                 }
                 break;
             case "exp":
-                if (imPols[r.id]) {
+                if (typeof imPols[r.id] != "undefined" && (imPols[r.id].imPol || ctx.dom === "n")) {
                     r.type = "cm";
                     r.id = imPols[r.id].id;
-                } else if ((typeof tmpExps[r.id] != "undefined")&&(ctx.dom == "n")) {
-                    r.type = "cm";
-                    r.dim = module.exports.getExpDim(res, pil, r.id, stark);
-                    r.id = tmpExps[r.id].id;
                 } else {
                     const p = r.prime ? 1 : 0;
                     if (typeof ctx.expMap[p][r.id] === "undefined") {

@@ -96,5 +96,5 @@ module.exports.calculateZ = async function(F, num, den) {
         throw new Error("z does not match");
     }
 
-    return z;
+    return [z];
 }

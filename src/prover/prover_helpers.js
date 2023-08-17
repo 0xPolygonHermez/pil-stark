@@ -2,6 +2,7 @@ const { proofgen_execute } = require("./prover_worker");
 const workerpool = require("workerpool");
 const {BigBuffer} = require("ffjavascript");
 const { BigBufferHandler } = require("../fflonk/helpers/fflonk_prover_helpers");
+const { calculateZ, calculateH1H2 } = require("../helpers/polutils");
 
 const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
@@ -282,7 +283,7 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
     };
 
     const execStages = [];
-    for(let i = 0; i < ctx.pilInfo.nStages; ++i) {
+    for(let i = 0; i < ctx.pilInfo.nLibStages; ++i) {
         const stage = 2 + i;
         execStages.push(`stage${stage}`);
     }
@@ -291,7 +292,7 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
         execInfo.inputSections.push({ name: "const_n" });
         execInfo.inputSections.push({ name: "cm1_n" });
         execInfo.inputSections.push({ name: "x_n" });
-        for(let j = 0; j < ctx.pilInfo.nStages; j++) {
+        for(let j = 0; j < ctx.pilInfo.nLibStages; j++) {
             const stage = j + 2;
             execInfo.inputSections.push({ name: `cm${stage}_n` });
             execInfo.outputSections.push({ name: `cm${stage}_n` });
@@ -301,18 +302,18 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
     } else if (execPart == "imPols") {
         execInfo.inputSections.push({ name: "const_n" });
         execInfo.inputSections.push({ name: "cm1_n" });
-        for(let i = 0; i < ctx.pilInfo.nStages; i++) {
+        for(let i = 0; i < ctx.pilInfo.nLibStages; i++) {
             const stage = i + 2;
             execInfo.inputSections.push({ name: `cm${stage}_n` });
         }
         execInfo.inputSections.push({ name: "x_n" });
-        execInfo.outputSections.push({ name: `cm${ctx.pilInfo.nStages + 1}_n` });
+        execInfo.outputSections.push({ name: `cm${ctx.pilInfo.nLibStages + 1}_n` });
         execInfo.outputSections.push({ name: "tmpExp_n" });
         dom = "n";
     } else if (execPart == "Q") {
         execInfo.inputSections.push({ name: "const_ext" });
         execInfo.inputSections.push({ name: "cm1_ext" });
-        for(let i = 0; i < ctx.pilInfo.nStages; i++) {
+        for(let i = 0; i < ctx.pilInfo.nLibStages; i++) {
             const stage = i + 2;
             execInfo.inputSections.push({ name: `cm${stage}_ext` });
         }
@@ -325,7 +326,7 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
     } else if (execPart == "fri") {
         execInfo.inputSections.push({ name: "const_ext" });
         execInfo.inputSections.push({ name: "cm1_ext" });
-        for(let i = 0; i < ctx.pilInfo.nStages; i++) {
+        for(let i = 0; i < ctx.pilInfo.nLibStages; i++) {
             const stage = i + 2;
             execInfo.inputSections.push({ name: `cm${stage}_ext` });
         }
@@ -461,4 +462,15 @@ module.exports.calculateExpsParallel = async function calculateExpsParallel(ctx,
     }
 
     await pool.terminate();
+}
+
+module.exports.hintFunctions = async function hintFunctions(functionName, F, inputs) {
+    if(functionName === "calculateZ") {
+        return calculateZ(F, ...inputs);
+    } else if(functionName === "calculateH1H2") {
+        return calculateH1H2(F,...inputs);
+    } else {
+        throw new Error("Invalid function name: " + functionName);
+    }
+
 }

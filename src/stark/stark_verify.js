@@ -47,12 +47,11 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         logger.debug(`  Domain size: ${N} (2^${nBits})`);
         logger.debug(`  Const  pols:   ${starkInfo.nConstants}`);
         logger.debug(`  Stage 1 pols:   ${starkInfo.varPolMap.filter(p => p.stage == "cm1").length}`);
-        for(let i = 0; i < starkInfo.nStages; i++) {
+        for(let i = 0; i < starkInfo.nLibStages; i++) {
             const stage = i + 2;
             logger.debug(`  Stage ${stage} pols:   ${starkInfo.varPolMap.filter(p => p.stage == "cm" + stage).length}`);
         }
         logger.debug(`  Stage Q pols:   ${starkInfo.varPolMap.filter(p => p.stage == "cmQ").length}`);
-        logger.debug(`  Temp exp pols: ${starkInfo.varPolMap.filter(p => p.stage == "tmpExp").length}`);
         logger.debug("-----------------------------");
     }
 
@@ -71,7 +70,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
 
     transcript.put(proof.root1);
 
-    for(let i=0; i < starkInfo.nStages; i++) {
+    for(let i=0; i < starkInfo.nLibStages; i++) {
         const stage = i + 2;
         for(let j = 0; j < starkInfo.challenges[stage].length; ++j) {
             const index = starkInfo.challenges[stage][j];
@@ -139,7 +138,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
             return false;
         }
     
-        for(let i = 0; i < starkInfo.nStages; ++i) {
+        for(let i = 0; i < starkInfo.nLibStages; ++i) {
             const stage = i + 2;
             let res = MH.verifyGroupProof(proof[`root${stage}`], query[stage][1], idx, query[stage][0]);
             if (!res) {
@@ -148,7 +147,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
             }
         }
         
-        res = MH.verifyGroupProof(proof.rootQ, query[starkInfo.nStages + 2][1], idx, query[starkInfo.nStages + 2][0]);
+        res = MH.verifyGroupProof(proof.rootQ, query[starkInfo.nLibStages + 2][1], idx, query[starkInfo.nLibStages + 2][0]);
         if (!res) {
             if(logger) logger.warn(`Invalid rootQ`);
             return false;
@@ -157,9 +156,11 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         const ctxQry = {};
         ctxQry.consts = query[0][0];
         ctxQry.tree1 = query[1][0];
-        ctxQry.tree2 = query[2][0];
-        ctxQry.tree3 = query[3][0];
-        ctxQry.treeQ = query[4][0];
+        for(let i = 0; i < starkInfo.nLibStages; ++i) {
+            const stage = i + 2;
+            ctxQry[`tree${stage}`] = query[i + 2][0];
+        }
+        ctxQry.treeQ = query[starkInfo.nLibStages + 2][0];
         ctxQry.evals = ctx.evals;
         ctxQry.publics = ctx.publics;
         ctxQry.challenges = ctx.challenges;
@@ -215,12 +216,13 @@ function executeCode(F, ctx, code) {
 
 
     function getRef(r) {
+
+        if (r.type.startsWith("tree")) {
+            return extractVal(ctx[r.type], r.treePos, r.dim);
+        }
+        
         switch (r.type) {
             case "tmp": return tmp[r.id];
-            case "tree1": return extractVal(ctx.tree1, r.treePos, r.dim);
-            case "tree2": return extractVal(ctx.tree2, r.treePos, r.dim);
-            case "tree3": return extractVal(ctx.tree3, r.treePos, r.dim);
-            case "treeQ": return extractVal(ctx.treeQ, r.treePos, r.dim);
             case "const": return ctx.consts[r.id];
             case "eval": return ctx.evals[r.id];
             case "number": return BigInt(r.value);

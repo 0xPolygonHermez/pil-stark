@@ -2,7 +2,7 @@
 module.exports.proof2zkin = function proof2zkin(p, starkInfo) {
     const zkin = {};
     zkin.root1 = p.root1;
-    for(let i = 0; i < starkInfo.nStages; ++i) {
+    for(let i = 0; i < starkInfo.nLibStages; ++i) {
         const stage = i + 2;
         zkin[`root${stage}`] = p[`root${stage}`];
     }
@@ -24,7 +24,7 @@ module.exports.proof2zkin = function proof2zkin(p, starkInfo) {
     zkin.s0_valsC = [];
     zkin.s0_vals1 = [];
 
-    for(let i = 0; i < starkInfo.nStages; ++i) {
+    for(let i = 0; i < starkInfo.nLibStages; ++i) {
         const stage = i + 2;
         zkin[`s0_vals${stage}`] = [];
     }
@@ -32,7 +32,7 @@ module.exports.proof2zkin = function proof2zkin(p, starkInfo) {
 
     zkin.s0_siblingsC = [];
     zkin.s0_siblings1 = [];
-    for(let i = 0; i < starkInfo.nStages; ++i) {
+    for(let i = 0; i < starkInfo.nLibStages; ++i) {
         const stage = i + 2;
         zkin[`s0_siblings${stage}`] = [];
     }
@@ -46,14 +46,14 @@ module.exports.proof2zkin = function proof2zkin(p, starkInfo) {
         zkin.s0_vals1[i] = friProof[0].polQueries[i][1][0];
         zkin.s0_siblings1[i] = friProof[0].polQueries[i][1][1];
 
-        for(let j = 0; j < starkInfo.nStages; ++j) {
+        for(let j = 0; j < starkInfo.nLibStages; ++j) {
             const stage = j + 2;
             zkin[`s0_vals${stage}`][i] = friProof[0].polQueries[i][stage][0];
             zkin[`s0_siblings${stage}`][i] = friProof[0].polQueries[i][stage][1];
         }
 
-        zkin.s0_valsQ[i] = friProof[0].polQueries[i][starkInfo.nStages + 2][0];
-        zkin.s0_siblingsQ[i] = friProof[0].polQueries[i][starkInfo.nStages + 2][1];
+        zkin.s0_valsQ[i] = friProof[0].polQueries[i][starkInfo.nLibStages + 2][0];
+        zkin.s0_siblingsQ[i] = friProof[0].polQueries[i][starkInfo.nLibStages + 2][1];
 
     }
 

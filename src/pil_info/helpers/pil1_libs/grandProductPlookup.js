@@ -3,13 +3,16 @@ const ExpressionOps = require("../../expressionops");
 module.exports.grandProductPlookup = function grandProductPlookup(res, pil) {
     const E = new ExpressionOps();
 
-    const alpha = E.challenge("alpha");
-    const beta = E.challenge("beta");
-    const gamma = E.challenge("gamma");
-    const delta = E.challenge("delta");
+    const alpha = E.challenge("stage1_challenge0");
+    const beta = E.challenge("stage1_challenge1");
+    const gamma = E.challenge("stage2_challenge0");
+    const delta = E.challenge("stage2_challenge1");
 
 
     for (let i=0; i<pil.plookupIdentities.length; i++) {
+        const name = `Plookup${i}`;
+        res.libs[name] = [];
+
         const puCtx = {};
         const pi = pil.plookupIdentities[i];
 
@@ -60,6 +63,23 @@ module.exports.grandProductPlookup = function grandProductPlookup(res, pil) {
 
         puCtx.h1Id = pil.nCommitments++;
         puCtx.h2Id = pil.nCommitments++;
+        
+        const stage1 = {
+            pols: {
+                fExpId: {id: puCtx.fExpId, tmp: true},
+                tExpId: {id: puCtx.tExpId, tmp: true},
+                h1Id: {id: puCtx.h1Id},
+                h2Id: {id: puCtx.h2Id},
+            },
+            hints: [
+                {
+                    inputs: ["fExpId", "tExpId"], 
+                    outputs: ["h1Id", "h2Id"], 
+                    lib: "calculateH1H2"
+                }
+            ]
+        }
+        res.libs[name].push(stage1);
         
         puCtx.zId = pil.nCommitments++;
 
@@ -138,6 +158,21 @@ module.exports.grandProductPlookup = function grandProductPlookup(res, pil) {
         pil.expressions.push(c2);
         pil.polIdentities.push({e: pil.expressions.length - 1});
 
-        res.puCtx.push(puCtx);
+        const stage2 = {
+            pols: {
+                numId: {id: puCtx.numId, tmp: true},
+                denId: {id: puCtx.denId, tmp: true},
+                zId: {id: puCtx.zId},
+            },
+            hints: [
+                {
+                    inputs: ["numId", "denId"], 
+                    outputs: ["zId"], 
+                    lib: "calculateZ"
+                }
+            ]
+
+        }
+        res.libs[name].push(stage2);
     }
 }

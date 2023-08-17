@@ -3,11 +3,14 @@ const ExpressionOps = require("../../expressionops");
 module.exports.grandProductPermutation = function grandProductPermutation(res, pil) {
     const E = new ExpressionOps();
 
-    const gamma = E.challenge("gamma");
-    const delta = E.challenge("delta");
-    const epsilon = E.challenge("epsilon");
+    const gamma = E.challenge("stage1_challenge0");
+    const delta = E.challenge("stage1_challenge1");
+    const epsilon = E.challenge("stage1_challenge2");
 
     for (let i=0; i<pil.permutationIdentities.length; i++) {
+        const name = `Permutation${i}`;
+        res.libs[name] = [];
+
         const peCtx = {};
         const pi = pil.permutationIdentities[i];
 
@@ -85,6 +88,22 @@ module.exports.grandProductPermutation = function grandProductPermutation(res, p
         pil.expressions.push(c2);
         pil.polIdentities.push({e: pil.expressions.length - 1});
 
-        res.peCtx.push(peCtx);
+        const stage1 = {
+            pols: {
+                fExpId: {id: peCtx.fExpId, tmp: true},
+                tExpId: {id: peCtx.tExpId, tmp: true},
+                numId: {id: peCtx.numId, tmp: true},
+                denId: {id: peCtx.denId, tmp: true},
+                zId: {id: peCtx.zId},
+            },
+            hints: [
+                {
+                    inputs: ["numId", "denId"], 
+                    outputs: ["zId"], 
+                    lib: "calculateZ"
+                }
+            ]
+        }
+        res.libs[name].push(stage1);
     }
 }

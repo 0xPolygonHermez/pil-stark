@@ -39,7 +39,7 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         logger.debug(`  Domain size:   ${domainSize} (2^${power})`);
         logger.debug(`  Const  pols:   ${fflonkInfo.nConstants}`);
         logger.debug(`  Stage 1 pols:   ${fflonkInfo.nCommitments}`);
-        for(let i = 0; i < fflonkInfo.nStages; i++) {
+        for(let i = 0; i < fflonkInfo.nLibStages; i++) {
             const stage = i + 2;
             logger.debug(`  Stage ${stage} pols:   ${fflonkInfo.varPolMap.filter(p => p.stage == "cm" + stage).length}`);
         }

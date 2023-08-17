@@ -3,13 +3,16 @@ const ExpressionOps = require("../../expressionops");
 
 const getKs = require("pilcom").getKs;
 
-module.exports.grandProductConnection = function grandProductConnection(F, res, pil) {
+module.exports.grandProductConnection = function grandProductConnection(res, pil, F) {
     const E = new ExpressionOps();
 
-    const gamma = E.challenge("gamma");
-    const delta = E.challenge("delta");
+    const gamma = E.challenge("stage1_challenge0");
+    const delta = E.challenge("stage1_challenge1");
 
     for (let i=0; i<pil.connectionIdentities.length; i++) {
+        const name = `Connection${i}`;
+        res.libs[name] = [];
+
         const ci = pil.connectionIdentities[i];
         const ciCtx = {};
 
@@ -88,6 +91,20 @@ module.exports.grandProductConnection = function grandProductConnection(F, res, 
         pil.expressions.push(c2);
         pil.polIdentities.push({e: pil.expressions.length - 1});
 
-        res.ciCtx.push(ciCtx);
+        const stage1 = {
+            pols: {
+                numId: {id: ciCtx.numId, tmp: true},
+                denId: {id: ciCtx.denId, tmp: true},
+                zId: {id: ciCtx.zId},
+            },
+            hints: [
+                {
+                    inputs: ["numId", "denId"], 
+                    outputs: ["zId"], 
+                    lib: "calculateZ"
+                }
+            ]
+        }
+        res.libs[name].push(stage1);
     }
 }
