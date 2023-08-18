@@ -117,7 +117,7 @@ describe("generating files for arguments", async function () {
         let shKeyFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.shkey.json`);
         await fs.promises.writeFile(shKeyFilename, JSON.stringify(shKey, null, 1));
 
-        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, options);
+        await fflonkSetup(constPols, zkeyFilename, ptauFile, fflonkInfo, options);
     
         // Save constant polynomial evaluations file
         const constPolsFilename =  path.join(__dirname, "../../", "tmp", `${outputFilename}.const`);

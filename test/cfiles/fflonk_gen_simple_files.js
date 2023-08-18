@@ -101,7 +101,7 @@ describe("simple sm", async function () {
         const shKeyFilename =  path.join(__dirname, "../../", "tmp", `${filename}.shkey.json`);
         await fs.promises.writeFile(shKeyFilename, JSON.stringify(shKey, null, 1));
 
-        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 0, logger});
+        await fflonkSetup(constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 0, logger});
 
         // Save verification key file
         const VkeyFilename = path.join(__dirname, "../../", "tmp", `${filename}.vkey`);

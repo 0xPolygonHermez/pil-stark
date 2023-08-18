@@ -50,13 +50,13 @@ module.exports.initProverStark = async function initProverStark(pilInfo, constPo
         logger.debug(`  Domain size: ${ctx.N} (2^${ctx.nBits})`);
         logger.debug(`  Domain size ext: ${ctx.Next} (2^${ctx.nBitsExt})`);
         logger.debug(`  Const  pols:   ${ctx.pilInfo.nConstants}`);
-        logger.debug(`  Stage 1 pols:   ${ctx.pilInfo.varPolMap.filter(p => p.stage == "cm1").length}`);
+        logger.debug(`  Stage 1 pols:   ${ctx.pilInfo.cmPolsMap.filter(p => p.stage == "cm1").length}`);
         for(let i = 0; i < ctx.pilInfo.nLibStages; i++) {
             const stage = i + 2;
-            logger.debug(`  Stage ${stage} pols:   ${ctx.pilInfo.varPolMap.filter(p => p.stage == "cm" + stage).length}`);
+            logger.debug(`  Stage ${stage} pols:   ${ctx.pilInfo.cmPolsMap.filter(p => p.stage == "cm" + stage).length}`);
         }
-        logger.debug(`  Stage Q pols:   ${ctx.pilInfo.varPolMap.filter(p => p.stage == "cmQ").length}`);
-        logger.debug(`  Temp exp pols: ${ctx.pilInfo.varPolMap.filter(p => p.stage == "tmpExp").length}`);
+        logger.debug(`  Stage Q pols:   ${ctx.pilInfo.cmPolsMap.filter(p => p.stage == "cmQ").length}`);
+        logger.debug(`  Temp exp pols: ${ctx.pilInfo.cmPolsMap.filter(p => p.stage == "tmpExp").length}`);
         logger.debug("-----------------------------");
     }
 

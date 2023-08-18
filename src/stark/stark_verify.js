@@ -46,12 +46,12 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         logger.debug(`  VerificationType: ${starkStruct.verificationHashType}`);
         logger.debug(`  Domain size: ${N} (2^${nBits})`);
         logger.debug(`  Const  pols:   ${starkInfo.nConstants}`);
-        logger.debug(`  Stage 1 pols:   ${starkInfo.varPolMap.filter(p => p.stage == "cm1").length}`);
+        logger.debug(`  Stage 1 pols:   ${starkInfo.cmPolsMap.filter(p => p.stage == "cm1").length}`);
         for(let i = 0; i < starkInfo.nLibStages; i++) {
             const stage = i + 2;
-            logger.debug(`  Stage ${stage} pols:   ${starkInfo.varPolMap.filter(p => p.stage == "cm" + stage).length}`);
+            logger.debug(`  Stage ${stage} pols:   ${starkInfo.cmPolsMap.filter(p => p.stage == "cm" + stage).length}`);
         }
-        logger.debug(`  Stage Q pols:   ${starkInfo.varPolMap.filter(p => p.stage == "cmQ").length}`);
+        logger.debug(`  Stage Q pols:   ${starkInfo.cmPolsMap.filter(p => p.stage == "cmQ").length}`);
         logger.debug("-----------------------------");
     }
 
@@ -108,7 +108,8 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
     let xAcc = 1n;
     let q = 0n;
     for (let i=0; i<starkInfo.qDeg; i++) {
-        q = F.add(q, F.mul(xAcc, ctx.evals[starkInfo.evIdx.cm[0][starkInfo.qs[i]]]));
+        const evId = starkInfo.evMap.findIndex(e => e.type === "cm" && e.id === starkInfo.qs[i]);
+        q = F.add(q, F.mul(xAcc, ctx.evals[evId]));
         xAcc = F.mul(xAcc, xN);
     }
 

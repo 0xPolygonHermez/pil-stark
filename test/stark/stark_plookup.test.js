@@ -13,7 +13,7 @@ const Logger = require('logplease');
 const smGlobal = require("../state_machines/sm/sm_global.js");
 const smPlookup = require("../state_machines/sm_plookup/sm_plookup.js");
 
-describe("test plookup sm", async function () {
+describe("test stark plookup sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {

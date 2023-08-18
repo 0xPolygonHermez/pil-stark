@@ -13,7 +13,7 @@ const Logger = require('logplease');
 const smGlobal = require("../state_machines/sm/sm_global.js");
 const smPermutation = require("../state_machines/sm_simple_permutation/sm_simple_permutation.js");
 
-describe("test plookup sm", async function () {
+describe("test simple permutation sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {

@@ -2,8 +2,10 @@
 const { addPol, getExpDim } = require("./helpers/helpers.js");
 
 module.exports = function map(res, pil, stark) {  
-    res.varPolMap = [];
-    
+    res.cmPolsMap = [];
+
+    res.constPolsMap = [];
+
     res.mapSectionsN = {};
     
     res.mapSectionsN["cm1"] = 0;
@@ -16,16 +18,22 @@ module.exports = function map(res, pil, stark) {
     for (const polRef in pil.references) {
         const polInfo = pil.references[polRef];
         let name = polRef;
-        if(polInfo.type === 'cmP') {
-            if(polInfo.isArray) {
-                for(let i = 0; i < polInfo.len; ++i) {
-                    const namePol = name + i;
-                    const polId = polInfo.id + i;
+        if(polInfo.isArray) {
+            for(let i = 0; i < polInfo.len; ++i) {
+                const namePol = name + i;
+                const polId = polInfo.id + i;
+                if(polInfo.type === 'constP') {
+                    res.constPolsMap.push({ name: namePol, dim:1, stagePos: polId })
+                } else if(polInfo.type === 'cmP') {
                     addPol(res, "cm1", namePol, 1, polId);           
-                }
-            } else {
+                } 
+            }
+        } else {
+            if(polInfo.type === 'constP') {
+                res.constPolsMap.push({ name: name, dim:1, stagePos: res.constPolsMap.length })
+            } else if(polInfo.type === 'cmP') {
                 addPol(res, "cm1", name, 1, polInfo.id); 
-            } 
+            }
         }
     }
 
@@ -93,10 +101,10 @@ function mapImPols(res, pil, stark) {
         addPol(res, section, name, dim, pol.id);
 
         if(pol.imPol) {
-            res.varPolMap[pol.id].imPol = true;
+            res.cmPolsMap[pol.id].imPol = true;
         }
 
-        if(pol.libName !== "") {
+        if(pol.libName) {
             res.libs[pol.libName][pol.stage].pols[pol.name].id = pol.id;
         } 
     }

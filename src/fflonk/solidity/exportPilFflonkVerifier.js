@@ -44,21 +44,13 @@ module.exports = async function exportPilFflonkVerifier(vk, fflonkInfo, options 
     orderedEvals = orderedEvals.map(e => e.name.replace(".", "_"));
 
     const evNames = {};
-    for(let i = 0; i < fflonkInfo.evIdx.cm.length; ++i) {
-        for(const polId in fflonkInfo.evIdx.cm[i]) {
-            let polName = i === 0 ? vk.polsMap.cm[polId] : i === 1 ? vk.polsMap.cm[polId] + "w" : vk.polsMap.cm[polId] + `w${i}`;
-            const evalIndex = fflonkInfo.evIdx.cm[i][polId];
-            evNames[evalIndex] = polName.replace(".", "_");
-        }
+    for(let i = 0; i < fflonkInfo.evMap.length; ++i) {
+        const ev = fflonkInfo.evMap[i];
+        let polName = ev.prime === 0 ? ev.name : ev.prime === 1 ? ev.name + "w" : ev.name + `w${ev.prime}`;
+        evNames[i] = polName.replace(".", "_"); 
     }
 
-    for(let i = 0; i < fflonkInfo.evIdx.const.length; ++i) {
-        for(const polId in fflonkInfo.evIdx.const[i]) {
-            let polName = i === 0 ? vk.polsMap.const[polId] : i === 1 ? vk.polsMap.const[polId] + "w" : vk.polsMap.const[polId] + `w${i}`;
-            const evalIndex = fflonkInfo.evIdx.const[i][polId];
-            evNames[evalIndex] = polName.replace(".", "_");
-        }
-    }
+    console.log(evNames);
     
     let nBytesCommits = (vk.f.filter(fi => fi.stages.length !== 1 || fi.stages[0].stage !== 0).length + 2) * 2 + (orderedEvals.length - 1);
 

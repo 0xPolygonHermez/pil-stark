@@ -382,12 +382,13 @@ template parallel VerifyEvaluations() {
     // Note: Each Qi has degree < n. qDeg determines the number of polynomials of degree < n needed to define Q
     // Calculate Q(X) = Q1(X) + X^n*Q2(X) + X^(2n)*Q3(X) + ..... X^((qDeg-1)n)*Q(X) evaluated at z 
     for (var i=0; i< <%- starkInfo.qDeg %>; i++) {
+<%      const evId = starkInfo.evMap.findIndex(e => e.type === "cm" && e.id === starkInfo.qs[0]); -%>
         if (i==0) {
             xAcc[0] <== [1, 0, 0];
-            qAcc[0] <== evals[<%- starkInfo.evIdx.cm[0][starkInfo.qs[0]] %>+i];
+            qAcc[0] <== evals[<%- evId %>+i];
         } else {
             xAcc[i] <== CMul()(xAcc[i-1], zMul[<%- starkStruct.nBits - 1%>]);
-            qStep[i-1] <== CMul()(xAcc[i], evals[<%- starkInfo.evIdx.cm[0][starkInfo.qs[0]] %>+i]);
+            qStep[i-1] <== CMul()(xAcc[i], evals[<%- evId %>+i]);
             qAcc[i][0] <== qAcc[i-1][0] + qStep[i-1][0];
             qAcc[i][1] <== qAcc[i-1][1] + qStep[i-1][1];
             qAcc[i][2] <== qAcc[i-1][2] + qStep[i-1][2];
@@ -484,7 +485,7 @@ template MapValues() {
 
 <% for (let t = 1; t<=starkInfo.nLibStages + 2; t++) {                              -%>
 <%      let index = t === starkInfo.nLibStages + 2 ? "Q" : t;                       -%>
-<%      let sectionsStage = starkInfo.varPolMap.filter(p => p.stage === "cm" + index);  -%>
+<%      let sectionsStage = starkInfo.cmPolsMap.filter(p => p.stage === "cm" + index);  -%>
 <%      for (let i=0; i< sectionsStage.length; i++) {         -%>
 <%          const p = sectionsStage[i];  -%>
 <%          if (p.dim == 1) {                                                    -%>
@@ -497,7 +498,7 @@ template MapValues() {
 
 <% for (let t = 1; t<=starkInfo.nLibStages + 2; t++) {                              -%>
 <%      let index = t === starkInfo.nLibStages + 2 ? "Q" : t;                       -%>
-<%      let sectionsStage = starkInfo.varPolMap.filter(p => p.stage === "cm" + index);  -%>
+<%      let sectionsStage = starkInfo.cmPolsMap.filter(p => p.stage === "cm" + index);  -%>
 <%      for (let i=0; i< sectionsStage.length; i++) {         -%>
 <%          const p = sectionsStage[i];  -%>
 <%          if (p.dim == 1) {                                                    -%>

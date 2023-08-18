@@ -39,8 +39,8 @@ async function run() {
     await curve.terminate();
 
     // Load preprocessed polynomials
-    const cnstPols = newConstantPolsArray(pil, F);
-    await cnstPols.loadFromFileFr(constFile, Fr);
+    const constPols = newConstantPolsArray(pil, F);
+    await constPols.loadFromFileFr(constFile, Fr);
 
     const fflonkInfo = JSON.parse(await fs.promises.readFile(fflonkInfoFile, "utf8"));
 
@@ -49,7 +49,7 @@ async function run() {
     options.extraMuls = argv.extraMuls === undefined ? 2 : Number(argv.extraMuls);
     options.maxQDegree = argv.maxQDegree === undefined ? 0 : Number(argv.maxQDegree);
         
-    await fflonkSetup(pil, cnstPols, zkeyFile, ptauFile, fflonkInfo, options);
+    await fflonkSetup(constPols, zkeyFile, ptauFile, fflonkInfo, options);
 
     console.log("Setup done correctly");
 }

@@ -18,17 +18,10 @@ const {ethers, run} = require("hardhat");
 describe("Fflonk permutation sm", async function () {
     this.timeout(10000000);
 
-    let curve;
-
     before(async () => {
         if (!fs.existsSync(`./tmp/contracts`)){
             fs.mkdirSync(`./tmp/contracts`, {recursive: true});
         }
-        curve = await getCurveFromName("bn128");
-    })
-
-    after(async () => {
-        await curve.terminate();
     })
 
     it("It should create the pols main", async () => {
@@ -64,7 +57,7 @@ describe("Fflonk permutation sm", async function () {
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", "fflonk_permutation.zkey");
 
-        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1, logger});
+        await fflonkSetup(constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1, logger});
    
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 

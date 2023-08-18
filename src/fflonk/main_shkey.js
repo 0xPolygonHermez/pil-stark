@@ -48,7 +48,7 @@ async function run() {
     const fflonkInfoRaw = await fs.promises.readFile(fflonkInfoFile, "utf8");
     const fflonkInfo = JSON.parse(fflonkInfoRaw);
 
-    let { zkey: shKey } = await fflonkShKey(pil, ptauFile, fflonkInfo, {
+    let { zkey: shKey } = await fflonkShKey(ptauFile, fflonkInfo, {
         extraMuls, maxQDegree
     });
 

@@ -1,11 +1,11 @@
 const { iterateCode } = require("../codegen");
 
 module.exports.addPol = function addPol(res, stage, name, dim, pos) {
-    const polsStage = res.varPolMap.filter((p) => p.stage == stage);
+    const polsStage = res.cmPolsMap.filter((p) => p.stage == stage);
     const polPos = polsStage.length;
     const stagePos = polsStage.reduce((acc, p) => acc + p.dim, 0);
     const polType = { stage, name, dim, stagePos, polPos };
-    res.varPolMap[pos] = polType;
+    res.cmPolsMap[pos] = polType;
     res.mapSectionsN[stage] += dim;
 }
 
@@ -27,7 +27,7 @@ module.exports.getExpDim = function getExpDim(res, pil, expId, stark) {
                     if (d>md) md=d;
                 }
                 return md;
-            case "cm": return res.varPolMap[exp.id].dim;
+            case "cm": return res.cmPolsMap[exp.id].dim;
             case "exp":
                 exp.dimMap = _getExpDim(pil.expressions[exp.id]);
                 return exp.dimMap;
@@ -101,7 +101,7 @@ function setCodeDimensions(code, pilInfo, stark) {
             switch (r.type) {
                 case "tmp": r.dim = tmpDim[r.id]; break;
                 case "tmpExp": break;
-                case "cm": r.dim = pilInfo.varPolMap[r.id].dim; break;
+                case "cm": r.dim = pilInfo.cmPolsMap[r.id].dim; break;
                 case "const": 
                 case "number": 
                 case "public": 
@@ -155,7 +155,7 @@ function fixProverCode(res, code, dom, stark, verifierQuery = false) {
         switch (r.type) {
             case "cm":
                 if (verifierQuery) {
-                    const p1 = res.varPolMap[r.id];
+                    const p1 = res.cmPolsMap[r.id];
                     let index = Number(p1.stage.substr(2));
                     if (p1.stage === "cmQ") {
                         r.type = "treeQ";

@@ -1340,7 +1340,7 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
     }
 
     function evalMap(polId, prime) {
-        let p = fflonkInfo.varPolMap[polId];
+        let p = fflonkInfo.cmPolsMap[polId];
         ++refpols;
         if (!p) {
             console.log("xx");
@@ -1453,7 +1453,7 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
     }
 
     function evalMap_(polId, prime) {
-        let p = fflonkInfo.varPolMap[polId];
+        let p = fflonkInfo.cmPolsMap[polId];
         let offset = p.stagePos;
         let size = fflonkInfo.mapSectionsN[p.stage];
         if (p.dim == 1) {

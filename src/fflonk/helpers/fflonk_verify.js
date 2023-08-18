@@ -9,10 +9,7 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
 
     const curve = await getCurveFromName(vk.curve);
     const Fr = curve.Fr;
-
-    console.log(vk);
-    console.log(proof);
-
+    
     vk = fromObjectVk(curve, vk);
     
     proof = fromObjectProof(curve, proof);
@@ -25,7 +22,7 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     const ctx = {};
     ctx.evals = [];
     ctx.publics = publics;
-    ctx.challenges = [0,0,0,0,0];
+    ctx.challenges = [];
     ctx.curve = curve;
     ctx.N = 1 << vk.power;
     ctx.nBits = vk.power;
@@ -93,7 +90,6 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
 
     const stageQCommitPols = vk.f.filter(fi => fi.stages[0].stage === nStages).map(fi => proof.polynomials[`f${fi.index}`]);
     for(let i = 0; i < stageQCommitPols.length; i++) {
-        console.log(ctx.curve.G1.toString(stageQCommitPols[i]));
         transcript.addPolCommitment(stageQCommitPols[i]);
     }
 
@@ -109,23 +105,10 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         vk.f[i].commit = proof.polynomials[`f${vk.f[i].index}`];
     }
 
-    console.log(fflonkInfo.evIdx.cm);
-    
-    for(let i = 0; i < fflonkInfo.evIdx.cm.length; ++i) {
-        for(const polId in fflonkInfo.evIdx.cm[i]) {
-            let polName = i === 0 ? vk.polsMap.cm[polId] : i === 1 ? vk.polsMap.cm[polId] + "w" : vk.polsMap.cm[polId] + `w${i}`;
-            const evalIndex = fflonkInfo.evIdx.cm[i][polId];
-            ctx.evals[evalIndex] = proof.evaluations[polName];   
-        }
-    }
-
-    for(let i = 0; i < fflonkInfo.evIdx.const.length; ++i) {
-        for(const polId in fflonkInfo.evIdx.const[i]) {
-            let polName = i === 0 ? vk.polsMap.const[polId] : i === 1 ? vk.polsMap.const[polId] + "w" : vk.polsMap.const[polId] + `w${i}`;
-            const evalIndex = fflonkInfo.evIdx.const[i][polId];
-            ctx.evals[evalIndex] = proof.evaluations[polName];                          
-
-        }
+    for(let i = 0; i < fflonkInfo.evMap.length; ++i) {
+        const ev = fflonkInfo.evMap[i];
+        let polName = ev.prime === 0 ? ev.name : ev.prime === 1 ? ev.name + "w" : ev.name + `w${ev.prime}`;
+        ctx.evals[i] = proof.evaluations[polName]; 
     }
     
     let challengeXi = curve.Fr.exp(challengeXiSeed, vk.powerW);
@@ -143,8 +126,6 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
    
     const Q = curve.Fr.div(execCode, ctx.Z);
 
-    console.log("Q", curve.Fr.toString(Q));
-    
     const nonCommittedPols = [];
     if(vk.maxQDegree === 0) {
         proof.evaluations["Q"] = Q;
@@ -159,7 +140,7 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
             }
         }
         if (!curve.Fr.eq(Q, q)) {
-            console.log(`Invalid Q.`)
+            console.log(`Invalid Q.`);
             return false;
         }
 
@@ -196,7 +177,8 @@ function executeCode(F, ctx, code) {
     function getRef(r) {
         switch (r.type) {
             case "tmp": return tmp[r.id];
-            case "eval": return ctx.evals[r.id];
+            case "eval": 
+                return ctx.evals[r.id];
             case "number": return ctx.curve.Fr.e(`${r.value}`);
             case "public": return ctx.curve.Fr.e(ctx.publics[r.id]);
             case "challenge": return ctx.challenges[r.id];

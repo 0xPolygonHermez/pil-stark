@@ -291,7 +291,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         }
 
         function evalMap(polId, prime, extend) {
-            let p = starkInfo.varPolMap[polId];
+            let p = starkInfo.cmPolsMap[polId];
             if (!p) {
                 console.log("xx");
             }

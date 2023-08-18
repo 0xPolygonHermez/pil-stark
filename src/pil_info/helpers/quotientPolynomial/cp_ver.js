@@ -23,11 +23,6 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
 
     res.code.qVerifier = buildCode(ctxC);
 
-    res.evIdx = {
-        cm: [{}, {}],
-        const: [{}, {}],
-    }
-
     res.evMap = [];
 
     const ctxF = {};
@@ -38,10 +33,10 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
 
     if (stark) {
         for (let i = 0; i < res.qDeg; i++) {
-            res.evIdx["cm"][0][res.qs[i]] = res.evMap.length;
             const rf = {
                 type: "cm",
                 id: res.qs[i],
+                name: "Q" + i,
                 prime: 0,
             };
             res.evMap.push(rf);
@@ -68,19 +63,20 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
                 }
             case "cm":
             case "const":
-                console.log(r, res.varPolMap[r.id]);
-                if (typeof res.evIdx[r.type][p][r.id] === "undefined") {
-                    res.evIdx[r.type][p][r.id] = res.evMap.length;
+		        let evalIndex = res.evMap.findIndex(e => e.type === r.type && e.id === r.id && e.prime === p);
+                if (evalIndex == -1) {
                     const rf = {
                         type: r.type,
+                        name: r.type === "cm" ? res.cmPolsMap[r.id].name : res.constPolsMap[r.id].name,
                         id: r.id,
                         prime: p
                     };
                     res.evMap.push(rf);
+                    evalIndex = res.evMap.length - 1;
                 }
                 delete r.prime;
-                r.id= res.evIdx[r.type][p][r.id];
-                r.type= "eval";
+                r.id = evalIndex;
+                r.type = "eval";
                 break;
             case "number":
             case "challenge":

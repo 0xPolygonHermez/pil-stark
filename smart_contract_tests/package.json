@@ -4,7 +4,8 @@
   "scripts": {
     "test": "npx hardhat test",
     "test:simple": "mocha test/fflonk_simple.test.js",
-    "test:fibonacci": "mocha test/fflonk_fibonacci.test.js"
+    "test:fibonacci": "mocha test/fflonk_fibonacci.test.js",
+    "test:all": "mocha test/fflonk_all.test.js"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.3",

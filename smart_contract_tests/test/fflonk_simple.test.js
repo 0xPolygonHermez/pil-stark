@@ -14,7 +14,7 @@ const {ethers, run} = require("hardhat");
 
 const Logger = require('logplease');
 
-async function runTest(pilFile, curve) {
+async function runTest(pilFile) {
     const logger = Logger.create("pil-fflonk", {showTimestamp: false});
     Logger.setLogLevel("DEBUG");
 
@@ -47,7 +47,7 @@ async function runTest(pilFile, curve) {
     const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
     const zkeyFilename =  path.join(__dirname, "../../", "tmp", `fflonk_${pilFile}.zkey}`);
 
-    await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 0, logger});
+    await fflonkSetup(constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 0, logger});
    
     const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 
@@ -89,36 +89,29 @@ async function runTest(pilFile, curve) {
 describe("simple sm", async function () {
     this.timeout(10000000);
 
-    let curve;
-
     before(async () => {
         if (!fs.existsSync(`./tmp/contracts`)){
             fs.mkdirSync(`./tmp/contracts`, {recursive: true});
         }
-        curve = await getCurveFromName("bn128");
-    })
-
-    after(async () => {
-        await curve.terminate();
     })
 
     it.skip("Simple1", async () => {
-        await runTest("simple1", curve);
+        await runTest("simple1");
     });
     it("Simple2", async () => {
-        await runTest("simple2", curve);
+        await runTest("simple2");
     });
     it("Simple2p", async () => {
-        await runTest("simple2p", curve);
+        await runTest("simple2p");
     });
     it("Simple3", async () => {
-        await runTest("simple3", curve);
+        await runTest("simple3");
     });
     it("Simple4", async () => {
-        await runTest("simple4", curve);
+        await runTest("simple4");
     });
     it("Simple4p", async () => {
-        await runTest("simple4p", curve);
+        await runTest("simple4p");
     });
 
 });

@@ -169,7 +169,7 @@ module.exports.compileCode = function compileCode(ctx, code, dom, ret) {
     }
 
     function evalMap(polId, prime, extended, val) {
-        let p = ctx.pilInfo.varPolMap[polId];
+        let p = ctx.pilInfo.cmPolsMap[polId];
         offset = p.stagePos;
         let index = prime ? `((i + ${next})%${N})` : "i";
         let size = ctx.pilInfo.mapSectionsN[p.stage];
@@ -234,7 +234,7 @@ module.exports.setPol = function setPol(ctx, idPol, pol, dom) {
 module.exports.getPolRef = function getPolRef(ctx, idPol, dom) {
     if(!["n", "ext"].includes(dom)) throw new Error("invalid stage");
     const deg = dom === "ext" ? ctx.Next : ctx.N;
-    let p = ctx.pilInfo.varPolMap[idPol];
+    let p = ctx.pilInfo.cmPolsMap[idPol];
     let stage = p.stage + "_" + dom;
     let polRef = {
         stage: stage,

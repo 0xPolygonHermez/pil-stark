@@ -1783,7 +1783,7 @@ module.exports = function compileCode_parser(starkInfo, functionName, code, dom,
     }
 
     function evalMap(polId, prime) {
-        let p = starkInfo.varPolMap[polId];
+        let p = starkInfo.cmPolsMap[polId];
         ++refpols;
         if (!p) {
             console.log("xx");
@@ -1916,7 +1916,7 @@ module.exports = function compileCode_parser(starkInfo, functionName, code, dom,
     }
 
     function evalMap_(polId, prime, extend) {
-        let p = starkInfo.varPolMap[polId];
+        let p = starkInfo.cmPolsMap[polId];
         let stage = extend ? p.stage + "_n" : p.stage + "_ext";
         let offset = starkInfo.mapOffsets[stage];
         offset += p.stagePos;

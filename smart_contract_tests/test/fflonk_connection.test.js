@@ -17,18 +17,12 @@ const Logger = require('logplease');
 describe("Fflonk connection sm", async function () {
     this.timeout(10000000);
 
-    let curve;
-
     before(async () => {
         if (!fs.existsSync(`./tmp/contracts`)){
             fs.mkdirSync(`./tmp/contracts`, {recursive: true});
         }
-        curve = await getCurveFromName("bn128");
     })
 
-    after(async () => {
-        await curve.terminate();
-    })
 
     it("It should create the pols main", async () => {
         const logger = Logger.create("pil-fflonk", {showTimestamp: false});
@@ -63,7 +57,7 @@ describe("Fflonk connection sm", async function () {
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", "fflonk_connection.zkey");
 
-        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1, logger});
+        await fflonkSetup(constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 1, logger});
    
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 

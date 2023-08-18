@@ -613,7 +613,7 @@ module.exports = function compileCode_fri(starkInfo, functionName, code, dom) {
     }
 
     function evalMap(polId, prime, extend) {
-        let p = starkInfo.varPolMap[polId];
+        let p = starkInfo.cmPolsMap[polId];
         ++refpols;
         if (!p) {
             console.log("xx");

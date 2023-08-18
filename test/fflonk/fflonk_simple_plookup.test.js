@@ -16,7 +16,7 @@ const smSimplePlookup = require("../state_machines/sm_simple_plookup/sm_simple_p
 
 const Logger = require('logplease');
 
-describe("Fflonk plookup sm", async function () {
+describe("Fflonk simple plookup sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
@@ -51,7 +51,7 @@ describe("Fflonk plookup sm", async function () {
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", "fflonk_simple_plookup.zkey");
 
-        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 0, logger});
+        await fflonkSetup(constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 0, logger});
 
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 

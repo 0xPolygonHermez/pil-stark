@@ -5,10 +5,10 @@ const { interpolate } = require("../../helpers/fft/fft_p.bn128");
 const { writePilFflonkZkeyFile } = require("../zkey/zkey_pilfflonk");
 const fflonkShKey = require("./fflonk_shkey.js");
 
-module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFile, fflonkInfo, options) {
+module.exports = async function fflonkSetup(constPols, zkeyFilename, ptauFile, fflonkInfo, options) {
     const logger = options.logger;
 
-    let { zkey, PTau, curve } = await fflonkShKey(_pil, ptauFile, fflonkInfo, options);
+    let { zkey, PTau, curve } = await fflonkShKey(ptauFile, fflonkInfo, options);
 
     const {fd: fdPTau, sections: pTauSections} = await readBinFile(ptauFile, "ptau", 1, 1 << 22, 1 << 24);
     const sG2 = curve.G2.F.n8 * 2;
@@ -36,7 +36,7 @@ module.exports = async function fflonkSetup(_pil, cnstPols, zkeyFilename, ptauFi
     zkey.constPolsEvals = new BigBuffer(fflonkInfo.nConstants * sDomain); // Constant polynomials
     zkey.constPolsEvalsExt = new BigBuffer(fflonkInfo.nConstants * sDomainExt); // Constant polynomials
 
-    await cnstPols.writeToBigBufferFr(zkey.constPolsEvals, curve.Fr, fflonkInfo.nConstants);
+    await constPols.writeToBigBufferFr(zkey.constPolsEvals, curve.Fr, fflonkInfo.nConstants);
 
     if(fflonkInfo.nConstants > 0) {
         await interpolate(zkey.constPolsEvals, fflonkInfo.nConstants, nBits, zkey.constPolsCoefs, zkey.constPolsEvalsExt, nBitsExt, curve.Fr);

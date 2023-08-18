@@ -1,10 +1,8 @@
 const {setup} = require("shplonkjs");
 const {Scalar} = require("ffjavascript");
 
-module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options) {
+module.exports = async function fflonkShkey(ptauFile, fflonkInfo, options) {
     const logger = options.logger;
-
-    const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
 
     if(logger) logger.info("> Starting fflonk shkey generation");
 
@@ -28,25 +26,13 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
 
     polsNames[nStages] = [];
 
-    for (const polRef in pil.references) {
-        const polInfo = pil.references[polRef];
-        const name = polRef;
-        if(polInfo.type === 'constP') {
-            polInfo.stage = 0;
-            if(polInfo.isArray) {
-                for(let i = 0; i < polInfo.len; ++i) {
-                    const namePol = name + i;
-                    const polId = polInfo.id + i;
-                    setPolDefs("const", 0, namePol, polId, domainSize);
-                }
-            } else {
-                setPolDefs("const", 0, name, polInfo.id, domainSize);
-            }
-        } 
+    for(let i = 0; i < fflonkInfo.constPolsMap.length; ++i) {
+        const polInfo = fflonkInfo.constPolsMap[i];
+        setPolDefs("const", 0, polInfo.name, i, domainSize);
     }
 
-    for(let i = 0; i < fflonkInfo.varPolMap.length; ++i) {
-        const polInfo = fflonkInfo.varPolMap[i];
+    for(let i = 0; i < fflonkInfo.cmPolsMap.length; ++i) {
+        const polInfo = fflonkInfo.cmPolsMap[i];
         if(polInfo.stage === "tmpExp") continue;
         const stage = Number(polInfo.stage.slice(2));
         setPolDefs("cm", stage, polInfo.name, i, domainSize);
@@ -58,15 +44,16 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
 
     const blindCoefs = fflonkInfo.maxPolsOpenings * (fflonkInfo.qDeg + 1);
     const domainSizeQ = fflonkInfo.qDeg * domainSize + blindCoefs;
-
-    if(!maxQDegree || (domainSizeQ - blindCoefs) / domainSize <= maxQDegree) {
+    
+    if(!maxQDegree || (domainSizeQ - blindCoefs) <= maxQDegree * domainSize) {
         maxQDegree = 0;
         polsXi.push({name: "Q", stage: nStages, degree: domainSizeQ, fi: fiIndex});
         polsNames[nStages].push("Q")
-    } else {
+    } else if((domainSizeQ - blindCoefs) / domainSize > maxQDegree) {
         const nQ = Math.ceil((domainSizeQ - blindCoefs) / (maxQDegree * domainSize));
         for(let i = 0; i < nQ; ++i) {
             let degree = i === nQ - 1 ? domainSizeQ - i*maxQDegree*domainSize : maxQDegree * domainSize + 2;
+        
             polsXi.push({name: `Q${i}`, stage: nStages, degree: degree, fi: fiIndex});
             polsNames[nStages].push(`Q${i}`)
         } 

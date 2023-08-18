@@ -1,5 +1,5 @@
 const compileCode_parser = require("./compileCode_parser.js")
-const compileCode_4ext = require("./compileCode_4ext.js")
+const compileCode_QPolynomial = require("./compileCode_QPolynomial.js")
 
 module.exports = function buildCHelpers(fflonkInfo, config = {}) {
 
@@ -90,7 +90,7 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_4ext(fflonkInfo, "stepQext_first", fflonkInfo.stepQext.first, "ext"));
+        code.push(compileCode_QPolynomial(fflonkInfo, "stepQext_first", fflonkInfo.stepQext.first, "ext"));
         result.stepQext_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
@@ -274,7 +274,7 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
 
         function evalMap(polId, prime) {
 
-            let p = fflonkInfo.varPolMap[polId];
+            let p = fflonkInfo.cmPolsMap[polId];
             if (!p) {
                 console.log("xx");
             }

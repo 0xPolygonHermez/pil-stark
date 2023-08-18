@@ -70,7 +70,7 @@ describe("simple sm", async function () {
         const ptauFile =  path.join(__dirname, "../../", "tmp", "powersOfTau28_hez_final_19.ptau");
         const zkeyFilename =  path.join(__dirname, "../../", "tmp", `fflonk_${pilFile}.zkey`);
 
-        await fflonkSetup(pil, constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 0, logger, maxQDegree: 1});
+        await fflonkSetup(constPols, zkeyFilename, ptauFile, fflonkInfo, {extraMuls: 0, logger, maxQDegree: 1});
     
         const zkey = await readPilFflonkZkeyFile(zkeyFilename, {logger});
 

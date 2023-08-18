@@ -40,8 +40,9 @@ module.exports.initProverFflonk = async function initProver(pilInfo, zkey, logge
     ctx.committedPols = {};
     ctx.nonCommittedPols = [];
 
-    const domainSizeQ = ctx.pilInfo.qDeg * ctx.N + ctx.pilInfo.maxPolsOpenings * (ctx.pilInfo.qDeg + 1);
-    const nQ = ctx.zkey.maxQDegree ? Math.ceil(domainSizeQ / (ctx.zkey.maxQDegree * ctx.N)) : 1;
+    let blindCoefs =  ctx.pilInfo.maxPolsOpenings * (ctx.pilInfo.qDeg + 1);
+    ctx.domainSizeQ = ctx.pilInfo.qDeg * ctx.N + blindCoefs;
+    ctx.nQ = ctx.zkey.maxQDegree ? Math.ceil((ctx.domainSizeQ - blindCoefs) / (ctx.zkey.maxQDegree * ctx.N)) : 1;
 
     if (logger) {
         logger.debug("-----------------------------");
@@ -57,7 +58,7 @@ module.exports.initProverFflonk = async function initProver(pilInfo, zkey, logge
             const stage = i + 2;
             logger.debug(`  Stage ${stage} pols:   ${ctx.pilInfo.mapSectionsN[`cm${stage}`]}`);
         }
-        logger.debug(`  Stage Q pols:   ${nQ}`);
+        logger.debug(`  Stage Q pols:   ${ctx.nQ}`);
         logger.debug(`  Temp exp pols: ${ctx.pilInfo.mapSectionsN.tmpExp}`);
         logger.debug("-----------------------------");
     }
@@ -129,21 +130,16 @@ module.exports.computeQFflonk = async function computeQ(ctx, logger) {
     ctx["Q"] = await Polynomial.fromEvaluations(ctx.q_ext, ctx.curve, logger);
     ctx["Q"].divZh(ctx.N, 1 << ctx.extendBits);
 
-    if(ctx.zkey.maxQDegree) {
-        const domainSizeQ = ctx.pilInfo.qDeg * ctx.N + ctx.pilInfo.maxPolsOpenings * (ctx.pilInfo.qDeg + 1);
-        const nQ = Math.ceil(domainSizeQ / (ctx.zkey.maxQDegree * ctx.N));
-        // let rand1 = ctx.F.random();
-        // let rand2 = ctx.F.random();
-        let rand1 = ctx.F.one;
-        let rand2 = ctx.F.one;
+    if(ctx.nQ > 1) {
+        let rand1 = ctx.F.random();
+        let rand2 = ctx.F.random();
 
-
-        for(let i = 0; i < nQ; ++i) {
+        for(let i = 0; i < ctx.nQ; ++i) {
             const st = (i * ctx.zkey.maxQDegree * ctx.N) * ctx.F.n8;
-            const end = (i == nQ - 1 ? domainSizeQ : (i + 1) * ctx.zkey.maxQDegree * ctx.N) * ctx.F.n8;
+            const end = (i == ctx.nQ - 1 ? ctx.domainSizeQ : (i + 1) * ctx.zkey.maxQDegree * ctx.N) * ctx.F.n8;
 
             let len = end - st;
-            let extLen = i == nQ - 1 ? len : len + 2 * ctx.F.n8;
+            let extLen = i == ctx.nQ - 1 ? len : len + 2 * ctx.F.n8;
             let coefs = new BigBuffer(extLen);
             
             coefs.set(ctx["Q"].coef.slice(st, end));
@@ -154,9 +150,9 @@ module.exports.computeQFflonk = async function computeQ(ctx, logger) {
                 coefs.set(ctx.F.sub(coefs.slice(ctx.F.n8, 2*ctx.F.n8), rand2), ctx.F.n8);
             }
 
-            if (i < nQ - 1) {
-                // rand1 = ctx.F.random();
-                // rand2 = ctx.F.random();
+            if (i < ctx.nQ - 1) {
+                rand1 = ctx.F.random();
+                rand2 = ctx.F.random();
                 coefs.set(rand1, len);
                 coefs.set(rand2, len + ctx.F.n8);
             }
@@ -290,10 +286,8 @@ module.exports.extendAndCommit = async function extendAndCommit(stage, ctx, logg
 
     for (let i = 0; i < nPols; i++) {
         let nOpenings = findNumberOpenings(ctx.zkey.f, ctx.zkey.polsNamesStage[stage][i], stage);
-        console.log(ctx.zkey.polsNamesStage[stage][i], nOpenings);
         for(let j = 0; j < nOpenings; ++j) {
-            // const b = ctx.F.random();
-            const b = ctx.F.one;
+            const b = ctx.F.random();
             let offset1 = (j * nPols + i) * ctx.F.n8; 
             let offsetN = ((j + ctx.N) * nPols + i) * ctx.F.n8; 
             buffCoefs.set(ctx.F.add(buffCoefs.slice(offset1,offset1 + ctx.F.n8), ctx.F.neg(b)), offset1);
@@ -348,13 +342,3 @@ const BigBufferHandler = {
 };
 
 module.exports.BigBufferHandler = BigBufferHandler;
-
-function printPol(buffer, Fr) {
-    const len = buffer.byteLength / Fr.n8;
-
-    console.log("---------------------------");
-    for (let i = 0; i < len; ++i) {
-        console.log(i, Fr.toString(buffer.slice(i * Fr.n8, (i + 1) * Fr.n8)));
-    }
-    console.log("---------------------------");
-}

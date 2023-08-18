@@ -17,7 +17,7 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
 
     const res = {
-        varPolMap: [],
+        cmPolsMap: [],
         libs: {},
         code: {},
         nConstants: pil.nConstants,

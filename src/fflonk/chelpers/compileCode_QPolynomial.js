@@ -24,7 +24,7 @@ const range_polsseq_4 = new Set();
 
 
 
-module.exports = function compileCode_4ext(fflonkInfo, nBits, functionName, code, dom) {
+module.exports = function compileCode_QPolynomial(fflonkInfo, nBits, functionName, code, dom) {
     const body = [];
 
     var ops = [];
@@ -797,7 +797,7 @@ module.exports = function compileCode_4ext(fflonkInfo, nBits, functionName, code
     }
 
     function evalMap(polId, prime) {
-        let p = fflonkInfo.varPolMap[polId];
+        let p = fflonkInfo.cmPolsMap[polId];
         ++refpols;
         if (!p) {
             console.log("xx");
@@ -916,7 +916,7 @@ module.exports = function compileCode_4ext(fflonkInfo, nBits, functionName, code
     }
 
     function evalMap_(polId, prime) {
-        let p = fflonkInfo.varPolMap[polId];
+        let p = fflonkInfo.cmPolsMap[polId];
         let offset = p.stagePos;
         let size = fflonkInfo.mapSectionsN[p.stage];
         if (p.dim == 1) {
