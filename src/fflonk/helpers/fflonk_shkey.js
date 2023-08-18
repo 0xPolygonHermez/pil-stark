@@ -8,21 +8,6 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
 
     if(logger) logger.info("> Starting fflonk shkey generation");
 
-    let polsNames = {
-        0: [],
-        1: [],
-        2: [],
-        3: [],
-        4: [],
-    };
-
-    let fiMap = {
-        0: {},
-        1: {},
-        2: {},
-        3: {},
-    };
-
     const nStages = fflonkInfo.nLibStages + 2;
     let fiNames = {};
     let fiIndex = 0;
@@ -30,6 +15,19 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
     const polsXi = []; 
     const polsWXi = []; 
     
+    const pilPower = fflonkInfo.pilPower;
+    const domainSize = 2 ** pilPower;
+
+    let polsNames = {};
+    let fiMap = {};
+
+    for(let i = 0; i < nStages; ++i) {
+        polsNames[i] = [];
+        fiMap[i] = {};
+    }
+
+    polsNames[nStages] = [];
+
     for (const polRef in pil.references) {
         const polInfo = pil.references[polRef];
         const name = polRef;
@@ -39,120 +37,23 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
                 for(let i = 0; i < polInfo.len; ++i) {
                     const namePol = name + i;
                     const polId = polInfo.id + i;
-                    setPolDefs("const", 0, namePol, polId, polInfo.polDeg);
+                    setPolDefs("const", 0, namePol, polId, domainSize);
                 }
             } else {
-                setPolDefs("const", 0, name, polInfo.id, polInfo.polDeg);
+                setPolDefs("const", 0, name, polInfo.id, domainSize);
             }
         } 
     }
 
-    for (const polRef in pil.references) {
-        const polInfo = pil.references[polRef];
-        const name = polRef;
-        if(polInfo.type === 'cmP') {
-            polInfo.stage = 1;
-            if(polInfo.isArray) {
-                for(let i = 0; i < polInfo.len; ++i) {
-                    const namePol = name + i;
-                    const polId = polInfo.id + i;
-                    setPolDefs("cm", 1, namePol, polId, polInfo.polDeg);             
-                }
-            } else {
-                setPolDefs("cm", 1, name, polInfo.id, polInfo.polDeg);
-            } 
-        }
+    for(let i = 0; i < fflonkInfo.varPolMap.length; ++i) {
+        const polInfo = fflonkInfo.varPolMap[i];
+        if(polInfo.stage === "tmpExp") continue;
+        const stage = Number(polInfo.stage.slice(2));
+        setPolDefs("cm", stage, polInfo.name, i, domainSize);
     }
-
-    const pilPower = fflonkInfo.pilPower;
-    const domainSize = 2 ** pilPower;
-   
-    for(let i = 0; i < fflonkInfo.puCtx.length; ++i) {
-        const namePlookupH1 = `Plookup.H1_${i}`;
-        const idPlookupH1 = fflonkInfo.puCtx[i].h1Id;
-        pil.references[namePlookupH1] = {
-            name: namePlookupH1,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: idPlookupH1,
-            stage: 2,
-        }
-        setPolDefs("cm", 2, namePlookupH1, idPlookupH1, domainSize);
-
-        const namePlookupH2 = `Plookup.H2_${i}`;
-        const idPlookupH2 = fflonkInfo.puCtx[i].h2Id;
-        pil.references[namePlookupH2] = {
-            name: namePlookupH2,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: idPlookupH2,
-            stage: 2,
-        }
-        setPolDefs("cm", 2, namePlookupH2, idPlookupH2, domainSize);
-    }
-
-
-    for(let i = 0; i < fflonkInfo.puCtx.length; ++i) {
-        const namePlookupZ = `Plookup.Z${i}`;
-        const idPlookupZ = fflonkInfo.puCtx[i].zId;
-        pil.references[namePlookupZ] = {
-            name: namePlookupZ,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: idPlookupZ,
-            stage:3,
-        }
-        setPolDefs("cm", 3, namePlookupZ, idPlookupZ, domainSize);
-    }
-
-    for(let i = 0; i < fflonkInfo.peCtx.length; ++i) {
-        const namePermutationZ = `Permutation.Z${i}`;
-        const idPermutationZ = fflonkInfo.peCtx[i].zId;
-        pil.references[namePermutationZ] = {
-            name: namePermutationZ,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: idPermutationZ,
-            stage:3,
-        }
-        setPolDefs("cm", 3, namePermutationZ, idPermutationZ, domainSize);
-    }
-
-    for(let i = 0; i < fflonkInfo.ciCtx.length; ++i) {
-        const nameConnectionZ = `Connection.Z${i}`;
-        const idConnectionZ = fflonkInfo.ciCtx[i].zId;
-        pil.references[nameConnectionZ] = {
-            name: nameConnectionZ,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: idConnectionZ,
-            stage:3,
-        }
-        setPolDefs("cm", 3, nameConnectionZ, idConnectionZ, domainSize);
-    }
-
-    const imPols = fflonkInfo.varPolMap.filter(p => p.imPol === true);
-    for(let i = 0; i < imPols.length; ++i) {
-        const nameImPol = `Im${i}`;
-        const idImPol = fflonkInfo.varPolMap.indexOf(imPols[i]);
-        pil.references[nameImPol] = {
-            name: nameImPol,
-            isArray: false,
-            polDeg: domainSize,
-            type: "cmP",
-            id: idImPol,
-            stage:3,
-        }
-        setPolDefs("cm", 3, nameImPol, idImPol, domainSize);
-    }
-
+        
     fixFIndex();
-    
+
     let maxQDegree = options.maxQDegree || 0;
 
     const blindCoefs = fflonkInfo.maxPolsOpenings * (fflonkInfo.qDeg + 1);
@@ -160,14 +61,14 @@ module.exports = async function fflonkShkey(_pil, ptauFile, fflonkInfo, options)
 
     if(!maxQDegree || (domainSizeQ - blindCoefs) / domainSize <= maxQDegree) {
         maxQDegree = 0;
-        polsXi.push({name: "Q", stage: 4, degree: domainSizeQ, fi: fiIndex});
-        polsNames[4].push("Q")
+        polsXi.push({name: "Q", stage: nStages, degree: domainSizeQ, fi: fiIndex});
+        polsNames[nStages].push("Q")
     } else {
         const nQ = Math.ceil((domainSizeQ - blindCoefs) / (maxQDegree * domainSize));
         for(let i = 0; i < nQ; ++i) {
             let degree = i === nQ - 1 ? domainSizeQ - i*maxQDegree*domainSize : maxQDegree * domainSize + 2;
-            polsXi.push({name: `Q${i}`, stage: 4, degree: degree, fi: fiIndex});
-            polsNames[4].push(`Q${i}`)
+            polsXi.push({name: `Q${i}`, stage: nStages, degree: degree, fi: fiIndex});
+            polsNames[nStages].push(`Q${i}`)
         } 
     }
     

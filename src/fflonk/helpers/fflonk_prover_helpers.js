@@ -35,7 +35,7 @@ module.exports.initProverFflonk = async function initProver(pilInfo, zkey, logge
     ctx.NCoefs = 1 << ctx.nBitsCoefs;
     ctx.Next = (1 << ctx.nBitsExt);
 
-    ctx.challenges = [0,0,0,0,0];
+    ctx.challenges = [];
 
     ctx.committedPols = {};
     ctx.nonCommittedPols = [];
@@ -52,10 +52,10 @@ module.exports.initProverFflonk = async function initProver(pilInfo, zkey, logge
         logger.debug(`  Domain size ext: ${ctx.Next} (2^${ctx.nBitsExt})`);
         logger.debug(`  ExtendBits: ${ctx.extendBits}`);
         logger.debug(`  Const  pols:   ${ctx.pilInfo.nConstants}`);
-        logger.debug(`  Stage 1 pols:   ${ctx.pilInfo.nCommitments}`);
+        logger.debug(`  Stage 1 pols:   ${ctx.pilInfo.mapSectionsN.cm1}`);
         for(let i = 0; i < ctx.pilInfo.nLibStages; i++) {
             const stage = i + 2;
-            logger.debug(`  Stage ${stage} pols:   ${ctx.pilInfo.varPolMap.filter(p => p.stage == "cm" + stage).length}`);
+            logger.debug(`  Stage ${stage} pols:   ${ctx.pilInfo.mapSectionsN[`cm${stage}`]}`);
         }
         logger.debug(`  Stage Q pols:   ${nQ}`);
         logger.debug(`  Temp exp pols: ${ctx.pilInfo.mapSectionsN.tmpExp}`);
@@ -64,28 +64,28 @@ module.exports.initProverFflonk = async function initProver(pilInfo, zkey, logge
 
     // Reserve big buffers for the polynomial evaluations
     ctx.const_n = new Proxy(new BigBuffer(ctx.pilInfo.nConstants * ctx.N * ctx.F.n8), BigBufferHandler); // Constant polynomials
-    ctx.cm1_n = new Proxy(new BigBuffer(ctx.pilInfo.nCommitments * ctx.N * ctx.F.n8), BigBufferHandler);
+    ctx.cm1_n = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm1 * ctx.N * ctx.F.n8), BigBufferHandler);
     for(let i = 0; i < ctx.pilInfo.nLibStages; i++) {
         const stage = i + 2;
-        ctx[`cm${stage}_n`] = new Proxy(new BigBuffer(ctx.pilInfo.varPolMap.filter(p => p.stage == "cm" + stage).length * ctx.N * ctx.F.n8), BigBufferHandler);
+        ctx[`cm${stage}_n`] = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN[`cm${stage}`] * ctx.N * ctx.F.n8), BigBufferHandler);
     }    
     ctx.tmpExp_n = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.tmpExp * ctx.N * ctx.F.n8), BigBufferHandler); // Expression polynomials
     ctx.x_n = new Proxy(new BigBuffer(ctx.N * ctx.F.n8), BigBufferHandler); // Omegas de field extension
 
     // Reserve big buffers for the polynomial coefficients
     ctx.const_coefs = new Proxy(new BigBuffer(ctx.pilInfo.nConstants * ctx.N * ctx.F.n8), BigBufferHandler); // Constant polynomials
-    ctx.cm1_coefs = new Proxy(new BigBuffer(ctx.pilInfo.nCommitments * ctx.NCoefs * ctx.F.n8), BigBufferHandler);
+    ctx.cm1_coefs = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm1 * ctx.NCoefs * ctx.F.n8), BigBufferHandler);
     for(let i = 0; i < ctx.pilInfo.nLibStages; i++) {
         const stage = i + 2;
-        ctx[`cm${stage}_coefs`] = new Proxy(new BigBuffer(ctx.pilInfo.varPolMap.filter(p => p.stage == "cm" + stage).length * ctx.NCoefs * ctx.F.n8), BigBufferHandler);
+        ctx[`cm${stage}_coefs`] = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN[`cm${stage}`] * ctx.NCoefs * ctx.F.n8), BigBufferHandler);
     }  
 
     // Reserve big buffers for the polynomial evaluations in the extended
     ctx.const_ext = new Proxy(new BigBuffer(ctx.pilInfo.nConstants * ctx.Next * ctx.F.n8), BigBufferHandler);
-    ctx.cm1_ext = new Proxy(new BigBuffer(ctx.pilInfo.nCommitments * ctx.Next * ctx.F.n8), BigBufferHandler);
+    ctx.cm1_ext = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN.cm1 * ctx.Next * ctx.F.n8), BigBufferHandler);
     for(let i = 0; i < ctx.pilInfo.nLibStages; i++) {
         const stage = i + 2;
-        ctx[`cm${stage}_ext`] = new Proxy(new BigBuffer(ctx.pilInfo.varPolMap.filter(p => p.stage == "cm" + stage).length * ctx.Next * ctx.F.n8), BigBufferHandler);
+        ctx[`cm${stage}_ext`] = new Proxy(new BigBuffer(ctx.pilInfo.mapSectionsN[`cm${stage}`] * ctx.Next * ctx.F.n8), BigBufferHandler);
     }
     ctx.q_ext = new Proxy(new BigBuffer(ctx.Next * ctx.F.n8), BigBufferHandler);
     ctx.x_ext = new Proxy(new BigBuffer(ctx.Next * ctx.F.n8), BigBufferHandler); // Omegas a l'extès
@@ -132,8 +132,10 @@ module.exports.computeQFflonk = async function computeQ(ctx, logger) {
     if(ctx.zkey.maxQDegree) {
         const domainSizeQ = ctx.pilInfo.qDeg * ctx.N + ctx.pilInfo.maxPolsOpenings * (ctx.pilInfo.qDeg + 1);
         const nQ = Math.ceil(domainSizeQ / (ctx.zkey.maxQDegree * ctx.N));
-        let rand1 = ctx.F.random();
-        let rand2 = ctx.F.random();
+        // let rand1 = ctx.F.random();
+        // let rand2 = ctx.F.random();
+        let rand1 = ctx.F.one;
+        let rand2 = ctx.F.one;
 
 
         for(let i = 0; i < nQ; ++i) {
@@ -153,8 +155,8 @@ module.exports.computeQFflonk = async function computeQ(ctx, logger) {
             }
 
             if (i < nQ - 1) {
-                rand1 = ctx.F.random();
-                rand2 = ctx.F.random();
+                // rand1 = ctx.F.random();
+                // rand2 = ctx.F.random();
                 coefs.set(rand1, len);
                 coefs.set(rand2, len + ctx.F.n8);
             }
@@ -282,14 +284,16 @@ module.exports.extendAndCommit = async function extendAndCommit(stage, ctx, logg
     const buffCoefs = ctx["cm" + stage + "_coefs"];
     const buffTo = ctx["cm" + stage + "_ext"];
 
-    const nPols = ctx.pilInfo.varPolMap.filter(p => p.stage == "cm" + stage).length;
+    const nPols = ctx.pilInfo.mapSectionsN[`cm${stage}`];
 
     await ifft(buffFrom, nPols, ctx.nBits, buffCoefs, ctx.F);
 
     for (let i = 0; i < nPols; i++) {
         let nOpenings = findNumberOpenings(ctx.zkey.f, ctx.zkey.polsNamesStage[stage][i], stage);
+        console.log(ctx.zkey.polsNamesStage[stage][i], nOpenings);
         for(let j = 0; j < nOpenings; ++j) {
-            const b = ctx.F.random();
+            // const b = ctx.F.random();
+            const b = ctx.F.one;
             let offset1 = (j * nPols + i) * ctx.F.n8; 
             let offsetN = ((j + ctx.N) * nPols + i) * ctx.F.n8; 
             buffCoefs.set(ctx.F.add(buffCoefs.slice(offset1,offset1 + ctx.F.n8), ctx.F.neg(b)), offset1);
@@ -344,3 +348,13 @@ const BigBufferHandler = {
 };
 
 module.exports.BigBufferHandler = BigBufferHandler;
+
+function printPol(buffer, Fr) {
+    const len = buffer.byteLength / Fr.n8;
+
+    console.log("---------------------------");
+    for (let i = 0; i < len; ++i) {
+        console.log(i, Fr.toString(buffer.slice(i * Fr.n8, (i + 1) * Fr.n8)));
+    }
+    console.log("---------------------------");
+}

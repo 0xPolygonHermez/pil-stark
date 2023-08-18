@@ -10,8 +10,11 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     const curve = await getCurveFromName(vk.curve);
     const Fr = curve.Fr;
 
-    vk = fromObjectVk(curve, vk);
+    console.log(vk);
+    console.log(proof);
 
+    vk = fromObjectVk(curve, vk);
+    
     proof = fromObjectProof(curve, proof);
 
     let publics = [];
@@ -30,7 +33,9 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
     const domainSize = ctx.N;
     const power = vk.power;
 
-    const nPolsQ = vk.f.filter(fi => fi.stages[0].stage === 4).map(fi => fi.pols).flat(Infinity);
+    const nStages = fflonkInfo.nLibStages + 2;
+
+    const nPolsQ = vk.f.filter(fi => fi.stages[0].stage === nStages).map(fi => fi.pols).flat(Infinity);
 
     if (logger) {
         logger.debug("------------------------------");
@@ -38,12 +43,12 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         logger.debug(`  Curve:         ${curve.name}`);
         logger.debug(`  Domain size:   ${domainSize} (2^${power})`);
         logger.debug(`  Const  pols:   ${fflonkInfo.nConstants}`);
-        logger.debug(`  Stage 1 pols:   ${fflonkInfo.nCommitments}`);
+        logger.debug(`  Stage 1 pols:   ${fflonkInfo.mapSectionsN.cm1}`);
         for(let i = 0; i < fflonkInfo.nLibStages; i++) {
             const stage = i + 2;
-            logger.debug(`  Stage ${stage} pols:   ${fflonkInfo.varPolMap.filter(p => p.stage == "cm" + stage).length}`);
+            logger.debug(`  Stage ${stage} pols:   ${fflonkInfo.mapSectionsN[`cm${stage}`]}`);
         }
-        logger.debug(`  Stage 4 pols:   ${nPolsQ.length}`);
+        logger.debug(`  Stage Q pols:   ${nPolsQ.length}`);
         logger.debug("------------------------------");
     }
 
@@ -63,42 +68,30 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         transcript.addPolCommitment(stage1CommitPols[i]);
     }
     
-    if(fflonkInfo.varPolMap.filter(p => p.stage == "cm2").length > 0 || fflonkInfo.peCtx.length > 0) {
-        for(let j = 0; j < fflonkInfo.challenges[2].length; ++j) {
-            const index = fflonkInfo.challenges[2][j];
+    for(let i=0; i < fflonkInfo.nLibStages; i++) {
+        const stage = i + 2;
+
+        for(let j = 0; j < fflonkInfo.challenges[stage].length; ++j) {
+            const index = fflonkInfo.challenges[stage][j];
             ctx.challenges[index] = transcript.getChallenge();
             if (logger) logger.debug("··· challenges[" + index + "]: " + Fr.toString(ctx.challenges[index]));
             transcript.reset();
             transcript.addScalar(ctx.challenges[index]);
         }
-    }
-    
-    const stage2CommitPols = vk.f.filter(fi => fi.stages[0].stage === 2).map(fi => proof.polynomials[`f${fi.index}`]);
-    for(let i = 0; i < stage2CommitPols.length; i++) {
-        transcript.addPolCommitment(stage2CommitPols[i]);
-    }
 
-    if(fflonkInfo.varPolMap.filter(p => p.stage == "cm3").length > 0 > 0) {
-        for(let j = 0; j < fflonkInfo.challenges[3].length; ++j) {
-            const index = fflonkInfo.challenges[3][j];
-            ctx.challenges[index] = transcript.getChallenge();
-            if (logger) logger.debug("··· challenges[" + index + "]: " + Fr.toString(ctx.challenges[index]));
-            transcript.reset();
-            transcript.addScalar(ctx.challenges[index]);
+        const stageCommitPols = vk.f.filter(fi => fi.stages[0].stage === stage).map(fi => proof.polynomials[`f${fi.index}`]);
+        for(let i = 0; i < stageCommitPols.length; i++) {
+            transcript.addPolCommitment(stageCommitPols[i]);
         }
+
     }
     
-    const stage3CommitPols = vk.f.filter(fi => fi.stages[0].stage === 3).map(fi => proof.polynomials[`f${fi.index}`]);
-    for(let i = 0; i < stage3CommitPols.length; i++) {
-        transcript.addPolCommitment(stage3CommitPols[i]);
-    }
-
     ctx.challenges[fflonkInfo.challenges["Q"][0]] = transcript.getChallenge();
     if (logger) logger.debug("··· challenges[" + fflonkInfo.challenges["Q"][0] + "]: " + Fr.toString(ctx.challenges[fflonkInfo.challenges["Q"][0]]));
     transcript.reset();
     transcript.addScalar(ctx.challenges[fflonkInfo.challenges["Q"][0]]);
 
-    const stageQCommitPols = vk.f.filter(fi => fi.stages[0].stage === 4).map(fi => proof.polynomials[`f${fi.index}`]);
+    const stageQCommitPols = vk.f.filter(fi => fi.stages[0].stage === nStages).map(fi => proof.polynomials[`f${fi.index}`]);
     for(let i = 0; i < stageQCommitPols.length; i++) {
         console.log(ctx.curve.G1.toString(stageQCommitPols[i]));
         transcript.addPolCommitment(stageQCommitPols[i]);
@@ -115,6 +108,8 @@ module.exports = async function fflonkVerify(vk, publicSignals, proof, fflonkInf
         }
         vk.f[i].commit = proof.polynomials[`f${vk.f[i].index}`];
     }
+
+    console.log(fflonkInfo.evIdx.cm);
     
     for(let i = 0; i < fflonkInfo.evIdx.cm.length; ++i) {
         for(const polId in fflonkInfo.evIdx.cm[i]) {

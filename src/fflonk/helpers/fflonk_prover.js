@@ -1,6 +1,6 @@
 const proofGen = require("../../prover/prover.js")
 
-const parallelExec = true;
+const parallelExec = false;
 const useThreads = false;
 
 module.exports = async function fflonkProve(zkey, cmPols, pilInfo, options = {}) {

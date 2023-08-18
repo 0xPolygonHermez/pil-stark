@@ -21,13 +21,9 @@ module.exports = async function proofGen(cmPols, pilInfo, constTree, constPols, 
         cmPols.writeToBigBuffer(ctx.cm1_n, ctx.pilInfo.mapSectionsN.cm1);
     } else {
         // Read committed polynomials
-        await cmPols.writeToBigBufferFr(ctx.cm1_n, ctx.F);
+        await cmPols.writeToBigBufferFr(ctx.cm1_n, ctx.F, ctx.pilInfo.mapSectionsN.cm1);
     }
    
-    if (cmPols.$$nPols != ctx.pilInfo.nCommitments) {
-        throw new Error(`Number of Commited Polynomials: ${cmPols.length} do not match with the pilInfo definition: ${ctx.pilInfo.nCommitments} `)
-    };
-
     // STAGE 1. Compute Trace Column Polynomials
     await stage1(ctx, options);
 
@@ -142,4 +138,14 @@ async function setChallenges(stage, ctx, challenge, logger) {
     } else {
         setChallengesFflonk(stage, ctx, challenge, logger);
     }
+}
+
+function printPol(buffer, Fr) {
+    const len = buffer.byteLength / Fr.n8;
+
+    console.log("---------------------------");
+    for (let i = 0; i < len; ++i) {
+        console.log(i, Fr.toString(buffer.slice(i * Fr.n8, (i + 1) * Fr.n8)));
+    }
+    console.log("---------------------------");
 }

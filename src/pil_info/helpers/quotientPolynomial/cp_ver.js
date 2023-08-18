@@ -60,6 +60,7 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
                 }
             case "cm":
             case "const":
+                console.log(r, res.varPolMap, p);
                 if (typeof res.evIdx[r.type][p][r.id] === "undefined") {
                     res.evIdx[r.type][p][r.id] = res.evMap.length;
                     const rf = {

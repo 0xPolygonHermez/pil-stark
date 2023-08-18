@@ -38,6 +38,7 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctxExt, st
             || (!maxDeg && Object.keys(imExpsP).length === 0)) {
             [imExps, qDeg] = [imExpsP, qDegP];
         }
+        if(Object.keys(imExpsP).length === 0) break;
     }
 
     console.log("Number of intermediate expressions: " + Object.keys(imExps).length);

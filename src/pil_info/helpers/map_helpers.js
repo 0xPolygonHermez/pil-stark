@@ -1,10 +1,10 @@
 const { iterateCode } = require("../codegen");
 
-module.exports.addPol = function addPol(res, stage, dim, pos) {
+module.exports.addPol = function addPol(res, stage, name, dim, pos) {
     const polsStage = res.varPolMap.filter((p) => p.stage == stage);
     const polPos = polsStage.length;
     const stagePos = polsStage.reduce((acc, p) => acc + p.dim, 0);
-    const polType = { stage, dim, stagePos, polPos };
+    const polType = { stage, name, dim, stagePos, polPos };
     res.varPolMap[pos] = polType;
     res.mapSectionsN[stage] += dim;
 }
@@ -113,7 +113,7 @@ module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, sta
 }
 
 
-module.exports.fixProverCode = function fixProverCode(res, code, imPols, pil, dom, stark, verifierQuery = false) {
+module.exports.fixProverCode = function fixProverCode(res, code, imPols, dom, stark, verifierQuery = false) {
     const ctx = {};
     ctx.expMap = [];
     
