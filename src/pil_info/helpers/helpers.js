@@ -48,8 +48,31 @@ module.exports.getExpDim = function getExpDim(res, pil, expId, stark) {
     }
 }
 
+module.exports.setDimensions = function setDimensions(res, stark) {
+    for (let i=0; i<res.nPublics; i++) {
+        if (res.publicsCode[i]) setCodeDimensions(res.publicsCode[i], res, stark);
+    }
+    
+    for(let i = 0; i < Object.keys(res.code).length; ++i) {
+        const name = Object.keys(res.code)[i];
+        setCodeDimensions(res.code[name], res, stark);
+    }
+}
 
-module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, stark) {
+module.exports.fixCode = function fixCode(res, stark) {
+    for (let i=0; i< res.publicsCode.length; i++) {
+        fixProverCode(res, res.publicsCode[i], "n", stark);
+    }
+
+    for(let i = 0; i < Object.keys(res.code).length; ++i) {
+        const name = Object.keys(res.code)[i];
+        const dom = ["Q", "qVerifier" ,"fri", "queryVerifier"].includes(name) ? "ext" : "n";
+        const verifier = name === "queryVerifier" ? true : false;
+        fixProverCode(res, res.code[name], dom, stark, verifier);
+    }
+}
+
+function setCodeDimensions(code, pilInfo, stark) {
     const tmpDim = [];
 
     _setCodeDimensions(code.first);
@@ -113,14 +136,16 @@ module.exports.setCodeDimensions = function setCodeDimensions(code, pilInfo, sta
 }
 
 
-module.exports.fixProverCode = function fixProverCode(res, code, imPols, dom, stark, verifierQuery = false) {
+function fixProverCode(res, code, dom, stark, verifierQuery = false) {
     const ctx = {};
     ctx.expMap = [];
     
-    let openings = stark ? res.nFriOpenings : 2;
+    // let openings = stark ? res.nFriOpenings : 2;
+    let openings = 2;
     for(let i = 0; i < openings; ++i) {
         ctx.expMap[i] = {};
     }
+
     ctx.code = code;
     ctx.dom = dom;
 
@@ -146,9 +171,9 @@ module.exports.fixProverCode = function fixProverCode(res, code, imPols, dom, st
                 }
                 break;
             case "exp":
-                if (typeof imPols[r.id] != "undefined" && (imPols[r.id].imPol || ctx.dom === "n")) {
+                if (typeof res.imPolsMap[r.id] != "undefined" && (res.imPolsMap[r.id].imPol || ctx.dom === "n")) {
                     r.type = "cm";
-                    r.id = imPols[r.id].id;
+                    r.id = res.imPolsMap[r.id].id;
                 } else {
                     const p = r.prime ? 1 : 0;
                     if (typeof ctx.expMap[p][r.id] === "undefined") {
@@ -178,4 +203,27 @@ module.exports.fixProverCode = function fixProverCode(res, code, imPols, dom, st
                 throw new Error("Invalid reference type " + r.type);
         }
     }
+}
+
+module.exports.setMapOffsets = function setMapOffsets(res) {
+    const N = 1 << res.starkStruct.nBits;
+    const Next = 1 << res.starkStruct.nBitsExt;
+
+    res.mapOffsets = {};
+    res.mapOffsets.cm1_n = 0;
+    for(let i = 0; i < res.nLibStages; ++i) {
+        const stage = 2 + i;
+        res.mapOffsets["cm" + stage + "_n"] = res.mapOffsets["cm" + (stage - 1) + "_n"] + N * res.mapSectionsN["cm" + (stage - 1)];
+    }
+    res.mapOffsets.cmQ_n = res.mapOffsets["cm" + (res.nLibStages + 1) + "_n"] +  N * res.mapSectionsN["cm" + (res.nLibStages + 1)];
+    res.mapOffsets.tmpExp_n = res.mapOffsets.cmQ_n +  N * res.mapSectionsN.cmQ;
+    res.mapOffsets.cm1_ext = res.mapOffsets.tmpExp_n +  N * res.mapSectionsN.tmpExp;
+    for(let i = 0; i < res.nLibStages; ++i) {
+        const stage = 2 + i;
+        res.mapOffsets["cm" + stage + "_ext"] = res.mapOffsets["cm" + (stage - 1) + "_ext"] + Next * res.mapSectionsN["cm" +  (stage - 1) ];
+    }
+    res.mapOffsets.cmQ_ext = res.mapOffsets["cm" + (res.nLibStages + 1) + "_ext"] +  Next * res.mapSectionsN["cm" + (res.nLibStages + 1)];
+    res.mapOffsets.q_ext = res.mapOffsets.cmQ_ext +  Next * res.mapSectionsN.cmQ;
+    res.mapOffsets.f_ext = res.mapOffsets.q_ext +  Next * res.mapSectionsN.q_ext;
+    res.mapTotalN = res.mapOffsets.f_ext +  Next * res.mapSectionsN.f_ext;
 }

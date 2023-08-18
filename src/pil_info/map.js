@@ -1,5 +1,5 @@
 
-const { addPol, getExpDim, setCodeDimensions, fixProverCode } = require("./helpers/map_helpers.js");
+const { addPol, getExpDim } = require("./helpers/helpers.js");
 
 module.exports = function map(res, pil, stark) {  
     res.varPolMap = [];
@@ -12,15 +12,6 @@ module.exports = function map(res, pil, stark) {
         res.mapSectionsN[`cm${stage}`] = 0;
     }
     res.mapSectionsN["tmpExp"] = 0;
-    res.mapSectionsN["cmQ"] = 0;
-    res.mapSectionsN["f_ext"] = 3;
-
-    const imPols = {};
-
-    for(let i = 0; i < Object.keys(res.imPolsMap).length; ++i) {
-        let key = Object.keys(res.imPolsMap)[i];
-        imPols[key] = {libName: "", id: res.imPolsMap[key], imPol: true};
-    }
 
     for (const polRef in pil.references) {
         const polInfo = pil.references[polRef];
@@ -38,74 +29,25 @@ module.exports = function map(res, pil, stark) {
         }
     }
 
-    mapLibPols(res, imPols, pil, stark);
+    mapLibPols(res, pil, stark);
 
-    mapImPols(res, imPols, pil, stark);
+    mapImPols(res, pil, stark);
 
     res.qDim = getExpDim(res, pil, res.cExp, stark);
     res.mapSectionsN["q_ext"] = res.qDim;
-
+	
     if(stark) {
+        res.mapSectionsN["cmQ"] = 0;
+        res.mapSectionsN["f_ext"] = 3;
+
         for (let i=0; i<res.qDeg; i++) {
             addPol(res, "cmQ", `Q${i}`, res.qDim, res.qs[i]);
         }
     }
-
-    fixCode(res, imPols, pil, stark);
-
-    setDimensions(res, stark);
-
-    if(stark) setMapOffsets(res); 
 }
 
-function setMapOffsets(res) {
-    const N = 1 << res.starkStruct.nBits;
-    const Next = 1 << res.starkStruct.nBitsExt;
-
-    res.mapOffsets = {};
-    res.mapOffsets.cm1_n = 0;
-    for(let i = 0; i < res.nLibStages; ++i) {
-        const stage = 2 + i;
-        res.mapOffsets["cm" + stage + "_n"] = res.mapOffsets["cm" + (stage - 1) + "_n"] + N * res.mapSectionsN["cm" + (stage - 1)];
-    }
-    res.mapOffsets.cmQ_n = res.mapOffsets["cm" + (res.nLibStages + 1) + "_n"] +  N * res.mapSectionsN["cm" + (res.nLibStages + 1)];
-    res.mapOffsets.tmpExp_n = res.mapOffsets.cmQ_n +  N * res.mapSectionsN.cmQ;
-    res.mapOffsets.cm1_ext = res.mapOffsets.tmpExp_n +  N * res.mapSectionsN.tmpExp;
-    for(let i = 0; i < res.nLibStages; ++i) {
-        const stage = 2 + i;
-        res.mapOffsets["cm" + stage + "_ext"] = res.mapOffsets["cm" + (stage - 1) + "_ext"] + Next * res.mapSectionsN["cm" +  (stage - 1) ];
-    }
-    res.mapOffsets.cmQ_ext = res.mapOffsets["cm" + (res.nLibStages + 1) + "_ext"] +  Next * res.mapSectionsN["cm" + (res.nLibStages + 1)];
-    res.mapOffsets.q_ext = res.mapOffsets.cmQ_ext +  Next * res.mapSectionsN.cmQ;
-    res.mapOffsets.f_ext = res.mapOffsets.q_ext +  Next * res.mapSectionsN.q_ext;
-    res.mapTotalN = res.mapOffsets.f_ext +  Next * res.mapSectionsN.f_ext;
-}
-
-function setDimensions(res, stark) {
-    for (let i=0; i<res.nPublics; i++) {
-        if (res.publicsCode[i]) setCodeDimensions(res.publicsCode[i], res, stark);
-    }
-    
-    for(let i = 0; i < Object.keys(res.code).length; ++i) {
-        const name = Object.keys(res.code)[i];
-        setCodeDimensions(res.code[name], res, stark);
-    }
-}
-
-function fixCode(res, imPols, pil, stark) {
-    for (let i=0; i< res.publicsCode.length; i++) {
-        fixProverCode(res, res.publicsCode[i], imPols, "n", stark);
-    }
-
-    for(let i = 0; i < Object.keys(res.code).length; ++i) {
-        const name = Object.keys(res.code)[i];
-        const dom = ["Q", "fri", "queryVerifier"].includes(name) ? "ext" : "n";
-        const verifier = name === "queryVerifier" ? true : false;
-        fixProverCode(res, res.code[name], imPols, dom, stark, verifier);
-    }
-}
-
-function mapLibPols(res, imPols, pil, stark) {
+function mapLibPols(res, pil, stark) {
+    let nCommits = pil.nCommitments;
     for(let i = 0; i < Object.keys(res.libs).length; ++i) {
         const libName = Object.keys(res.libs)[i];
         const lib = res.libs[libName];
@@ -117,12 +59,12 @@ function mapLibPols(res, imPols, pil, stark) {
                 const name = Object.keys(libStage.pols)[k];
                 if(libStage.pols[name].tmp) {
                     const polId = libStage.pols[name].id;
-                    if (!imPols[polId]) {
-                        imPols[polId] = {libName: libName, stage: j, name: name, imPol: false, id: pil.nCommitments++};
+                    if (!res.imPolsMap[polId]) {
+                        res.imPolsMap[polId] = {libName: libName, stage: j, name: name, imPol: false, id: nCommits++};
                     } else {
-                        imPols[polId].libName = libName;
-                        imPols[polId].stage = j;
-                        imPols[polId].name = name;
+                        res.imPolsMap[polId].libName = libName;
+                        res.imPolsMap[polId].stage = j;
+                        res.imPolsMap[polId].name = name;
                     }
 
                     dim = Math.max(dim, getExpDim(res, pil, polId, stark))
@@ -140,10 +82,10 @@ function mapLibPols(res, imPols, pil, stark) {
     }
 }
 
-function mapImPols(res, imPols, pil, stark) {
-    for (let i=0; i<Object.keys(imPols).length; i++) {
-        let id = Object.keys(imPols)[i];
-        let pol = imPols[id];
+function mapImPols(res, pil, stark) {
+    for (let i=0; i<Object.keys(res.imPolsMap).length; i++) {
+        let id = Object.keys(res.imPolsMap)[i];
+        let pol = res.imPolsMap[id];
         const section = pol.imPol ? "cm" + (res.nLibStages + 1) : "tmpExp";
         const dim = getExpDim(res, pil, id, stark);
 

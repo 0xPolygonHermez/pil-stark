@@ -3,7 +3,6 @@ const F3g = require("./helpers/f3g.js");
 const fs = require("fs");
 const path = require("path");
 const { log2 } = require("pilcom/src/utils.js");
-const { setCodeDimensions } = require("./pil_info/helpers/map_helpers.js");
 
 
 module.exports = async function pil2circom(pil, constRoot, starkInfo, options) {
@@ -12,9 +11,6 @@ module.exports = async function pil2circom(pil, constRoot, starkInfo, options) {
     starkStruct = starkInfo.starkStruct;
 
     const F = new F3g();
-
-    setCodeDimensions(starkInfo.code.qVerifier, starkInfo, true);
-    setCodeDimensions(starkInfo.code.queryVerifier, starkInfo, true);
 
     let template;
     if (starkStruct.verificationHashType == "GL") {

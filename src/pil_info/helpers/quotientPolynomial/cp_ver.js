@@ -4,12 +4,20 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
     const ctxC = {
         pil: pil,
         calculated: {
-            exps: Object.assign({}, res.imPolsMap),
-            expsPrime: Object.assign({}, res.imPolsMap)
+            exps: {},
+            expsPrime: {}
         },
         tmpUsed: 0,
         code: []
     };
+
+    for(let i = 0; i < Object.keys(res.imPolsMap).length; i++) {
+        const expId = Object.keys(res.imPolsMap)[i];
+        if(res.imPolsMap[expId].imPol) {
+            ctxC.calculated.exps[expId] = true;
+            ctxC.calculated.expsPrime[expId] = true;
+        }
+    }
 
     pilCodeGen(ctxC, res.cExp, false, null, null, true);
 
@@ -46,9 +54,9 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
             // Check the expressions ids. If it is an intermediate polynomial
             // modify the type and set it as a commit;
             case "exp":
-                if (res.imPolsMap[r.id]) {
+                if (res.imPolsMap[r.id] && res.imPolsMap[r.id].imPol) {
                     r.type = "cm";
-                    r.id = res.imPolsMap[r.id];
+                    r.id = res.imPolsMap[r.id].id;
                 } else {
                     if (typeof ctx.expMap[p][r.id] === "undefined") {
                         ctx.expMap[p][r.id] = ctx.code.tmpUsed ++;
@@ -60,7 +68,7 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
                 }
             case "cm":
             case "const":
-                console.log(r, res.varPolMap, p);
+                console.log(r, res.varPolMap[r.id]);
                 if (typeof res.evIdx[r.type][p][r.id] === "undefined") {
                     res.evIdx[r.type][p][r.id] = res.evMap.length;
                     const rf = {
