@@ -24,7 +24,7 @@ const range_polsseq_4 = new Set();
 
 
 
-module.exports = function compileCode_parser(starkInfo, config, functionName, code, dom, ret) {
+module.exports = function compileCode_parser(starkInfo, functionName, code, dom, ret) {
 
     var ops = [];
     var cont_ops = 0;
@@ -78,12 +78,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     for (let j = 0; j < code.length; j++) {
         const src = [];
         const r = code[j];
-        /*if (!(r.dest.type == 'cm') && !(r.dest.type == 'tmpExp') && !(r.dest.type == 'tmp' && r.dest.dim == 1 && r.op == 'add' && r.src[0].type === "tmp" && r.src[1].type == "cm" && r.src[1].prime)
-            && !(r.dest.type == 'tmp' && r.dest.dim == 1 && r.op == 'mul' && (r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'number'))) {
-            pushResArg(r);
-            ++count_args0;
-        }*/
-        let lexp = getLRef(r);
         for (k = 0; k < r.src.length; k++) {
             src.push(getRef(r.src[k]));
         }
@@ -149,16 +143,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                     opsString += "3, ";
                                     break;
                                 }
-                                case "tmpExp": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    assert(!r.src[1].prime);
-                                    counters_ops[1] += 1;
-                                    ops.push(1);
-                                    opsString += "1, ";
-                                    break;
-                                }
                                 default: {
                                     console.log(src[0], src[1]);
                                     console.log(r.src[0].type, r.src[1].type);
@@ -214,15 +198,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                     counters_ops[3] += 1;
                                     ops.push(3);
                                     opsString += "3, ";
-                                    break;
-                                } case "tmpExp": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[1]);
-                                    pushSrcArg(r.src[0]);
-                                    assert(!r.src[1].prime);
-                                    counters_ops[1] += 1;
-                                    ops.push(1);
-                                    opsString += "1, ";
                                     break;
                                 }
                                 default: {
@@ -343,25 +318,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 pushResArg(r);
                                 pushSrcArg(r.src[0]);
                                 pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'tmpExp') && (r.src[1].type === 'challenge')) {
-
-                                assert(r.src[0].dim == 1);
-                                assert(!r.src[0].prime);
-                                counters_ops[16] += 1;
-                                ops.push(16);
-                                opsString += "16, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'tmpExp') && (r.src[1].type === 'tmp')) {
-
-                                assert(!r.src[0].prime);
-                                counters_ops[15] += 1;
-                                ops.push(15);
-                                opsString += "15, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
                             } else {
                                 console.log(src[0], src[1]);
                                 console.log(r.src[0].type, r.src[1].type);
@@ -401,32 +357,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 pushSrcArg(r.src[1]);
                                 pushSrcArg(r.src[0]);
                             } else if ((r.src[0].type === 'cm') && (r.src[1].type === 'challenge')) {
-                                assert(!r.src[0].prime);
-                                counters_ops[20] += 1;
-                                ops.push(20);
-                                opsString += "20, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmpExp')) {
-                                assert(!r.src[1].prime);
-                                counters_ops[19] += 1;
-                                ops.push(19);
-                                opsString += "19, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-
-                            } else if ((r.src[1].type === 'tmp') && (r.src[0].type === 'tmpExp')) {
-                                assert(!r.src[0].prime);
-                                counters_ops[19] += 1;
-                                ops.push(19);
-                                opsString += "19, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[0].type === 'tmpExp') && (r.src[1].type === 'challenge')) {
                                 assert(!r.src[0].prime);
                                 counters_ops[20] += 1;
                                 ops.push(20);
@@ -540,11 +470,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                             ops.push(40);
                             opsString += "40, ";
                             assert(!r.src[1].prime);
-                        } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmpExp')) {
-                            assert(!r.src[1].prime);
-                            counters_ops[22] += 1;
-                            ops.push(22);
-                            opsString += "22, ";
+
                         } else {
                             console.log(src[0], src[1]);
                             console.log(r.src[0].type, r.src[1].type);
@@ -581,13 +507,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 counters_ops[44] += 1;
                                 ops.push(44);
                                 opsString += "44, ";
-                            } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmpExp')) {
-                                assert(!r.src[1].prime);
-                                counters_ops[44] += 1;
-                                ops.push(44);
-                                opsString += "44, ";
-                            }
-                            else {
+                            } else {
                                 console.log(src[0], src[1]);
                                 console.log(r.src[0].type, r.src[1].type);
                                 throw new Error("Option not considered!");
@@ -849,15 +769,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 pushResArg(r);
                                 pushSrcArg(r.src[1]);
                                 pushSrcArg(r.src[0]);
-
-                            } else if ((r.src[0].type === 'tmpExp' && r.src[0].prime) && (r.src[1].type === 'challenge')) {
-
-                                counters_ops[63] += 1;
-                                ops.push(63);
-                                opsString += "63, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
                             } else {
                                 console.log(src[0], src[1]);
                                 console.log(r.src[0].type, r.src[1].type);
@@ -939,17 +850,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 pushResArg(r);
                                 pushSrcArg(r.src[0]);
                                 pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[0].type == 'tmpExp' && r.src[0].prime) && (r.src[1].type == 'challenge')) {
-                                //92: 76
-                                pushResArg(r);
-                                counters_ops[73] += 1;
-                                ops.push(73);
-                                opsString += "73, ";
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            }
-                            else {
+                            } else {
                                 console.log(src[0], src[1]);
                                 console.log(r.src[0].type, r.src[1].type);
                                 throw new Error("Option not considered!");
@@ -1013,7 +914,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                 }
                 default: throw new Error("Invalid op:" + c[j].op);
             }
-        } else if ((r.dest.type == 'cm' || r.dest.type == 'tmpExp') && !r.dest.prime) {
+        } else if (r.dest.type == 'cm' && !r.dest.prime) {
             /**
              * 
              * 
@@ -1053,16 +954,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                     }
                                     break;
                                 }
-                                case "tmpExp": {
-                                    assert(!r.src[1].prime);
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    counters_ops[87] += 1;
-                                    ops.push(87);
-                                    opsString += "87, ";
-                                    break;
-                                }
                                 default: {
                                     console.log(src[0], src[1]);
                                     console.log(r.src[0].type, r.src[1].type);
@@ -1083,15 +974,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                     } else {
                                         assert(0);
                                     }
-                                    break;
-                                } case "tmpExp": {
-                                    assert(!r.src[0].prime);
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[1]);
-                                    pushSrcArg(r.src[0]);
-                                    counters_ops[87] += 1;
-                                    ops.push(87);
-                                    opsString += "87, ";
                                     break;
                                 }
                                 default: {
@@ -1150,24 +1032,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 pushResArg(r);
                                 pushSrcArg(r.src[0]);
                                 pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmpExp')) {
-                                assert(!r.src[1].prime);
-                                counters_ops[89] += 1;
-                                ops.push(89);
-                                opsString += "89, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-
-                            } else if ((r.src[1].type === 'tmp') && (r.src[0].type === 'tmpExp')) {
-                                assert(!r.src[0].prime);
-                                counters_ops[89] += 1;
-                                ops.push(89);
-                                opsString += "89, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
                             } else {
                                 console.log(src[0], src[1]);
                                 console.log(r.src[0].type, r.src[1].type);
@@ -1302,10 +1166,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                             counters_ops[100] += 1;
                             ops.push(100);
                             opsString += "100, ";
-                        } else if (r.dest.type == 'tmpExp' && !r.dest.prime && r.src[0].type == 'tmp') {
-                            counters_ops[100] += 1;
-                            ops.push(100);
-                            opsString += "100, ";
                         } else {
                             console.log(r.dest.type, r.src[0].type);
                             throw new Error("Option not considered!");
@@ -1320,7 +1180,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                 }
                 default: throw new Error("Invalid op:" + c[j].op);
             }
-        } else if ((r.dest.type == 'cm' || r.dest.type == 'tmpExp') && r.dest.prime) {
+        } else if (r.dest.type == 'cm' && r.dest.prime) {
             /**
             * 
             * 
@@ -1365,16 +1225,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                     }
                                     break;
                                 }
-                                case "tmpExp": {
-                                    assert(!r.src[1].prime);
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    counters_ops[102] += 1;
-                                    ops.push(102);
-                                    opsString += "102, ";
-                                    break;
-                                }
                                 default: {
                                     console.log(src[0], src[1]);
                                     console.log(r.src[0].type, r.src[1].type);
@@ -1400,15 +1250,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                         ops.push(114);
                                         opsString += "114, ";
                                     }
-                                    break;
-                                } case "tmpExp": {
-                                    assert(!r.src[0].prime);
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[1]);
-                                    pushSrcArg(r.src[0]);
-                                    counters_ops[102] += 1;
-                                    ops.push(102);
-                                    opsString += "102, ";
                                     break;
                                 }
                                 default: {
@@ -1467,24 +1308,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 pushResArg(r);
                                 pushSrcArg(r.src[0]);
                                 pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmpExp')) {
-                                assert(!r.src[1].prime);
-                                counters_ops[104] += 1;
-                                ops.push(104);
-                                opsString += "104, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-
-                            } else if ((r.src[1].type === 'tmp') && (r.src[0].type === 'tmpExp')) {
-                                assert(!r.src[0].prime);
-                                counters_ops[104] += 1;
-                                ops.push(104);
-                                opsString += "104, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
                             } else {
                                 console.log(src[0], src[1]);
                                 console.log(r.src[0].type, r.src[1].type);
@@ -1634,10 +1457,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                             counters_ops[113] += 1;
                             ops.push(113);
                             opsString += "113, ";
-                        } else if (r.dest.type == 'tmpExp' && r.src[0].type == 'tmp') {
-                            counters_ops[113] += 1;
-                            ops.push(113);
-                            opsString += "113, ";
                         } else {
                             console.log(r.dest.type, r.src[0].type);
                             throw new Error("Option not considered!");
@@ -1729,9 +1548,9 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     argsString += "};"
 
     // join operations
-    if (functionName == "stepQ2ns_first") {
+    if (functionName == "stepQext_first") {
         assert(0);
-        //Not suported at this moment due to 2ns
+        //Not suported at this moment due to ext
     } else if (functionName == "step3_first") {
 
         groupOps = " 0, 50,";
@@ -1808,34 +1627,25 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                         if (r.id > range_const[3] || range_const[3] === -1) range_const[3] = r.id;
                         return ` params.pConstPols->getElement(${r.id},i)`;
                     }
-                } else if (dom == "2ns") {
+                } else if (dom == "ext") {
                     if (r.prime) {
                         if (r.id < range_const[4] || range_const[4] === -1) range_const[4] = r.id;
                         if (r.id > range_const[5] || range_const[5] === -1) range_const[5] = r.id;
-                        return `params.pConstPols2ns->getElement(${r.id},(i+${next})%${N})`;
+                        return `params.pConstPolsext->getElement(${r.id},(i+${next})%${N})`;
                     } else {
                         if (r.id < range_const[6] || range_const[6] === -1) range_const[6] = r.id;
                         if (r.id > range_const[7] || range_const[7] === -1) range_const[7] = r.id;
-                        return `params.pConstPols2ns->getElement(${r.id},i)`;
+                        return `params.pConstPolsext->getElement(${r.id},i)`;
                     }
-                } else {
-                    throw new Error("Invalid dom");
-                }
-            }
-            case "tmpExp": {
-                if (dom == "n") {
-                    return evalMap(starkInfo.tmpExp_n[r.id], r.prime)
-                } else if (dom == "2ns") {
-                    throw new Error("Invalid dom");
                 } else {
                     throw new Error("Invalid dom");
                 }
             }
             case "cm": {
                 if (dom == "n") {
-                    return evalMap(starkInfo.cm_n[r.id], r.prime)
-                } else if (dom == "2ns") {
-                    return evalMap(starkInfo.cm_2ns[r.id], r.prime)
+                    return evalMap(r.id, r.prime, false)
+                } else if (dom == "ext") {
+                    return evalMap(r.id, r.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -1843,8 +1653,8 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             case "q": {
                 if (dom == "n") {
                     throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    return evalMap(starkInfo.qs[r.id], r.prime)
+                } else if (dom == "ext") {
+                    return evalMap(starkInfo.qs[r.id], r.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -1873,8 +1683,8 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             case "x": {
                 if (dom == "n") {
                     return `(Goldilocks::Element &)*params.x_n[i]`;
-                } else if (dom == "2ns") {
-                    return `(Goldilocks::Element &)*params.x_2ns[i]`;
+                } else if (dom == "ext") {
+                    return `(Goldilocks::Element &)*params.x_ext[i]`;
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -1901,8 +1711,8 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             case "q": {
                 if (dom == "n") {
                     throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    eDst = `(Goldilocks3::Element &)(params.q_2ns[i * 3])`
+                } else if (dom == "ext") {
+                    eDst = `(Goldilocks3::Element &)(params.q_ext[i * 3])`
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -1910,19 +1720,9 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             }
             case "cm": {
                 if (dom == "n") {
-                    eDst = evalMap(starkInfo.cm_n[r.dest.id], r.dest.prime)
-                } else if (dom == "2ns") {
-                    eDst = evalMap(starkInfo.cm_2ns[r.dest.id], r.dest.prime)
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
-            case "tmpExp": {
-                if (dom == "n") {
-                    eDst = evalMap(starkInfo.tmpExp_n[r.dest.id], r.dest.prime)
-                } else if (dom == "2ns") {
-                    throw new Error("Invalid dom");
+                    eDst = evalMap(r.dest.id, r.dest.prime, false)
+                } else if (dom == "ext") {
+                    eDst = evalMap(r.dest.id, r.dest.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -1931,8 +1731,8 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             case "f": {
                 if (dom == "n") {
                     throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    eDst = `(Goldilocks3::Element &)(params.f_2ns[i * 3])`
+                } else if (dom == "ext") {
+                    eDst = `(Goldilocks3::Element &)(params.f_ext[i * 3])`
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -1965,19 +1765,9 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             }
             case "cm": {
                 if (dom == "n") {
-                    eDst = evalMap_(starkInfo.cm_n[r.dest.id], r.dest.prime)
-                } else if (dom == "2ns") {
-                    eDst = evalMap_(starkInfo.cm_2ns[r.dest.id], r.dest.prime)
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
-            case "tmpExp": {
-                if (dom == "n") {
-                    eDst = evalMap_(starkInfo.tmpExp_n[r.dest.id], r.dest.prime)
-                } else if (dom == "2ns") {
-                    throw new Error("Invalid dom");
+                    eDst = evalMap_(r.dest.id, r.dest.prime, false)
+                } else if (dom == "ext") {
+                    eDst = evalMap_(r.dest.id, r.dest.primel, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -1998,7 +1788,8 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         if (!p) {
             console.log("xx");
         }
-        let offset = starkInfo.mapOffsets[p.stage];
+        let stage = extend ? p.stage + "_n" : p.stage + "_ext";
+        let offset = starkInfo.mapOffsets[stage];
         offset += p.stagePos;
         let size = starkInfo.mapSectionsN[p.stage];
         if (p.dim == 1) {
@@ -2060,7 +1851,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                         argsString += `${r.id}, `;
                         cont_args += 1;
                     }
-                } else if (dom == "2ns") {
+                } else if (dom == "ext") {
                     if (r.prime) {
                         args.push(r.id);
                         args.push(next);
@@ -2077,22 +1868,11 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                 }
                 break;
             }
-            case "tmpExp": {
-                if (dom == "n") {
-                    evalMap_(starkInfo.tmpExp_n[r.id], r.prime)
-                } else if (dom == "2ns") {
-                    console.log("hola ", r.type);
-                    throw new Error("Invalid dom");
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
             case "cm": {
                 if (dom == "n") {
-                    evalMap_(starkInfo.cm_n[r.id], r.prime)
-                } else if (dom == "2ns") {
-                    evalMap_(starkInfo.cm_2ns[r.id], r.prime)
+                    evalMap_(r.id, r.prime, false)
+                } else if (dom == "ext") {
+                    evalMap_(r.id, r.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -2101,8 +1881,8 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             case "q": {
                 if (dom == "n") {
                     throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    evalMap_(starkInfo.qs[r.id], r.prime)
+                } else if (dom == "ext") {
+                    evalMap_(starkInfo.qs[r.id], r.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -2135,9 +1915,10 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         }
     }
 
-    function evalMap_(polId, prime) {
+    function evalMap_(polId, prime, extend) {
         let p = starkInfo.varPolMap[polId];
-        let offset = starkInfo.mapOffsets[p.stage];
+        let stage = extend ? p.stage + "_n" : p.stage + "_ext";
+        let offset = starkInfo.mapOffsets[stage];
         offset += p.stagePos;
         let size = starkInfo.mapSectionsN[p.stage];
         if (p.dim == 1) {

@@ -1,5 +1,5 @@
 const compileCode_parser = require("./compileCode_parser.js")
-const compileCode_42ns = require("./compileCode_42ns.js")
+const compileCode_4ext = require("./compileCode_4ext.js")
 
 module.exports = function buildCHelpers(fflonkInfo, config = {}) {
 
@@ -24,29 +24,13 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
     const codePublics = [];
     for (let i = 0; i < fflonkInfo.nPublics; i++) {
         if (fflonkInfo.publicsCode[i]) {
-            codePublics.push(compileCode(i, fflonkInfo.publicsCode[i].first, "n", true));
+            codePublics.push(compileCode(i, fflonkInfo.publicsCode[i], "n", true));
         }
     }
 
     code.push(
         [
-        `void PilFflonkSteps::publics_first(AltBn128::Engine &E, PilFflonkStepsParams &params, uint64_t i, uint64_t pub) {`,
-        ...codePublics,
-        `}`
-        ].join("\n")
-    );
-
-    code.push(
-        [
-        `void PilFflonkSteps::publics_i(AltBn128::Engine &E, PilFflonkStepsParams &params, uint64_t i, uint64_t pub) {`,
-        ...codePublics,
-        `}`
-        ].join("\n")
-    );
-
-    code.push(
-        [
-        `void PilFflonkSteps::publics_last(AltBn128::Engine &E, PilFflonkStepsParams &params, uint64_t i, uint64_t pub) {`,
+        `void PilFflonkSteps::publics(AltBn128::Engine &E, PilFflonkStepsParams &params, uint64_t i, uint64_t pub) {`,
         ...codePublics,
         `}`
         ].join("\n")
@@ -106,16 +90,16 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_42ns(fflonkInfo, "stepQ2ns_first", fflonkInfo.stepQ2ns.first, "2ns"));
-        result.stepQ2ns_parser = code.join("\n\n") + "\n";
+        code.push(compileCode_4ext(fflonkInfo, "stepQext_first", fflonkInfo.stepQext.first, "ext"));
+        result.stepQext_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
-    code.push(compileCode("stepQ2ns_first", fflonkInfo.stepQ2ns.first, "2ns", false));
-    code.push(compileCode("stepQ2ns_i", fflonkInfo.stepQ2ns.first, "2ns", false));
-    code.push(compileCode("stepQ2ns_last", fflonkInfo.stepQ2ns.first, "2ns", false));
+    code.push(compileCode("stepQext_first", fflonkInfo.stepQext.first, "ext", false));
+    code.push(compileCode("stepQext_i", fflonkInfo.stepQext.first, "ext", false));
+    code.push(compileCode("stepQext_last", fflonkInfo.stepQext.first, "ext", false));
 
     if (multipleCodeFiles) {
-        result.stepQ2ns = code.join("\n\n") + "\n";
+        result.stepQext = code.join("\n\n") + "\n";
         result.constValues =  [
             `u_int64_t PilFflonkSteps::getNumConstValues() { return ${vIndex}; }\n`,
             `void PilFflonkSteps::setConstValues(AltBn128::Engine &E, PilFflonkStepsParams &params) {`,
@@ -194,8 +178,8 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
                     const index = r.prime ? `((i + ${next})%${N})` : "i"
                     if (dom == "n") {
                         return `params.const_n[${r.id} + ${index} * ${fflonkInfo.nConstants}]`;
-                    } else if (dom == "2ns") {
-                        return `params.const_2ns[${r.id} + ${index} * ${fflonkInfo.nConstants}]`;
+                    } else if (dom == "ext") {
+                        return `params.const_ext[${r.id} + ${index} * ${fflonkInfo.nConstants}]`;
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -210,8 +194,8 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
                 case "cm": {
                     if (dom == "n") {
                         return evalMap(fflonkInfo.cm_n[r.id], r.prime)
-                    } else if (dom == "2ns") {
-                        return evalMap(fflonkInfo.cm_2ns[r.id], r.prime)
+                    } else if (dom == "ext") {
+                        return evalMap(fflonkInfo.cm_ext[r.id], r.prime)
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -238,8 +222,8 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
                 case "x": {
                     if (dom == "n") {
                         return `params.x_n[i]`;
-                    } else if (dom == "2ns") {
-                        return `params.x_2ns[i]`;
+                    } else if (dom == "ext") {
+                        return `params.x_ext[i]`;
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -258,8 +242,8 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
                 case "q": {
                     if (dom == "n") {
                         throw new Error("Accessing q in domain n");
-                    } else if (dom == "2ns") {
-                        eDst = `params.q_2ns[i]`
+                    } else if (dom == "ext") {
+                        eDst = `params.q_ext[i]`
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -268,8 +252,8 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
                 case "cm": {
                     if (dom == "n") {
                         eDst = evalMap(fflonkInfo.cm_n[r.dest.id], r.dest.prime)
-                    } else if (dom == "2ns") {
-                        eDst = evalMap(fflonkInfo.cm_2ns[r.dest.id], r.dest.prime)
+                    } else if (dom == "ext") {
+                        eDst = evalMap(fflonkInfo.cm_ext[r.dest.id], r.dest.prime)
                     } else {
                         throw new Error("Invalid dom");
                     }

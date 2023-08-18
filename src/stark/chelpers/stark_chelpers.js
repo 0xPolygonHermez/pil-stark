@@ -1,6 +1,6 @@
-const compileCode_52ns = require("./compileCode_52ns.js")
+const compileCode_fri = require("./compileCode_fri.js")
 const compileCode_parser = require("./compileCode_parser.js")
-const compileCode_42ns = require("./compileCode_42ns.js")
+const compileCode_QPolynomial = require("./compileCode_Q.js")
 
 module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
@@ -19,7 +19,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     for (let i = 0; i < starkInfo.nPublics; i++) {
         const comma = i == 0 ? "     " : "     ,";
         if (starkInfo.publicsCode[i]) {
-            pubTable.push(`${comma}(publics_${i}_first, publics_${i}_i,  publics_${i}_last)`);
+            pubTable.push(`${comma}(publics_${i}_first, NULL, NULL)`);
         } else {
             pubTable.push(`${comma}(NULL,NULL,NULL)`);
         }
@@ -35,79 +35,32 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         code.push(pubTable.join("\n"));
     }
 
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(starkInfo, config, "step2prev_first", starkInfo.step2prev.first, "n"));
-        result.step2prev_parser = code.join("\n\n") + "\n";
-        code.length = 0;
+    for(let i = 0; i < Object.keys(starkInfo.code).length; ++i) {
+        const name = Object.keys(starkInfo.code)[i];
+        if(["qVerifier", "queryVerifier"].includes(name)) continue;
+        const dom = ["Q", "fri"].includes(name) ? "ext" : "n";
+
+        if (optcodes && multipleCodeFiles) {
+            if(name === "Q") {
+                code.push(compileCode_QPolynomial(starkInfo, `${name}_first`, starkInfo.code[name].first, dom));
+            } else if (name === "fri") {
+                code.push(compileCode_fri(starkInfo, `${name}_first`, starkInfo.code[name].first, dom));
+            } else {
+                code.push(compileCode_parser(starkInfo, `${name}_first`, starkInfo.code[name].first, dom));
+            }
+            result[`${name}_parser`]= code.join("\n\n") + "\n";
+            code.length = 0;
+        }
+
+	    code.push(compileCode(`${name}_first`, starkInfo.code[name].first, dom));
+
+        if (multipleCodeFiles) {
+            result[name] = code.join("\n\n") + "\n";
+            code.length = 0;
+        }
     }
 
-    code.push(compileCode("step2prev_first", starkInfo.step2prev.first, "n"));
-    code.push(compileCode("step2prev_i", starkInfo.step2prev.first, "n"));
-    code.push(compileCode("step2prev_last", starkInfo.step2prev.first, "n"));
-
-    if (multipleCodeFiles) {
-        result.step2 = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(starkInfo, config, "step3prev_first", starkInfo.step3prev.first, "n"));
-        result.step3prev_parser = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    code.push(compileCode("step3prev_first", starkInfo.step3prev.first, "n"));
-    code.push(compileCode("step3prev_i", starkInfo.step3prev.first, "n"));
-    code.push(compileCode("step3prev_last", starkInfo.step3prev.first, "n"));
-
-    if (multipleCodeFiles) {
-        result.step3prev = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(starkInfo, config, "step3_first", starkInfo.step3.first, "n"));
-        result.step3_parser = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    code.push(compileCode("step3_first", starkInfo.step3.first, "n"));
-    code.push(compileCode("step3_i", starkInfo.step3.first, "n"));
-    code.push(compileCode("step3_last", starkInfo.step3.first, "n"));
-
-    if (multipleCodeFiles) {
-        result.step3 = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_42ns(starkInfo, "stepQ2ns_first", starkInfo.stepQ2ns.first, "2ns"));
-        result.stepQ2ns_parser = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-    code.push(compileCode("stepQ2ns_first", starkInfo.stepQ2ns.first, "2ns"));
-    code.push(compileCode("stepQ2ns_i", starkInfo.stepQ2ns.first, "2ns"));
-    code.push(compileCode("stepQ2ns_last", starkInfo.stepQ2ns.first, "2ns"));
-
-    if (multipleCodeFiles) {
-        result.stepQ2ns = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_52ns(starkInfo, "stepEv2ns_first", starkInfo.stepEv2ns.first, "2ns"));
-        result.stepEv2ns_parser = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    code.push(compileCode("stepEv2ns_first", starkInfo.stepEv2ns.first, "2ns"));
-    code.push(compileCode("stepEv2ns_i", starkInfo.stepEv2ns.first, "2ns"));
-    code.push(compileCode("stepEv2ns_last", starkInfo.stepEv2ns.first, "2ns"));
-
-    if (multipleCodeFiles) {
-        result.stepEv2ns = code.join("\n\n") + "\n";
-        return result;
-    }
+    if(multipleCodeFiles) return result;
 
     return code.join("\n\n");
 
@@ -242,36 +195,19 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
             switch (r.type) {
                 case "tmp": return `tmp_${r.id}`;
                 case "const": {
-                    if (dom == "n") {
-                        if (r.prime) {
-                            return ` params.pConstPols->getElement(${r.id},(i+1)%${N})`;
-                        } else {
-                            return ` params.pConstPols->getElement(${r.id},i)`;
-                        }
-                    } else if (dom == "2ns") {
-                        if (r.prime) {
-                            return `params.pConstPols2ns->getElement(${r.id},(i+${next})%${N})`;
-                        } else {
-                            return `params.pConstPols2ns->getElement(${r.id},i)`;
-                        }
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                }
-                case "tmpExp": {
-                    if (dom == "n") {
-                        return evalMap(starkInfo.tmpExp_n[r.id], r.prime)
-                    } else if (dom == "2ns") {
-                        throw new Error("Invalid dom");
+                    let ext = dom == "ext" ? next : 1;
+                    let index = r.prime ? `(i+${ext})%${N}` : `i`;
+                    if (["n", "ext"].includes(dom)) {
+                        return ` params.pConstPols->getElement(${r.id},${index})`;
                     } else {
                         throw new Error("Invalid dom");
                     }
                 }
                 case "cm": {
                     if (dom == "n") {
-                        return evalMap(starkInfo.cm_n[r.id], r.prime)
-                    } else if (dom == "2ns") {
-                        return evalMap(starkInfo.cm_2ns[r.id], r.prime)
+                        return evalMap(r.id, r.prime, false)
+                    } else if (dom == "ext") {
+                        return evalMap(r.id, r.prime, true)
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -279,8 +215,8 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                 case "q": {
                     if (dom == "n") {
                         throw new Error("Accessing q in domain n");
-                    } else if (dom == "2ns") {
-                        return evalMap(starkInfo.qs[r.id], r.prime)
+                    } else if (dom == "ext") {
+                        return evalMap(starkInfo.qs[r.id], r.prime, true)
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -294,8 +230,8 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                 case "x": {
                     if (dom == "n") {
                         return `(Goldilocks::Element &)*params.x_n[i]`;
-                    } else if (dom == "2ns") {
-                        return `(Goldilocks::Element &)*params.x_2ns[i]`;
+                    } else if (dom == "ext") {
+                        return `(Goldilocks::Element &)*params.x_ext[i]`;
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -322,8 +258,8 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                 case "q": {
                     if (dom == "n") {
                         throw new Error("Accessing q in domain n");
-                    } else if (dom == "2ns") {
-                        eDst = `(Goldilocks3::Element &)(params.q_2ns[i * 3])`
+                    } else if (dom == "ext") {
+                        eDst = `(Goldilocks3::Element &)(params.q_ext[i * 3])`
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -331,19 +267,9 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                 }
                 case "cm": {
                     if (dom == "n") {
-                        eDst = evalMap(starkInfo.cm_n[r.dest.id], r.dest.prime)
-                    } else if (dom == "2ns") {
-                        eDst = evalMap(starkInfo.cm_2ns[r.dest.id], r.dest.prime)
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                    break;
-                }
-                case "tmpExp": {
-                    if (dom == "n") {
-                        eDst = evalMap(starkInfo.tmpExp_n[r.dest.id], r.dest.prime)
-                    } else if (dom == "2ns") {
-                        throw new Error("Invalid dom");
+                        eDst = evalMap(r.dest.id, r.dest.prime, false)
+                    } else if (dom == "ext") {
+                        eDst = evalMap(r.dest.id, r.dest.prime, true)
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -352,8 +278,8 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
                 case "f": {
                     if (dom == "n") {
                         throw new Error("Accessing q in domain n");
-                    } else if (dom == "2ns") {
-                        eDst = `(Goldilocks3::Element &)(params.f_2ns[i * 3])`
+                    } else if (dom == "ext") {
+                        eDst = `(Goldilocks3::Element &)(params.f_ext[i * 3])`
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -364,31 +290,24 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
             return eDst;
         }
 
-        function evalMap(polId, prime) {
+        function evalMap(polId, prime, extend) {
             let p = starkInfo.varPolMap[polId];
             if (!p) {
                 console.log("xx");
             }
-            let offset = starkInfo.mapOffsets[p.stage];
+            let stage = extend ? p.stage + "_n" : p.stage + "_ext";
+            let offset = starkInfo.mapOffsets[stage];
             offset += p.stagePos;
             let size = starkInfo.mapSectionsN[p.stage];
+            let index = prime ? `((i + ${next})%${N})` : "i";
+            let pos = `${offset} + ${index} * ${size}`;
             if (p.dim == 1) {
-                if (prime) {
-                    return `params.pols[${offset} + ((i + ${next})%${N})*${size}]`;
-                } else {
-                    return `params.pols[${offset} + i*${size}]`;
-                }
+                return `params.pols[${pos}]`;
             } else if (p.dim == 3) {
-                if (prime) {
-                    return `(Goldilocks3::Element &)(params.pols[${offset} + ((i + ${next})%${N})*${size}])`;
-                } else {
-                    return `(Goldilocks3::Element &)(params.pols[${offset} + i*${size}])`;
-                }
+                return `(Goldilocks3::Element &)(params.pols[${pos}])`;
             } else {
                 throw new Error("invalid dim");
             }
         }
-
     }
-
 }

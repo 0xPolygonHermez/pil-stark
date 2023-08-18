@@ -960,7 +960,7 @@
             "args": [
                 "-s tmp/fibonacci.starkinfo.json",
                 "-c tmp/fibonacci.chelpers.cpp",
-                "-C AllSteps",
+                "-C FibonacciSteps",
                 "-m"
             ],
             "runtimeArgs": [

@@ -23,7 +23,7 @@ const range_polsseq_3 = new Set();
 const range_polsseq_4 = new Set();
 
 
-module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
+module.exports = function compileCode_fri(starkInfo, functionName, code, dom) {
 
     const body = [];
 
@@ -438,7 +438,7 @@ module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
                             break;
                         }
                         case 'sub': {
-                            throw new Error("This option should not be used for 52ns");
+                            throw new Error("This option should not be used for fri");
                             break;
                         }
                         case 'mul': {
@@ -471,34 +471,25 @@ module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
                         if (r.id > range_const[3] || range_const[3] === -1) range_const[3] = r.id;
                         return ` params.pConstPols->getElement(${r.id},i)`;
                     }
-                } else if (dom == "2ns") {
+                } else if (dom == "ext") {
                     if (r.prime) {
                         if (r.id < range_const[4] || range_const[4] === -1) range_const[4] = r.id;
                         if (r.id > range_const[5] || range_const[5] === -1) range_const[5] = r.id;
-                        return `params.pConstPols2ns->getElement(${r.id},(i+${next})%${N})`;
+                        return `params.pConstPolsext->getElement(${r.id},(i+${next})%${N})`;
                     } else {
                         if (r.id < range_const[6] || range_const[6] === -1) range_const[6] = r.id;
                         if (r.id > range_const[7] || range_const[7] === -1) range_const[7] = r.id;
-                        return `&params.pConstPols2ns->getElement(${r.id},i), params.pConstPols2ns->numPols()`;
+                        return `&params.pConstPolsext->getElement(${r.id},i), params.pConstPolsext->numPols()`;
                     }
-                } else {
-                    throw new Error("Invalid dom");
-                }
-            }
-            case "tmpExp": {
-                if (dom == "n") {
-                    return evalMap(starkInfo.tmpExp_n[r.id], r.prime)
-                } else if (dom == "2ns") {
-                    throw new Error("Invalid dom");
                 } else {
                     throw new Error("Invalid dom");
                 }
             }
             case "cm": {
                 if (dom == "n") {
-                    return evalMap(starkInfo.cm_n[r.id], r.prime)
-                } else if (dom == "2ns") {
-                    return evalMap(starkInfo.cm_2ns[r.id], r.prime)
+                    return evalMap(r.id, r.prime, false)
+                } else if (dom == "ext") {
+                    return evalMap(r.id, r.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -506,8 +497,8 @@ module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
             case "q": {
                 if (dom == "n") {
                     throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    return evalMap(starkInfo.qs[r.id], r.prime)
+                } else if (dom == "ext") {
+                    return evalMap(starkInfo.qs[r.id], r.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -534,8 +525,8 @@ module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
             case "x": {
                 if (dom == "n") {
                     return `(Goldilocks::Element &)*params.x_n[i]`;
-                } else if (dom == "2ns") {
-                    return `(Goldilocks::Element &)*params.x_2ns[i]`;
+                } else if (dom == "ext") {
+                    return `(Goldilocks::Element &)*params.x_ext[i]`;
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -589,8 +580,8 @@ module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
             case "q": {
                 if (dom == "n") {
                     throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    eDst = `(Goldilocks3::Element &)(params.q_2ns[i * 3])`
+                } else if (dom == "ext") {
+                    eDst = `(Goldilocks3::Element &)(params.q_ext[i * 3])`
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -598,19 +589,9 @@ module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
             }
             case "cm": {
                 if (dom == "n") {
-                    eDst = evalMap(starkInfo.cm_n[r.dest.id], r.dest.prime)
-                } else if (dom == "2ns") {
-                    eDst = evalMap(starkInfo.cm_2ns[r.dest.id], r.dest.prime)
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
-            case "tmpExp": {
-                if (dom == "n") {
-                    eDst = evalMap(starkInfo.tmpExp_n[r.dest.id], r.dest.prime)
-                } else if (dom == "2ns") {
-                    throw new Error("Invalid dom");
+                    eDst = evalMap(r.dest.id, r.dest.prime, false)
+                } else if (dom == "ext") {
+                    eDst = evalMap(r.dest.id, r.dest.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -619,8 +600,8 @@ module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
             case "f": {
                 if (dom == "n") {
                     throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    eDst = `(Goldilocks3::Element &)(params.f_2ns[i * 3])`
+                } else if (dom == "ext") {
+                    eDst = `(Goldilocks3::Element &)(params.f_ext[i * 3])`
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -631,13 +612,14 @@ module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
         return eDst;
     }
 
-    function evalMap(polId, prime) {
+    function evalMap(polId, prime, extend) {
         let p = starkInfo.varPolMap[polId];
         ++refpols;
         if (!p) {
             console.log("xx");
         }
-        let offset = starkInfo.mapOffsets[p.stage];
+        let stage = extend ? p.stage + "_n" : p.stage + "_ext";
+        let offset = starkInfo.mapOffsets[stage];
         offset += p.stagePos;
         let size = starkInfo.mapSectionsN[p.stage];
         if (p.dim == 1) {

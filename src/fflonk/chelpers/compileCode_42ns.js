@@ -24,7 +24,7 @@ const range_polsseq_4 = new Set();
 
 
 
-module.exports = function compileCode_42ns(fflonkInfo, nBits, functionName, code, dom) {
+module.exports = function compileCode_4ext(fflonkInfo, nBits, functionName, code, dom) {
     const body = [];
 
     var ops = [];
@@ -677,16 +677,16 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, functionName, code
                         if (r.id > range_const[3] || range_const[3] === -1) range_const[3] = r.id;
                         return ` params.const_n[${r.id} + i * ${fflonkInfo.nConstants}]`;
                     }
-                } else if (dom == "2ns") {
+                } else if (dom == "ext") {
                     if (r.prime) {
                         if (r.id < range_const[4] || range_const[4] === -1) range_const[4] = r.id;
                         if (r.id > range_const[5] || range_const[5] === -1) range_const[5] = r.id;
-                        return ` params.const_2ns[${r.id} + ((i+${next})%${N}) * ${fflonkInfo.nConstants}]`;
+                        return ` params.const_ext[${r.id} + ((i+${next})%${N}) * ${fflonkInfo.nConstants}]`;
 
                     } else {
                         if (r.id < range_const[6] || range_const[6] === -1) range_const[6] = r.id;
                         if (r.id > range_const[7] || range_const[7] === -1) range_const[7] = r.id;
-                        return ` params.const_2ns[${r.id} + i * ${fflonkInfo.nConstants}]`;
+                        return ` params.const_ext[${r.id} + i * ${fflonkInfo.nConstants}]`;
                     }
                 } else {
                     throw new Error("Invalid dom");
@@ -695,7 +695,7 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, functionName, code
             case "tmpExp": {
                 if (dom == "n") {
                     return evalMap(fflonkInfo.tmpExp_n[r.id], r.prime)
-                } else if (dom == "2ns") {
+                } else if (dom == "ext") {
                     throw new Error("Invalid dom");
                 } else {
                     throw new Error("Invalid dom");
@@ -704,8 +704,8 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, functionName, code
             case "cm": {
                 if (dom == "n") {
                     return evalMap(fflonkInfo.cm_n[r.id], r.prime)
-                } else if (dom == "2ns") {
-                    return evalMap(fflonkInfo.cm_2ns[r.id], r.prime)
+                } else if (dom == "ext") {
+                    return evalMap(fflonkInfo.cm_ext[r.id], r.prime)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -728,8 +728,8 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, functionName, code
             case "x": {
                 if (dom == "n") {
                     return `params.x_n[i]`;
-                } else if (dom == "2ns") {
-                    return `params.x_2ns[i]`;
+                } else if (dom == "ext") {
+                    return `params.x_ext[i]`;
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -764,8 +764,8 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, functionName, code
             case "cm": {
                 if (dom == "n") {
                     eDst = evalMap(fflonkInfo.cm_n[r.dest.id], r.dest.prime)
-                } else if (dom == "2ns") {
-                    eDst = evalMap(fflonkInfo.cm_2ns[r.dest.id], r.dest.prime)
+                } else if (dom == "ext") {
+                    eDst = evalMap(fflonkInfo.cm_ext[r.dest.id], r.dest.prime)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -774,8 +774,8 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, functionName, code
             case "q": {
                 if (dom == "n") {
                     throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    eDst = `params.q_2ns[i]`
+                } else if (dom == "ext") {
+                    eDst = `params.q_ext[i]`
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -784,7 +784,7 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, functionName, code
             case "tmpExp": {
                 if (dom == "n") {
                     eDst = evalMap(fflonkInfo.tmpExp_n[r.dest.id], r.dest.prime)
-                } else if (dom == "2ns") {
+                } else if (dom == "ext") {
                     throw new Error("Invalid dom");
                 } else {
                     throw new Error("Invalid dom");
@@ -850,7 +850,7 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, functionName, code
                         argsString += `${r.id}, `;
                         cont_args += 1;
                     }
-                } else if (dom == "2ns") {
+                } else if (dom == "ext") {
                     if (r.prime) {
                         args.push(r.id);
                         args.push(next);
@@ -870,7 +870,7 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, functionName, code
             case "tmpExp": {
                 if (dom == "n") {
                     evalMap_(fflonkInfo.tmpExp_n[r.id], r.prime)
-                } else if (dom == "2ns") {
+                } else if (dom == "ext") {
                     console.log("hola ", r.type);
                     throw new Error("Invalid dom");
                 } else {
@@ -881,8 +881,8 @@ module.exports = function compileCode_42ns(fflonkInfo, nBits, functionName, code
             case "cm": {
                 if (dom == "n") {
                     evalMap_(fflonkInfo.cm_n[r.id], r.prime)
-                } else if (dom == "2ns") {
-                    evalMap_(fflonkInfo.cm_2ns[r.id], r.prime)
+                } else if (dom == "ext") {
+                    evalMap_(fflonkInfo.cm_ext[r.id], r.prime)
                 } else {
                     throw new Error("Invalid dom");
                 }
