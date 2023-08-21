@@ -11,7 +11,7 @@ const map = require("./map.js");
 
 const { log2 } = require("pilcom/src/utils.js");
 const generateLibsCode = require("./helpers/generateLibsCode.js");
-const { setMapOffsets, fixCode, setDimensions } = require("./helpers/helpers.js");
+const { fixCode, setDimensions } = require("./helpers/helpers.js");
 
 module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
@@ -88,23 +88,6 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
     delete res.imPolsMap;
     delete res.cExp;
     delete res.friExpId;
-
-    if(!stark) {
-        // Calculate maxPolsOpenings
-        let nOpenings = {};
-        for(let i = 0; i < res.evMap.length; ++i) {
-            if(res.evMap[i].type === "const") continue;
-            const name = res.evMap[i].type + res.evMap[i].id;
-            if(!nOpenings[name]) nOpenings[name] = 1;
-            ++nOpenings[name];
-        }
-
-        res.maxPolsOpenings = Math.max(...Object.values(nOpenings));
-        
-        res.nBitsZK = Math.ceil(Math.log2((res.pilPower + res.maxPolsOpenings) / res.pilPower));
-    } else {
-        setMapOffsets(res); 
-    }
     
     return res;
 

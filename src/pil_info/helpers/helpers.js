@@ -1,14 +1,5 @@
 const { iterateCode } = require("../codegen");
 
-module.exports.addPol = function addPol(res, stage, name, dim, pos) {
-    const polsStage = res.cmPolsMap.filter((p) => p.stage == stage);
-    const polPos = polsStage.length;
-    const stagePos = polsStage.reduce((acc, p) => acc + p.dim, 0);
-    const polType = { stage, name, dim, stagePos, polPos };
-    res.cmPolsMap[pos] = polType;
-    res.mapSectionsN[stage] += dim;
-}
-
 module.exports.getExpDim = function getExpDim(res, pil, expId, stark) {
 
     return _getExpDim(pil.expressions[expId]);
@@ -164,8 +155,8 @@ function fixProverCode(res, code, dom, stark, verifierQuery = false) {
                         if(index < 1 || index > res.nLibStages + 1) throw new Error("Invalid cm stage");
                         r.type = "tree" + index;
                     }
-                    
-                    r.stageId = p1.polPos;
+                            
+                    r.stageId = res.cmPolsMap.filter(p => p.stage === p1.stage && p.stagePos < p1.stagePos).length;
                     r.treePos = p1.stagePos;
                     r.dim = p1.dim;
                 }
@@ -203,27 +194,4 @@ function fixProverCode(res, code, dom, stark, verifierQuery = false) {
                 throw new Error("Invalid reference type " + r.type);
         }
     }
-}
-
-module.exports.setMapOffsets = function setMapOffsets(res) {
-    const N = 1 << res.starkStruct.nBits;
-    const Next = 1 << res.starkStruct.nBitsExt;
-
-    res.mapOffsets = {};
-    res.mapOffsets.cm1_n = 0;
-    for(let i = 0; i < res.nLibStages; ++i) {
-        const stage = 2 + i;
-        res.mapOffsets["cm" + stage + "_n"] = res.mapOffsets["cm" + (stage - 1) + "_n"] + N * res.mapSectionsN["cm" + (stage - 1)];
-    }
-    res.mapOffsets.cmQ_n = res.mapOffsets["cm" + (res.nLibStages + 1) + "_n"] +  N * res.mapSectionsN["cm" + (res.nLibStages + 1)];
-    res.mapOffsets.tmpExp_n = res.mapOffsets.cmQ_n +  N * res.mapSectionsN.cmQ;
-    res.mapOffsets.cm1_ext = res.mapOffsets.tmpExp_n +  N * res.mapSectionsN.tmpExp;
-    for(let i = 0; i < res.nLibStages; ++i) {
-        const stage = 2 + i;
-        res.mapOffsets["cm" + stage + "_ext"] = res.mapOffsets["cm" + (stage - 1) + "_ext"] + Next * res.mapSectionsN["cm" +  (stage - 1) ];
-    }
-    res.mapOffsets.cmQ_ext = res.mapOffsets["cm" + (res.nLibStages + 1) + "_ext"] +  Next * res.mapSectionsN["cm" + (res.nLibStages + 1)];
-    res.mapOffsets.q_ext = res.mapOffsets.cmQ_ext +  Next * res.mapSectionsN.cmQ;
-    res.mapOffsets.f_ext = res.mapOffsets.q_ext +  Next * res.mapSectionsN.q_ext;
-    res.mapTotalN = res.mapOffsets.f_ext +  Next * res.mapSectionsN.f_ext;
 }

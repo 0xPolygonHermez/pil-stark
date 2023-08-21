@@ -41,6 +41,18 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark)
             };
             res.evMap.push(rf);
         }
+    } else {
+        let nOpenings = {};
+        for(let i = 0; i < res.evMap.length; ++i) {
+            if(res.evMap[i].type === "const") continue;
+            const name = res.evMap[i].type + res.evMap[i].id;
+            if(!nOpenings[name]) nOpenings[name] = 1;
+            ++nOpenings[name];
+        }   
+
+        res.maxPolsOpenings = Math.max(...Object.values(nOpenings));
+
+        res.nBitsZK = Math.ceil(Math.log2((res.pilPower + res.maxPolsOpenings) / res.pilPower));
     }
 
     function fixRef(r, ctx) {
