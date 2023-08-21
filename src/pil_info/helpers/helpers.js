@@ -1,5 +1,3 @@
-const { iterateCode } = require("../codegen");
-
 module.exports.getExpDim = function getExpDim(res, pil, expId, stark) {
 
     return _getExpDim(pil.expressions[expId]);
@@ -35,6 +33,32 @@ module.exports.getExpDim = function getExpDim(res, pil, expId, stark) {
                 if(stark) return 3;
                 throw new Error("Exp op not defined: " + exp.op);
             default: throw new Error("Exp op not defined: " + exp.op);
+        }
+    }
+}
+
+module.exports.iterateCode = function iterateCode(code, dom, f) {
+    const ctx = {};
+
+    ctx.dom = dom;
+    ctx.expMap = [];
+    
+    // let openings = stark ? res.nFriOpenings : 2;
+    let openings = 2;
+    for(let i = 0; i < openings; ++i) {
+        ctx.expMap[i] = {};
+    }
+
+    ctx.code = code;
+
+    _iterate(code.first, f);
+    
+    function _iterate(subCode, f) {
+        for (let i=0; i<subCode.length; i++) {
+            for (let j=0; j<subCode[i].src.length; j++) {
+                f(subCode[i].src[j], ctx);
+            }
+            f(subCode[i].dest, ctx);
         }
     }
 }
@@ -128,19 +152,7 @@ function setCodeDimensions(code, pilInfo, stark) {
 
 
 function fixProverCode(res, code, dom, stark, verifierQuery = false) {
-    const ctx = {};
-    ctx.expMap = [];
-    
-    // let openings = stark ? res.nFriOpenings : 2;
-    let openings = 2;
-    for(let i = 0; i < openings; ++i) {
-        ctx.expMap[i] = {};
-    }
-
-    ctx.code = code;
-    ctx.dom = dom;
-
-    iterateCode(code, fixRef, ctx)
+    module.exports.iterateCode(code, dom, fixRef)
 
     function fixRef(r, ctx) {
         switch (r.type) {

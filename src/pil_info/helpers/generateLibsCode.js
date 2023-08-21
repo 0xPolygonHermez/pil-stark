@@ -61,13 +61,12 @@ module.exports = function generateLibsCode(F, res, pil, ctx) {
                 for(let k = 0; k < Object.keys(polsStage).length; ++k) {
                     let name = Object.keys(polsStage)[k];
                     if(polsStage[name].tmp) {
-                        pilCodeGen(ctx, polsStage[name].id, false);
+                        pilCodeGen(ctx, polsStage[name].id, 0);
                     }                    
                 }
             }
         }
         const stage = 2 + i;
         res.code[`stage${stage}`] = buildCode(ctx);
-        ctx.calculated =  { exps: {}, expsPrime: {} }
     }
 }

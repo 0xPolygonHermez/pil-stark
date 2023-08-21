@@ -46,13 +46,11 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
         res.starkStruct = starkStruct;
     }
    
-    generatePublicCalculators(res, pil);
-    
     const ctx = {
         pil: pil,
         calculated: {
-            exps: {},
-            expsPrime: {}
+            0: {},
+            1: {}
         },
         tmpUsed: 0,
         code: []
@@ -61,12 +59,14 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
     const ctx_ext = {
         pil: pil,
         calculated: {
-            exps: {},
-            expsPrime: {}
+            0: {},
+            1: {}
         },
         tmpUsed: 0,
         code: []
     };
+
+    generatePublicCalculators(res, pil, ctx);
 
     generateLibsCode(F, res, pil, ctx);
     
@@ -74,11 +74,11 @@ module.exports = function pilInfo(F, _pil, stark = true, starkStruct) {
 
     map(res, pil, stark);
 
-    generateConstraintPolynomialVerifier(res, pil, stark);
+    generateConstraintPolynomialVerifier(res, ctx, stark);
 
     if(stark) {
         generateFRIPolynomial(res, pil, ctx_ext);
-        generateVerifierQuery(res, pil);
+        generateVerifierQuery(res, ctx_ext);
     } 
 
     fixCode(res, stark);

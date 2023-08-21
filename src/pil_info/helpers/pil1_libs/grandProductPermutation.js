@@ -27,9 +27,7 @@ module.exports.grandProductPermutation = function grandProductPermutation(res, p
             tExp = E.sub(tExp, delta);
             tExp = E.mul(tExp, E.exp(pi.selT));
             tExp = E.add(tExp, delta);
-
-            tExp.idQ = pil.nQ;
-            pil.nQ++;
+            tExp.keep = true;
         }
 
         peCtx.tExpId = pil.expressions.length;
@@ -49,9 +47,7 @@ module.exports.grandProductPermutation = function grandProductPermutation(res, p
             fExp = E.sub(fExp, delta);
             fExp = E.mul(fExp, E.exp(pi.selF));
             fExp = E.add(fExp, delta);
-
-            fExp.idQ = pil.nQ;
-            pil.nQ++;
+            fExp.keep = true;
         }
 
         peCtx.fExpId = pil.expressions.length;

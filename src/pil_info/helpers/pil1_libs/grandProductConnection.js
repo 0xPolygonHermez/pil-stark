@@ -51,7 +51,7 @@ module.exports.grandProductConnection = function grandProductConnection(res, pil
                         gamma
                     )
                 );
-            numExp.idQ = pil.nQ++;
+            numExp.keep = true;
 
             const denExp =
                 E.mul(
@@ -64,7 +64,7 @@ module.exports.grandProductConnection = function grandProductConnection(res, pil
                         gamma
                     )
                 );
-            denExp.idQ = pil.nQ++;
+            denExp.keep = true;
 
             ciCtx.numId = pil.expressions.length;
             pil.expressions.push(numExp);

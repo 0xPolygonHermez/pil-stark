@@ -29,9 +29,7 @@ module.exports.grandProductPlookup = function grandProductPlookup(res, pil) {
             tExp = E.sub(tExp, beta);
             tExp = E.mul(tExp, E.exp(pi.selT));
             tExp = E.add(tExp, beta);
-
-            tExp.idQ = pil.nQ;
-            pil.nQ++;
+            tExp.keep = true;
         }
 
         puCtx.tExpId = pil.expressions.length;
@@ -52,9 +50,7 @@ module.exports.grandProductPlookup = function grandProductPlookup(res, pil) {
             fExp = E.sub(fExp, E.exp(puCtx.tExpId));
             fExp = E.mul(fExp, E.exp(pi.selF));
             fExp = E.add(fExp, E.exp(puCtx.tExpId));
-
-            fExp.idQ = pil.nQ;
-            pil.nQ++;
+            fExp.keep = true;
         }
 
         puCtx.fExpId = pil.expressions.length;
@@ -118,7 +114,7 @@ module.exports.grandProductPlookup = function grandProductPlookup(res, pil) {
             ),
             E.add(E.number(1), delta)
         );
-        numExp.idQ = pil.nQ++;
+        numExp.keep = true;
         puCtx.numId = pil.expressions.length;
         numExp.keep = true;
         pil.expressions.push(numExp);
@@ -145,7 +141,7 @@ module.exports.grandProductPlookup = function grandProductPlookup(res, pil) {
                 E.mul(gamma,E.add(E.number(1), delta))
             )
         );
-        denExp.idQ = pil.nQ++;
+        denExp.keep = true;
         puCtx.denId = pil.expressions.length;
         denExp.keep = true;
         pil.expressions.push(denExp);

@@ -1,35 +1,25 @@
-const {pilCodeGen, buildCode, iterateCode} = require("../../codegen.js");
+const {pilCodeGen, buildCode} = require("../../codegen.js");
+const { iterateCode } = require("../helpers.js");
 
-module.exports  = function generateConstraintPolynomialVerifier(res, pil, stark) {
-    const ctxC = {
-        pil: pil,
-        calculated: {
-            exps: {},
-            expsPrime: {}
-        },
-        tmpUsed: 0,
-        code: []
-    };
-
+module.exports  = function generateConstraintPolynomialVerifier(res, ctx, stark) {
+    ctx.calculated[0] = {};
+    ctx.calculated[1] = {};
+       
     for(let i = 0; i < Object.keys(res.imPolsMap).length; i++) {
         const expId = Object.keys(res.imPolsMap)[i];
         if(res.imPolsMap[expId].imPol) {
-            ctxC.calculated.exps[expId] = true;
-            ctxC.calculated.expsPrime[expId] = true;
+            ctx.calculated[0][expId] = true;
+            ctx.calculated[1][expId] = true;
         }
     }
 
-    pilCodeGen(ctxC, res.cExp, false, null, null, true);
+    pilCodeGen(ctx, res.cExp, 0, true);
 
-    res.code.qVerifier = buildCode(ctxC);
+    res.code.qVerifier = buildCode(ctx);
 
     res.evMap = [];
 
-    const ctxF = {};
-    ctxF.expMap = [{}, {}];
-    ctxF.code = res.code.qVerifier;
-
-    iterateCode(res.code.qVerifier, fixRef, ctxF);
+    iterateCode(res.code.qVerifier, "n", fixRef);
 
     if (stark) {
         for (let i = 0; i < res.qDeg; i++) {
