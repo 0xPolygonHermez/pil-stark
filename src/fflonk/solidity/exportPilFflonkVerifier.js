@@ -49,8 +49,6 @@ module.exports = async function exportPilFflonkVerifier(vk, fflonkInfo, options 
         let polName = ev.prime === 0 ? ev.name : ev.prime === 1 ? ev.name + "w" : ev.name + `w${ev.prime}`;
         evNames[i] = polName.replace(".", "_"); 
     }
-
-    console.log(evNames);
     
     let nBytesCommits = (vk.f.filter(fi => fi.stages.length !== 1 || fi.stages[0].stage !== 0).length + 2) * 2 + (orderedEvals.length - 1);
 

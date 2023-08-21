@@ -53,13 +53,13 @@ module.exports.initProverFflonk = async function initProver(pilInfo, zkey, logge
         logger.debug(`  Domain size ext: ${ctx.Next} (2^${ctx.nBitsExt})`);
         logger.debug(`  ExtendBits: ${ctx.extendBits}`);
         logger.debug(`  Const  pols:   ${ctx.pilInfo.nConstants}`);
-        logger.debug(`  Stage 1 pols:   ${ctx.pilInfo.mapSectionsN.cm1}`);
+        logger.debug(`  Stage 1 pols:   ${ctx.pilInfo.cmPolsMap.filter(p => p.stage == "cm1").length}`);
         for(let i = 0; i < ctx.pilInfo.nLibStages; i++) {
             const stage = i + 2;
-            logger.debug(`  Stage ${stage} pols:   ${ctx.pilInfo.mapSectionsN[`cm${stage}`]}`);
+            logger.debug(`  Stage ${stage} pols:   ${ctx.pilInfo.cmPolsMap.filter(p => p.stage == "cm" + stage).length}`);
         }
         logger.debug(`  Stage Q pols:   ${ctx.nQ}`);
-        logger.debug(`  Temp exp pols: ${ctx.pilInfo.mapSectionsN.tmpExp}`);
+        logger.debug(`  Temp exp pols: ${ctx.pilInfo.cmPolsMap.filter(p => p.stage == "tmpExp").length}`);
         logger.debug("-----------------------------");
     }
 
@@ -133,7 +133,6 @@ module.exports.computeQFflonk = async function computeQ(ctx, logger) {
     if(ctx.nQ > 1) {
         let rand1 = ctx.F.random();
         let rand2 = ctx.F.random();
-
         for(let i = 0; i < ctx.nQ; ++i) {
             const st = (i * ctx.zkey.maxQDegree * ctx.N) * ctx.F.n8;
             const end = (i == ctx.nQ - 1 ? ctx.domainSizeQ : (i + 1) * ctx.zkey.maxQDegree * ctx.N) * ctx.F.n8;

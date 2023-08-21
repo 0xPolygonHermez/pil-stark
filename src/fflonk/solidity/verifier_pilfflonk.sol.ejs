@@ -38,19 +38,7 @@ pragma solidity >=0.7.0 <0.9.0;
         } else if (r.type === "public") {
             return `calldataload(add(pPublic,${r.id*32}))`;
         } else if (r.type === "challenge") {
-            if(r.id === 0) {
-                return "challengeAlpha";
-            } else if(r.id === 1) {         
-                return "challengeBeta";
-            } else if(r.id === 2) {         
-                return "challengeGamma";
-            } else if(r.id === 3) {         
-                return "challengeDelta";
-            } else if(r.id === 4) {         
-                return "challengeA";
-            } else {
-                throw new Error("Invalid Challenge: " +r.id);
-            }
+            return `mload(add(pMem, pChallenge${r.id}))`;
         } else if (r.type === "x") {
             return "challengeXi";
         } else {
@@ -178,21 +166,13 @@ contract PilFflonkVerifier {
     // Memory data
     // Challenges
 <%  let challengeCount = 0; -%>
-<%  if(fflonkInfo.mapSectionsN.cm2_n > 0 || fflonkInfo.peCtx.length > 0) { -%> 
-    uint16 constant pAlpha  = <%- challengeCount %>;
-    uint16 constant pBeta   = <%- challengeCount + 32 %>;
+<%  for(let i = 0; i < fflonkInfo.nChallenges; ++i) { -%>
+    uint16 constant pChallenge<%- i %> = <%- challengeCount %>;
+<%  challengeCount += 32; -%>
+<%  } -%>
+    uint16 constant pXiSeed = <%- challengeCount %>;
+    uint16 constant pXi = <%- challengeCount + 32 %>;
 <%  challengeCount += 64; -%>
-<% } -%>
-   
-<%  if(fflonkInfo.mapSectionsN.cm3_n > 0) { -%> 
-    uint16 constant pGamma  = <%- challengeCount %>;
-    uint16 constant pDelta   = <%- challengeCount + 32 %>;
-<%  challengeCount += 64; -%>
-<% } -%>
-    uint16 constant pA      = <%- challengeCount %>;
-    uint16 constant pXiSeed = <%- challengeCount + 32 %>;
-    uint16 constant pXi = <%- challengeCount + 64 %>;
-<% challengeCount += 96; -%>
 
 <% if(vk.maxQDegree > 0) { -%>
     uint16 constant pXiN = <%- challengeCount %>;
@@ -250,60 +230,44 @@ contract PilFflonkVerifier {
 <%  } -%>
 <%  } -%>
 
-<%  if(fflonkInfo.mapSectionsN.cm2_n > 0 || fflonkInfo.peCtx.length > 0) { -%>
-                // Compute challenge.alpha
-                mstore(add(pMem, pAlpha),  mod(keccak256(add(pMem, pLastMem), <%= memC - pLastMem %>), q))
+                let challenge
 
-                // Compute challenge.beta
-                mstore(add(pMem, pBeta), mod(keccak256(add(pMem, pAlpha), 32), q))
-<%  memC = pLastMem; -%>
+<%  for(let i = 0; i < fflonkInfo.nLibStages; ++i) { -%>
+<%      const stage = i + 2 -%>
+                // Transcript stage <%= stage %>
+<%      for(let j = 0; j < fflonkInfo.challenges[stage].length; ++j) { -%>
+<%          const index = fflonkInfo.challenges[stage][j]; -%>
+                challenge := mod(keccak256(add(pMem, pLastMem), <%= memC - pLastMem %>), q)
+                mstore(add(pMem, pChallenge<%- index %>), challenge) // Store challenge <%= index %>
+                mstore(add(pMem, pLastMem), challenge) // Add challenge to transcript
+<%              memC = pLastMem + 32; -%>
 
-                mstore(add(pMem, <%= memC %>), mload(add(pMem, pBeta)))
-<%  memC += 32 -%>
-<%  } -%>
-
-<%  for(let i = 0; i < vk.f.length; ++i) { -%>
-<%  if(vk.f[i].stages[0].stage === 2) { -%>
+<%      } -%>
+<%      for(let i = 0; i < vk.f.length; ++i) { -%>
+<%          if(vk.f[i].stages[0].stage === stage) { -%>
                 mstore(add(pMem, <%= memC %>), calldataload(pf<%- vk.f[i].index %>))
                 mstore(add(pMem, <%= memC + 32 %>), calldataload(add(pf<%- vk.f[i].index %>, 32)))
-<%  memC += 64 -%>
-<%  } -%>
-<%  } -%>
-                
-<%  if(fflonkInfo.mapSectionsN.cm3_n > 0) { -%>
-                // Compute challenge.gamma
-                mstore(add(pMem, pGamma),  mod(keccak256(add(pMem, pLastMem), <%= memC - pLastMem %>), q))
+<%              memC += 64 -%>
+<%          } -%>
+<%      } -%>
 
-                // Compute challenge.delta
-                mstore(add(pMem, pDelta), mod(keccak256(add(pMem, pGamma), 32), q))
-<%  memC = pLastMem; -%>
-
-                mstore(add(pMem, <%= memC %>), mload(add(pMem, pDelta)))
-<%  memC += 32 -%>
 <%  } -%>
 
-<%  for(let i = 0; i < vk.f.length; ++i) { -%>
-<%  if(vk.f[i].stages[0].stage === 3) { -%>
-                mstore(add(pMem, <%= memC %>), calldataload(pf<%- vk.f[i].index %>))
-                mstore(add(pMem, <%= memC + 32 %>), calldataload(add(pf<%- vk.f[i].index %>, 32)))
-<%  memC += 64 -%>
-<%  } -%>
-<%  } -%>
-                // Compute challenge.a
-                mstore(add(pMem, pA),  mod(keccak256(add(pMem, pLastMem), <%= memC - pLastMem %>), q))
+                // Compute challenge quotient polynomial
+                challenge := mod(keccak256(add(pMem, pLastMem), <%= memC - pLastMem %>), q)
+                mstore(add(pMem, pChallenge<%- fflonkInfo.nChallenges - 1 %>), challenge)
+                mstore(add(pMem, pLastMem), challenge)
+<%  memC = pLastMem + 32; -%>
 
                 // Compute xiSeed
-<%  memC = pLastMem; -%>
-                mstore(add(pMem, pLastMem), mload(add(pMem, pA)))
-<%  memC += 32; -%>
 <%  for(let i = 0; i < vk.f.length; ++i) { -%>
-<%  if(vk.f[i].stages[0].stage === 4) { -%>
+<%  if(vk.f[i].stages[0].stage === fflonkInfo.nLibStages + 2) { -%>
                 mstore(add(pMem, <%= memC %>), calldataload(pf<%- vk.f[i].index %>))
                 mstore(add(pMem, <%= memC + 32 %>), calldataload(add(pf<%- vk.f[i].index %>, 32)))
 <%  memC += 64 -%>
 <%  } -%>
 <%  } -%>
-                let xiSeed := mod(keccak256(add(pMem, pLastMem), <%- 32 + vk.f.filter(fi => fi.stages[0].stage === 4).length * 64  %>), q)
+                let xiSeed := mod(keccak256(add(pMem, pLastMem), <%- 32 + vk.f.filter(fi => fi.stages[0].stage === fflonkInfo.nLibStages + 2).length * 64  %>), q)
                 mstore(add(pMem, pXiSeed), xiSeed)
                                 
                 // Compute xin
@@ -379,21 +343,12 @@ contract PilFflonkVerifier {
             function computeQ(pMem, pPublic) {
 <%  } else { -%>
             function computeQ(pMem) {
-<%  } -%>    
+<%  } -%>
             
                 let mIn := mload(0x40)
                 let tmp
                 let tmp2
 
-<%  if (fflonkInfo.mapSectionsN.cm2_n > 0 || fflonkInfo.peCtx.length > 0) { -%>
-                let challengeAlpha := mload(add(pMem, pAlpha))
-                let challengeBeta := mload(add(pMem, pBeta))
-<%  } -%>  
-<%  if (fflonkInfo.mapSectionsN.cm3_n > 0) { -%>
-                let challengeGamma := mload(add(pMem, pGamma))
-                let challengeDelta := mload(add(pMem, pDelta))
-<%  } -%>  
-                let challengeA := mload(add(pMem, pA))
                 let challengeXi := mload(add(pMem, pXi))
 <%  if(vk.maxQDegree > 0) { -%>
                 let challengeXiN := mload(add(pMem, pXiN))
@@ -404,7 +359,7 @@ contract PilFflonkVerifier {
 <%  if(vk.maxQDegree > 0) { -%>
                 tmp := 0
                 let xAcc := 1
-<%  const nPolsQ = vk.f.filter(fi => fi.stages[0].stage === 4).map(fi => fi.pols).flat(Infinity).length; -%>
+<%  const nPolsQ = vk.f.filter(fi => fi.stages[0].stage === fflonkInfo.nLibStages + 2).map(fi => fi.pols).flat(Infinity).length; -%>
 <%  for(let i = 0; i < nPolsQ; ++i) { -%>
                 tmp := addmod(tmp, mulmod(calldataload(pEval_Q<%- i %>), xAcc, q), q)
 <%  if(i < nPolsQ - 1) { -%>

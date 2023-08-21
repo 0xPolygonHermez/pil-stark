@@ -9,9 +9,11 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctxExt, st
     res.challenges["Q"] = [vc.id];
     res.nChallenges++;
 
-    const xi = E.challenge("xi");
-    res.challenges["xi"] = [xi.id];
-    res.nChallenges++;
+    if(stark) {
+        const xi = E.challenge("xi");
+        res.challenges["xi"] = [xi.id];
+        res.nChallenges++;
+    }
 
     let cExp = null;
     for (let i=0; i<pil.polIdentities.length; i++) {

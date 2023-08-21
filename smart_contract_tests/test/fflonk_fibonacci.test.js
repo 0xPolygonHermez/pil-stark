@@ -1,11 +1,11 @@
 const chai = require("chai");
 const assert = chai.assert;
 const expect = chai.expect;
-const {F1Field, getCurveFromName} = require("ffjavascript");
+const {F1Field} = require("ffjavascript");
 const path = require("path");
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
-const { fflonkSetup, fflonkProve, pilInfo, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey, readPilFflonkZkeyFile} = require("pil-stark");
+const { fflonkSetup, fflonkProve, pilInfo, exportFflonkCalldata, exportPilFflonkVerifier, fflonkVerificationKey, readPilFflonkZkeyFile, fflonkVerify} = require("pil-stark");
 
 const smFibonacci = require("../../test/state_machines/sm_fibonacci/sm_fibonacci.js");
 
@@ -85,7 +85,6 @@ describe("Fflonk Fibonacci sm", async function () {
             .map((str, index) => (index === 0 ? str + ']' : '[' + str))
             .map(str => JSON.parse(str));
 
-            console.log(...inputs);
             expect(await pilFflonkVerifier.verifyProof(...inputs)).to.equal(true);
     
         } else {

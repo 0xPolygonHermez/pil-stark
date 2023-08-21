@@ -5,7 +5,13 @@
     "test": "npx hardhat test",
     "test:simple": "mocha test/fflonk_simple.test.js",
     "test:fibonacci": "mocha test/fflonk_fibonacci.test.js",
-    "test:all": "mocha test/fflonk_all.test.js"
+    "test:all": "mocha test/fflonk_all.test.js",
+    "test:simple_connection": "mocha test/fflonk_simple_connection.test.js",
+    "test:connection": "mocha test/fflonk_connection.test.js",
+    "test:simple_permutation": "mocha test/fflonk_simple_permutation.test.js",
+    "test:permutation": "mocha test/fflonk_permutation.test.js",
+    "test:simple_plookup": "mocha test/fflonk_simple_plookup.test.js",
+    "test:plookup": "mocha test/fflonk_plookup.test.js"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.3",
