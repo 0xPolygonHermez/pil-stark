@@ -82,12 +82,6 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
     for (let j = 0; j < code.length; j++) {
         const src = [];
         const r = code[j];
-        /*if (!(r.dest.type == 'cm') && !(r.dest.type == 'tmpExp') && !(r.dest.type == 'tmp' && r.dest.dim == 1 && r.op == 'add' && r.src[0].type === "tmp" && r.src[1].type == "cm" && r.src[1].prime)
-            && !(r.dest.type == 'tmp' && r.dest.dim == 1 && r.op == 'mul' && (r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'number'))) {
-            pushResArg(r);
-            ++count_args0;
-        }*/
-        let lexp = getLRef(r);
         for (k = 0; k < r.src.length; k++) {
             src.push(getRef(r.src[k]));
         }
@@ -153,16 +147,6 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
                                     opsString += "3, ";
                                     break;
                                 }
-                                case "tmpExp": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    assert(!r.src[1].prime);
-                                    counters_ops[1] += 1;
-                                    ops.push(1);
-                                    opsString += "1, ";
-                                    break;
-                                }
                                 default: {
                                     console.log(src[0], src[1]);
                                     console.log(r.src[0].type, r.src[1].type);
@@ -218,15 +202,6 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
                                     counters_ops[3] += 1;
                                     ops.push(3);
                                     opsString += "3, ";
-                                    break;
-                                } case "tmpExp": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[1]);
-                                    pushSrcArg(r.src[0]);
-                                    assert(!r.src[1].prime);
-                                    counters_ops[1] += 1;
-                                    ops.push(1);
-                                    opsString += "1, ";
                                     break;
                                 }
                                 default: {
@@ -390,11 +365,6 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
                             ops.push(40);
                             opsString += "40, ";
                             assert(!r.src[1].prime);
-                        } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmpExp')) {
-                            assert(!r.src[1].prime);
-                            counters_ops[22] += 1;
-                            ops.push(22);
-                            opsString += "22, ";
                         } else {
                             console.log(src[0], src[1]);
                             console.log(r.src[0].type, r.src[1].type);
@@ -614,7 +584,7 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
                 }
                 default: throw new Error("Invalid op:" + c[j].op);
             }
-        } else if ((r.dest.type == 'cm' || r.dest.type == 'tmpExp') && !r.dest.prime) {
+        } else if (r.dest.type == 'cm' && !r.dest.prime) {
             /**
              * 
              * 
@@ -654,16 +624,6 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
                                     }
                                     break;
                                 }
-                                case "tmpExp": {
-                                    assert(!r.src[1].prime);
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    counters_ops[87] += 1;
-                                    ops.push(87);
-                                    opsString += "87, ";
-                                    break;
-                                }
                                 default: {
                                     console.log(src[0], src[1]);
                                     console.log(r.src[0].type, r.src[1].type);
@@ -684,15 +644,6 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
                                     } else {
                                         assert(0);
                                     }
-                                    break;
-                                } case "tmpExp": {
-                                    assert(!r.src[0].prime);
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[1]);
-                                    pushSrcArg(r.src[0]);
-                                    counters_ops[87] += 1;
-                                    ops.push(87);
-                                    opsString += "87, ";
                                     break;
                                 }
                                 default: {
@@ -805,10 +756,6 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
                             counters_ops[100] += 1;
                             ops.push(100);
                             opsString += "100, ";
-                        } else if (r.dest.type == 'tmpExp' && !r.dest.prime && r.src[0].type == 'tmp') {
-                            counters_ops[100] += 1;
-                            ops.push(100);
-                            opsString += "100, ";
                         } else {
                             console.log(r.dest.type, r.src[0].type);
                             throw new Error("Option not considered!");
@@ -820,7 +767,7 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
                 }
                 default: throw new Error("Invalid op:" + c[j].op);
             }
-        } else if ((r.dest.type == 'cm' || r.dest.type == 'tmpExp') && r.dest.prime) {
+        } else if (r.dest.type == 'cm' && r.dest.prime) {
             /**
             * 
             * 
@@ -865,16 +812,6 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
                                     }
                                     break;
                                 }
-                                case "tmpExp": {
-                                    assert(!r.src[1].prime);
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    counters_ops[102] += 1;
-                                    ops.push(102);
-                                    opsString += "102, ";
-                                    break;
-                                }
                                 default: {
                                     console.log(src[0], src[1]);
                                     console.log(r.src[0].type, r.src[1].type);
@@ -900,15 +837,6 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
                                         ops.push(114);
                                         opsString += "114, ";
                                     }
-                                    break;
-                                } case "tmpExp": {
-                                    assert(!r.src[0].prime);
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[1]);
-                                    pushSrcArg(r.src[0]);
-                                    counters_ops[102] += 1;
-                                    ops.push(102);
-                                    opsString += "102, ";
                                     break;
                                 }
                                 default: {
@@ -1033,10 +961,6 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
                         pushResArg(r);
                         pushSrcArg(r.src[0]);
                         if (r.dest.type == 'cm' && r.src[0].type == 'tmp') {
-                            counters_ops[113] += 1;
-                            ops.push(113);
-                            opsString += "113, ";
-                        } else if (r.dest.type == 'tmpExp' && r.src[0].type == 'tmp') {
                             counters_ops[113] += 1;
                             ops.push(113);
                             opsString += "113, ";
@@ -1212,20 +1136,11 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
                     throw new Error("Invalid dom");
                 }
             }
-            case "tmpExp": {
-                if (dom == "n") {
-                    return evalMap(fflonkInfo.tmpExp_n[r.id], r.prime)
-                } else if (dom == "ext") {
-                    throw new Error("Invalid dom");
-                } else {
-                    throw new Error("Invalid dom");
-                }
-            }
             case "cm": {
                 if (dom == "n") {
-                    return evalMap(fflonkInfo.cm_n[r.id], r.prime)
+                    return evalMap(r.id, r.prime, false)
                 } else if (dom == "ext") {
-                    return evalMap(fflonkInfo.cm_ext[r.id], r.prime)
+                    return evalMap(r.id, r.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -1267,43 +1182,6 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
         }
     }
 
-    function getLRef(r) {
-        let eDst;
-        switch (r.dest.type) {
-            case "tmp": {
-
-                if (r.dest.dim == 1) {
-                    eDst = `tmp1[${r.dest.id}]`;
-                } else {
-                    throw new Error("Invalid dim");
-                }
-                break;
-            }
-            case "cm": {
-                if (dom == "n") {
-                    eDst = evalMap(fflonkInfo.cm_n[r.dest.id], r.dest.prime)
-                } else if (dom == "ext") {
-                    eDst = evalMap(fflonkInfo.cm_ext[r.dest.id], r.dest.prime)
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
-            case "tmpExp": {
-                if (dom == "n") {
-                    eDst = evalMap(fflonkInfo.tmpExp_n[r.dest.id], r.dest.prime)
-                } else if (dom == "ext") {
-                    throw new Error("Invalid dom");
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
-            default: throw new Error("Invalid reference type set: " + r.dest.type);
-        }
-        return eDst;
-    }
-
     function pushResArg(r) {
         let eDst;
         switch (r.dest.type) {
@@ -1316,19 +1194,9 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
             }
             case "cm": {
                 if (dom == "n") {
-                    eDst = evalMap_(fflonkInfo.cm_n[r.dest.id], r.dest.prime)
+                    eDst = evalMap_(r.dest.id, r.dest.prime, false)
                 } else if (dom == "ext") {
-                    eDst = evalMap_(fflonkInfo.cm_ext[r.dest.id], r.dest.prime)
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
-            case "tmpExp": {
-                if (dom == "n") {
-                    eDst = evalMap_(fflonkInfo.tmpExp_n[r.dest.id], r.dest.prime)
-                } else if (dom == "ext") {
-                    throw new Error("Invalid dom");
+                    eDst = evalMap_(r.dest.id, r.dest.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -1339,24 +1207,25 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
         return eDst;
     }
 
-    function evalMap(polId, prime) {
+    function evalMap(polId, prime, extend) {
         let p = fflonkInfo.cmPolsMap[polId];
         ++refpols;
         if (!p) {
             console.log("xx");
         }
         let offset = p.stagePos;
+        let stage = extend ? p.stage + "_n" : p.stage + "_ext";
         let size = fflonkInfo.mapSectionsN[p.stage];
         if (p.dim == 1) {
             if (prime) {
                 range_pols_1.add(size);
-                range_polsseq_1.add(p.stage);
-                return `params.${p.stage}[${offset} + ((i + ${next})%${N})*${size}]`;
+                range_polsseq_1.add(stage);
+                return `params.${stage}[${offset} + ((i + ${next})%${N})*${size}]`;
 
             } else {
                 range_pols_2.add(size);
-                range_polsseq_2.add(p.stage);
-                return `params.${p.stage}[${offset} + i*${size}]`;
+                range_polsseq_2.add(stage);
+                return `params.${stage}[${offset} + i*${size}]`;
             }
         } else {
             throw new Error("invalid dim");
@@ -1404,22 +1273,11 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
                 }
                 break;
             }
-            case "tmpExp": {
-                if (dom == "n") {
-                    evalMap_(fflonkInfo.tmpExp_n[r.id], r.prime)
-                } else if (dom == "ext") {
-                    console.log("hola ", r.type);
-                    throw new Error("Invalid dom");
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
             case "cm": {
                 if (dom == "n") {
-                    evalMap_(fflonkInfo.cm_n[r.id], r.prime)
+                    evalMap_(r.id, r.prime, false)
                 } else if (dom == "ext") {
-                    evalMap_(fflonkInfo.cm_ext[r.id], r.prime)
+                    evalMap_(r.id, r.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -1452,9 +1310,10 @@ module.exports = function compileCode_parser(fflonkInfo, nBits, functionName, co
         }
     }
 
-    function evalMap_(polId, prime) {
+    function evalMap_(polId, prime, extend) {
         let p = fflonkInfo.cmPolsMap[polId];
         let offset = p.stagePos;
+        let stage = extend ? p.stage + "_n" : p.stage + "_ext";
         let size = fflonkInfo.mapSectionsN[p.stage];
         if (p.dim == 1) {
             if (prime) {

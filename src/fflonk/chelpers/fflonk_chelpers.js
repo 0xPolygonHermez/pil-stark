@@ -43,63 +43,32 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
         code.length = 0;
     }
 
+    for(let i = 0; i < Object.keys(starkInfo.code).length; ++i) {
+        const name = Object.keys(starkInfo.code)[i];
+        if(["qVerifier", "queryVerifier"].includes(name)) continue;
+        const dom = ["Q", "fri"].includes(name) ? "ext" : "n";
 
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(fflonkInfo, nBits, "step2prev_first", fflonkInfo.step2prev.first, "n"));
-        result.step2prev_parser = code.join("\n\n") + "\n";
-        code.length = 0;
+        if (optcodes && multipleCodeFiles) {
+            if(name === "Q") {
+                code.push(compileCode_QPolynomial(starkInfo, `${name}_first`, starkInfo.code[name].first, dom));
+            } else if (name === "fri") {
+                code.push(compileCode_fri(starkInfo, `${name}_first`, starkInfo.code[name].first, dom));
+            } else {
+                code.push(compileCode_parser(starkInfo, `${name}_first`, starkInfo.code[name].first, dom));
+            }
+            result[`${name}_parser`]= code.join("\n\n") + "\n";
+            code.length = 0;
+        }
+
+	    code.push(compileCode(`${name}_first`, starkInfo.code[name].first, dom));
+
+        if (multipleCodeFiles) {
+            result[name] = code.join("\n\n") + "\n";
+            code.length = 0;
+        }
     }
 
-    code.push(compileCode("step2prev_first", fflonkInfo.step2prev.first, "n"));
-    code.push(compileCode("step2prev_i", fflonkInfo.step2prev.first, "n"));
-    code.push(compileCode("step2prev_last", fflonkInfo.step2prev.first, "n"));
-
-    if (multipleCodeFiles) {
-        result.step2 = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(fflonkInfo, nBits, "step3prev_first", fflonkInfo.step3prev.first, "n"));
-        result.step3prev_parser = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    code.push(compileCode("step3prev_first", fflonkInfo.step3prev.first, "n"));
-    code.push(compileCode("step3prev_i", fflonkInfo.step3prev.first, "n"));
-    code.push(compileCode("step3prev_last", fflonkInfo.step3prev.first, "n"));
-
-    if (multipleCodeFiles) {
-        result.step3prev = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(fflonkInfo, nBits, "step3_first", fflonkInfo.step3.first, "n"));
-        result.step3_parser = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    code.push(compileCode("step3_first", fflonkInfo.step3.first, "n"));
-    code.push(compileCode("step3_i", fflonkInfo.step3.first, "n"));
-    code.push(compileCode("step3_last", fflonkInfo.step3.first, "n"));
-
-    if (multipleCodeFiles) {
-        result.step3 = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_QPolynomial(fflonkInfo, "stepQext_first", fflonkInfo.stepQext.first, "ext"));
-        result.stepQext_parser = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-    code.push(compileCode("stepQext_first", fflonkInfo.stepQext.first, "ext", false));
-    code.push(compileCode("stepQext_i", fflonkInfo.stepQext.first, "ext", false));
-    code.push(compileCode("stepQext_last", fflonkInfo.stepQext.first, "ext", false));
-
-    if (multipleCodeFiles) {
-        result.stepQext = code.join("\n\n") + "\n";
+    if(multipleCodeFiles) {
         result.constValues =  [
             `u_int64_t PilFflonkSteps::getNumConstValues() { return ${vIndex}; }\n`,
             `void PilFflonkSteps::setConstValues(AltBn128::Engine &E, PilFflonkStepsParams &params) {`,
@@ -184,18 +153,11 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
                         throw new Error("Invalid dom");
                     }
                 }
-                case "tmpExp": {
-                    if (dom == "n") {
-                        return evalMap(fflonkInfo.tmpExp_n[r.id], r.prime)
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                }
                 case "cm": {
                     if (dom == "n") {
-                        return evalMap(fflonkInfo.cm_n[r.id], r.prime)
+                        return evalMap(r.id, r.prime, false)
                     } else if (dom == "ext") {
-                        return evalMap(fflonkInfo.cm_ext[r.id], r.prime)
+                        return evalMap(r.id, r.prime, true)
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -251,17 +213,9 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
                 }
                 case "cm": {
                     if (dom == "n") {
-                        eDst = evalMap(fflonkInfo.cm_n[r.dest.id], r.dest.prime)
+                        eDst = evalMap(r.dest.id, r.dest.prime, false)
                     } else if (dom == "ext") {
-                        eDst = evalMap(fflonkInfo.cm_ext[r.dest.id], r.dest.prime)
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                    break;
-                }
-                case "tmpExp": {
-                    if (dom == "n") {
-                        eDst = evalMap(fflonkInfo.tmpExp_n[r.dest.id], r.dest.prime)
+                        eDst = evalMap(r.dest.id, r.dest.prime, true)
                     } else {
                         throw new Error("Invalid dom");
                     }
@@ -272,7 +226,7 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
             return eDst;
         }
 
-        function evalMap(polId, prime) {
+        function evalMap(polId, prime, extend) {
 
             let p = fflonkInfo.cmPolsMap[polId];
             if (!p) {
@@ -281,7 +235,8 @@ module.exports = function buildCHelpers(fflonkInfo, config = {}) {
             let offset = p.stagePos;
             let index = prime ? `((i + ${next})%${N})` : "i";
             let size = fflonkInfo.mapSectionsN[p.stage];
-            return `params.${p.stage}[${offset} + ${index}*${size}]`;
+            let stage = extend ? p.stage + "_n" : p.stage + "_ext";
+            return `params.${stage}[${offset} + ${index}*${size}]`;
         }
     }
 

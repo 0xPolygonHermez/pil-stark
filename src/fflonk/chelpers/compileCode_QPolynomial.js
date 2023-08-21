@@ -692,20 +692,11 @@ module.exports = function compileCode_QPolynomial(fflonkInfo, nBits, functionNam
                     throw new Error("Invalid dom");
                 }
             }
-            case "tmpExp": {
-                if (dom == "n") {
-                    return evalMap(fflonkInfo.tmpExp_n[r.id], r.prime)
-                } else if (dom == "ext") {
-                    throw new Error("Invalid dom");
-                } else {
-                    throw new Error("Invalid dom");
-                }
-            }
             case "cm": {
                 if (dom == "n") {
-                    return evalMap(fflonkInfo.cm_n[r.id], r.prime)
+                    return evalMap(r.id, r.prime, false)
                 } else if (dom == "ext") {
-                    return evalMap(fflonkInfo.cm_ext[r.id], r.prime)
+                    return evalMap(r.id, r.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -763,9 +754,9 @@ module.exports = function compileCode_QPolynomial(fflonkInfo, nBits, functionNam
             }
             case "cm": {
                 if (dom == "n") {
-                    eDst = evalMap(fflonkInfo.cm_n[r.dest.id], r.dest.prime)
+                    eDst = evalMap(r.dest.id, r.dest.prime, false)
                 } else if (dom == "ext") {
-                    eDst = evalMap(fflonkInfo.cm_ext[r.dest.id], r.dest.prime)
+                    eDst = evalMap(r.dest.id, r.dest.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -781,39 +772,30 @@ module.exports = function compileCode_QPolynomial(fflonkInfo, nBits, functionNam
                 }
                 break;
             }
-            case "tmpExp": {
-                if (dom == "n") {
-                    eDst = evalMap(fflonkInfo.tmpExp_n[r.dest.id], r.dest.prime)
-                } else if (dom == "ext") {
-                    throw new Error("Invalid dom");
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
             default: throw new Error("Invalid reference type set: " + r.dest.type);
         }
         return eDst;
     }
 
-    function evalMap(polId, prime) {
+    function evalMap(polId, prime, extend) {
         let p = fflonkInfo.cmPolsMap[polId];
         ++refpols;
         if (!p) {
             console.log("xx");
         }
+        let stage = extend ? p.stage + "_n" : p.stage + "_ext";
         let offset = p.stagePos;
         let size = fflonkInfo.mapSectionsN[p.stage];
         if (p.dim == 1) {
             if (prime) {
                 range_pols_1.add(size);
-                range_polsseq_1.add(p.stage);
-                return `params.${p.stage}[${offset} + ((i + ${next})%${N})*${size}]`;
+                range_polsseq_1.add(stage);
+                return `params.${stage}[${offset} + ((i + ${next})%${N})*${size}]`;
 
             } else {
                 range_pols_2.add(size);
-                range_polsseq_2.add(p.stage);
-                return `params.${p.stage}[${offset} + i*${size}]`;
+                range_polsseq_2.add(stage);
+                return `params.${stage}[${offset} + i*${size}]`;
             }
         } else {
             throw new Error("invalid dim");
@@ -867,22 +849,11 @@ module.exports = function compileCode_QPolynomial(fflonkInfo, nBits, functionNam
                 }
                 break;
             }
-            case "tmpExp": {
-                if (dom == "n") {
-                    evalMap_(fflonkInfo.tmpExp_n[r.id], r.prime)
-                } else if (dom == "ext") {
-                    console.log("hola ", r.type);
-                    throw new Error("Invalid dom");
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
             case "cm": {
                 if (dom == "n") {
-                    evalMap_(fflonkInfo.cm_n[r.id], r.prime)
+                    evalMap_(r.id, r.prime, false)
                 } else if (dom == "ext") {
-                    evalMap_(fflonkInfo.cm_ext[r.id], r.prime)
+                    evalMap_(r.id, r.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -915,9 +886,10 @@ module.exports = function compileCode_QPolynomial(fflonkInfo, nBits, functionNam
         }
     }
 
-    function evalMap_(polId, prime) {
+    function evalMap_(polId, prime, extend) {
         let p = fflonkInfo.cmPolsMap[polId];
         let offset = p.stagePos;
+        let stage = extend ? p.stage + "_n" : p.stage + "_ext";
         let size = fflonkInfo.mapSectionsN[p.stage];
         if (p.dim == 1) {
             if (prime) {
