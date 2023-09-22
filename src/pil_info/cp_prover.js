@@ -195,20 +195,20 @@ function getExpDim(pil, exp, maxDeg) {
         case "neg":
             let md = 1;
             for (let i=0; i<exp.values.length; i++) {
-                const d = getExpDim(pil, exp.values[i]);
+                const d = getExpDim(pil, exp.values[i], maxDeg);
                 if (d>md) md=d;
             }
             return md;
         case "mul":
-            return getExpDim(pil, exp.values[0]) + getExpDim(pil, exp.values[1])
+            return getExpDim(pil, exp.values[0], maxDeg) + getExpDim(pil, exp.values[1], maxDeg)
         case "muladd":
-            return Math.max(getExpDim(pil, exp.values[0]) + getExpDim(pil, exp.values[1]), getExpDim(pil, exp.values[2]));
+            return Math.max(getExpDim(pil, exp.values[0], maxDeg) + getExpDim(pil, exp.values[1], maxDeg), getExpDim(pil, exp.values[2], maxDeg));
         case "cm": return 1;
         case "const": return 1;
         case "exp": 
             if(exp.dim && exp.dim[maxDeg] >= 0) return exp.dim[maxDeg];
             if(!exp.dim) exp.dim = {};
-            exp.dim[maxDeg] = getExpDim(pil, pil.expressions[exp.id]);
+            exp.dim[maxDeg] = getExpDim(pil, pil.expressions[exp.id], maxDeg);
             return exp.dim[maxDeg];
         case "number": return 0;
         case "public": return 0;

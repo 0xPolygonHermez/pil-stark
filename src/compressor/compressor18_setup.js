@@ -8,6 +8,7 @@ const ejs = require("ejs");
 const r1cs2plonk = require("../r1cs2plonk");
 const {M, P, S, C} = require("../helpers/hash/poseidon/poseidon_constants_opt.js");
 const { getCustomGatesInfo, calculatePlonkConstraintsHalfs } = require("./compressor_helpers.js");
+const { connect } = require("../helpers/polutils");
 
 /*
     Compress plonk constraints and verifies custom gates using 18 committed polynomials
@@ -594,7 +595,7 @@ module.exports = async function plonkSetup(F, r1cs, options) {
                 if (typeof lastSignal[sMap[j][i]] !== "undefined") {
                     const ls = lastSignal[sMap[j][i]];
                     connections++;
-                    connect(constPols.Compressor.S[ls.col][ls.row], constPols.Compressor.S[j][i]);
+                    connect(constPols.Compressor.S[ls.col],ls.row, constPols.Compressor.S[j],i);
                 } else {
                     lastSignal[sMap[j][i]] = {
                         col: j,
@@ -644,8 +645,4 @@ module.exports = async function plonkSetup(F, r1cs, options) {
         sMap: sMap,
         plonkAdditions: plonkAdditions
     };
-
-    function connect(p1, p2) {
-        [p1, p2] = [p2, p1];
-    }
 }

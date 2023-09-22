@@ -6,6 +6,7 @@ const {tmpName} = require("tmp-promise");
 const { newConstantPolsArray, compile, getKs } = require("pilcom");
 const ejs = require("ejs");
 const r1cs2plonk = require("../../src/r1cs2plonk");
+const { connect } = require("../../src/helpers/polutils.js");
 
 
 
@@ -132,9 +133,4 @@ module.exports = async function plonkSetup(r1cs) {
         sMap: sMap,
         plonkAdditions: plonkAdditions
     };
-
-    function connect(p1, i1, p2, i2) {
-        [p1[i1], p2[i2]] = [p2[i2], p1[i1]];
-    }
-
 }
