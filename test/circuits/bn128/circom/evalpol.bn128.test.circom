@@ -3,5 +3,5 @@ pragma custom_templates;
 
 include "../../../../circuits.bn128/evalpol.circom";
 
-component main = EvalPol(32);
+component main = EvalPol(32, 1);
 

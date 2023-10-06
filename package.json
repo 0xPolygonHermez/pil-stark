@@ -109,6 +109,7 @@
   "devDependencies": {
     "@iden3/bigarray": "^0.0.2",
     "chai": "^4.3.6",
+    "chai-as-promised": "^7.1.1",
     "circom_tester": "^0.0.18",
     "mocha": "^10.0.0",
     "temporary": "^1.1.0",

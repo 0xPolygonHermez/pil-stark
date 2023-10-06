@@ -123,6 +123,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         }
     }
 
+    transcript.put(MH.root(constTree));
     for (let i=0; i<starkInfo.publics.length; i++) {
         transcript.put(ctx.publics[i]);
     }
