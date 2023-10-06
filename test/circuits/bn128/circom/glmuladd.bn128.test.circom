@@ -8,7 +8,7 @@ template GLMulAdd() {
     signal input inc;
     signal output out;
 
-    signal mul <== GLMul()(ina, inb);
+    signal mul <== GLMul(1)(ina, inb);
     out <== GLAdd(1)(mul, inc);
 }
 

@@ -8,7 +8,7 @@ template GLCMulAdd() {
     signal input inc[3];
     signal output out[3];
 
-    signal mul[3] <== GLCMul()(ina, inb);
+    signal mul[3] <== GLCMul(1)(ina, inb);
     out <== GLCAdd(1)(mul, inc);
 }
 

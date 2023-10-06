@@ -17,6 +17,7 @@ const argv = require("yargs")
     .alias("v", "verkey")
     .alias("o", "output")
     .string("arity")
+    .string("norm")
     .argv;
 
 async function run() {
@@ -42,6 +43,7 @@ async function run() {
 
     if(starkInfo.starkStruct.verificationHashType === "BN128") {
         options.arity =  Number(argv.arity) || 16;
+        options.norm = Number(argv.norm) || 1; 
         console.log(`Arity: ${options.arity}`);
     }
 

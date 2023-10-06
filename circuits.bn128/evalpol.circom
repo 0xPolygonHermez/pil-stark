@@ -13,7 +13,7 @@ template EvalPol(n, norm) {
     component cmuladd[n-1];
 
     for (var i=1; i<n; i++) {
-        cmul[i-1] = GLCMul();
+        cmul[i-1] = GLCMul(norm);
         if (i==1) {
             cmul[i-1].ina <== pol[n-1];
         } else {
