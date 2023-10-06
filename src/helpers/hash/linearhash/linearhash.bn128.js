@@ -16,12 +16,14 @@ module.exports = class LinearHashBN {
 
         const vals3 = [];
 
+        const p = 18446744069414584321n;
+        
         let acc = F.zero;
         let accN = 0;
         for(let i=0; i<vals.length; i++) {
             if (Array.isArray(vals[i])) {
                 for (let k=0; k<vals[i].length; k++) {
-                    acc = F.add(acc, F.e(BigInt(vals[i][k]) << BigInt(64*accN)) );
+                    acc = F.add(acc, F.e(BigInt(vals[i][k]) * (p**BigInt(accN))));
                     accN++;
                     if (accN == 3) {
                         vals3.push(acc);
@@ -30,7 +32,7 @@ module.exports = class LinearHashBN {
                     }
                 }
             } else {
-                acc = F.add(acc, F.e(BigInt(vals[i]) << BigInt(64*accN)) );
+                acc = F.add(acc, F.e(BigInt(vals[i]) * (p**BigInt(accN))));
                 accN++;
                 if (accN == 3) {
                     vals3.push(acc);

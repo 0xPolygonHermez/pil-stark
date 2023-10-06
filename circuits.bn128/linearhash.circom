@@ -11,11 +11,13 @@ template LinearHash(nInputs, eSize, arity) {
     var sAc = 0;
     var nAc =0;
 
+    var p = 0xFFFFFFFF00000001;
+    
     var nHashes;
     if (nElements256 == 1) {
         for (var i=0; i<nInputs; i++) {
             for (var j=0; j<eSize; j++) {
-                sAc = sAc + 2**(64*nAc) * in[i][j];
+                sAc = sAc + p**nAc * in[i][j];
                 nAc ++;
             }
         }
@@ -46,7 +48,7 @@ template LinearHash(nInputs, eSize, arity) {
 
         for (var i=0; i<nInputs; i++) {
             for (var j=0; j<eSize; j++) {
-                sAc = sAc + 2**(64*nAc) * in[i][j];
+                sAc = sAc + p**nAc * in[i][j];
                 nAc ++;
                 if (nAc == 3) {
                     if (curHash == nHashes - 1) {
