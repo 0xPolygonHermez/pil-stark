@@ -252,6 +252,7 @@ class Transcript {
 template Transcript() {
 
     signal input publics[<%- pil.publics.length %>];
+    signal input rootC[4];
     signal input root1[4]; 
     signal input root2[4]; 
     signal input root3[4]; 
@@ -270,6 +271,7 @@ template Transcript() {
 
 <%
     const transcript = new Transcript();
+    transcript.put("rootC", 4);
     transcript.put("publics", pil.publics.length);
     transcript.put("root1", 4);
     transcript.getField("challenges[0]", 3);
@@ -416,7 +418,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
 <% }                                         -%>
     signal input tree4[<%- starkInfo.mapSectionsN.cm4_2ns %>];
     signal input consts[<%- starkInfo.nConstants %>];
-    signal input s0_vals[1<< nextStep][3];
+    signal input s1_vals[1<< nextStep][3];
     signal input enable;
     
 
@@ -454,7 +456,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
         s0_keys_lowValues[i] = ys[i + nextStepBits];
     } 
    
-    signal lowValues[3] <== TreeSelector(nextStep, 3)(s0_vals, s0_keys_lowValues);
+    signal lowValues[3] <== TreeSelector(nextStep, 3)(s1_vals, s0_keys_lowValues);
 
     enable * (lowValues[0] - queryVals[0]) === 0;
     enable * (lowValues[1] - queryVals[1]) === 0;
@@ -619,7 +621,7 @@ template StarkVerifier() {
     // Calculate challenges, s_i special and queries
     ///////////
 
-    (challenges,ys,<%- si_specials.join(",") %>) <== Transcript()(publics,root1,root2,root3,root4,evals, <%- si_roots.join(",") %>,finalPol);
+    (challenges,ys,<%- si_specials.join(",") %>) <== Transcript()(publics,rootC,root1,root2,root3,root4,evals, <%- si_roots.join(",") %>,finalPol);
 
     ///////////
     // Check constraints polynomial in the evaluation point

@@ -41,6 +41,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         publics: publics
     };
 
+    transcript.put(constRoot);
     for (let i=0; i<publics.length; i++) {
         transcript.put(publics[i]);
     }

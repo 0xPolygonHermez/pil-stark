@@ -1,7 +1,7 @@
 
 const {pilCodeGen, buildCode} = require("./codegen.js");
 
-module.exports = function generateVerifierQuery(res, pil) {
+module.exports = function generateVerifierQuery(res, pil, addMul) {
 
     const ctxFri = {
         pil: pil,
@@ -13,7 +13,7 @@ module.exports = function generateVerifierQuery(res, pil) {
         code: []
     };
 
-    pilCodeGen(ctxFri, res.friExpId, false, null, null, true);
+    pilCodeGen(ctxFri, res.friExpId, false, null, null, addMul);
     res.verifierQueryCode = buildCode(ctxFri);
     res.nExps = pil.expressions.length;
 

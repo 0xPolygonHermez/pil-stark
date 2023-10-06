@@ -2,6 +2,7 @@ pragma circom 2.1.0;
 
 include "gl.circom";
 include "bitify.circom";
+include "lessthangl.circom";
 
 
 function roots(i) {
@@ -128,9 +129,7 @@ template FFT(nBits, inv) {
             n2bK[i][e].in <== k[i][e];
             _ <== n2bK[i][e].out;
 
-            n2bO[i][e] = Num2Bits(64);
-            n2bO[i][e].in <== out[i][e];
-	        _ <== n2bO[i][e].out;
+            LessThanGoldilocks()(out[i][e]);
         }
     }
 }

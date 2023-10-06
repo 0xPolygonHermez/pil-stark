@@ -1,19 +1,21 @@
 pragma circom 2.1.0;
 
 include "bitify.circom";
+include "lessthangl.circom";
 
 template GLNorm() {
     signal input in;
     signal output out;
 
     var p=0xFFFFFFFF00000001;
-    signal k <-- (in + 16*p)\p;
-    out <-- (in+16*p) - k*p;
 
-    _ <== Num2Bits(10)(k);
-    _ <== Num2Bits(64)(out);
+    signal k <-- in\p;
+    out <-- in - k*p;   
 
-    (in+16*p) === k*p + out;
+    k * (k - 1) === 0;
+    LessThanGoldilocks()(out);
+
+    in === k*p + out;
 }
 
 template GLCNorm() {
@@ -21,32 +23,29 @@ template GLCNorm() {
     signal output out[3];
 
 
-    var p=0xFFFFFFFF00000001;
-
     for (var i=0; i<3; i++) {
         out[i] <== GLNorm()(in[i]);
     }
 }
 
-template GLMulAdd() {
+template GLAdd() {
     signal input ina;
     signal input inb;
-    signal input inc;
+    signal output out;
+
+    signal sum <== ina+inb;
+    out <== GLNorm()(sum);
+}
+
+template GLSub() {
+    signal input ina;
+    signal input inb;
     signal output out;
 
     var p=0xFFFFFFFF00000001;
-    signal k;
-    signal m;
 
-    m <== (ina + 16*p)*(inb + 16*p) + inc;
-
-    k <-- m\p;
-    out <-- m-k*p;
-
-    _ <== Num2Bits(80)(k);
-    _ <== Num2Bits(64)(out);
-
-    m === k*p + out;
+    signal sub <== ina-inb+p;
+    out <== GLNorm()(sub);
 }
 
 template GLMul() {
@@ -54,50 +53,39 @@ template GLMul() {
     signal input inb;
     signal output out;
 
-    out <== GLMulAdd()(ina, inb, 0);
+    var p=0xFFFFFFFF00000001;
+
+    signal k;
+    signal m;
+
+    m <== ina*inb;
+
+    k <-- m\p;
+    out <== m-k*p;
+
+    LessThanGoldilocks()(out);
+    _ <== Num2Bits(65)(k);
 }
 
-template GLCMulAdd() {
+template GLCAdd() {
     signal input ina[3];
     signal input inb[3];
-    signal input inc[3];
+    signal output out[3];
+
+    signal sum[3] <== [ina[0]+inb[0], ina[1]+inb[1], ina[2]+inb[2]];
+    out <== GLCNorm()(sum);
+}
+
+template GLCSub() {
+    signal input ina[3];
+    signal input inb[3];
     signal output out[3];
 
     var p=0xFFFFFFFF00000001;
 
-    signal A,B,C,D,E,F,G;
-    signal m[3];
-
-    A <== ((ina[0]+16*p) + (ina[1]+16*p))  * ((inb[0]+16*p) + (inb[1]+16*p));
-    B <== ((ina[0]+16*p) + (ina[2]+16*p))  * ((inb[0]+16*p) + (inb[2]+16*p));
-    C <== ((ina[1]+16*p) + (ina[2]+16*p))  * ((inb[1]+16*p) + (inb[2]+16*p));
-    D <== (ina[0]+16*p) * (inb[0]+16*p);
-    E <== (ina[1]+16*p) * (inb[1]+16*p);
-    F <== (ina[2]+16*p) * (inb[2]+16*p);
-    G <== D-E;
-    m[0] <== C+G-F + inc[0]+16*p;
-    m[1] <== A+C-E-E-D + inc[1]+16*p;
-    m[2] <== B-G + inc[2]+16*p;
-
-    signal k[3];
-
-    k[0] <-- m[0] \ p;
-    k[1] <-- m[1] \ p;
-    k[2] <-- m[2] \ p;
-
-    out[0] <-- m[0] -k[0]*p;
-    out[1] <-- m[1] -k[1]*p;
-    out[2] <-- m[2] -k[2]*p;
-
-    for (var i = 0; i<3; i++) {
-        _ <== Num2Bits(80)(k[i]);
-        _ <== Num2Bits(64)(out[i]);
-    }
-
-    m[0]  === k[0]*p + out[0];
-    m[1]  === k[1]*p + out[1];
-    m[2]  === k[2]*p + out[2];
-
+    signal sub[3] <== [ina[0]-inb[0]+p, ina[1]-inb[1]+p, ina[2]-inb[2]+p];
+    out <== GLCNorm()(sub);
+    
 }
 
 template GLCMul() {
@@ -105,7 +93,35 @@ template GLCMul() {
     signal input inb[3];
     signal output out[3];
 
-    out <== GLCMulAdd()(ina, inb, [0,0,0]);
+    var p=0xFFFFFFFF00000001;
+
+    signal A,B,C,D,E,F;
+    signal m[3];
+
+    A <== (ina[0] + ina[1])  * (inb[0] + inb[1]);
+    B <== (ina[0] + ina[2])  * (inb[0] + inb[2]);
+    C <== (ina[1] + ina[2])  * (inb[1] + inb[2]);
+    D <== ina[0] * inb[0];
+    E <== ina[1] * inb[1];
+    F <== ina[2] * inb[2];
+    m[0] <== C+D-E-F + 2*p;
+    m[1] <== A+C-E-E-D + 3*p;
+    m[2] <== B+E-D + p;
+
+    signal k[3];
+
+    k[0] <-- m[0] \ p;
+    k[1] <-- m[1] \ p;
+    k[2] <-- m[2] \ p;
+
+    out[0] <== m[0] - k[0]*p;
+    out[1] <== m[1] - k[1]*p;
+    out[2] <== m[2] - k[2]*p;
+
+    for (var i = 0; i<3; i++) {
+        _ <== Num2Bits(69)(k[i]);
+        LessThanGoldilocks()(out[i]);
+    }
 }
 
 
@@ -139,8 +155,6 @@ template GLInv() {
 
     signal check <== GLMul()(in, out);
     check === 1;
-
-    _ <== Num2Bits(64)(out);
 }
 
 
@@ -189,9 +203,5 @@ template GLCInv() {
 
     signal check[3] <== GLCMul()(in, out);
     check === [1,0,0];
-
-    _ <== Num2Bits(64)(out[0]);
-    _ <== Num2Bits(64)(out[1]);
-    _ <== Num2Bits(64)(out[2]);
 
 }

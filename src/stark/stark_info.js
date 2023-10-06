@@ -56,18 +56,19 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
         code: []
     };
 
-
+    const addMul = starkStruct.verificationHashType == "GL" ? true : false; 
+        
     generateStep2(res, pil, ctx);                        // H1, H2
 
     generateStep3(res, pil, ctx);                        // Z Polynomials and LC of permutation chcks.
 
     generateConstraintPolynomial(res, pil, ctx, ctx2ns);            // Step4
 
-    generateConstraintPolynomialVerifier(res, pil);
+    generateConstraintPolynomialVerifier(res, pil, addMul);
 
     generateFRIPolynomial(res, pil, ctx2ns);
 
-    generateVerifierQuery(res, pil);
+    generateVerifierQuery(res, pil, addMul);
 
     map(res, pil);
 
