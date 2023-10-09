@@ -1,7 +1,7 @@
 
 const assert = require("assert");
 const buildMerklehashGL = require("../helpers/hash/merklehash/merklehash_p.js");
-const buildMerklehashBN128 = require("../helpers/hash/merklehash/merklehash_bn128_p.js");
+const buildMerkleHashBN128 = require("../helpers/hash/merklehash/merklehash_bn128_p.js");
 const Transcript = require("../helpers/transcript/transcript");
 const TranscriptBN128 = require("../helpers/transcript/transcript.bn128");
 const F3g = require("../helpers/f3g.js");
@@ -40,7 +40,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         transcript = new Transcript(poseidon);
     } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
-        MH = await buildMerklehashBN128();
+        MH = await buildMerkleHashBN128();
         transcript = new TranscriptBN128(poseidonBN128);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
@@ -121,6 +121,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         }
     }
 
+    transcript.put(MH.root(constTree));
     for (let i=0; i<starkInfo.publics.length; i++) {
         transcript.put(ctx.publics[i]);
     }

@@ -1,6 +1,6 @@
 const {pilCodeGen, buildCode, iterateCode} = require("./codegen.js");
 
-module.exports  = function generateConstraintPolynomialVerifier(res, pil) {
+module.exports  = function generateConstraintPolynomialVerifier(res, pil, addMul) {
     const ctxC = {
         pil: pil,
         calculated: {
@@ -11,7 +11,7 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil) {
         code: []
     };
 
-    pilCodeGen(ctxC, res.cExp, false, null, null, true);
+    pilCodeGen(ctxC, res.cExp, false, null, null, addMul);
 
     res.verifierCode = buildCode(ctxC);
 

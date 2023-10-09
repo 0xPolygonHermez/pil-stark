@@ -8,6 +8,7 @@ describe("GL in BN128 circuit", function () {
     let circuitCMul;
     let circuitMulAdd;
     let circuitCMulAdd;
+    let circuitCMulAdd2;
     let circuitInv;
     let circuitCInv;
 
@@ -18,6 +19,7 @@ describe("GL in BN128 circuit", function () {
         circuitCMul = await wasm_tester(path.join(__dirname, "circom", "glcmul.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
         circuitMulAdd = await wasm_tester(path.join(__dirname, "circom", "glmuladd.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
         circuitCMulAdd = await wasm_tester(path.join(__dirname, "circom", "glcmuladd.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
+        circuitCMulAdd2 = await wasm_tester(path.join(__dirname, "circom", "glcmuladd2.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
         circuitInv = await wasm_tester(path.join(__dirname, "circom", "glinv.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
         circuitCInv = await wasm_tester(path.join(__dirname, "circom", "glcinv.bn128.test.circom"), {O:1, include: ["circuits.bn128", "node_modules/circomlib/circuits"]});
     });
@@ -74,6 +76,20 @@ describe("GL in BN128 circuit", function () {
         const w = await circuitCMulAdd.calculateWitness(input, true);
 
         await circuitCMulAdd.assertOut(w, {out: F.add(F.mul(input.ina, input.inb), input.inc)});
+    });
+
+    it("Should check a complex multiplication addition v2", async () => {
+        const F = new F3g();
+
+        const input={
+            ina: F.e([-2, 3, -35]),
+            inb: F.e([-1,-33, 4]),
+            inc: F.e([5,-8, -99])
+        };
+
+        const w = await circuitCMulAdd2.calculateWitness(input, true);
+
+        await circuitCMulAdd2.assertOut(w, {out: F.add(F.mul(input.ina, input.inb), input.inc)});
     });
 
     it("Should check a basefield inv", async () => {
