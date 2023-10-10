@@ -1,6 +1,8 @@
 pragma circom 2.1.0;
+
 include "bitify.circom";
 
+// Given an integer a, checks whether a < GL
 template LessThanGoldilocks() {
     var n = 64;
     var p = 0xFFFFFFFF00000001;

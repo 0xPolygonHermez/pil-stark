@@ -2,6 +2,9 @@ pragma circom 2.1.0;
 
 include "gl.circom";
 
+// Given a polynomial p(X) of degree lower than n over the GL³ field, and an evaluation point x from GL³,
+// it computes p(x) using Horner's method: 
+//                          p(x) = p₀ + x(p₁ + x(p₂ + ... + x(pₙ₋₁))).
 template EvalPol(n) {
     signal input {maxNum} pol[n][3];
     signal input {maxNum} x[3];
