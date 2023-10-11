@@ -8,9 +8,25 @@ template GLCMulAdd2() {
     signal input inc[3];
     signal output out[3];
 
-    signal mul[3] <== GLCMul()(ina, inb);
-    signal sum[3] <== GLCAdd()(mul, inc);
-    out <== GLCNorm()(sum);
+    var p = 0xFFFFFFFF00000001;
+
+    signal {maxNum} a[3];
+    a.maxNum = p - 1;
+    a <== ina;
+
+    signal {maxNum} b[3];
+    b.maxNum = p - 1;
+    b <== inb;
+
+    signal {maxNum} c[3];
+    c.maxNum = p - 1;
+    c <== inc;
+
+    signal {maxNum} mul[3] <== GLCMul(66)(a, b);
+    signal {maxNum} sum[3] <== GLCAdd()(mul, c);
+    signal {maxNum} res[3] <== GLCNorm(65)(sum);
+
+    out <== res;
 }
 
 component main = GLCMulAdd2();

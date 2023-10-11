@@ -8,9 +8,25 @@ template GLMulAdd() {
     signal input inc;
     signal output out;
 
-    signal mul <== GLMul()(ina, inb);
-    signal sum <== GLAdd()(mul, inc);
-    out <== GLNorm()(sum);
+    var p = 0xFFFFFFFF00000001;
+
+    signal {maxNum} a;
+    a.maxNum = p - 1;
+    a <== ina;
+
+    signal {maxNum} b;
+    b.maxNum = p - 1;
+    b <== inb;
+
+    signal {maxNum} c;
+    c.maxNum = p - 1;
+    c <== inc;
+
+    signal {maxNum} mul <== GLMul(64)(a, b);
+    signal {maxNum} sum <== GLAdd()(mul, c);
+    signal {maxNum} res <== GLNorm(65)(sum);
+
+    out <== res;
 }
 
 component main = GLMulAdd();
