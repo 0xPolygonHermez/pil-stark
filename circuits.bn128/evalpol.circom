@@ -3,14 +3,14 @@ pragma circom 2.1.0;
 include "gl.circom";
 
 template EvalPol(n) {
-    signal input pol[n][3];
-    signal input x[3];
-    signal output out[3];
+    signal input {maxNum} pol[n][3];
+    signal input {maxNum} x[3];
+    signal output {maxNum} out[3];
 
     component cmul[n-1];
 
     for (var i=1; i<n; i++) {
-        cmul[i-1] = GLCMulAdd();
+        cmul[i-1] = GLCMulAdd(67);
         if (i==1) {
             cmul[i-1].ina <== pol[n-1];
         } else {

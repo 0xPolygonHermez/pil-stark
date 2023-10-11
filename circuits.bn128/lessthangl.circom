@@ -5,6 +5,7 @@ template LessThanGoldilocks() {
     var n = 64;
     var p = 0xFFFFFFFF00000001;
     signal input in;
+    signal output {maxNum} out;
     
     component n2b = Num2Bits(n+1);
 
@@ -14,4 +15,7 @@ template LessThanGoldilocks() {
     lessThan === 1;
 
      _ <== n2b.out;
+
+    out.maxNum = p - 1;
+    out <== in;
 }

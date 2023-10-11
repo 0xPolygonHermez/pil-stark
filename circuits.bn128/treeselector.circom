@@ -7,9 +7,11 @@ pragma circom 2.1.0;
 template TreeSelector(nLevels, eSize) {
 
     var n = 1 << nLevels;
-    signal input values[n][eSize]; // Initial values
+    signal input {maxNum} values[n][eSize]; // Initial values
     signal input key[nLevels]; // Array that determines at each level if we keep even or odd positions
-    signal output out[eSize];
+    signal output {maxNum} out[eSize];
+
+    var p = 0xFFFFFFFF00000001;
 
     //Stores all the tree values (except for the leaves)
     //Note that if a tree has n leaves, the tree will have 2*n - 1 elements and so we only need to store n - 1
@@ -36,6 +38,7 @@ template TreeSelector(nLevels, eSize) {
     }
 
     // Return the root
+    out.maxNum = p - 1;
     out <== im[n-2];
 }
 

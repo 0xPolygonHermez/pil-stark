@@ -116,20 +116,22 @@ template FFT(nBits, inv) {
         }
     }
 
+    signal outs[N][3];
+
     component n2bK[N][3];
     component n2bO[N][3];
     for (var i=0; i<N; i++) {
         for (var e=0; e<3; e++) {
             k[i][e] <-- sum[i][e] \ p;
-            out[i][e] <-- sum[i][e] % p;
+            outs[i][e] <-- sum[i][e] % p;
+
+            out[i][e] <== LessThanGoldilocks()(outs[i][e]);
 
             k[i][e]*p + out[i][e] === sum[i][e];
 
             n2bK[i][e] = Num2Bits(64+nBits+1);
             n2bK[i][e].in <== k[i][e];
             _ <== n2bK[i][e].out;
-
-            LessThanGoldilocks()(out[i][e]);
         }
     }
 }
