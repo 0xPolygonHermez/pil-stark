@@ -11,12 +11,10 @@ template GLNorm(maxQuotientBits) {
     var p=0xFFFFFFFF00000001;
 
     signal k <-- in\p;
-    signal value <-- in - k*p;
+    signal value <== in - k*p;
 
     _ <== Num2Bits(maxQuotientBits)(k);
     out <== LessThanGoldilocks()(value);
-
-    in === k*p + out;
 }
 
 template GLCopy() {
