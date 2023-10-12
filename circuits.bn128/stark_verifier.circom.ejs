@@ -323,9 +323,7 @@ template SetChallenge() {
     signal input values[3];
     signal output {maxNum} challenge[3];
 
-    var p = 0xFFFFFFFFFFFFFFFF;
-
-    challenge.maxNum = p - 1;
+    challenge.maxNum = 0xFFFFFFFFFFFFFFFF;
     challenge <== values;
 }
 
@@ -472,11 +470,10 @@ template parallel VerifyEvaluations() {
     signal input enable;
 
     var p = 0xFFFFFFFF00000001;
-    var q = 0xFFFFFFFFFFFFFFFF;
 
     // zMul stores all the powers of z (which is stored in challenge7) up to nBits, i.e, [z, z^2, ..., z^nBits]
     signal {maxNum} zMul[<%- starkStruct.nBits %>][3];
-    zMul.maxNum = q - 1;
+    zMul.maxNum = 0xFFFFFFFFFFFFFFFF;
     for (var i=0; i< <%- starkStruct.nBits %> ; i++) {
         if(i==0){
 <%  const maxQuotientBitszMul0 = mulValuesBits(ch, ch); -%>
