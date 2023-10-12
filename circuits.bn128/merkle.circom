@@ -2,13 +2,17 @@ pragma circom 2.1.0;
 
 include "poseidon.circom";
 
+/*
+    Given a leaf value, its sibling path and a key indicating the hashing position for each element in the path, calculate the merkle tree root 
+    - keyBits: number of bits in the key
+*/
 template Merkle(keyBits) {
     var arity = 16;
     var nLevels = 0;
     var n = 1 << keyBits;
     var nn = n;
-    while (nn>1) {
-        nLevels ++;
+    while (nn > 1) {
+        nLevels++;
         nn = (nn - 1)\arity + 1;
     }
 
@@ -86,7 +90,7 @@ template Merkle(keyBits) {
             hash.inputs[i] <== s[i] * (value - siblings[0][i] ) + siblings[0][i];
         }
 
-        var nextNBits = keyBits -4;
+        var nextNBits = keyBits - 4;
         if (nextNBits<0) nextNBits = 0;
         var nNext = (n - 1)\arity + 1;
 

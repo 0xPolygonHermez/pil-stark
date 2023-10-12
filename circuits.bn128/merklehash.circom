@@ -5,7 +5,7 @@ include "merkle.circom";
 include "utils.circom";
 
 /*
-    Given a leaf value and its sibling path, calculate the merkle tree root 
+    Given a set of leaf values, their sibling path and their key, calculate the merkle tree root 
     - eSize: Size of the extended field (usually it will be either 3 if we are in Fp³ or 1)
     - elementsInLinear: Each leave of the merkle tree is made by this number of values. 
     - nLinears: Number of leaves of the merkle tree
@@ -15,7 +15,7 @@ template MerkleHash(eSize, elementsInLinear, nLinears) {
     assert(1 << nBits == nLinears);
     var nLevels = (nBits - 1)\4 +1;
     signal input values[elementsInLinear][eSize];
-    signal input siblings[nLevels][16]; // Sibling path to calculate the merkle root given a set of values. Why 16 ???
+    signal input siblings[nLevels][16]; // Sibling path to calculate the merkle root given a set of values.
     signal input key[nBits]; // Defines either each element of the sibling path is the left or right one
     signal output root; // Root of the merkle tree
 
@@ -28,6 +28,12 @@ template MerkleHash(eSize, elementsInLinear, nLinears) {
 }
 
 
+/*
+    Given a set of leaf values, their sibling path, their key, their merkle root and a boolean, check that the merkle tree root matches with the one sent as input
+    - eSize: Size of the extended field (usually it will be either 3 if we are in Fp³ or 1)
+    - elementsInLinear: Each leave of the merkle tree is made by this number of values. 
+    - nLinears: Number of leaves of the merkle tree
+*/
 template parallel VerifyMerkleHash(eSize, elementsInLinear, nLinears) {
     var nBits = log2(nLinears);
     assert(1 << nBits == nLinears);

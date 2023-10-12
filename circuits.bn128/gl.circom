@@ -3,6 +3,7 @@ pragma circom 2.1.0;
 include "bitify.circom";
 include "lessthangl.circom";
 
+// Given an integer a, computes a % GL
 template GLNorm(maxQuotientBits) {
     signal input {maxNum} in;
     signal output {maxNum} out;
@@ -26,6 +27,7 @@ template GLCopy() {
     out <== in;
 }
 
+// Given two integers a,b, computes a + b
 template GLAdd() {
     signal input {maxNum} ina;
     signal input {maxNum} inb;
@@ -35,7 +37,7 @@ template GLAdd() {
     out <== ina + inb;
 }
 
-
+// Given two integers a,b, computes a - b + GL
 template GLSub() {
     signal input {maxNum} ina;
     signal input {maxNum} inb;
@@ -50,6 +52,7 @@ template GLSub() {
     out <== ina - inb + k*p;
 }
 
+// Given two integers a,b, computes (a·b) % GL
 template GLMul(maxQuotientBits) {
     signal input {maxNum} ina;
     signal input {maxNum} inb;
@@ -70,6 +73,7 @@ template GLMul(maxQuotientBits) {
 
 }
 
+// Given an array of three integers (a₁, a₂, a₃), computes aᵢ % GL for i = 1,2,3
 template GLCNorm(maxQuotientBits) {
     signal input {maxNum} in[3];
     signal output {maxNum} out[3];
@@ -98,7 +102,7 @@ template GLCAdd() {
     }
 }
 
-
+// Given two arrays of three integers (a₁, a₂, a₃),(b₁, b₂, b₃), computes aᵢ - bᵢ + GL for i = 1,2,3
 template GLCSub() {
     signal input {maxNum} ina[3];
     signal input {maxNum} inb[3];
@@ -109,6 +113,8 @@ template GLCSub() {
     }
 }
 
+// Given three arrays of three integers a = (a₁, a₂, a₃),b = (b₁, b₂, b₃),c = (c₁, c₂, c₃),
+// computes (a·b + c) % GL³ for i = 1,2,3
 template GLCMulAdd(maxQuotientBits) {
     signal input {maxNum} ina[3];
     signal input {maxNum} inb[3];
@@ -149,6 +155,7 @@ template GLCMulAdd(maxQuotientBits) {
     }
 }
 
+// Given two arrays of three integers a = (a₁, a₂, a₃),b = (b₁, b₂, b₃), computes (a·b) % GL³ for i = 1,2,3
 template GLCMul(maxQuotientBits) {
     signal input {maxNum} ina[3];
     signal input {maxNum} inb[3];
@@ -161,6 +168,8 @@ template GLCMul(maxQuotientBits) {
     out <== GLCMulAdd(maxQuotientBits)(ina, inb, inc);
 }
 
+// Given an integer a != 0, computes the extended euclidean algorithm of a and GL
+// and returns the integer x satisfying a·x + GL·y = 1
 function _inv1(a) {
     assert(a!=0);
     var p = 0xFFFFFFFF00000001;
@@ -183,6 +192,7 @@ function _inv1(a) {
     return t;
 }
 
+// Given an integer a != 0, computes a⁻¹ % GL
 template GLInv(maxQuotientBits) {
     signal input {maxNum} in;
     signal output {maxNum} out;
@@ -196,7 +206,7 @@ template GLInv(maxQuotientBits) {
 
 }
 
-
+// Given an array of three integers a = (a₁, a₂, a₃), computes a⁻¹ % GL³
 template GLCInv(maxQuotientBits) {
     signal input {maxNum} in[3];
     signal output {maxNum} out[3];
