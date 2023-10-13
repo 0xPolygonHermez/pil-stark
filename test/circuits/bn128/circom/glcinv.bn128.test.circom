@@ -12,7 +12,7 @@ template TestGLCInv() {
     inp.maxNum = p - 1;
     inp <== in;
 
-    signal {maxNum} res[3] <== GLCInv(66)(inp);
+    signal {maxNum} res[3] <== GLCInv()(inp);
     out <== res;
 } 
 

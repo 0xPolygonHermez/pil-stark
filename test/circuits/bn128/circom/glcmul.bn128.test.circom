@@ -17,7 +17,7 @@ template TestGLCMul() {
     b.maxNum = p - 1;
     b <== inb;
 
-    signal {maxNum} res[3] <== GLCMul(66)(a,b);
+    signal {maxNum} res[3] <== GLCMul()(a,b);
     out <== res;
 } 
 

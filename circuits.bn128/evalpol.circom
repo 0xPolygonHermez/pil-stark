@@ -10,22 +10,21 @@ template EvalPol(n) {
     signal input {maxNum} x[3];
     signal output {maxNum} out[3];
 
-    component cmul[n-1];
+    var p = 0xFFFFFFFF00000001;
 
+    signal {maxNum} cmul[n-1][3];
+    cmul.maxNum = p - 1;
+    
     for (var i=1; i<n; i++) {
-        cmul[i-1] = GLCMulAdd(67);
         if (i==1) {
-            cmul[i-1].ina <== pol[n-1];
+            cmul[i-1] <== GLCMulAdd()(pol[n - 1], x, pol[n - 2]);
         } else {
-            cmul[i-1].ina <== cmul[i-2].out;
+            cmul[i-1] <== GLCMulAdd()(cmul[i - 2], x, pol[n - i - 1]);
         }
-        cmul[i-1].inb <== x;
-
-        cmul[i-1].inc <== pol[n-i-1];
     }
 
     if (n>1) {
-        out <== cmul[n-2].out;
+        out <== cmul[n-2];
     } else {
         out <== pol[n-1];
 

@@ -22,7 +22,7 @@ template TestGLCMulAdd() {
     c.maxNum = p - 1;
     c <== inc;
 
-    signal {maxNum} res[3] <== GLCMulAdd(67)(a,b,c);
+    signal {maxNum} res[3] <== GLCMulAdd()(a,b,c);
     out <== res;
 } 
 

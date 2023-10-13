@@ -12,7 +12,7 @@ template TestGLInv() {
     inp.maxNum = p - 1;
     inp <== in;
 
-    signal {maxNum} res <== GLInv(66)(inp);
+    signal {maxNum} res <== GLInv()(inp);
     out <== res;
 } 
 

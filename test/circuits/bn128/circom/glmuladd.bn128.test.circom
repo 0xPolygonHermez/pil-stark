@@ -22,9 +22,9 @@ template GLMulAdd() {
     c.maxNum = p - 1;
     c <== inc;
 
-    signal {maxNum} mul <== GLMul(64)(a, b);
+    signal {maxNum} mul <== GLMul()(a, b);
     signal {maxNum} sum <== GLAdd()(mul, c);
-    signal {maxNum} res <== GLNorm(65)(sum);
+    signal {maxNum} res <== GLNorm()(sum);
 
     out <== res;
 }

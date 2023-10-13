@@ -17,7 +17,7 @@ template TestGLMul() {
     b.maxNum = p - 1;
     b <== inb;
 
-    signal {maxNum} res <== GLMul(64)(a,b);
+    signal {maxNum} res <== GLMul()(a,b);
     out <== res;
 } 
 

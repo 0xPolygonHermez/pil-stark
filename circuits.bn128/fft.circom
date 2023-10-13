@@ -89,7 +89,7 @@ template FFT(nBits, inv) {
     var N = 1<<nBits;
 
     signal input in[N][3];
-    signal output out[N][3];
+    signal output {maxNum} out[N][3];
 
     signal k[N][3];
 

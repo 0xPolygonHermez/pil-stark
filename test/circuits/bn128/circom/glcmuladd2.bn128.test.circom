@@ -22,9 +22,9 @@ template GLCMulAdd2() {
     c.maxNum = p - 1;
     c <== inc;
 
-    signal {maxNum} mul[3] <== GLCMul(66)(a, b);
+    signal {maxNum} mul[3] <== GLCMul()(a, b);
     signal {maxNum} sum[3] <== GLCAdd()(mul, c);
-    signal {maxNum} res[3] <== GLCNorm(65)(sum);
+    signal {maxNum} res[3] <== GLCNorm()(sum);
 
     out <== res;
 }

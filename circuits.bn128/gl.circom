@@ -2,9 +2,10 @@ pragma circom 2.1.0;
 
 include "bitify.circom";
 include "lessthangl.circom";
+include "utils.circom";
 
 // Given an integer a, computes a % GL
-template GLNorm(maxQuotientBits) {
+template GLNorm() {
     signal input {maxNum} in;
     signal output {maxNum} out;
 
@@ -12,6 +13,8 @@ template GLNorm(maxQuotientBits) {
 
     signal k <-- in\p;
     signal value <== in - k*p;
+
+    var maxQuotientBits = log2((in.maxNum - 1) \ p) + 1;
 
     _ <== Num2Bits(maxQuotientBits)(k);
     out <== LessThanGoldilocks()(value);
@@ -51,7 +54,7 @@ template GLSub() {
 }
 
 // Given two integers a,b, computes (a·b) % GL
-template GLMul(maxQuotientBits) {
+template GLMul() {
     signal input {maxNum} ina;
     signal input {maxNum} inb;
     signal output {maxNum} out;
@@ -66,18 +69,21 @@ template GLMul(maxQuotientBits) {
 
     signal mul <== m-k*p;
 
+    var maxQuotientBits = log2((ina.maxNum * inb.maxNum - 1) \ p) + 1;
+
+
     _ <== Num2Bits(maxQuotientBits)(k);
     out <== LessThanGoldilocks()(mul);
 
 }
 
 // Given an array of three integers (a₁, a₂, a₃), computes aᵢ % GL for i = 1,2,3
-template GLCNorm(maxQuotientBits) {
+template GLCNorm() {
     signal input {maxNum} in[3];
     signal output {maxNum} out[3];
 
     for (var i=0; i<3; i++) {
-        out[i] <== GLNorm(maxQuotientBits)(in[i]);
+        out[i] <== GLNorm()(in[i]);
     }
 }
 
@@ -113,7 +119,7 @@ template GLCSub() {
 
 // Given three arrays of three integers a = (a₁, a₂, a₃),b = (b₁, b₂, b₃),c = (c₁, c₂, c₃),
 // computes (a·b + c) % GL³ for i = 1,2,3
-template GLCMulAdd(maxQuotientBits) {
+template GLCMulAdd() {
     signal input {maxNum} ina[3];
     signal input {maxNum} inb[3];
     signal input {maxNum} inc[3];
@@ -124,16 +130,29 @@ template GLCMulAdd(maxQuotientBits) {
     signal A,B,C,D,E,F,G;
     signal m[3];
 
-    A <== ((ina[0]) + (ina[1]))  * ((inb[0]) + (inb[1]));
-    B <== ((ina[0]) + (ina[2]))  * ((inb[0]) + (inb[2]));
-    C <== ((ina[1]) + (ina[2]))  * ((inb[1]) + (inb[2]));
-    D <== (ina[0]) * (inb[0]);
-    E <== (ina[1]) * (inb[1]);
-    F <== (ina[2]) * (inb[2]);
+    A <== (ina[0] + ina[1])  * (inb[0] + inb[1]);
+    B <== (ina[0] + ina[2])  * (inb[0] + inb[2]);
+    C <== (ina[1] + ina[2])  * (inb[1] + inb[2]);
+    D <== ina[0] * inb[0];
+    E <== ina[1] * inb[1];
+    F <== ina[2] * inb[2];
     G <== D-E;
+
     m[0] <== C+G-F + inc[0];
     m[1] <== A+C-E-E-D + inc[1];
     m[2] <== B-G + inc[2];
+
+    // m[0] = a1b1 + a1b2 + a2b1 + a2b2 + a0b0 - a1b1 - a2b2 
+    //     = a1b2 + a2b1 + a0b0 -> 3*ina.maxNum * inb.maxNum
+
+    // m[1] = a0b0 + a0b1 + a1b0 + a1b1 + a1b1 + a1b2 + a2b1 + a2b2 - a1b1 - a1b1 - a0b0 
+    //     = a0b1 + a1b0 + a1b2 + a2b1 + a2b2 -> 5*ina.maxNum * inb.maxNum
+    
+    // m[2] = a0b0 + a0b2 + a2b0 + a2b2 - a0b0 + a1b1 
+    //      = a0b2 + a2b0 + a2b2 + a1b1 -> 4*ina.maxNum * inb.maxNum
+
+    //Since all the elements of the array takes the same tag value, we set as the max value 5*ina.maxNum * inb.maxNum
+    var maxQuotientBits = log2((5*ina.maxNum * inb.maxNum - 1) \ p) + 1;
 
     signal k[3];
 
@@ -147,6 +166,8 @@ template GLCMulAdd(maxQuotientBits) {
     muladd[1] <== m[1] -k[1]*p;
     muladd[2] <== m[2] -k[2]*p;
 
+    out.maxNum = p - 1;
+
     for (var i = 0; i<3; i++) {
         _ <== Num2Bits(maxQuotientBits)(k[i]);
         out[i] <== LessThanGoldilocks()(muladd[i]);
@@ -154,7 +175,7 @@ template GLCMulAdd(maxQuotientBits) {
 }
 
 // Given two arrays of three integers a = (a₁, a₂, a₃),b = (b₁, b₂, b₃), computes (a·b) % GL³ for i = 1,2,3
-template GLCMul(maxQuotientBits) {
+template GLCMul() {
     signal input {maxNum} ina[3];
     signal input {maxNum} inb[3];
     signal output {maxNum} out[3];
@@ -163,7 +184,7 @@ template GLCMul(maxQuotientBits) {
     inc.maxNum = 0;
     inc <== [0,0,0];
 
-    out <== GLCMulAdd(maxQuotientBits)(ina, inb, inc);
+    out <== GLCMulAdd()(ina, inb, inc);
 }
 
 // Given an integer a != 0, computes the extended euclidean algorithm of a and GL
@@ -191,7 +212,7 @@ function _inv1(a) {
 }
 
 // Given an integer a != 0, computes a⁻¹ % GL
-template GLInv(maxQuotientBits) {
+template GLInv() {
     signal input {maxNum} in;
     signal output {maxNum} out;
 
@@ -199,13 +220,13 @@ template GLInv(maxQuotientBits) {
 
     out <== LessThanGoldilocks()(inv);
 
-    signal {maxNum} check <== GLMul(maxQuotientBits)(in, out);
+    signal {maxNum} check <== GLMul()(in, out);
     check === 1;
 
 }
 
 // Given an array of three integers a = (a₁, a₂, a₃), computes a⁻¹ % GL³
-template GLCInv(maxQuotientBits) {
+template GLCInv() {
     signal input {maxNum} in[3];
     signal output {maxNum} out[3];
 
@@ -254,6 +275,6 @@ template GLCInv(maxQuotientBits) {
     out[1] <== LessThanGoldilocks()(inv[1]);
     out[2] <== LessThanGoldilocks()(inv[2]);
 
-    signal check[3] <== GLCMul(maxQuotientBits)(in, out);
+    signal check[3] <== GLCMul()(in, out);
     check === [1,0,0];
 }
