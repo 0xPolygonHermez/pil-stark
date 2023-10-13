@@ -35,11 +35,13 @@ which is acceptable.
 */
 template BN1toGL3() {
     signal input in;
-    signal output out[3];
+    signal output {maxNum} out[3];
 
     signal n2b[254] <== Num2Bits_strict()(in);
     
     component b2n[3];
+
+    out.maxNum = 0xFFFFFFFFFFFFFFFF;
 
     for (var i=0; i<3; i++) {
         b2n[i] = Bits2Num(64);

@@ -25,28 +25,19 @@ class Transcript {
         this.hCnt =0;
         this.hiCnt =0;
         this.n2bCnt =0;
-        this.bn1togl3Cnt =0;
 
         this.code = [];
     }
 
 
     getField(v) {
-        this.code.push(`${v} <== SetChallenge()([${this.getFields1()}, ${this.getFields1()}, ${this.getFields1()}]);`);    
+        this.code.push(`${v} <== BN1toGL3()(${this.getFields1()});`);    
     }
 
     getFields1() {
-        if (this.out3.length > 0) {
-            return this.out3.shift();
-        }
         if (this.out.length > 0) {
-            const cName = `bn1togl3_${this.bn1togl3Cnt++}`;
-            this.code.push(`signal ${cName}[3] <== BN1toGL3()(${this.out.shift()});`);
-            this.out3.push(`${cName}[0]`);
-            this.out3.push(`${cName}[1]`);
-            this.out3.push(`${cName}[2]`);
             this.hiCnt++;
-            return this.getFields1();
+            return this.out.shift();
         }
         this.updateState();
         return this.getFields1();
@@ -281,14 +272,6 @@ template GLC3() {
 
     out.maxNum = in.maxNum;
     out <== [in, 0, 0];
-}
-
-template SetChallenge() {
-    signal input values[3];
-    signal output {maxNum} challenge[3];
-
-    challenge.maxNum = 0xFFFFFFFFFFFFFFFF;
-    challenge <== values;
 }
 
 /* 
