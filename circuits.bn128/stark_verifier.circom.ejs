@@ -3,14 +3,16 @@ pragma circom 2.1.0;
 include "gl.circom";
 include "lessthangl.circom";
 include "poseidon.circom";
-include "bitify.circom";
-include "sha256/sha256.circom";
 include "fft.circom";
 include "merklehash.circom";
 include "evalpol.circom";
 include "treeselector.circom";
 include "bn1togl3.circom";
-include "compconstant64.circom";
+<% if (!options.skipMain) {  -%>
+    include "compconstant64.circom";
+    include "bitify.circom";
+    include "sha256/sha256.circom";
+<% } -%>
 
 <%
 class Transcript {
