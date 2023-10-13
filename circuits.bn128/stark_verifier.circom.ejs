@@ -364,18 +364,18 @@ template parallel VerifyFRI(prevStepBits, currStepBits, nextStepBits, e0, e1) {
     signal input {maxNum} s_vals_next[1 << nextStep][3];
     signal input enable;
 
-    var p = 0xFFFFFFFF00000001;
+    var q = 0xFFFFFFFFFFFFFFFF;
 
     signal {maxNum} s_sx[currStepBits - 1];
-    s_sx.maxNum = p - 1;
+    s_sx.maxNum = q;
 
     signal {maxNum} inp[currStepBits - 2];
-    inp.maxNum = p - 1;
+    inp.maxNum = q;
 
     signal {maxNum} ina;
     signal {maxNum} inb;
-    ina.maxNum = p - 1;
-    inb.maxNum = p - 1;
+    ina.maxNum = q;
+    inb.maxNum = q;
 
     ina <== ys[0] * (e1 - e0) + e0;
     inb <== ys[1] * (invroots(prevStepBits - 1) -1) + 1;
@@ -392,7 +392,7 @@ template parallel VerifyFRI(prevStepBits, currStepBits, nextStepBits, e0, e1) {
     } else {
         signal {maxNum} inp1 <== GLConst(e0)();
         signal {maxNum} inp2;
-        inp2.maxNum = p - 1;
+        inp2.maxNum = q;
         inp2 <== ys[0] * (invroots(prevStepBits) -1) + 1;
 
         signal {maxNum} mul <== GLMul()(inp1, inp2);
@@ -432,11 +432,11 @@ template parallel VerifyEvaluations() {
     signal input {maxNum} publics[<%- pil.publics.length %>];
     signal input enable;
 
-    var p = 0xFFFFFFFF00000001;
+    var q = 0xFFFFFFFFFFFFFFFF;
 
     // zMul stores all the powers of z (which is stored in challenge7) up to nBits, i.e, [z, z^2, ..., z^nBits]
     signal {maxNum} zMul[<%- starkStruct.nBits %>][3];
-    zMul.maxNum = 0xFFFFFFFFFFFFFFFF;
+    zMul.maxNum = q;
     for (var i=0; i< <%- starkStruct.nBits %> ; i++) {
         if(i==0){
             zMul[i] <== GLCMul()(challenges7, challenges7);
@@ -460,9 +460,9 @@ template parallel VerifyEvaluations() {
     signal {maxNum} qStep[<%- starkInfo.qDeg-1 %>][3]; // Stores the evaluations of Q_i
     signal {maxNum} qAcc[<%- starkInfo.qDeg %>][3]; // Stores the accumulate sum of Q_i
 
-    qStep.maxNum = p - 1;
-    qAcc.maxNum = <%- starkInfo.qDeg %>*(p - 1);
-    xAcc.maxNum = p - 1;
+    qStep.maxNum = q;
+    qAcc.maxNum = <%- starkInfo.qDeg %>*q;
+    xAcc.maxNum = q;
     
     // Note: Each Qi has degree < n. qDeg determines the number of polynomials of degree < n needed to define Q
     // Calculate Q(X) = Q1(X) + X^n*Q2(X) + X^(2n)*Q3(X) + ..... X^((qDeg-1)n)*Q(X) evaluated at z 
@@ -513,7 +513,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     signal input {maxNum} s1_vals[1 << nextStep][3];
     signal input enable;
 
-    var p = 0xFFFFFFFF00000001;
+    var q = 0xFFFFFFFFFFFFFFFF;
 
     // Map the s0_vals so that they are converted either into single vars (if they belong to base field) or arrays of 3 elements (if 
     // they belong to the extended field). 
@@ -528,15 +528,15 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     mapValues.vals4 <== tree4;
 
     signal {maxNum} xacc[<%- starkStruct.steps[0].nBits -1 %>];
-    xacc.maxNum = p - 1;
+    xacc.maxNum = q;
 
     signal {maxNum} ina;
     signal {maxNum} inb;
-    ina.maxNum = p - 1;
-    inb.maxNum = p - 1;
+    ina.maxNum = q;
+    inb.maxNum = q;
 
     signal {maxNum} inp[<%- starkStruct.steps[0].nBits -1 %>];
-    inp.maxNum = p - 1;
+    inp.maxNum = q;
 
     for (var i=1; i<<%- starkStruct.steps[0].nBits %>; i++ ) {
         if(i==1) {
@@ -554,7 +554,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     X.maxNum = xacc.maxNum;
     X <== [xacc[<%- starkStruct.steps[0].nBits -2 %>], 0, 0];
 <% } else {                             -%>
-    X.maxNum = p - 1;
+    X.maxNum = q;
     X <== [ys[0]*(<%- F.shift %> * roots(<%- starkStruct.steps[0].nBits %>)-<%- F.shift %>) + <%- F.shift %>, 0, 0];
 <% }                                    -%>
 
@@ -614,15 +614,13 @@ template MapValues() {
 <%      }                                                                        -%>
 <% }                                                                             -%>
 
-    var p = 0xFFFFFFFF00000001;
-
 <% for (let t = 1; t<=4; t++) {                                                   -%>
 <%      for (let i=0; i< starkInfo.mapSections[sNames[t]].length; i++) {        -%>
 <%          const p = starkInfo.varPolMap[starkInfo.mapSections[sNames[t]][i]];  -%>
 <%          if (p.dim == 1) {                                                    -%>
     tree<%- t %>_<%- i %> <== GLCopy()(vals<%- t %>[<%- p.sectionPos %>]);
 <%          } else if (p.dim == 3) {                                             -%>
-    tree<%- t %>_<%- i %>.maxNum = p - 1;
+    tree<%- t %>_<%- i %>.maxNum = 0xFFFFFFFFFFFFFFFF;
     tree<%- t %>_<%- i %> <== [vals<%- t %>[<%- p.sectionPos %>],vals<%- t %>[<%- p.sectionPos + 1 %>] , vals<%- t %>[<%- p.sectionPos + 2 %>]];
 <%          } else throw new Error("Invalid dim")                                -%>
 <%      }                                                                        -%>
@@ -725,13 +723,13 @@ template StarkVerifier() {
 
     signal {maxNum} publicsGL[<%- pil.publics.length %>]; 
     for(var i = 0; i < <%- starkInfo.nPublics %>; i++){
-        publicsGL[i] <== LessThanGoldilocks()(publics[i]);
+        publicsGL[i] <== LessThan64Bits()(publics[i]);
     }
 
     signal {maxNum} evalsGL[<%- starkInfo.evMap.length %>][3];
     for(var i = 0; i < <%- starkInfo.evMap.length %>; i++){
         for(var j = 0; j < 3; j++) {
-            evalsGL[i][j] <== LessThanGoldilocks()(evals[i][j]);
+            evalsGL[i][j] <== LessThan64Bits()(evals[i][j]);
         }
     }
 
@@ -749,31 +747,31 @@ template StarkVerifier() {
 <% }                                                  -%>
     for(var i = 0; i < <%- starkStruct.nQueries %>; i++){
         for(var j = 0; j < <%- starkInfo.nConstants %>; j++) {
-            s0_valsCGL[i][j] <== LessThanGoldilocks()(s0_valsC[i][j]);
+            s0_valsCGL[i][j] <== LessThan64Bits()(s0_valsC[i][j]);
         }
 
         for(var j = 0; j < <%- starkInfo.mapSectionsN.cm1_2ns %>; j++) {
-            s0_vals1GL[i][j] <== LessThanGoldilocks()(s0_vals1[i][j]);
+            s0_vals1GL[i][j] <== LessThan64Bits()(s0_vals1[i][j]);
         }
 
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
         for(var j = 0; j < <%- starkInfo.mapSectionsN.cm2_2ns %>; j++) {
-            s0_vals2GL[i][j] <== LessThanGoldilocks()(s0_vals2[i][j]);
+            s0_vals2GL[i][j] <== LessThan64Bits()(s0_vals2[i][j]);
         }
 <% } -%>
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
         for(var j = 0; j < <%- starkInfo.mapSectionsN.cm3_2ns %>; j++) {
-            s0_vals3GL[i][j] <== LessThanGoldilocks()(s0_vals3[i][j]);
+            s0_vals3GL[i][j] <== LessThan64Bits()(s0_vals3[i][j]);
         }
 <% } -%>
 
         for(var j = 0; j < <%- starkInfo.mapSectionsN.cm4_2ns %>; j++) {
-            s0_vals4GL[i][j] <== LessThanGoldilocks()(s0_vals4[i][j]);
+            s0_vals4GL[i][j] <== LessThan64Bits()(s0_vals4[i][j]);
         }
 
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
         for(var j = 0; j < <%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits))*3 %>; j++) {
-            s<%- s %>_valsGL[i][j] <== LessThanGoldilocks()(s<%- s %>_vals[i][j]);
+            s<%- s %>_valsGL[i][j] <== LessThan64Bits()(s<%- s %>_vals[i][j]);
         }
 <% }                                                  -%>
     }
@@ -781,7 +779,7 @@ template StarkVerifier() {
     signal {maxNum} finalPolGL[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];
     for(var i = 0; i < <%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>; i++){
         for(var j = 0; j < 3; j++) {
-            finalPolGL[i][j] <== LessThanGoldilocks()(finalPol[i][j]);
+            finalPolGL[i][j] <== LessThan64Bits()(finalPol[i][j]);
         }
     }
 

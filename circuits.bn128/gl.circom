@@ -73,7 +73,7 @@ template GLMul() {
 
 
     _ <== Num2Bits(maxQuotientBits)(k);
-    out <== LessThanGoldilocks()(mul);
+    out <== LessThan64Bits()(mul);
 
 }
 
@@ -166,11 +166,11 @@ template GLCMulAdd() {
     muladd[1] <== m[1] -k[1]*p;
     muladd[2] <== m[2] -k[2]*p;
 
-    out.maxNum = p - 1;
+    out.maxNum = 0xFFFFFFFFFFFFFFFF;
 
     for (var i = 0; i<3; i++) {
         _ <== Num2Bits(maxQuotientBits)(k[i]);
-        out[i] <== LessThanGoldilocks()(muladd[i]);
+        out[i] <== LessThan64Bits()(muladd[i]);
     }
 }
 
@@ -218,11 +218,10 @@ template GLInv() {
 
     signal inv <-- _inv1(in);
 
-    out <== LessThanGoldilocks()(inv);
+    out <== LessThan64Bits()(inv);
 
     signal {maxNum} check <== GLMul()(in, out);
     check === 1;
-
 }
 
 // Given an array of three integers a = (a₁, a₂, a₃), computes a⁻¹ % GL³
@@ -270,10 +269,10 @@ template GLCInv() {
     inv[0] <--  i1;
     inv[1] <--  i2;
     inv[2] <--  i3;
-    
-    out[0] <== LessThanGoldilocks()(inv[0]);
-    out[1] <== LessThanGoldilocks()(inv[1]);
-    out[2] <== LessThanGoldilocks()(inv[2]);
+
+    out[0] <== LessThan64Bits()(inv[0]);
+    out[1] <== LessThan64Bits()(inv[1]);
+    out[2] <== LessThan64Bits()(inv[2]);
 
     signal check[3] <== GLCMul()(in, out);
     check === [1,0,0];

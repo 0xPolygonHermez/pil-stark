@@ -9,6 +9,8 @@ template LessThanGoldilocks() {
     signal input in;
     signal output {maxNum} out;
     
+    _ <== Num2Bits(n)(in); // We discard the invalid solutions
+
     component n2b = Num2Bits(n+1);
 
     n2b.in <== in + (1<<n) - p;
@@ -19,5 +21,15 @@ template LessThanGoldilocks() {
      _ <== n2b.out;
 
     out.maxNum = p - 1;
+    out <== in;
+}
+
+template LessThan64Bits() {
+    signal input in;
+    signal output {maxNum} out;
+
+    _ <== Num2Bits(64)(in);
+    
+    out.maxNum = 0xFFFFFFFFFFFFFFFF;
     out <== in;
 }

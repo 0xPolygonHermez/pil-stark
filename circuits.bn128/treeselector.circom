@@ -11,8 +11,6 @@ template TreeSelector(nLevels, eSize) {
     signal input key[nLevels]; // Array that determines at each level if we keep even or odd positions
     signal output {maxNum} out[eSize];
 
-    var p = 0xFFFFFFFF00000001;
-
     //Stores all the tree values (except for the leaves)
     //Note that if a tree has n leaves, the tree will have 2*n - 1 elements and so we only need to store n - 1
     signal im[n-1][eSize];
@@ -38,7 +36,7 @@ template TreeSelector(nLevels, eSize) {
     }
 
     // Return the root
-    out.maxNum = p - 1;
+    out.maxNum = 0xFFFFFFFFFFFFFFFF;
     out <== im[n-2];
 }
 

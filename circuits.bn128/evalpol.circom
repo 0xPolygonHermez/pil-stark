@@ -10,10 +10,8 @@ template EvalPol(n) {
     signal input {maxNum} x[3];
     signal output {maxNum} out[3];
 
-    var p = 0xFFFFFFFF00000001;
-
     signal {maxNum} cmul[n-1][3];
-    cmul.maxNum = p - 1;
+    cmul.maxNum = 0xFFFFFFFFFFFFFFFF;
     
     for (var i=1; i<n; i++) {
         if (i==1) {

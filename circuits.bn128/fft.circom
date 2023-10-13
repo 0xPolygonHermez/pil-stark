@@ -125,7 +125,7 @@ template FFT(nBits, inv) {
             k[i][e] <-- sum[i][e] \ p;
             outs[i][e] <-- sum[i][e] % p;
 
-            out[i][e] <== LessThanGoldilocks()(outs[i][e]);
+            out[i][e] <== LessThan64Bits()(outs[i][e]);
 
             k[i][e]*p + out[i][e] === sum[i][e];
 
