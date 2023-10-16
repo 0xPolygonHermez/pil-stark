@@ -9,9 +9,9 @@ include "evalpol.circom";
 include "treeselector.circom";
 include "bn1togl3.circom";
 <% if (!options.skipMain) {  -%>
-    include "compconstant64.circom";
-    include "bitify.circom";
-    include "sha256/sha256.circom";
+include "compconstant64.circom";
+include "bitify.circom";
+include "sha256/sha256.circom";
 <% } -%>
 
 <%
@@ -102,7 +102,7 @@ class Transcript {
         for (let i=0; i<NFields; i++) {
             const f = this.getFields253();
             n2b[i] = `transcriptN2b_${this.n2bCnt++}`;
-            this.code.push(`signal ${n2b[i]}[254] <== Num2Bits_strict()(${f});`);
+            this.code.push(`signal {binary} ${n2b[i]}[254] <== Num2Bits_strictT()(${f});`);
         }
         if(this.hiCnt < 17) {
             this.code.push(`for(var i = ${this.hiCnt}; i < 17; i++){

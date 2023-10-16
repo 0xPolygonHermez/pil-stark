@@ -1,10 +1,10 @@
 pragma circom 2.1.0;
 
-include "bitify.circom";
+include "bitifyT.circom";
 
 template CompConstant64(ct) {
     signal input in[64];
-    signal output out;
+    signal output {binary} out;
 
     signal parts[32];
 
@@ -43,7 +43,7 @@ template CompConstant64(ct) {
         e = e*2;
     }
 
-    signal num2bits[33] <== Num2Bits(33)(sum[31]);
+    signal {binary} num2bits[33] <== Num2BitsT(33)(sum[31]);
     
     for (var i = 0; i < 32; i++) {
         _ <== num2bits[i];

@@ -1,6 +1,6 @@
 pragma circom 2.1.0;
 
-include "bitify.circom";
+include "bitifyT.circom";
 include "lessthangl.circom";
 include "utils.circom";
 

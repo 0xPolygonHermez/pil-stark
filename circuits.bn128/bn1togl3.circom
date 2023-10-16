@@ -1,7 +1,7 @@
 
 pragma circom 2.1.0;
 
-include "bitify.circom";
+include "bitifyT.circom";
 
 /*
 Given an element over the BN128 scalar's field,
@@ -37,19 +37,20 @@ template BN1toGL3() {
     signal input in;
     signal output {maxNum} out[3];
 
-    signal n2b[254] <== Num2Bits_strict()(in);
+    signal {binary} n2b[254] <== Num2Bits_strictT()(in);
     
-    component b2n[3];
+    signal values[3][64];
+    for (var i=0; i<3; i++) {
+        for (var j=0; j<64; j++) {
+            values[i][j] <== n2b[64*i+j];
+        }
+    }
 
     out.maxNum = 0xFFFFFFFFFFFFFFFF;
 
-    for (var i=0; i<3; i++) {
-        b2n[i] = Bits2Num(64);
-        for (var j=0; j<64; j++) {
-            b2n[i].in[j] <== n2b[64*i+j];
-        }
-        out[i] <== b2n[i].out;
-    }
+    out[0] <== Bits2Num(64)(values[0]);
+    out[1] <== Bits2Num(64)(values[1]);
+    out[2] <== Bits2Num(64)(values[2]);
 
     for (var i=192; i < 254; i++) {
         _ <== n2b[i];

@@ -2,7 +2,7 @@ pragma circom 2.1.0;
 
 template Num2Bits(n) {
     signal input in;
-    signal output out[n];
+    signal output {binary} out[n];
     var lc1=0;
 
     var e2=1;
@@ -100,7 +100,7 @@ template AliasCheck() {
 
 template Num2Bits_strict() {
     signal input in;
-    signal output out[64];
+    signal output {binary} out[64];
 
     signal n2b[64] <== Num2Bits(64)(in);
     
@@ -109,7 +109,7 @@ template Num2Bits_strict() {
 }
 
 template Bits2Num(n) {
-    signal input in[n];
+    signal input {binary} in[n];
     signal output out;
     var lc1=0;
 

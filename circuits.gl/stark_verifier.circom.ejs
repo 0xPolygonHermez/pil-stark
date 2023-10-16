@@ -89,7 +89,7 @@ class Transcript {
         for (let i=0; i<NFields; i++) {
             const f = this.getFields1();
             n2b[i] = `transcriptN2b_${this.n2bCnt++}`;
-            this.code.push(`signal ${n2b[i]}[64] <== Num2Bits_strict()(${f});`);
+            this.code.push(`signal {binary} ${n2b[i]}[64] <== Num2Bits_strict()(${f});`);
         }
         if(this.hiCnt < 12) {
             this.code.push(`for(var i = ${this.hiCnt}; i < 12; i++){
@@ -693,10 +693,6 @@ template StarkVerifier() {
     // Verify Merkle Roots
     ///////////
 
-<% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
-        signal {binary} s<%- s %>_keys_merkle[<%- starkStruct.nQueries %>][<%- starkStruct.steps[s].nBits %>];
-<% } -%>
-
     //Calculate merkle root for s0 vals
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         
@@ -720,6 +716,7 @@ template StarkVerifier() {
         VerifyMerkleHash(1, <%- starkInfo.nConstants %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_valsC_p[q], s0_siblingsC[q], ys[q], rootC, enabled);                                    
     }
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
+    signal {binary} s<%- s %>_keys_merkle[<%- starkStruct.nQueries %>][<%- starkStruct.steps[s].nBits %>];
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         // Calculate merkle root for s<%- s %> vals
         for(var i = 0; i < <%-starkStruct.steps[s].nBits %>; i++) { s<%- s %>_keys_merkle[q][i] <== ys[q][i]; }
