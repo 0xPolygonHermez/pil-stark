@@ -1,5 +1,7 @@
 pragma circom 2.1.5;
 
+include "compconstant.circom";
+
 template AliasCheckT() {
 
     signal input {binary} in[254];
