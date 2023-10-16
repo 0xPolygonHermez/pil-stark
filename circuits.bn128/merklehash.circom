@@ -16,7 +16,7 @@ template MerkleHash(eSize, elementsInLinear, nLinears) {
     var nLevels = (nBits - 1)\4 +1;
     signal input values[elementsInLinear][eSize];
     signal input siblings[nLevels][16]; // Sibling path to calculate the merkle root given a set of values.
-    signal input key[nBits]; // Defines either each element of the sibling path is the left or right one
+    signal input {binary} key[nBits]; // Defines either each element of the sibling path is the left or right one
     signal output root; // Root of the merkle tree
 
     // Each leaf in the merkle tree might be composed by multiple values. Therefore, the first step is to 
@@ -40,9 +40,9 @@ template parallel VerifyMerkleHash(eSize, elementsInLinear, nLinears) {
     var nLevels = (nBits - 1)\4 +1;
     signal input values[elementsInLinear][eSize];
     signal input siblings[nLevels][16]; // Sibling path to calculate the merkle root given a set of values. Why 16 ???
-    signal input key[nBits]; // Defines either each element of the sibling path is the left or right one
+    signal input {binary} key[nBits]; // Defines either each element of the sibling path is the left or right one
     signal input root; // Root of the merkle tree
-    signal input enable; // Boolean that determines either we want to check that roots matches or not
+    signal input {binary} enable; // Boolean that determines either we want to check that roots matches or not
 
     // Calculate the merkle root 
     signal merkleRoot <== MerkleHash(eSize, elementsInLinear, nLinears)(values, siblings, key);

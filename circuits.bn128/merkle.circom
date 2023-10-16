@@ -18,11 +18,11 @@ template Merkle(keyBits) {
 
     signal input value;
     signal input siblings[nLevels][arity];
-    signal input key[keyBits];
+    signal input {binary} key[keyBits];
     signal output root;
 
-    signal s[16];
-    signal a, b, c, d, ab, ac, ad, bc, bd, cd, abc, abd, acd, bcd, abcd;
+    signal {binary} s[16];
+    signal {binary} a, b, c, d, ab, ac, ad, bc, bd, cd, abc, abd, acd, bcd, abcd;
 
     component mNext;
     component hash;
@@ -103,9 +103,12 @@ template Merkle(keyBits) {
             }
         }
 
+        signal {binary} nextKeys[nextNBits];
         for (var i=0; i<nextNBits; i++) {
-            mNext.key[i] <== key[i+4];
+            nextKeys[i] <== key[i+4];
         }
+
+        mNext.key <== nextKeys;
 
         root <== mNext.root;
     }
