@@ -17,7 +17,7 @@ function getBits(idx, nBits) {
     return res;
 }
 
-describe("Linear Hash Circuit Test", function () {
+describe("Merkle Hash GPU Circuit Test", function () {
     let poseidon;
     let MH;
     let circuit;

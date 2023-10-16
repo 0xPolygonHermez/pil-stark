@@ -385,7 +385,7 @@ template parallel VerifyFRI(prevStepBits, currStepBits, nextStepBits, e0, e1) {
 
     signal {maxNum} coefs[1 << step][3] <== FFT(step, 1)(s_vals_curr);
     signal {maxNum} evalXprime[3] <== GLCMul()(s_specialX, s_X);
-    signal evalPol[3] <== EvalPol(1 << step)(coefs, evalXprime);
+    signal {maxNum} evalPol[3] <== EvalPol(1 << step)(coefs, evalXprime);
     
     signal {binary} s_keys_lowValues[nextStep];
     for(var i = 0; i < nextStep; i++) { s_keys_lowValues[i] <== ys[i + nextStepBits]; } 
