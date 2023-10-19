@@ -1,6 +1,6 @@
 pragma circom 2.1.0;
 
-include "bitify.circom";
+include "bitifyT.circom";
 include "lessthangl.circom";
 include "utils.circom";
 
@@ -16,7 +16,7 @@ template GLNorm() {
 
     var maxQuotientBits = log2((in.maxNum - 1) \ p) + 1;
 
-    _ <== Num2Bits(maxQuotientBits)(k);
+    _ <== Num2BitsT(maxQuotientBits)(k);
     out <== LessThanGoldilocks()(value);
 }
 
@@ -72,7 +72,7 @@ template GLMul() {
     var maxQuotientBits = log2((ina.maxNum * inb.maxNum - 1) \ p) + 1;
 
 
-    _ <== Num2Bits(maxQuotientBits)(k);
+    _ <== Num2BitsT(maxQuotientBits)(k);
     out <== LessThan64Bits()(mul);
 
 }
@@ -169,7 +169,7 @@ template GLCMulAdd() {
     out.maxNum = 0xFFFFFFFFFFFFFFFF;
 
     for (var i = 0; i<3; i++) {
-        _ <== Num2Bits(maxQuotientBits)(k[i]);
+        _ <== Num2BitsT(maxQuotientBits)(k[i]);
         out[i] <== LessThan64Bits()(muladd[i]);
     }
 }

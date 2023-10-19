@@ -11,7 +11,7 @@ template Merkle(nLevels) {
 
     signal input value[4]; // Leaf value
     signal input siblings[nLevels][4]; // Sibling values
-    signal input key[nLevels];
+    signal input {binary} key[nLevels];
     signal output root[4];
 
     component hash[nLevels];

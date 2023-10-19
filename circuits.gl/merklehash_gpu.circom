@@ -16,7 +16,7 @@ template MerkleHash(eSize, elementsInLinear, nLinears) {
     assert(1 << nBits == nLinears);
     signal input values[elementsInLinear][eSize]; // Values that are contained in a leaf
     signal input siblings[nBits][4]; // Sibling path to calculate the merkle root given a set of values
-    signal input key[nBits]; // Defines either each element of the sibling path is the left or right one
+    signal input {binary} key[nBits]; // Defines either each element of the sibling path is the left or right one
     signal output root[4]; // Root of the merkle tree
 
     // Each leaf in the merkle tree might be composed by multiple values. Therefore, the first step is to 
@@ -33,9 +33,9 @@ template parallel VerifyMerkleHash(eSize, elementsInLinear, nLinears) {
     assert(1 << nBits == nLinears);
     signal input values[elementsInLinear][eSize]; // Values that are contained in a leaf
     signal input siblings[nBits][4]; // Sibling path to calculate the merkle root given a set of values
-    signal input key[nBits]; // Defines either each element of the sibling path is the left or right one
+    signal input {binary} key[nBits]; // Defines either each element of the sibling path is the left or right one
     signal input root[4]; // Root of the merkle tree
-    signal input enable; // Boolean that determines either we want to check that roots matches or not
+    signal input {binary} enable; // Boolean that determines either we want to check that roots matches or not
 
     signal merkleRoot[4] <== MerkleHash(eSize, elementsInLinear, nLinears)(values, siblings, key);
    

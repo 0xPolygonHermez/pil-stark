@@ -2,7 +2,7 @@ pragma circom 2.1.0;
 
 template Num2Bits(n) {
     signal input in;
-    signal output out[n];
+    signal output {binary} out[n];
     var lc1=0;
 
     var e2=1;
@@ -41,7 +41,7 @@ cm cl sm sl   res
 */
 
 template CompConstant(ct) {
-    signal input in[64];
+    signal input {binary} in[64];
     signal output out;
 
     signal parts[32];
@@ -92,7 +92,7 @@ template CompConstant(ct) {
 
 template AliasCheck() {
 
-    signal input in[64];
+    signal input {binary} in[64];
 
     signal compConstant <== CompConstant(-1)(in);
     compConstant === 0;
@@ -100,16 +100,16 @@ template AliasCheck() {
 
 template Num2Bits_strict() {
     signal input in;
-    signal output out[64];
+    signal output {binary} out[64];
 
-    signal n2b[64] <== Num2Bits(64)(in);
+    signal {binary} n2b[64] <== Num2Bits(64)(in);
     
     AliasCheck()(n2b);
     out <== n2b;
 }
 
 template Bits2Num(n) {
-    signal input in[n];
+    signal input {binary} in[n];
     signal output out;
     var lc1=0;
 
@@ -123,7 +123,7 @@ template Bits2Num(n) {
 }
 
 template Bits2Num_strict() {
-    signal input in[64];
+    signal input {binary} in[64];
     signal output out;
 
     AliasCheck()(in);

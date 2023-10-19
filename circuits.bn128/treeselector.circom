@@ -8,7 +8,7 @@ template TreeSelector(nLevels, eSize) {
 
     var n = 1 << nLevels;
     signal input {maxNum} values[n][eSize]; // Initial values
-    signal input key[nLevels]; // Array that determines at each level if we keep even or odd positions
+    signal input {binary} key[nLevels]; // Array that determines at each level if we keep even or odd positions
     signal output {maxNum} out[eSize];
 
     //Stores all the tree values (except for the leaves)

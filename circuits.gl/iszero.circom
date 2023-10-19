@@ -5,7 +5,7 @@ pragma circom 2.1.0;
 */
 template IsZero() {
     signal input in;
-    signal output out;
+    signal output {binary} out;
 
     signal inv;
 
