@@ -1,7 +1,7 @@
 
 const {iterateCode} = require("./codegen.js");
 
-module.exports = function map(res, pil) {
+module.exports = function map(res, expressions) {
     res.varPolMap = [];
     function addPol(polType) {
         res.varPolMap.push(polType);
@@ -33,7 +33,7 @@ module.exports = function map(res, pil) {
 
     const tmpExps = {};
 
-    pil.cmDims = [];
+    let cmDims = [];
     for (let i=0; i<res.nCm1; i++) {
         const pp_n = addPol({
             section: "cm1_n",
@@ -47,11 +47,11 @@ module.exports = function map(res, pil) {
         res.cm_2ns.push(pp_2ns);
         res.mapSections.cm1_n.push(pp_n);
         res.mapSections.cm1_2ns.push(pp_2ns);
-        pil.cmDims[i] = 1;
+        cmDims[i] = 1;
     }
 
     for (let i=0; i<res.puCtx.length; i++) {
-        const dim = Math.max(getExpDim(pil, res.puCtx[i].fExpId), getExpDim(pil, res.puCtx[i].tExpId));
+        const dim = Math.max(getExpDim(expressions, cmDims, res.puCtx[i].fExpId), getExpDim(expressions, cmDims, res.puCtx[i].tExpId));
         const pph1_n = addPol({
             section: "cm2_n",
             dim:dim
@@ -64,7 +64,7 @@ module.exports = function map(res, pil) {
         res.cm_2ns.push(pph1_2ns);
         res.mapSections.cm2_n.push(pph1_n);
         res.mapSections.cm2_2ns.push(pph1_2ns);
-        pil.cmDims[res.nCm1 + i*2] = dim;
+        cmDims[res.nCm1 + i*2] = dim;
         const pph2_n = addPol({
             section: "cm2_n",
             dim:dim
@@ -77,9 +77,9 @@ module.exports = function map(res, pil) {
         res.cm_2ns.push(pph2_2ns);
         res.mapSections.cm2_n.push(pph2_n);
         res.mapSections.cm2_2ns.push(pph2_2ns);
-        pil.cmDims[res.nCm1 + i*2+1] = dim;
+        cmDims[res.nCm1 + i*2+1] = dim;
 
-        if (! res.imExps[res.puCtx[i].fExpId]) {
+        if (!res.imExpsList.find(m => m === res.puCtx[i].fExpId)) {
             if ( typeof tmpExps[res.puCtx[i].fExpId] === "undefined") {
                 tmpExps[res.puCtx[i].fExpId] = res.tmpExp_n.length;
                 const ppf_n = addPol({
@@ -91,7 +91,7 @@ module.exports = function map(res, pil) {
                 res.exp2pol[res.puCtx[i].fExpId] = ppf_n;
             }
         }
-        if (! res.imExps[res.puCtx[i].tExpId]) {
+        if (!res.imExpsList.find(m => m === res.puCtx[i].tExpId)) {
             if ( typeof tmpExps[res.puCtx[i].tExpId] === "undefined") {
                 tmpExps[res.puCtx[i].tExpId] = res.tmpExp_n.length;
                 const ppt_n = addPol({
@@ -126,9 +126,9 @@ module.exports = function map(res, pil) {
         res.cm_2ns.push(ppz_2ns);
         res.mapSections.cm3_n.push(ppz_n);
         res.mapSections.cm3_2ns.push(ppz_2ns);
-        pil.cmDims[res.nCm1 + res.nCm2 + i] = 3;
+        cmDims[res.nCm1 + res.nCm2 + i] = 3;
 
-        if (! res.imExps[o.numId]) {
+        if (!res.imExpsList.find(m => m === o.numId)) {
             if ( typeof tmpExps[o.numId] === "undefined") {
                 tmpExps[o.numId] = res.tmpExp_n.length;
                 const ppNum_n = addPol({
@@ -140,7 +140,7 @@ module.exports = function map(res, pil) {
                 res.exp2pol[o.numId] = ppNum_n;
             }
         }
-        if (! res.imExps[o.denId]) {
+        if (!res.imExpsList.find(m => m === o.denId)) {
             if ( typeof tmpExps[o.denId] === "undefined") {
                 tmpExps[o.denId] = res.tmpExp_n.length;
                 const ppDen_n = addPol({
@@ -155,7 +155,7 @@ module.exports = function map(res, pil) {
     }
 
     for (let i=0; i<res.imExpsList.length; i++) {
-        const dim = getExpDim(pil, res.imExpsList[i]);
+        const dim = getExpDim(expressions, cmDims, res.imExpsList[i]);
         const ppz_n = addPol({
             section: "cm3_n",
             dim:dim
@@ -168,13 +168,11 @@ module.exports = function map(res, pil) {
         res.cm_2ns.push(ppz_2ns);
         res.mapSections.cm3_n.push(ppz_n);
         res.mapSections.cm3_2ns.push(ppz_2ns);
-        pil.cmDims[res.nCm1 + res.nCm2 + res.puCtx.length + res.peCtx.length + res.ciCtx.length + i] = dim;
+        cmDims[res.nCm1 + res.nCm2 + res.puCtx.length + res.peCtx.length + res.ciCtx.length + i] = dim;
         res.exp2pol[res.imExpsList[i]] = ppz_n;
     }
 
-
-
-    res.qDim = getExpDim(pil, res.cExp);
+    res.qDim = getExpDim(expressions, cmDims, res.cExpId);
     for (let i=0; i<res.qDeg; i++) {
         const ppz_n = addPol({
             section: "cm4_n",
@@ -188,7 +186,7 @@ module.exports = function map(res, pil) {
         res.cm_2ns.push(ppz_2ns);
         res.mapSections.cm4_n.push(ppz_n);
         res.mapSections.cm4_2ns.push(ppz_2ns);
-        pil.cmDims[res.nCm1 + res.nCm2 + res.nCm3 + i] = res.qDim;
+        cmDims[res.nCm1 + res.nCm2 + res.nCm3 + i] = res.qDim;
     }
 
     const ppq_2ns = addPol({
@@ -202,7 +200,6 @@ module.exports = function map(res, pil) {
         dim:3
     });
     res.f_2ns.push(ppf_2ns);
-
 
     mapSections(res);
     let N = 1 << res.starkStruct.nBits;
@@ -239,7 +236,6 @@ module.exports = function map(res, pil) {
     }
     fixProverCode(res.step2prev, "n");
     fixProverCode(res.step3prev, "n");
-    fixProverCode(res.step3, "n");
     fixProverCode(res.step42ns, "2ns");
     fixProverCode(res.step52ns, "2ns");
     fixProverCode(res.verifierQueryCode, "2ns");
@@ -267,7 +263,6 @@ module.exports = function map(res, pil) {
 
     setCodeDimensions(res.step2prev, res, 1);
     setCodeDimensions(res.step3prev,res, 1);
-    setCodeDimensions(res.step3, res, 1);
     setCodeDimensions(res.step42ns, res, 1);
     setCodeDimensions(res.step52ns, res, 1);
     setCodeDimensions(res.verifierCode, res, 3);
@@ -299,7 +294,7 @@ module.exports = function map(res, pil) {
                         r.id = res.imExp2cm[res.imExpsList[idx]];
                     } else if ((typeof tmpExps[r.id] != "undefined")&&(ctx.dom == "n")) {
                         r.type = "tmpExp";
-                        r.dim = getExpDim(pil, r.id);
+                        r.dim = getExpDim(expressions, cmDims, r.id);
                         r.id = tmpExps[r.id];
                     } else {
                         const p = r.prime ? 1 : 0;
@@ -354,9 +349,9 @@ function mapSections(res) {
     });
 }
 
-function getExpDim(pil, expId) {
+function getExpDim(expressions, cmDims, expId) {
 
-    return _getExpDim(pil.expressions[expId]);
+    return _getExpDim(expressions[expId]);
 
     function _getExpDim(exp) {
         if(typeof(exp.dimMap) !== "undefined") return exp.dimMap; 
@@ -374,12 +369,11 @@ function getExpDim(pil, expId) {
                     if (d>md) md=d;
                 }
                 return md;
-            case "cm": return pil.cmDims[exp.id];
+            case "cm": return cmDims[exp.id];
             case "const": return 1;
             case "exp":
-                exp.dimMap = _getExpDim(pil.expressions[exp.id]);
+                exp.dimMap = _getExpDim(expressions[exp.id]);
                 return exp.dimMap;
-            case "q": return _getExpDim(pil.expressions[pil.q2exp[exp.id]]);
             case "number": return 1;
             case "public": return 1;
             case "challenge": return 3;
@@ -425,11 +419,6 @@ function setCodeDimensions(code, starkInfo, dimX) {
                 case "tree3": d=r.dim; break;
                 case "tree4": d=r.dim; break;
                 case "tmpExp": d=r.dim; break;
-/*
-                case "exp": d= starkInfo.varPolMap[starkInfo.exps_2ns[r.id]] ?
-                               starkInfo.varPolMap[starkInfo.exps_2ns[r.id]].dim:
-                               starkInfo.varPolMap[starkInfo.exps_n[r.id]].dim; break;
-*/
                 case "cm": d=starkInfo.varPolMap[starkInfo.cm_2ns[r.id]].dim; break;
                 case "q": d=starkInfo.varPolMap[starkInfo.qs[r.id]].dim; break;
                 case "const": d=1; break;

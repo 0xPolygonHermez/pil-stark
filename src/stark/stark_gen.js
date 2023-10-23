@@ -115,7 +115,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
             // EDU: Do not implement this in the firs version.
             //      we will not use it.
             ctx.publics[i] = calculateExpAtPoint(ctx, starkInfo.publicsCode[i], starkInfo.publics[i].idx);
-//            ctx.publics[i] = ctx.exps[starkInfo.publics[i].polId][starkInfo.publics[i].idx];
         } else {
             throw new Error(`Invalid public type: ${polType.type}`);
         }
@@ -193,12 +192,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[ci.denId]);
         const z = calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
-    }
-
-    if (parallelExec) {
-        await calculateExpsParallel(pool, ctx, "step3", starkInfo);
-    } else {
-        calculateExps(ctx, starkInfo.step3, "n");
     }
 
     console.log("Merkelizing 3....");
