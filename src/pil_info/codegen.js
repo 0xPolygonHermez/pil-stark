@@ -1,13 +1,13 @@
 
 
-function pilCodeGen(ctx, expId, prime, addMul) {
+function pilCodeGen(ctx, expressions, expId, prime) {
     prime = prime || false;
 
     const primeIdx = prime ? "expsPrime" : "exps";
 
     if (ctx.calculated[primeIdx][expId]) return;
 
-    calculateDeps(ctx, ctx.pil.expressions[expId], prime, expId);
+    calculateDeps(ctx, expressions, expressions[expId], prime, expId);
 
     const codeCtx = {
         pil: ctx.pil,
@@ -16,12 +16,7 @@ function pilCodeGen(ctx, expId, prime, addMul) {
         code: []
     }
 
-    let e;
-    if (addMul) {
-        e = findAddMul(ctx.pil.expressions[expId]);
-    } else {
-        e = ctx.pil.expressions[expId];
-    }
+    let e = expressions[expId];
     const retRef = evalExp(codeCtx, e, prime);
 
     if (retRef.type == "tmp") {
@@ -227,14 +222,14 @@ function evalExp(codeCtx, exp, prime) {
 }
 
 
-function calculateDeps(ctx, exp, prime, expIdErr, addMul) {
+function calculateDeps(ctx, expressions, exp, prime) {
     if (exp.op == "exp") {
         if (prime && exp.next) expressionError(ctx.pil, `Double prime`, expIdErr, exp.id);
-        pilCodeGen(ctx, exp.id, prime || exp.next, addMul);
+        pilCodeGen(ctx, expressions, exp.id, prime || exp.next);
     }
     if (exp.values) {
         for (let i=0; i<exp.values.length; i++) {
-            calculateDeps(ctx, exp.values[i], prime, expIdErr, addMul);
+            calculateDeps(ctx, expressions, exp.values[i], prime);
         }
     }
 }
@@ -361,14 +356,14 @@ function buildLinearCode(ctx) {
 }
 
 
-function buildCode(ctx) {
+function buildCode(ctx, expressions) {
     res = {};
     res.code = buildLinearCode(ctx);
     res.tmpUsed = ctx.tmpUsed;
 
     // Expressions that are not saved, cannot be reused later on
-    for (let i=0; i<ctx.pil.expressions.length; i++) {
-        const e = ctx.pil.expressions[i];
+    for (let i=0; i< expressions.length; i++) {
+        const e = expressions[i];
         if ((!e.imPol)) {
             ctx.calculated.exps[i] = false;
             ctx.calculated.expsPrime[i] = false;
