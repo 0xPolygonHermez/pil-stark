@@ -54,7 +54,7 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns) {
     res.cExp = pil.expressions.length;
     pil.expressions.push(cExp);
 
-    res.nCm3 = pil.nCommitments - res.nCm1 - res.nCm2;
+    res.nCm3 = pil.nCommitments - res.nCm1;
     res.qs = [];
     for (let i=0; i<res.qDeg; i++) {
         res.qs[i] = pil.nCommitments++;

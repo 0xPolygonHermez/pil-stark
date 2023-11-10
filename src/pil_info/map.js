@@ -16,8 +16,6 @@ module.exports = function map(res, pil) {
     res.mapSections = {
         cm1_n: [],
         cm1_2ns: [],
-        cm2_n:[],
-        cm2_2ns:[],
         cm3_n:[],
         cm3_2ns:[],
         cm4_n:[],
@@ -34,7 +32,7 @@ module.exports = function map(res, pil) {
     const tmpExps = {};
 
     pil.cmDims = [];
-    for (let i=0; i<res.nCm1; i++) {
+    for (let i=0; i<res.nCommitments; i++) {
         const pp_n = addPol({
             section: "cm1_n",
             dim:1
@@ -51,58 +49,77 @@ module.exports = function map(res, pil) {
     }
 
     for (let i=0; i<res.puCtx.length; i++) {
-        const dim = Math.max(getExpDim(pil, res.puCtx[i].fExpId), getExpDim(pil, res.puCtx[i].tExpId));
-        const pph1_n = addPol({
-            section: "cm2_n",
-            dim:dim
+        const ppm_n = addPol({
+            section: "cm1_n",
+            dim:1
         });
-        const pph1_2ns = addPol({
-            section: "cm2_2ns",
-            dim:dim
+        const ppm_2ns = addPol({
+            section: "cm1_2ns",
+            dim:1
         });
-        res.cm_n.push(pph1_n);
-        res.cm_2ns.push(pph1_2ns);
-        res.mapSections.cm2_n.push(pph1_n);
-        res.mapSections.cm2_2ns.push(pph1_2ns);
-        pil.cmDims[res.nCm1 + i*2] = dim;
-        const pph2_n = addPol({
-            section: "cm2_n",
-            dim:dim
-        });
-        const pph2_2ns = addPol({
-            section: "cm2_2ns",
-            dim:dim
-        });
-        res.cm_n.push(pph2_n);
-        res.cm_2ns.push(pph2_2ns);
-        res.mapSections.cm2_n.push(pph2_n);
-        res.mapSections.cm2_2ns.push(pph2_2ns);
-        pil.cmDims[res.nCm1 + i*2+1] = dim;
 
-        if (! res.imExps[res.puCtx[i].fExpId]) {
-            if ( typeof tmpExps[res.puCtx[i].fExpId] === "undefined") {
-                tmpExps[res.puCtx[i].fExpId] = res.tmpExp_n.length;
-                const ppf_n = addPol({
-                    section: "tmpExp_n",
-                    dim:dim
-                });
-                res.tmpExp_n.push(ppf_n);
-                res.mapSections.tmpExp_n.push(ppf_n);
-                res.exp2pol[res.puCtx[i].fExpId] = ppf_n;
-            }
-        }
-        if (! res.imExps[res.puCtx[i].tExpId]) {
-            if ( typeof tmpExps[res.puCtx[i].tExpId] === "undefined") {
-                tmpExps[res.puCtx[i].tExpId] = res.tmpExp_n.length;
+        res.cm_n.push(ppm_n);
+        res.cm_2ns.push(ppm_2ns);
+        res.mapSections.cm1_n.push(ppm_n);
+        res.mapSections.cm1_2ns.push(ppm_2ns);
+        pil.cmDims[res.nCommitments + i] = 1;
+
+        for(let j = 0; j < res.puCtx[i].fVals.length; ++j) {
+            const fVal = res.puCtx[i].fVals[j];
+            if (! res.imExps[fVal] && typeof tmpExps[fVal] === "undefined") {
+                tmpExps[fVal] = res.tmpExp_n.length;
                 const ppt_n = addPol({
                     section: "tmpExp_n",
-                    dim:dim
+                    dim: getExpDim(pil, fVal)
                 });
                 res.tmpExp_n.push(ppt_n);
                 res.mapSections.tmpExp_n.push(ppt_n);
-                res.exp2pol[res.puCtx[i].tExpId] = ppt_n;
+                res.exp2pol[fVal] = ppt_n;
             }
         }
+
+        const fSelExpId = res.puCtx[i].fSelExpId;
+        if(fSelExpId !== null) {
+            if ( !res.imExps[fSelExpId] && typeof tmpExps[fSelExpId] === "undefined") {
+                tmpExps[fSelExpId] = res.tmpExp_n.length;
+                const ppfsel_n = addPol({
+                    section: "tmpExp_n",
+                    dim: getExpDim(pil, fSelExpId)
+                });
+                res.tmpExp_n.push(ppfsel_n);
+                res.mapSections.tmpExp_n.push(ppfsel_n);
+                res.exp2pol[fSelExpId] = ppfsel_n;
+            }
+        }
+    
+
+        for(let j = 0; j < res.puCtx[i].tVals.length; ++j) {
+            const tVal = res.puCtx[i].tVals[j];
+            if ( !res.imExps[tVal] && typeof tmpExps[tVal] === "undefined") {
+                tmpExps[tVal] = res.tmpExp_n.length;
+                const ppt_n = addPol({
+                    section: "tmpExp_n",
+                    dim: getExpDim(pil, tVal)
+                });
+                res.tmpExp_n.push(ppt_n);
+                res.mapSections.tmpExp_n.push(ppt_n);
+                res.exp2pol[tVal] = ppt_n;
+            }
+        }
+
+        const tSelExpId = res.puCtx[i].tSelExpId;
+        if(tSelExpId !== null) {
+            if ( !res.imExps[tSelExpId] && typeof tmpExps[tSelExpId] === "undefined") {
+                tmpExps[tSelExpId] = res.tmpExp_n.length;
+                const pptsel_n = addPol({
+                    section: "tmpExp_n",
+                    dim: getExpDim(pil, tSelExpId)
+                });
+                res.tmpExp_n.push(pptsel_n);
+                res.mapSections.tmpExp_n.push(pptsel_n);
+                res.exp2pol[tSelExpId] = pptsel_n;
+            }
+        } 
     }
 
     for (let i=0; i<res.puCtx.length + res.peCtx.length + res.ciCtx.length; i++) {
@@ -126,7 +143,7 @@ module.exports = function map(res, pil) {
         res.cm_2ns.push(ppz_2ns);
         res.mapSections.cm3_n.push(ppz_n);
         res.mapSections.cm3_2ns.push(ppz_2ns);
-        pil.cmDims[res.nCm1 + res.nCm2 + i] = 3;
+        pil.cmDims[res.nCm1 + i] = 3;
 
         if (! res.imExps[o.numId]) {
             if ( typeof tmpExps[o.numId] === "undefined") {
@@ -168,7 +185,7 @@ module.exports = function map(res, pil) {
         res.cm_2ns.push(ppz_2ns);
         res.mapSections.cm3_n.push(ppz_n);
         res.mapSections.cm3_2ns.push(ppz_2ns);
-        pil.cmDims[res.nCm1 + res.nCm2 + res.puCtx.length + res.peCtx.length + res.ciCtx.length + i] = dim;
+        pil.cmDims[res.nCm1 + res.puCtx.length + res.peCtx.length + res.ciCtx.length + i] = dim;
         res.exp2pol[res.imExpsList[i]] = ppz_n;
     }
 
@@ -188,7 +205,7 @@ module.exports = function map(res, pil) {
         res.cm_2ns.push(ppz_2ns);
         res.mapSections.cm4_n.push(ppz_n);
         res.mapSections.cm4_2ns.push(ppz_2ns);
-        pil.cmDims[res.nCm1 + res.nCm2 + res.nCm3 + i] = res.qDim;
+        pil.cmDims[res.nCm1 + res.nCm3 + i] = res.qDim;
     }
 
     const ppq_2ns = addPol({
@@ -209,13 +226,11 @@ module.exports = function map(res, pil) {
     let Next = 1 << res.starkStruct.nBitsExt;
     res.mapOffsets = {};
     res.mapOffsets.cm1_n = 0;
-    res.mapOffsets.cm2_n = res.mapOffsets.cm1_n +  N * res.mapSectionsN.cm1_n;
-    res.mapOffsets.cm3_n = res.mapOffsets.cm2_n +  N * res.mapSectionsN.cm2_n;
+    res.mapOffsets.cm3_n = res.mapOffsets.cm1_n +  N * res.mapSectionsN.cm1_n;
     res.mapOffsets.cm4_n = res.mapOffsets.cm3_n +  N * res.mapSectionsN.cm3_n;
     res.mapOffsets.tmpExp_n = res.mapOffsets.cm4_n +  N * res.mapSectionsN.cm4_n;
     res.mapOffsets.cm1_2ns = res.mapOffsets.tmpExp_n +  N * res.mapSectionsN.tmpExp_n;
-    res.mapOffsets.cm2_2ns = res.mapOffsets.cm1_2ns +  Next * res.mapSectionsN.cm1_2ns;
-    res.mapOffsets.cm3_2ns = res.mapOffsets.cm2_2ns +  Next * res.mapSectionsN.cm2_2ns;
+    res.mapOffsets.cm3_2ns = res.mapOffsets.cm1_2ns +  Next * res.mapSectionsN.cm1_2ns;
     res.mapOffsets.cm4_2ns = res.mapOffsets.cm3_2ns +  Next * res.mapSectionsN.cm3_2ns;
     res.mapOffsets.q_2ns = res.mapOffsets.cm4_2ns +  Next * res.mapSectionsN.cm4_2ns;
     res.mapOffsets.f_2ns = res.mapOffsets.q_2ns +  Next * res.mapSectionsN.q_2ns;
@@ -223,12 +238,10 @@ module.exports = function map(res, pil) {
 
     res.mapDeg = {};
     res.mapDeg.cm1_n = N;
-    res.mapDeg.cm2_n = N;
     res.mapDeg.cm3_n = N;
     res.mapDeg.cm4_n = N;
     res.mapDeg.tmpExp_n = N;
     res.mapDeg.cm1_2ns = Next;
-    res.mapDeg.cm2_2ns = Next;
     res.mapDeg.cm3_2ns = Next;
     res.mapDeg.cm4_2ns = Next;
     res.mapDeg.q_2ns = Next;
@@ -237,7 +250,7 @@ module.exports = function map(res, pil) {
     for (let i=0; i< res.publicsCode.length; i++) {
         fixProverCode(res.publicsCode[i], "n");
     }
-    fixProverCode(res.step2prev, "n");
+    fixProverCode(res.step1, "n");
     fixProverCode(res.step3prev, "n");
     fixProverCode(res.step3, "n");
     fixProverCode(res.step42ns, "2ns");
@@ -249,7 +262,6 @@ module.exports = function map(res, pil) {
             const p1 = res.varPolMap[res.cm_2ns[r.id]];
             switch(p1.section) {
                 case "cm1_2ns": r.type = "tree1"; break;
-                case "cm2_2ns": r.type = "tree2"; break;
                 case "cm3_2ns": r.type = "tree3"; break;
                 case "cm4_2ns": r.type = "tree4"; break;
                 default: throw new Error("Invalid cm section");
@@ -265,7 +277,7 @@ module.exports = function map(res, pil) {
         }
     }
 
-    setCodeDimensions(res.step2prev, res, 1);
+    setCodeDimensions(res.step1, res, 1);
     setCodeDimensions(res.step3prev,res, 1);
     setCodeDimensions(res.step3, res, 1);
     setCodeDimensions(res.step42ns, res, 1);
@@ -421,7 +433,6 @@ function setCodeDimensions(code, starkInfo, dimX) {
             switch (r.type) {
                 case "tmp": d=tmpDim[r.id]; break;
                 case "tree1": d=r.dim; break;
-                case "tree2": d=r.dim; break;
                 case "tree3": d=r.dim; break;
                 case "tree4": d=r.dim; break;
                 case "tmpExp": d=r.dim; break;

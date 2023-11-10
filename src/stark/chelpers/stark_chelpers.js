@@ -38,17 +38,17 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(starkInfo, config, "step2prev_first", starkInfo.step2prev.first, "n"));
-        result.step2prev_parser = code.join("\n\n") + "\n";
+        code.push(compileCode_parser(starkInfo, config, "step1_first", starkInfo.step1.first, "n"));
+        result.step1_parser = code.join("\n\n") + "\n";
         code.length = 0;
     }
 
-    code.push(compileCode("step2prev_first", starkInfo.step2prev.first, "n"));
-    code.push(compileCode("step2prev_i", starkInfo.step2prev.first, "n"));
-    code.push(compileCode("step2prev_last", starkInfo.step2prev.first, "n"));
+    code.push(compileCode("step1_first", starkInfo.step1.first, "n"));
+    code.push(compileCode("step1_i", starkInfo.step1.first, "n"));
+    code.push(compileCode("step1_last", starkInfo.step1.first, "n"));
 
     if (multipleCodeFiles) {
-        result.step2 = code.join("\n\n") + "\n";
+        result.step1 = code.join("\n\n") + "\n";
         code.length = 0;
     }
 

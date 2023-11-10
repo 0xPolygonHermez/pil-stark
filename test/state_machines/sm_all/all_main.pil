@@ -7,3 +7,4 @@ include "../sm_fibonacci/fibonacci.pil";
 include "../sm_connection/connection.pil";
 include "../sm_permutation/permutation.pil";
 include "../sm_plookup/plookup.pil";
+include "../sm_batch_lookup/batch_lookup.pil";

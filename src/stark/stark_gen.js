@@ -6,7 +6,7 @@ const Transcript = require("../helpers/transcript/transcript");
 const TranscriptBN128 = require("../helpers/transcript/transcript.bn128");
 const F3g = require("../helpers/f3g.js");
 
-const { buildZhInv, calculateH1H2, calculateZ } = require("../helpers/polutils.js");
+const { buildZhInv, calculateMulCounter, calculateZ, calculateS } = require("../helpers/polutils.js");
 const buildPoseidonGL = require("../helpers/hash/poseidon/poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 const FRI = require("./fri.js");
@@ -16,8 +16,8 @@ const workerpool = require("workerpool");
 const {starkgen_execute} = require("./stark_gen_worker");
 const {BigBuffer} = require("pilcom");
 
-const parallelExec = true;
-const useThreads = true;
+const parallelExec = false;
+const useThreads = false;
 const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
 
@@ -48,7 +48,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     const fri = new FRI( starkStruct, MH );
 
-    if (cmPols.$$nPols != starkInfo.nCm1) {
+    if (cmPols.$$nPols != starkInfo.nCommitments) {
         throw new Error(`Number of Commited Polynomials: ${cmPols.length} do not match with the starkInfo definition: ${starkInfo.nCm1} `)
     };
 
@@ -64,15 +64,13 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     ctx.starkInfo = starkInfo;
     ctx.tmp = [];
     ctx.challenges = [];
-    let nCm = starkInfo.nCm1;
+    let nCm = starkInfo.nCommitments;
 
     ctx.cm1_n = new BigBuffer(starkInfo.mapSectionsN.cm1_n*ctx.N);
-    cmPols.writeToBigBuffer(ctx.cm1_n, 0);
-    ctx.cm2_n = new BigBuffer(starkInfo.mapSectionsN.cm2_n*ctx.N);
+    cmPols.writeToBigBuffer(ctx.cm1_n, starkInfo.mapSectionsN.cm1_n);
     ctx.cm3_n = new BigBuffer(starkInfo.mapSectionsN.cm3_n*ctx.N);
     ctx.tmpExp_n = new BigBuffer(starkInfo.mapSectionsN.tmpExp_n*ctx.N);
     ctx.cm1_2ns = new BigBuffer(starkInfo.mapSectionsN.cm1_n*ctx.Next);
-    ctx.cm2_2ns = new BigBuffer(starkInfo.mapSectionsN.cm2_n*ctx.Next);
     ctx.cm3_2ns = new BigBuffer(starkInfo.mapSectionsN.cm3_n*ctx.Next);
     ctx.cm4_2ns = new BigBuffer(starkInfo.mapSectionsN.cm4_n*ctx.Next);
     ctx.q_2ns = new BigBuffer(starkInfo.qDim*ctx.Next);
@@ -126,42 +124,57 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         transcript.put(ctx.publics[i]);
     }
 
+
+    if (parallelExec) {
+        await calculateExpsParallel(pool, ctx, "step1", starkInfo);
+    } else {
+        calculateExps(ctx, starkInfo.step1, "n");
+    }
+
+    for (let i=0; i<starkInfo.puCtx.length; i++) {
+        const puCtx = starkInfo.puCtx[i];
+        const fPols = [];
+        const tPols = [];
+        let tSel;
+        let fSel;
+
+
+        for(let j=0; j<puCtx.tVals.length; j++) {
+            const tVal = puCtx.tVals[j];
+            tPols[j] = getPol(ctx, starkInfo, starkInfo.exp2pol[tVal]);
+            if(puCtx.tSelExpId) {
+                tSel = getPol(ctx, starkInfo, starkInfo.exp2pol[puCtx.tSelExpId]);
+            }
+        }
+
+        let mulCount = new Array(ctx.N).fill(0n);
+
+        for(let j=0; j<puCtx.fVals.length; j++) {
+            const fVal = puCtx.fVals[j];
+            fPols[j] = getPol(ctx, starkInfo, starkInfo.exp2pol[fVal]);
+            if(puCtx.fSelExpId) {
+                fSel = getPol(ctx, starkInfo, starkInfo.exp2pol[puCtx.fSelExpId]);
+            }
+        }
+
+        const mulCountFi = calculateMulCounter(F, fPols, tPols, fSel, tSel);
+        for (let j=0; j<ctx.N; j++) {
+            mulCount[j] += mulCountFi[j];
+        }
+
+        setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], mulCount);
+    }
+
     console.log("Merkelizing 1....");
     const tree1 = await extendAndMerkelize(MH, ctx.cm1_n, ctx.cm1_2ns, starkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree1));
 
 ///////////
-// 2.- Caluculate plookups h1 and h2
-///////////
-    ctx.challenges[0] = transcript.getField(); // u
-    ctx.challenges[1] = transcript.getField(); // defVal
-
-    if (parallelExec) {
-        await calculateExpsParallel(pool, ctx, "step2prev", starkInfo);
-    } else {
-        calculateExps(ctx, starkInfo.step2prev, "n");
-    }
-
-
-    for (let i=0; i<starkInfo.puCtx.length; i++) {
-        const puCtx = starkInfo.puCtx[i];
-        const fPol = getPol(ctx, starkInfo, starkInfo.exp2pol[puCtx.fExpId]);
-        const tPol = getPol(ctx, starkInfo, starkInfo.exp2pol[puCtx.tExpId]);
-        const [h1, h2] = calculateH1H2(F, fPol, tPol);
-        setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], h1);
-        setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], h2);
-    }
-
-    console.log("Merkelizing 2....");
-    if (global.gc) {global.gc();}
-    const tree2 = await extendAndMerkelize(MH, ctx.cm2_n, ctx.cm2_2ns, starkInfo.mapSectionsN.cm2_n, ctx.nBits, ctx.nBitsExt );
-    transcript.put(MH.root(tree2));
-
-///////////
 // 3.- Compute Z polynomials
 ///////////
+    ctx.challenges[0] = transcript.getField(); // alpha
+    ctx.challenges[1] = transcript.getField(); // beta
     ctx.challenges[2] = transcript.getField(); // gamma
-    ctx.challenges[3] = transcript.getField(); // betta
 
 
     if (parallelExec) {
@@ -171,15 +184,15 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     }
 
     for (let i=0; i<starkInfo.puCtx.length; i++) {
-        console.log(`Calculating z for plookup ${i}`);
+        console.log(`Calculating the grand-sum S for lookup check ${i}`);
         const pu = starkInfo.puCtx[i];
         const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[pu.numId]);
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[pu.denId]);
-        const z = calculateZ(F,pNum, pDen);
+        const z = calculateS(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
     for (let i=0; i<starkInfo.peCtx.length; i++) {
-        console.log(`Calculating z for permutation check ${i}`);
+        console.log(`Calculating the grand-product Z for permutation check ${i}`);
         const pe = starkInfo.peCtx[i];
         const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[pe.numId]);
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[pe.denId]);
@@ -187,7 +200,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
     }
     for (let i=0; i<starkInfo.ciCtx.length; i++) {
-        console.log(`Calculating z for connection ${i}`);
+        console.log(`Calculating the grand-product Z for connection check ${i}`);
         const ci = starkInfo.ciCtx[i];
         const pNum = getPol(ctx, starkInfo, starkInfo.exp2pol[ci.numId]);
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[ci.denId]);
@@ -209,7 +222,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 ///////////
 // 4. Compute C Polynomial
 ///////////
-    ctx.challenges[4] = transcript.getField(); // vc
+    ctx.challenges[3] = transcript.getField(); // vc
 
     if (parallelExec) {
         await calculateExpsParallel(pool, ctx, "step42ns", starkInfo);
@@ -236,14 +249,14 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     console.log("Merkelizing 4....");
     if (global.gc) {global.gc();}
-    tree4 = await merkelize(MH, ctx.cm4_2ns , starkInfo.mapSectionsN.cm4_2ns, ctx.nBitsExt);
+    const tree4 = await merkelize(MH, ctx.cm4_2ns , starkInfo.mapSectionsN.cm4_2ns, ctx.nBitsExt);
     transcript.put(MH.root(tree4));
 
 
 ///////////
 // 5. Compute FRI Polynomial
 ///////////
-    ctx.challenges[7] = transcript.getField(); // xi
+    ctx.challenges[6] = transcript.getField(); // xi
 
 // Calculate Evals
 
@@ -251,8 +264,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     let LpEv = new Array(N);
     LEv[0] = 1n;
     LpEv[0] = 1n;
-    const xis = F.div(ctx.challenges[7], F.shift);
-    const wxis = F.div(F.mul(ctx.challenges[7], F.w[nBits]), F.shift);
+    const xis = F.div(ctx.challenges[6], F.shift);
+    const wxis = F.div(F.mul(ctx.challenges[6], F.w[nBits]), F.shift);
     for (let k=1; k<N; k++) {
         LEv[k] = F.mul(LEv[k-1], xis);
         LpEv[k] = F.mul(LpEv[k-1], wxis);
@@ -300,14 +313,14 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         transcript.put(ctx.evals[i]);
     }
 
-    ctx.challenges[5] = transcript.getField(); // v1
-    ctx.challenges[6] = transcript.getField(); // v2
+    ctx.challenges[4] = transcript.getField(); // v1
+    ctx.challenges[5] = transcript.getField(); // v2
 
 
 // Calculate xDivXSubXi, xDivX4SubWXi
     if (global.gc) {global.gc();}
-    const xi = ctx.challenges[7];
-    const wxi = F.mul(ctx.challenges[7], F.w[nBits]);
+    const xi = ctx.challenges[6];
+    const wxi = F.mul(ctx.challenges[6], F.w[nBits]);
 
     ctx.xDivXSubXi = new BigBuffer((N << extendBits)*3);
     ctx.xDivXSubWXi = new BigBuffer((N << extendBits)*3);
@@ -356,7 +369,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     const queryPol = (idx) => {
         return [
             MH.getGroupProof(tree1, idx),
-            MH.getGroupProof(tree2, idx),
             MH.getGroupProof(tree3, idx),
             MH.getGroupProof(tree4, idx),
             MH.getGroupProof(constTree, idx),
@@ -371,7 +383,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     return {
         proof: {
             root1: MH.root(tree1),
-            root2: MH.root(tree2),
             root3: MH.root(tree3),
             root4: MH.root(tree4),
             evals: ctx.evals,
@@ -642,17 +653,37 @@ function getPol(ctx, starkInfo, idPol) {
     return res;
 }
 
+function getPolConst(ctx, starkInfo, idPol, next) {
+    const res = new Array(ctx.N);
+    for(let i = 0; i < ctx.N; i++) {
+        const index = next ? (i + 1)%ctx.N : i;
+        res[i] = ctx.const_n.getElement(idPol + index*starkInfo.nConstants)
+    }
+
+    return res;
+}
+
+function getPolCommit(ctx, starkInfo, idPol, next) {
+    const res = new Array(ctx.N);
+    for(let i = 0; i < ctx.N; i++) {
+        const index = next ? (i + 1)%ctx.N : i;
+        res[i] = ctx.cm1_n.getElement(idPol + index*starkInfo.mapSectionsN.cm1_n);
+    }
+
+    return res;
+}
+
 async function  extendAndMerkelize(MH, buffFrom, buffTo, nPols, nBits, nBitsExt) {
 
     await extend(buffFrom, buffTo, nPols, nBits, nBitsExt);
     return await merkelize(MH, buffTo, nPols, nBitsExt);
 }
 
-async function  extend(buffFrom, buffTo, nPols, nBits, nBitsExt ) {
+async function extend(buffFrom, buffTo, nPols, nBits, nBitsExt ) {
     await interpolate(buffFrom, nPols, nBits, buffTo, nBitsExt);
 }
 
-async function  merkelize(MH, buff, width, nBitsExt ) {
+async function merkelize(MH, buff, width, nBitsExt ) {
     const nExt = 1 << nBitsExt;
     return await MH.merkelize(buff, width, nExt);
 }
@@ -668,16 +699,14 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
         inputSections: [],
         outputSections: []
     };
-    if (execPart == "step2prev") {
+    if (execPart == "step1") {
         execInfo.inputSections.push({ name: "cm1_n" });
         execInfo.inputSections.push({ name: "const_n" });
-        execInfo.outputSections.push({ name: "cm2_n" });
         execInfo.outputSections.push({ name: "cm3_n" });
         execInfo.outputSections.push({ name: "tmpExp_n" });
         dom = "n";
     } else if (execPart == "step3prev") {
         execInfo.inputSections.push({ name: "cm1_n" });
-        execInfo.inputSections.push({ name: "cm2_n" });
         execInfo.inputSections.push({ name: "cm3_n" });
         execInfo.inputSections.push({ name: "const_n" });
         execInfo.inputSections.push({ name: "x_n" });
@@ -686,7 +715,6 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
         dom = "n";
     } else if (execPart == "step3") {
         execInfo.inputSections.push({ name: "cm1_n" });
-        execInfo.inputSections.push({ name: "cm2_n" });
         execInfo.inputSections.push({ name: "cm3_n" });
         execInfo.inputSections.push({ name: "const_n" });
         execInfo.inputSections.push({ name: "x_n" });
@@ -695,7 +723,6 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
         dom = "n";
     } else if (execPart == "step42ns") {
         execInfo.inputSections.push({ name: "cm1_2ns" });
-        execInfo.inputSections.push({ name: "cm2_2ns" });
         execInfo.inputSections.push({ name: "cm3_2ns" });
         execInfo.inputSections.push({ name: "const_2ns" });
         execInfo.inputSections.push({ name: "x_2ns" });
@@ -703,7 +730,6 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
         dom = "2ns";
     } else if (execPart == "step52ns") {
         execInfo.inputSections.push({ name: "cm1_2ns" });
-        execInfo.inputSections.push({ name: "cm2_2ns" });
         execInfo.inputSections.push({ name: "cm3_2ns" });
         execInfo.inputSections.push({ name: "cm4_2ns" });
         execInfo.inputSections.push({ name: "const_2ns" });
@@ -805,11 +831,9 @@ function ctxProxy(ctx) {
     const pCtx = {};
 
     createProxy("cm1_n");
-    createProxy("cm2_n");
     createProxy("cm3_n");
     createProxy("tmpExp_n");
     createProxy("cm1_2ns");
-    createProxy("cm2_2ns");
     createProxy("cm3_2ns");
     createProxy("cm4_2ns");
     createProxy("q_2ns");

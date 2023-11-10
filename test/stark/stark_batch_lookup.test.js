@@ -1,41 +1,41 @@
-const chai = require("chai");
-const assert = chai.assert;
-const F3g = require("../../src/helpers/f3g");
+const assert = require("chai").assert;
+const F3g = require("../../src/helpers/f3g.js");
 const path = require("path");
 const starkSetup = require("../../src/stark/stark_setup.js");
 const starkGen = require("../../src/stark/stark_gen.js");
 const starkVerify = require("../../src/stark/stark_verify.js");
-
 const { newConstantPolsArray, newCommitPolsArray, compile, verifyPil } = require("pilcom");
 
 const smGlobal = require("../state_machines/sm/sm_global.js");
-const smPermutation = require("../state_machines/sm_permutation/sm_permutation.js");
+const smBatchLookup = require("../state_machines/sm_batch_lookup/sm_batch_lookup.js");
 
-describe("test permutation sm", async function () {
+describe("test plookup sm", async function () {
     this.timeout(10000000);
 
     it("It should create the pols main", async () => {
         const starkStruct = {
-            nBits: 10,
-            nBitsExt: 11,
-            nQueries: 8,
+            nBits: 12,
+            nBitsExt: 13,
+            nQueries: 128,
             verificationHashType : "GL",
             steps: [
-                {nBits: 11},
-                {nBits: 3}
+                {nBits: 13},
+                {nBits: 10},
+                {nBits: 7},
+                {nBits: 4},
             ]
         };
 
         const F = new F3g("0xFFFFFFFF00000001");
-        const pil = await compile(F, path.join(__dirname, "../state_machines", "sm_permutation", "permutation_main.pil"));
+        const pil = await compile(F, path.join(__dirname, "../state_machines", "sm_batch_lookup", "batch_lookup_main.pil"));
+        
         const constPols =  newConstantPolsArray(pil);
 
         await smGlobal.buildConstants(constPols.Global);
-        await smPermutation.buildConstants(constPols.Permutation);
 
         const cmPols = newCommitPolsArray(pil);
 
-        await smPermutation.execute(cmPols.Permutation);
+        await smBatchLookup.execute(cmPols.BatchLookup);
 
         const res = await verifyPil(F, pil, cmPols , constPols);
 
@@ -53,8 +53,7 @@ describe("test permutation sm", async function () {
 
         const resV = await starkVerify(resP.proof, resP.publics, setup.constRoot, setup.starkInfo);
 
-        assert(resV==true);
-
+        assert(resV == true);
     });
 
 });

@@ -887,10 +887,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                                 pushSrcArg(r.src[0]);
                                 pushSrcArg(r.src[1]);
                             }  else if ((r.src[0].type === 'tmpExp' && !r.src[0].prime) && (r.src[1].type === 'challenge')) {
-                                counters_ops[62] += 1;
-                                ops.push(62);
-                                opsString += "62, ";
-                                pushResArg(r);
                                 pushSrcArg(r.src[0]);
                                 pushSrcArg(r.src[1]);
                             } else {
@@ -1916,16 +1912,16 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             "\n",
             `uint64_t args3prev[NARGS_] = ${argsString}`
         ].join("\n");
-    } else if (functionName == "step2prev_first") {
+    } else if (functionName == "step1_first") {
         res = [
             `#define NOPS_ ${cont_ops}`,
             `#define NARGS_ ${cont_args}`,
             `#define NTEMP1_ ${count1d}`,
             `#define NTEMP3_ ${count3d}`,
             "\n",
-            `uint64_t op2prev[NOPS_] = ${opsString}`,
+            `uint64_t op1[NOPS_] = ${opsString}`,
             "\n",
-            `uint64_t args2prev[NARGS_] = ${argsString}`
+            `uint64_t args1[NARGS_] = ${argsString}`
         ].join("\n");
     }
 

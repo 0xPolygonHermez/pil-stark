@@ -1,13 +1,12 @@
 
 const challengeMap = {
-    "u": 0,
-    "defVal": 1,
+    "alpha": 0,
+    "beta": 1,
     "gamma": 2,
-    "beta": 3,
-    "vc": 4,
-    "vf1": 5,
-    "vf2": 6,
-    "xi": 7
+    "vc": 3,
+    "vf1": 4,
+    "vf2": 5,
+    "xi": 6
 };
 
 class ExpressionOps {

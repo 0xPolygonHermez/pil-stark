@@ -5,6 +5,7 @@ const smPlookup = require("../sm_plookup/sm_plookup.js");
 const smFibonacci = require("../sm_fibonacci/sm_fibonacci.js");
 const smPermutation = require("../sm_permutation/sm_permutation.js");
 const smConnection = require("../sm_connection/sm_connection.js");
+const smBatchLookup = require("../sm_batch_lookup/sm_batch_lookup.js");
 
 const F3g = require("../../../src/helpers/f3g.js");
 const { newCommitPolsArray, compile } = require("pilcom");
@@ -29,6 +30,8 @@ async function run() {
     await smFibonacci.execute(cmPols.Fibonacci, [1,2]);
     await smPermutation.execute(cmPols.Permutation);
     await smConnection.execute(cmPols.Connection);
+    await smBatchLookup.execute(cmPols.BatchLookup);
+
 
     await cmPols.saveToFile(outputFile);
 

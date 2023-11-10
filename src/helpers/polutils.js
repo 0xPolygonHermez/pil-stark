@@ -1,7 +1,3 @@
-const { assert } = require("chai");
-
-
-
 module.exports.polMulAxi = function polMulAxi(F, p, init, acc) {
     let r = init;
     for (let i=0; i<p.length; i++) {
@@ -48,6 +44,51 @@ module.exports.buildZhInv = function buildZhInv(F, Nbits, extendBits, _offset) {
 }
 
 
+module.exports.calculateMulCounter = function calculateMulCounter(F, fPols, tPols, fSel, tSel) {
+    const N = fPols[0].length;
+
+    const t = new Map();
+
+    const mulCount = new Array(N).fill(0n);
+
+    for(let j = 0; j < N; j++) {
+        if(tSel && tSel[j] == 0n) continue;
+        const tPol = [];
+        for (let l = 0; l < tPols.length; l++) {
+            tPol.push(tPols[l][j].toString());
+        }
+        
+        const strT = tPol.join(",");
+        if (t.hasOwnProperty(strT)) {
+            t[strT].set(strT, t.get(strT).push(j));
+        } else {
+            t.set(strT, [j]);
+        }
+    }
+
+    for(let j = 0; j < N; j++) {
+        if(fSel && fSel[j] == 0n) continue;
+        const fPol = [];
+        for (let l = 0; l < fPols.length; l++) {
+            fPol.push(fPols[l][j].toString());
+        }
+        const strF = fPol.join(",");
+        if(!t.get(strF)) {
+            for (let l = 0; l < fPols.length; l++) {
+                console.log(l, j, fPols[l][j]);
+            }
+            throw new Error(`Number not included: ${strF}`);
+        }
+
+        const pols = t.get(strF);
+        for(let k = 0; k < pols.length; k++) {
+            mulCount[pols[k]]++;
+        }
+    }
+
+    return mulCount;
+}
+
 module.exports.calculateH1H2 = function calculateH1H2(F, f, t) {
     const idx_t = {};
     const s = [];
@@ -93,6 +134,24 @@ module.exports.calculateZ = function(F, num, den) {
     }
 
     return z;
+}
+
+module.exports.calculateS = function(F, num, den, m) {
+
+    const N = num.length;
+    const gsum = new Array(N);
+
+    const denI = F.batchInverse(den);
+
+    gsum[0] = F.zero;
+    for(let i = 1; i < N; ++i) {
+        gsum[i] = F.add(gsum[i - 1], F.mul(num[i - 1], denI[i - 1]));
+    }
+
+    const checkVal = F.add(gsum[N-1], F.mul(num[N-1], denI[N-1]));
+    if (!F.eq(checkVal, F.zero)) throw new Error("The grand-sum polynomial S is not well calculated");
+
+    return gsum;
 }
 
 module.exports.connect = function connect(p1, i1, p2, i2) {

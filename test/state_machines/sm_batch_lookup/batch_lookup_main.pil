@@ -1,0 +1,7 @@
+
+constant %N = 2**12;
+
+namespace Global(%N);
+    pol constant L1;
+
+include "batch_lookup.pil";

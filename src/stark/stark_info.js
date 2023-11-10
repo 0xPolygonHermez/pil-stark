@@ -1,6 +1,6 @@
 
 const generatePublicCalculators = require("../pil_info/publics.js");
-const generateStep2 = require("../pil_info/step2");
+const generateStep1 = require("../pil_info/step1");
 const generateStep3 = require("../pil_info/step3");
 const generateConstraintPolynomial = require("../pil_info/cp_prover");
 const generateFRIPolynomial = require("../pil_info/fri_prover");
@@ -32,6 +32,7 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
     res.starkStruct = starkStruct;
     res.nConstants = pil.nConstants;
     res.nPublics = pil.publics.length;
+    res.nCommitments = pil.nCommitments;
 
     generatePublicCalculators(res, pil);
     res.nCm1 = pil.nCommitments;
@@ -58,7 +59,7 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
 
     const addMul = starkStruct.verificationHashType == "GL" ? true : false; 
 
-    generateStep2(res, pil, ctx);                        // H1, H2
+    generateStep1(res, pil, ctx);                        // Plookup f and t expression values
 
     generateStep3(res, pil, ctx);                        // Z Polynomials and LC of permutation chcks.
 

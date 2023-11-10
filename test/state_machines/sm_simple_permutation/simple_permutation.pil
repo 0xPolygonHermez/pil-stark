@@ -1,0 +1,6 @@
+namespace SimplePermutation(%N);
+
+    pol commit a, b;
+
+    a is b;
+

@@ -47,30 +47,28 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
     }
 
     transcript.put(proof.root1);
-    ctx.challenges[0] = transcript.getField(); // u
-    ctx.challenges[1] = transcript.getField(); // defVal
-    transcript.put(proof.root2);
+    ctx.challenges[0] = transcript.getField(); // alpha
+    ctx.challenges[1] = transcript.getField(); // beta
     ctx.challenges[2] = transcript.getField(); // gamma
-    ctx.challenges[3] = transcript.getField(); // beta
 
     transcript.put(proof.root3);
-    ctx.challenges[4] = transcript.getField(); // vc
+    ctx.challenges[3] = transcript.getField(); // vc
 
     transcript.put(proof.root4);
-    ctx.challenges[7] = transcript.getField(); // xi
+    ctx.challenges[6] = transcript.getField(); // xi
 
     for (let i=0; i<ctx.evals.length; i++) {
         transcript.put(ctx.evals[i]);
     }
 
-    ctx.challenges[5] = transcript.getField(); // v1
-    ctx.challenges[6] = transcript.getField(); // v2
+    ctx.challenges[4] = transcript.getField(); // v1
+    ctx.challenges[5] = transcript.getField(); // v2
 
     console.log("Verify Evaluation");
 
-    const xN = F.exp(ctx.challenges[7], N)
+    const xN = F.exp(ctx.challenges[6], N)
     ctx.Z = F.sub(xN, 1n);
-    ctx.Zp = F.sub(F.exp(F.mul(ctx.challenges[7], F.w[nBits]), N), 1n);
+    ctx.Zp = F.sub(F.exp(F.mul(ctx.challenges[6], F.w[nBits]), N), 1n);
 
     const res=executeCode(F, ctx, starkInfo.verifierCode.first);
 
@@ -92,28 +90,25 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         let res;
         res = MH.verifyGroupProof(proof.root1, query[0][1], idx, query[0][0]);
         if (!res) return false;
-        res = MH.verifyGroupProof(proof.root2, query[1][1], idx, query[1][0]);
+        res = MH.verifyGroupProof(proof.root3, query[1][1], idx, query[1][0]);
         if (!res) return false;
-        res = MH.verifyGroupProof(proof.root3, query[2][1], idx, query[2][0]);
+        res = MH.verifyGroupProof(proof.root4, query[2][1], idx, query[2][0]);
         if (!res) return false;
-        res = MH.verifyGroupProof(proof.root4, query[3][1], idx, query[3][0]);
-        if (!res) return false;
-        res = MH.verifyGroupProof(constRoot, query[4][1], idx, query[4][0]);
+        res = MH.verifyGroupProof(constRoot, query[3][1], idx, query[3][0]);
         if (!res) return false;
 
         const ctxQry = {};
         ctxQry.tree1 = query[0][0];
-        ctxQry.tree2 = query[1][0];
-        ctxQry.tree3 = query[2][0];
-        ctxQry.tree4 = query[3][0];
-        ctxQry.consts = query[4][0];
+        ctxQry.tree3 = query[1][0];
+        ctxQry.tree4 = query[2][0];
+        ctxQry.consts = query[3][0];
         ctxQry.evals = ctx.evals;
         ctxQry.publics = ctx.publics;
         ctxQry.challenges = ctx.challenges;
 
         const x = F.mul(F.shift, F.exp(F.w[nBits + extendBits], idx));
-        ctxQry.xDivXSubXi = F.div(x, F.sub(x, ctxQry.challenges[7]));
-        ctxQry.xDivXSubWXi = F.div(x, F.sub(x, F.mul(F.w[nBits], ctxQry.challenges[7])));
+        ctxQry.xDivXSubXi = F.div(x, F.sub(x, ctxQry.challenges[6]));
+        ctxQry.xDivXSubWXi = F.div(x, F.sub(x, F.mul(F.w[nBits], ctxQry.challenges[6])));
 
         const vals = [executeCode(F, ctxQry, starkInfo.verifierQueryCode.first)];
 
@@ -150,7 +145,6 @@ function executeCode(F, ctx, code) {
         switch (r.type) {
             case "tmp": return tmp[r.id];
             case "tree1": return extractVal(ctx.tree1, r.treePos, r.dim);
-            case "tree2": return extractVal(ctx.tree2, r.treePos, r.dim);
             case "tree3": return extractVal(ctx.tree3, r.treePos, r.dim);
             case "tree4": return extractVal(ctx.tree4, r.treePos, r.dim);
             case "const": return ctx.consts[r.id];
@@ -160,7 +154,7 @@ function executeCode(F, ctx, code) {
             case "challenge": return ctx.challenges[r.id];
             case "xDivXSubXi": return ctx.xDivXSubXi;
             case "xDivXSubWXi": return ctx.xDivXSubWXi;
-            case "x": return ctx.challenges[7];
+            case "x": return ctx.challenges[6];
             case "Z": return r.prime ? ctx.Zp : ctx.Z;
             default: throw new Error("Invalid reference type get: " + r.type);
         }

@@ -60,7 +60,6 @@ function setDimensions(code) {
         switch (r.type) {
             case "tmp": d=tmpDim[r.id]; break;
             case "tree1": d=r.dim; break;
-            case "tree2": d=r.dim; break;
             case "tree3": d=r.dim; break;
             case "tree4": d=r.dim; break;
             case "const": d=1; break;
