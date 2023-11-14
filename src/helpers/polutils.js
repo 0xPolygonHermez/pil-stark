@@ -1,6 +1,5 @@
-const { assert } = require("chai");
-
-
+const F3g = require("../helpers/f3g.js");
+const linearSystemSolver = require('./system_solver');
 
 module.exports.polMulAxi = function polMulAxi(F, p, init, acc) {
     let r = init;
@@ -97,4 +96,41 @@ module.exports.calculateZ = function(F, num, den) {
 
 module.exports.connect = function connect(p1, i1, p2, i2) {
     [p1[i1], p2[i2]] = [p2[i2], p1[i1]];
+}
+
+module.exports.minimalPol = function minimalPol(F, z) {
+    const z_sq = F.square(z);
+    const z_cub = F.mul(z_sq, z);
+
+    let deg = 2;
+    for (let i = 0; i < 2; i++) {
+        let A = [];
+        let b = [];
+        if (deg === 2) {
+            A = [
+                [1n, z[0]],
+                [0n, z[1]],
+                [0n, z[2]],
+            ];
+            b = [F.neg(z_sq[0]), F.neg(z_sq[1]), F.neg(z_sq[2])];
+        } else if (deg === 3) {
+            A = [
+                [1n, z[0], z_sq[0]],
+                [0n, z[1], z_sq[1]],
+                [0n, z[2], z_sq[2]],
+            ];
+            b = [F.neg(z_cub[0]), F.neg(z_cub[1]), F.neg(z_cub[2])];
+        }
+
+        const sol = linearSystemSolver(F, A, b);
+        if (sol) {
+            const check = F.add(z_cub, F.add(F.mul(z_sq, sol[2]), F.add(F.mul(z, sol[1]), sol[0])));
+            if (!F.isZero(check)) throw new Error("The solution is not correct");
+
+            return sol;
+        }
+        deg++;
+    }
+
+    throw new Error("Could not find the minimal polynomial");
 }
