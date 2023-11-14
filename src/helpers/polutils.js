@@ -1,4 +1,3 @@
-const F3g = require("../helpers/f3g.js");
 const linearSystemSolver = require('./system_solver');
 
 module.exports.polMulAxi = function polMulAxi(F, p, init, acc) {
