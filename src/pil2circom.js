@@ -69,6 +69,7 @@ function setDimensions(code) {
             case "number": d=1; break;
             case "public": d=1; break;
             case "challenge": d=3; break;
+            case "challengefri": d=3; break;
             case "xDivXSubXi": d=3; break;
             case "xDivXSubWXi": d=3; break;
 	        case "mz": d=1; break;

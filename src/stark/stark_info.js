@@ -56,7 +56,7 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
         code: []
     };
 
-    const addMul = starkStruct.verificationHashType == "GL" ? true : false; 
+    const addMul = false; 
 
     generateStep2(res, pil, ctx);                        // H1, H2
 

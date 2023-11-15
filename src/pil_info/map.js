@@ -314,6 +314,7 @@ module.exports = function map(res, pil) {
                 case "const":
                 case "number":
                 case "challenge":
+                case "challengefri":
                 case "public":
                 case "tmp":
                 case "Zi":
@@ -386,6 +387,7 @@ function getExpDim(pil, expId) {
             case "number": return 1;
             case "public": return 1;
             case "challenge": return 3;
+            case "challengefri": return 3;
             case "eval": return 3;
             case "evalR": return 1;
             case "xDivXSubXi":  return 3;
@@ -444,6 +446,7 @@ function setCodeDimensions(code, starkInfo, dimX) {
                 case "number": d=1; break;
                 case "public": d=1; break;
                 case "challenge": d=3; break;
+                case "challengefri": d=3; break;
                 case "xDivXSubXi": d=dimX; break;
                 case "xDivXSubWXi": d=dimX; break;
 		        case "mz": d=1; break;

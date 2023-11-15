@@ -235,6 +235,11 @@ function evalExp(codeCtx, exp, prime) {
             type: "challenge",
             id: exp.id,
         }
+    } else if (exp.op == "challengefri") {
+        return {
+            type: "challengefri",
+            id: exp.id,
+        }
     } else if (exp.op == "eval") {
         return {
             type: "eval",

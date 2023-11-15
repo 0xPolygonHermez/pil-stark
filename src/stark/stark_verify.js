@@ -37,6 +37,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
 
     ctx = {
         challenges: [],
+        challengefri: [],
         evals: proof.evals,
         evals: proof.evalsR,
         publics: publics
@@ -70,6 +71,13 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
 
     ctx.challenges[5] = transcript.getField(); // v1
     ctx.challenges[6] = transcript.getField(); // v2
+
+    ctx.challengefri[0] = ctx.challenges[6];
+    for(let i = 1; i < starkInfo.nFriChallenges; i++) {
+        ctx.challengefri[i] = F.mul(ctx.challengefri[i-1], ctx.challenges[6]);
+    }
+
+    console.log(ctx.challengefri);
 
     console.log("Verify Evaluation");
 
@@ -116,6 +124,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         ctxQry.evalsR = ctx.evalsR;
         ctxQry.publics = ctx.publics;
         ctxQry.challenges = ctx.challenges;
+        ctxQry.challengefri = ctx.challengefri;
 
         const x = F.mul(F.shift, F.exp(F.w[nBits + extendBits], idx));
 
@@ -168,6 +177,7 @@ function executeCode(F, ctx, code) {
             case "number": return BigInt(r.value);
             case "public": return BigInt(ctx.publics[r.id]);
             case "challenge": return ctx.challenges[r.id];
+            case "challengefri": return ctx.challengefri[r.id];
             case "xDivXSubXi": return ctx.xDivXSubXi;
             case "xDivXSubWXi": return ctx.xDivXSubWXi;
             case "x": return ctx.challenges[7];

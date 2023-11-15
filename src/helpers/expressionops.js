@@ -88,6 +88,12 @@ class ExpressionOps {
         };
     }
 
+    challengefri(i) {
+        return {
+            op: "challengefri",
+            id: i,
+        }
+    }
     number(n) {
         return {
             op: "number",

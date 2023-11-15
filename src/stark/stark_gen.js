@@ -64,6 +64,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     ctx.starkInfo = starkInfo;
     ctx.tmp = [];
     ctx.challenges = [];
+    ctx.challengefri = [];
     let nCm = starkInfo.nCm1;
 
     ctx.cm1_n = new BigBuffer(starkInfo.mapSectionsN.cm1_n*ctx.N);
@@ -318,7 +319,14 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     // TODO: CALCULATE M
 
-// Calculate xDivXSubXi, xDivXSubWXi
+    ctx.challengefri[0] = ctx.challenges[6];
+    for(let i = 1; i < starkInfo.nFriChallenges; i++) {
+        ctx.challengefri[i] = F.mul(ctx.challengefri[i-1], ctx.challenges[6]);
+    }
+
+    console.log(ctx.challengefri);
+    
+// Calculate xDivXSubXi, xDivX4SubWXi
     if (global.gc) {global.gc();}
     const xi = ctx.challenges[7];
     const wxi = F.mul(ctx.challenges[7], F.w[nBits]);
@@ -467,6 +475,7 @@ function compileCode(ctx, code, dom, ret) {
             case "number": return `${r.value.toString()}n`;
             case "public": return `ctx.publics[${r.id}]`;
             case "challenge": return `ctx.challenges[${r.id}]`;
+            case "challengefri": return `ctx.challengefri[${r.id}]`;
             case "eval": return `ctx.evals[${r.id}]`;
             case "evalR": return `ctx.evalsR[${r.id}]`;
             case "xDivXSubXi": return `[ctx.xDivXSubXi[3*i], ctx.xDivXSubXi[3*i+1], ctx.xDivXSubXi[3*i+2]]`;
@@ -773,7 +782,8 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
             evals: ctx.evals,
             evalsR: ctx.evalsR,
             publics: ctx.publics,
-            challenges: ctx.challenges
+            challenges: ctx.challenges,
+            challengefri: ctx.challengefri
         };
         for (let s =0; s<execInfo.inputSections.length; s++) {
             const si = execInfo.inputSections[s];
@@ -846,6 +856,7 @@ function ctxProxy(ctx) {
     pCtx.Zi = ctx.Zi;
     pCtx.publics = ctx.publics;
     pCtx.challenges = ctx.challenges;
+    pCtx.challengefri = ctx.challengefri;
 
     pCtx.nBits = ctx.nBits;
     pCtx.nBitsExt = ctx.nBitsExt;

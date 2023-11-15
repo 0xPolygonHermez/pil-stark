@@ -135,6 +135,8 @@ class Transcript {
             return "evalsR[" + r.id + "]";
         } else if (r.type == "challenge") {
             return "challenges" + r.id;
+        } else if (r.type == "challengefri") {
+            return "challengefri[" + r.id + "]";
         } else if (r.type == "public") {
             return "publics[" + r.id + "]";
         } else if (r.type == "x") {
@@ -416,6 +418,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     signal input challenges5[3];
     signal input challenges6[3];
     signal input challenges7[3];
+    signal input challengefri[<%- starkInfo.nFriChallenges %>][3];
     signal input evals[<%- starkInfo.evMap.length %>][3];
     signal input evalsR[<%- starkInfo.evMap.filter(ev => ev.stage === 1).length %>];
     signal input tree1[<%- starkInfo.mapSectionsN.cm1_2ns %>];
@@ -742,6 +745,12 @@ template StarkVerifier() {
     // Verify FRI query
     ///////////
 
+    signal challengefri[<%- starkInfo.nFriChallenges %>][3];
+    challengefri[0] <== challenges[6];
+    for(var i = 1; i < <%- starkInfo.nFriChallenges %>; i++) {
+        challengefri[i] <== CMul()(challengefri[i-1], challenges[6]);
+    }
+
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
 
     // After checking that all merkle roots are properly built, the query and the intermediate 
@@ -760,7 +769,7 @@ template StarkVerifier() {
 -%>
         // Verify that the query is properly constructed. This is done by checking that the linear combination of the set of 
         // polynomials committed during the different rounds evaluated at z matches with the commitment of the FRI polynomial (unsure)
-        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges[5], challenges[6], challenges[7], evals, evalsR, <%- queryVals.join(", ") %>, <%- nextValsPol %>, enable);
+        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges[5], challenges[6], challenges[7], challengefri, evals, evalsR, <%- queryVals.join(", ") %>, <%- nextValsPol %>, enable);
 
         ///////////
         // Verify FRI construction
