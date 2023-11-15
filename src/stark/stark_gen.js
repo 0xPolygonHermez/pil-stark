@@ -300,9 +300,17 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         transcript.put(ctx.evals[i]);
     }
 
+    ctx.evalsR = [];
+    
+    // TODO: CALCULATE EVALS R
+    for (let i=0; i<ctx.evalsR.length; i++) {
+        transcript.put(ctx.evalsR[i]);
+    }
+
     ctx.challenges[5] = transcript.getField(); // v1
     ctx.challenges[6] = transcript.getField(); // v2
 
+    // TODO: CALCULATE M
 
 // Calculate xDivXSubXi, xDivX4SubWXi
     if (global.gc) {global.gc();}
@@ -375,6 +383,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
             root3: MH.root(tree3),
             root4: MH.root(tree4),
             evals: ctx.evals,
+            evalsR: ctx.evalsR,
             fri: friProof
         },
         publics: ctx.publics
@@ -453,9 +462,9 @@ function compileCode(ctx, code, dom, ret) {
             case "public": return `ctx.publics[${r.id}]`;
             case "challenge": return `ctx.challenges[${r.id}]`;
             case "eval": return `ctx.evals[${r.id}]`;
+            case "evalR": return `ctx.evalsR[${r.id}]`;
             case "xDivXSubXi": return `[ctx.xDivXSubXi[3*i], ctx.xDivXSubXi[3*i+1], ctx.xDivXSubXi[3*i+2]]`;
             case "xDivXSubWXi": return `[ctx.xDivXSubWXi[3*i], ctx.xDivXSubWXi[3*i+1], ctx.xDivXSubWXi[3*i+2]]`;
-             case "evalR": return `ctx.evalsR[${r.id}]`;
             case "mz": return "ctx.mz[i]";
             case "mwz": "ctx.mwz[i]";
  	    case "x": {
@@ -756,6 +765,7 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
             extendBits: (ctx.nBitsExt - ctx.nBits),
             next: next,
             evals: ctx.evals,
+            evalsR: ctx.evalsR,
             publics: ctx.publics,
             challenges: ctx.challenges
         };
@@ -839,6 +849,7 @@ function ctxProxy(ctx) {
     pCtx.tmp = ctx.tmp;
 
     pCtx.evals = ctx.evals;
+    pCtx.evalsR = ctx.evalsR;
 
     return pCtx;
 

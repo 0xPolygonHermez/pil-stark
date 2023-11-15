@@ -29,8 +29,9 @@ module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
         let eval;
         if(ev.stage === 1) {
             friExpression = ev.prime ? frimwzexp : frimzexp;
-            
-            eval = E.evalR(i); // TODO: WRONG
+            const evalRIndex = res.evMap.filter(e => e.stage === 1).findIndex(e => JSON.stringify(e) === JSON.stringify(ev));
+            console.log(evalRIndex);
+            eval = E.evalR(evalRIndex);
         } else {
             friExpression = ev.prime ? fri2exp : fri1exp;
             eval = E.eval(i);

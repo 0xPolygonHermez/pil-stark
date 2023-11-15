@@ -38,6 +38,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
     ctx = {
         challenges: [],
         evals: proof.evals,
+        evals: proof.evalsR,
         publics: publics
     };
 
@@ -61,6 +62,10 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
 
     for (let i=0; i<ctx.evals.length; i++) {
         transcript.put(ctx.evals[i]);
+    }
+
+    for (let i=0; i<ctx.evalsR.length; i++) {
+        transcript.put(ctx.evalsR[i]);
     }
 
     ctx.challenges[5] = transcript.getField(); // v1
@@ -108,10 +113,14 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         ctxQry.tree4 = query[3][0];
         ctxQry.consts = query[4][0];
         ctxQry.evals = ctx.evals;
+        ctxQry.evalsR = ctx.evalsR;
         ctxQry.publics = ctx.publics;
         ctxQry.challenges = ctx.challenges;
 
         const x = F.mul(F.shift, F.exp(F.w[nBits + extendBits], idx));
+
+        //TODO: CALCULATE MZ AND MWZ
+
         ctxQry.xDivXSubXi = F.div(x, F.sub(x, ctxQry.challenges[7]));
         ctxQry.xDivXSubWXi = F.div(x, F.sub(x, F.mul(F.w[nBits], ctxQry.challenges[7])));
 
@@ -155,6 +164,7 @@ function executeCode(F, ctx, code) {
             case "tree4": return extractVal(ctx.tree4, r.treePos, r.dim);
             case "const": return ctx.consts[r.id];
             case "eval": return ctx.evals[r.id];
+            case "evalR": return ctx.evalsR[r.id];
             case "number": return BigInt(r.value);
             case "public": return BigInt(ctx.publics[r.id]);
             case "challenge": return ctx.challenges[r.id];

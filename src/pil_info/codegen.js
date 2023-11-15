@@ -240,6 +240,11 @@ function evalExp(codeCtx, exp, prime) {
             type: "eval",
             id: exp.id,
         }
+    } else if (exp.op == "evalR") {
+        return {
+            type: "evalR",
+            id: exp.id,
+        }
     } else if (exp.op == "xDivXSubXi") {
         return {
             type: "xDivXSubXi"

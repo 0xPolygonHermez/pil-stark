@@ -6,6 +6,7 @@ module.exports.proof2zkin = function proof2zkin(p) {
     zkin.root3 = p.root3;
     zkin.root4 = p.root4;
     zkin.evals = p.evals;
+    zkin.evalsR = p.evalsR;
 
     const friProof = p.fri;
 

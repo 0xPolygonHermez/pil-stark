@@ -319,9 +319,10 @@ module.exports = function map(res, pil) {
                 case "Zi":
                 case "xDivXSubXi":
                 case "xDivXSubWXi":
-		case "mz":
+		        case "mz":
                 case "wmz":
                 case "eval":
+                case "evalR":
                 case "x":
                 case "q":
                 case "f":
@@ -386,9 +387,10 @@ function getExpDim(pil, expId) {
             case "public": return 1;
             case "challenge": return 3;
             case "eval": return 3;
+            case "evalR": return 1;
             case "xDivXSubXi":  return 3;
             case "xDivXSubWXi": return 3;
- 	    case "mz":  return 1;
+ 	        case "mz":  return 1;
             case "wmz": return 1;
             case "x": return 1;
             default: throw new Error("Exp op not defined: " + exp.op);
@@ -438,12 +440,13 @@ function setCodeDimensions(code, starkInfo, dimX) {
                 case "q": d=starkInfo.varPolMap[starkInfo.qs[r.id]].dim; break;
                 case "const": d=1; break;
                 case "eval": d=3; break;
+                case "evalR": d=1; break;
                 case "number": d=1; break;
                 case "public": d=1; break;
                 case "challenge": d=3; break;
                 case "xDivXSubXi": d=dimX; break;
                 case "xDivXSubWXi": d=dimX; break;
-		case "mz": d=1; break;
+		        case "mz": d=1; break;
                 case "wmz": d=1; break;
                 case "x": d=dimX; break;
                 case "Z": d=3; break;
