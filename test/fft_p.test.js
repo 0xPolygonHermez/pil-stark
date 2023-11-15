@@ -29,6 +29,7 @@ describe("test fft", async function () {
 
         const n = 1 << nBits;
         const buff1 = new BigBuffer(n*nPols);
+        const buffCoefs = new BigBuffer(n*nPols);
         const buff2 = new BigBuffer(n*nPols*(1 << extBits));
 
         console.log("Initializing...");
@@ -40,7 +41,7 @@ describe("test fft", async function () {
         }
 
         console.log("interpolate...");
-        await interpolate(buff1, nPols, nBits, buff2, nBits+extBits);
+        await interpolate(buff1, buffCoefs, nPols, nBits, buff2, nBits+extBits);
 
     });
 
@@ -79,7 +80,7 @@ describe("test fft", async function () {
         }
     });
 
-    it("Check interpolate", async () => {
+    it.only("Check interpolate", async () => {
         let nBits = 3;
         let nPols = 1;
         let extBits =1;
@@ -87,6 +88,7 @@ describe("test fft", async function () {
         const n = 1 << nBits;
         const nExt = 1 << (nBits + extBits);
         const buff = new BigBuffer(n*nPols);
+        const buffCoefs = new BigBuffer(n*nPols);
         const buffOut = new BigBuffer(nExt*nPols);
 
 
@@ -107,7 +109,13 @@ describe("test fft", async function () {
         }
 
         console.log("interpolate...");
-        await interpolate(buff, nPols, nBits, buffOut, nBits+extBits);
+        await interpolate(buff, buffCoefs, nPols, nBits, buffOut, nBits+extBits);
+
+        const buffOriginal = new BigBuffer(n*nPols);
+        ifft(buffCoefs, nPols, nBits, buffOriginal);
+
+        console.log(buffOriginal);
+        console.log(pols);
 
         console.log("check...");
         for (let i=0; i<nPols; i++) {
@@ -198,6 +206,7 @@ describe("test fft", async function () {
         const n = 1 << nBits;
         const nExt = 1 << (nBits + extBits);
         const buff = new BigBuffer(n*nPols);
+        const buffCoefs = new BigBuffer(n*nPols);
         const buffOut = new BigBuffer(nExt*nPols);
 
 
@@ -218,7 +227,7 @@ describe("test fft", async function () {
         }
 
         console.log("fft...");
-        await interpolate(buff, nPols, nBits, buffOut, nBits+extBits);
+        await interpolate(buff, buffCoefs, nPols, nBits, buffOut, nBits+extBits);
 
         console.log("check...");
         for (let i=0; i<nPols; i++) {

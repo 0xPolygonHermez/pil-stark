@@ -41,9 +41,11 @@ async function run() {
 
     const constBuff  = constPols.writeToBuff();
 
+    const constPolsArrayCoefs = new BigBuffer((1 << nBits) * pil.nConstants);
+
     const constPolsArrayE = new BigBuffer(nExt*pil.nConstants);
 
-    await interpolate(constBuff, pil.nConstants, nBits, constPolsArrayE, nBitsExt );
+    await interpolate(constBuff, constPolsArrayCoefs, pil.nConstants, nBits, constPolsArrayE, nBitsExt );
 
     let MH;
     if (starkStruct.verificationHashType == "GL") {

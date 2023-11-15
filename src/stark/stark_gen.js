@@ -78,6 +78,11 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     ctx.q_2ns = new BigBuffer(starkInfo.qDim*ctx.Next);
     ctx.f_2ns = new BigBuffer(3*ctx.Next);
 
+    ctx.cm1_coefs = new BigBuffer(starkInfo.mapSectionsN.cm1_n*ctx.N);
+    ctx.cm2_coefs = new BigBuffer(starkInfo.mapSectionsN.cm2_n*ctx.N);
+    ctx.cm3_coefs = new BigBuffer(starkInfo.mapSectionsN.cm3_n*ctx.N);
+    ctx.const_coefs = new BigBuffer(starkInfo.nConstants*ctx.N);
+
     ctx.x_n = new BigBuffer(N);
     let xx = F.one;
     for (let i=0; i<N; i++) {
@@ -127,7 +132,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     }
 
     console.log("Merkelizing 1....");
-    const tree1 = await extendAndMerkelize(MH, ctx.cm1_n, ctx.cm1_2ns, starkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.nBitsExt );
+    const tree1 = await extendAndMerkelize(MH, ctx.cm1_n, ctx.cm1_coefs, ctx.cm1_2ns, starkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree1));
 
 ///////////
@@ -303,6 +308,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     ctx.evalsR = [];
     
     // TODO: CALCULATE EVALS R
+
     for (let i=0; i<ctx.evalsR.length; i++) {
         transcript.put(ctx.evalsR[i]);
     }
@@ -654,14 +660,14 @@ function getPol(ctx, starkInfo, idPol) {
     return res;
 }
 
-async function  extendAndMerkelize(MH, buffFrom, buffTo, nPols, nBits, nBitsExt) {
+async function  extendAndMerkelize(MH, buffFrom, buffCoefs, buffTo, nPols, nBits, nBitsExt) {
 
     await extend(buffFrom, buffTo, nPols, nBits, nBitsExt);
     return await merkelize(MH, buffTo, nPols, nBitsExt);
 }
 
-async function  extend(buffFrom, buffTo, nPols, nBits, nBitsExt ) {
-    await interpolate(buffFrom, nPols, nBits, buffTo, nBitsExt);
+async function  extend(buffFrom, buffCoefs, buffTo, nPols, nBits, nBitsExt ) {
+    await interpolate(buffFrom, buffCoefs, nPols, nBits, buffTo, nBitsExt);
 }
 
 async function  merkelize(MH, buff, width, nBitsExt ) {

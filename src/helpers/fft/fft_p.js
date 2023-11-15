@@ -182,7 +182,7 @@ async function ifft(buffSrc, nPols, nBits, buffDst) {
 }
 
 
-async function interpolate(buffSrc, nPols, nBits, buffDst, nBitsExt) {
+async function interpolate(buffSrc, buffCoefs, nPols, nBits, buffDst, nBitsExt) {
     const n = 1 << nBits;
     const nExt = 1 << nBitsExt;
     const tmpBuff = new BigBuffer(nExt*nPols);
@@ -258,6 +258,7 @@ async function interpolate(buffSrc, nPols, nBits, buffDst, nBitsExt) {
 
     console.log("Interpolating prepare....")
     await interpolatePrepare(pool, bIn, nPols, nBits, nBitsExt);
+    buffCoefs.set(bIn.slice(0, n));
     console.log("Bit reverse....")
     await bitReverse(bOut, bIn, nPols, nBitsExt);
     [bIn, bOut] = [bOut, bIn];

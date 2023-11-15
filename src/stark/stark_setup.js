@@ -10,10 +10,11 @@ module.exports = async function starkSetup(constPols, pil, starkStruct) {
     const nBits = starkStruct.nBits;
     const nBitsExt = starkStruct.nBitsExt;
     const nExt= 1 << nBitsExt;
+    const constPolsArrayCoefs = new BigBuffer((1 << nBits)*pil.nConstants);
     const constPolsArrayE = new BigBuffer(nExt*pil.nConstants);
 
     const constBuff  = constPols.writeToBuff();
-    await interpolate(constBuff, pil.nConstants, nBits, constPolsArrayE, nBitsExt );
+    await interpolate(constBuff, constPolsArrayCoefs, pil.nConstants, nBits, constPolsArrayE, nBitsExt );
 
     let MH;
     if (starkStruct.verificationHashType == "GL") {

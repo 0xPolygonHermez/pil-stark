@@ -65,12 +65,13 @@ function setDimensions(code) {
             case "tree4": d=r.dim; break;
             case "const": d=1; break;
             case "eval": d=3; break;
+            case "evalR": d=1; break;
             case "number": d=1; break;
             case "public": d=1; break;
             case "challenge": d=3; break;
             case "xDivXSubXi": d=3; break;
             case "xDivXSubWXi": d=3; break;
-	    case "mz": d=1; break;
+	        case "mz": d=1; break;
             case "mwz": d=1; break;
             case "x": d=3; break;
             case "Z": d=3; break;

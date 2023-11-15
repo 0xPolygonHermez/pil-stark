@@ -48,3 +48,7 @@ template MinimalPolinomial() {
     m[1] <== Mux1()([c3x3[1], c3x2[1]], has3x2Solution);
     m[2] <== Mux1()([c3x3[2], 0], has3x2Solution);
 }
+
+template EvaluateMinimalPolinomial() {
+    
+}

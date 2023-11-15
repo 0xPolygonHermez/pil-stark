@@ -131,6 +131,8 @@ class Transcript {
     function ref(r) {
         if (r.type == "eval") {
             return "evals[" + r.id + "]";
+        } else if (r.type === "evalR") {
+            return "evalsR[" + r.id + "]";
         } else if (r.type == "challenge") {
             return "challenges" + r.id;
         } else if (r.type == "public") {
@@ -262,6 +264,7 @@ template Transcript() {
     signal input root3[4]; 
     signal input root4[4];
     signal input evals[<%- starkInfo.evMap.length %>][3]; 
+    signal input evalsR[<%- starkInfo.evMap.filter(ev => ev.stage === 1).length %>]; 
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
     signal input s<%- s %>_root[4];
 <% }                                                     -%>
@@ -290,6 +293,7 @@ template Transcript() {
     for (let i=0; i<starkInfo.evMap.length; i++) {
         transcript.put(`evals[${i}]`, 3);
     }
+    transcript.put(`evalsR`, starkInfo.evMap.filter(e => e.stage === 1).length);
     transcript.getField("challenges[5]", 3);
     transcript.getField("challenges[6]", 3);
     for (let si=0; si<starkStruct.steps.length; si++) {
@@ -413,6 +417,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     signal input challenges6[3];
     signal input challenges7[3];
     signal input evals[<%- starkInfo.evMap.length %>][3];
+    signal input evalsR[<%- starkInfo.evMap.filter(ev => ev.stage === 1).length %>];
     signal input tree1[<%- starkInfo.mapSectionsN.cm1_2ns %>];
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
     signal input tree2[<%- starkInfo.mapSectionsN.cm2_2ns %>];
@@ -450,6 +455,10 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
 
     signal den2inv[3] <== CInv()([xacc[<%- starkStruct.steps[0].nBits-1 %>] - roots(<%- starkStruct.nBits %>)*challenges7[0], -roots(<%- starkStruct.nBits %>)*challenges7[1],-roots(<%- starkStruct.nBits %>)*challenges7[2] ]);
     signal xDivXSubWXi[3] <== [xacc[<%- starkStruct.steps[0].nBits-1 %>] * den2inv[0], xacc[<%- starkStruct.steps[0].nBits-1 %>] * den2inv[1],  xacc[<%- starkStruct.steps[0].nBits-1 %>] * den2inv[2]];
+
+    // TODO: WRONG
+    signal mz <== 1;
+    signal mwz <== 1;
 
 <% const evalQ = unrollCode(starkInfo.verifierQueryCode.first) -%>
 
@@ -551,6 +560,8 @@ template StarkVerifier() {
 
     signal input evals[<%- starkInfo.evMap.length %>][3]; // Evaluations of the set polynomials at a challenge value z and gz
 
+    signal input evalsR[<%- starkInfo.evMap.filter(ev => ev.stage === 1).length %>];
+
     // Leaves values of the merkle tree used to check all the queries
     signal input s0_vals1[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm1_2ns %>];
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
@@ -625,7 +636,7 @@ template StarkVerifier() {
     // Calculate challenges, s_i special and queries
     ///////////
 
-    (challenges,ys,<%- si_specials.join(",") %>) <== Transcript()(publics,rootC,root1,root2,root3,root4,evals, <%- si_roots.join(",") %>,finalPol);
+    (challenges,ys,<%- si_specials.join(",") %>) <== Transcript()(publics,rootC,root1,root2,root3,root4,evals, evalsR, <%- si_roots.join(",") %>,finalPol);
 
     ///////////
     // Check constraints polynomial in the evaluation point
@@ -749,7 +760,7 @@ template StarkVerifier() {
 -%>
         // Verify that the query is properly constructed. This is done by checking that the linear combination of the set of 
         // polynomials committed during the different rounds evaluated at z matches with the commitment of the FRI polynomial (unsure)
-        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges[5], challenges[6], challenges[7], evals, <%- queryVals.join(", ") %>, <%- nextValsPol %>, enable);
+        VerifyQuery(<%- starkStruct.steps[0].nBits %>, <%- nextStep %>)(ys[q], challenges[5], challenges[6], challenges[7], evals, evalsR, <%- queryVals.join(", ") %>, <%- nextValsPol %>, enable);
 
         ///////////
         // Verify FRI construction
