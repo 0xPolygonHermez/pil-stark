@@ -1,5 +1,3 @@
-const linearSystemSolver = require('./system_solver');
-
 module.exports.polMulAxi = function polMulAxi(F, p, init, acc) {
     let r = init;
     for (let i=0; i<p.length; i++) {
@@ -101,35 +99,73 @@ module.exports.minimalPol = function minimalPol(F, z) {
     const z_sq = F.square(z);
     const z_cub = F.mul(z_sq, z);
 
-    let deg = 2;
-    for (let i = 0; i < 2; i++) {
-        let A = [];
-        let b = [];
-        if (deg === 2) {
-            A = [
-                [1n, z[0]],
-                [0n, z[1]],
-                [0n, z[2]],
-            ];
-            b = [F.neg(z_sq[0]), F.neg(z_sq[1]), F.neg(z_sq[2])];
-        } else if (deg === 3) {
-            A = [
-                [1n, z[0], z_sq[0]],
-                [0n, z[1], z_sq[1]],
-                [0n, z[2], z_sq[2]],
-            ];
-            b = [F.neg(z_cub[0]), F.neg(z_cub[1]), F.neg(z_cub[2])];
-        }
+    // let deg = 2;
+    // for (let i = 0; i < 2; i++) {
+    //     let A = [];
+    //     let b = [];
+    //     if (deg === 2) {
+    //         A = [
+    //             [1n, z[0]],
+    //             [0n, z[1]],
+    //             [0n, z[2]],
+    //         ];
+    //         b = [F.neg(z_sq[0]), F.neg(z_sq[1]), F.neg(z_sq[2])];
+    //     } else if (deg === 3) {
+    //         A = [
+    //             [1n, z[0], z_sq[0]],
+    //             [0n, z[1], z_sq[1]],
+    //             [0n, z[2], z_sq[2]],
+    //         ];
+    //         b = [F.neg(z_cub[0]), F.neg(z_cub[1]), F.neg(z_cub[2])];
+    //     }
 
-        const sol = linearSystemSolver(F, A, b);
-        if (sol) {
-            const check = F.add(z_cub, F.add(F.mul(z_sq, sol[2]), F.add(F.mul(z, sol[1]), sol[0])));
-            if (!F.isZero(check)) throw new Error("The solution is not correct");
+    //     const sol = linearSystemSolver(F, A, b);
+    //     if (sol) {
+    //         const check = F.add(z_cub, F.add(F.mul(z_sq, sol[2]), F.add(F.mul(z, sol[1]), sol[0])));
+    //         if (!F.isZero(check)) throw new Error("The solution is not correct");
 
-            return sol;
-        }
-        deg++;
+    //         return sol;
+    //     }
+    //     deg++;
+    // }
+
+    const sol2 = solveSysTwo();
+    let sol = [];
+    if (sol2 != false) {
+        sol = sol2;
+    } else {
+        sol = solveSysThree();
     }
 
-    throw new Error("Could not find the minimal polynomial");
+    const check = F.add(z_cub, F.add(F.mul(z_sq, sol[2]), F.add(F.mul(z, sol[1]), sol[0])));
+    if (!F.isZero(check)) throw new Error("The solution is not correct");
+
+    return sol;
+
+    function solveSysTwo() {
+        if (z[1] === 0n && z[2] === 0n) {
+            return false;
+        } else if (F.neq(F.mul(z[2], z_sq[1]), F.mul(z[1], z_sq[2]))) {
+            return false;
+        }
+        // From here we can assume that z[1],z[2] != 0 and there is a solution
+
+        const c1 = F.div(F.neg(z_sq[1]),z[1]);
+        const c0 = F.neg(F.add(z_sq[0],F.mul(c1,z[0])));
+
+        return [c0,c1];
+    }
+
+    function solveSysThree() {
+        const c2 = F.div(
+            F.sub(F.mul(z_cub[1], z[2]), F.mul(z_cub[2], z[1])),
+            F.sub(F.mul(z_sq[2], z[1]), F.mul(z_sq[1], z[2]))
+        );
+        const c1 = F.neg(F.div(F.add(z_cub[1], F.mul(c2, z_sq[1])), z[1]));
+        const c0 = F.neg(
+            F.add(F.add(z_cub[0], F.mul(c2, z_sq[0])), F.mul(c1, z[0]))
+        );
+
+        return [c0,c1,c2];
+    }
 }

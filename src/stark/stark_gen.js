@@ -312,7 +312,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     // TODO: CALCULATE M
 
-// Calculate xDivXSubXi, xDivX4SubWXi
+// Calculate xDivXSubXi, xDivXSubWXi
     if (global.gc) {global.gc();}
     const xi = ctx.challenges[7];
     const wxi = F.mul(ctx.challenges[7], F.w[nBits]);
