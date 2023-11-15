@@ -29,10 +29,10 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns) {
         }
     }
 
-    const m = Object.keys(res.imExps);
     res.imExpsList = Object.keys(res.imExps).map(Number);
     res.imExp2cm = {}
     for (let i=0; i<res.imExpsList.length; i++) {
+        module.exports.isExpressionStage1(res, pil.expressions, pil.expressions[res.imExpsList[i]]);
         res.imExp2cm[res.imExpsList[i]] = pil.nCommitments++;
         const e = {
             op: "sub",
@@ -184,6 +184,33 @@ function calculateImPols(pil, _exp, maxDeg) {
     }
 
 }
+
+module.exports.isExpressionStage1 = function isExpressionStage1(res, expressions, exp) {
+    if (exp.isStage1 !== undefined) return exp.isStage1;
+    if (exp.op == "exp") {
+        exp.isStage1 = isExpressionStage1(res, expressions, expressions[exp.id]);
+        return exp.isStage1;
+    } else if (["const", "public", "number"].includes(exp.op)) {
+        return true;
+    } else if (exp.op === "cm") {
+        if(exp.id < res.nCm1) {
+            return true;
+        } else {
+            return false;
+        }
+    } else if(["Zi", "challenge", "x"].includes(exp.op)) {
+        return false;
+    } else if(["add", "sub", "mul", "neg"].includes(exp.op)) {
+        for (let i=0; i<exp.values.length; i++) {
+            exp.isStage1 = isExpressionStage1(res, expressions, exp.values[i]);
+            if (!exp.isStage1) return false;
+        }
+        return true;
+    } else {
+        throw new Error("Exp op not defined: "+ exp.op);
+    }
+}
+
 
 
 function getExpDim(pil, exp, maxDeg) {

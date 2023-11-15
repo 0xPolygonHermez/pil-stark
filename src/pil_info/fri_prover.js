@@ -20,19 +20,40 @@ module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
 
     let fri1exp = null;
     let fri2exp = null;
+    let frimzexp = null;
+    let frimwzexp = null;
     for (let i=0; i<res.evMap.length; i++) {
         const ev = res.evMap[i];
-        let friExp = ev.prime ? fri2exp : fri1exp;
-        const e = E[ev.type](ev.id);
-        if (friExp) {
-            friExp = E.add(E.mul(friExp, vf2), E.sub(e,  E.eval(i)));
+        
+        let friExpression;
+        let eval;
+        if(ev.stage === 1) {
+            friExpression = ev.prime ? frimwzexp : frimzexp;
+            
+            eval = E.evalR(i); // TODO: WRONG
         } else {
-            friExp = E.sub(e,  E.eval(i));
+            friExpression = ev.prime ? fri2exp : fri1exp;
+            eval = E.eval(i);
         }
-        if (ev.prime) {
-            fri2exp = friExp;
+        const e = E[ev.type](ev.id);
+        if (friExpression) {
+            friExpression = E.add(E.mul(friExpression, vf2), E.sub(e,  eval));
         } else {
-            fri1exp = friExp;
+            friExpression = E.sub(e,  eval);
+        }
+
+        if(ev.stage === 1) {
+            if (ev.prime) {
+                frimwzexp = friExpression;
+            } else {
+                frimzexp = friExpression;
+            }
+        } else {
+            if (ev.prime) {
+                fri2exp = friExpression;
+            } else {
+                fri1exp = friExpression;
+            }
         }
     }
 
@@ -52,6 +73,24 @@ module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
             friExp = E.add(E.mul(vf1, friExp),  fri2exp );
         } else {
             friExp = fri2exp;
+        }
+    }
+
+    if (frimzexp) {
+        frimzexp = E.mul(frimzexp, E.mz() );
+        if (friExp) {
+            friExp = E.add(E.mul(vf1, friExp),  frimzexp );
+        } else {
+            friExp = frimzexp;
+        }
+    }
+
+    if (frimwzexp) {
+        frimwzexp = E.mul(frimwzexp, E.mz() );
+        if (friExp) {
+            friExp = E.add(E.mul(vf1, friExp),  frimwzexp );
+        } else {
+            friExp = frimwzexp;
         }
     }
 

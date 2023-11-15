@@ -236,7 +236,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     console.log("Merkelizing 4....");
     if (global.gc) {global.gc();}
-    tree4 = await merkelize(MH, ctx.cm4_2ns , starkInfo.mapSectionsN.cm4_2ns, ctx.nBitsExt);
+    const tree4 = await merkelize(MH, ctx.cm4_2ns , starkInfo.mapSectionsN.cm4_2ns, ctx.nBitsExt);
     transcript.put(MH.root(tree4));
 
 
@@ -455,7 +455,10 @@ function compileCode(ctx, code, dom, ret) {
             case "eval": return `ctx.evals[${r.id}]`;
             case "xDivXSubXi": return `[ctx.xDivXSubXi[3*i], ctx.xDivXSubXi[3*i+1], ctx.xDivXSubXi[3*i+2]]`;
             case "xDivXSubWXi": return `[ctx.xDivXSubWXi[3*i], ctx.xDivXSubWXi[3*i+1], ctx.xDivXSubWXi[3*i+2]]`;
-            case "x": {
+             case "evalR": return `ctx.evalsR[${r.id}]`;
+            case "mz": return "ctx.mz[i]";
+            case "mwz": "ctx.mwz[i]";
+ 	    case "x": {
                 if (dom=="n") {
                     return `ctx.x_n[i]`;
                 } else if (dom=="2ns") {
@@ -820,6 +823,8 @@ function ctxProxy(ctx) {
     createProxy("x_2ns");
     createProxy("xDivXSubXi");
     createProxy("xDivXSubWXi");
+    createProxy("mz");
+    createProxy("mwz");
 
     pCtx.F = ctx.F;
     pCtx.Zi = ctx.Zi;

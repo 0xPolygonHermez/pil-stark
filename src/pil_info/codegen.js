@@ -248,6 +248,14 @@ function evalExp(codeCtx, exp, prime) {
         return {
             type: "xDivXSubWXi"
         }
+    } else if (exp.op == "mz") {
+        return {
+            type: "mz"
+        }
+    } else if (exp.op == "mwz") {
+        return {
+            type: "mwz"
+        }
     } else if (exp.op == "x") {
         return {
             type: "x"

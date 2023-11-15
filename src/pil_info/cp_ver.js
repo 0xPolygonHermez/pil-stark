@@ -66,6 +66,12 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, addMul
                         id: r.id,
                         prime: r.prime ? true : false,
                     };
+                    if(r.type === "cm" && isIm(res.imExp2cm, r.id)) {
+                        const expId = isIm(res.imExp2cm, r.id);
+                        if(pil.expressions[expId].isStage1) rf.stage = 1;
+                    } else if(r.type === "const" || (r.type === "cm" && r.id < res.nCm1)) {
+                        rf.stage = 1;
+                    }
                     res.evMap.push(rf);
                 }
                 delete r.prime;
@@ -83,5 +89,14 @@ module.exports  = function generateConstraintPolynomialVerifier(res, pil, addMul
             default:
                 throw new Error("Invalid reference type: "+r.type);
         }
+    }
+
+    function isIm(imExp2cm, id) {
+        for (let exp in imExp2cm) {
+            if (imExp2cm[exp] === id) {
+              return exp;
+            }
+        }
+        return undefined;
     }
 }

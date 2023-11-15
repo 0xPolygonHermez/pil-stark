@@ -109,6 +109,24 @@ class ExpressionOps {
         }
     }
 
+    evalR(n) {
+        return {
+            op: "evalR",
+            id: n
+        }
+    }
+
+    mz() {
+        return {
+            op: "mz"
+        }
+    }
+
+    wmz() {
+        return {
+            op: "wmz"
+        }
+    }
     xDivXSubXi() {
         return {
             op: "xDivXSubXi"
