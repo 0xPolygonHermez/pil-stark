@@ -192,6 +192,50 @@ module.exports.polynomialDivision = function polynomialDivision(F, num, den) {
     return polR;
 }
 
+module.exports.evaluatePolynomial = function evaluatePolynomial(F, polynomial, x) {
+    let res = F.zero;
+
+    for (let i = degree(F, polynomial) + 1; i > 0; i--) {
+        const currentCoefficient = polynomial.getElement(i - 1);
+        res = F.add(currentCoefficient, F.mul(res, x));
+    }
+
+    return res;
+}
+
+module.exports.fastEvaluatePolynomial = function fastEvaluatePolynomial(F, polynomial, x) {
+    let nThreads = 3;
+
+    let nCoefs = degree(F, polynomial) + 1;
+    let coefsThread = parseInt(nCoefs / nThreads);
+    let residualCoefs = nCoefs - coefsThread * nThreads;
+
+    let res = [];
+    let xN = [];
+
+    xN[0] = F.one;
+
+    for (let i = 0; i < nThreads; i++) {
+        res[i] = F.zero;
+
+        let nCoefs =
+            i === nThreads - 1 ? coefsThread + residualCoefs : coefsThread;
+        for (let j = nCoefs; j > 0; j--) {
+            res[i] = F.add(polynomial.getElement(i * coefsThread + j - 1), F.mul(res[i], x));
+            if (i === 0) xN[0] = F.mul(xN[0], x);
+        }
+    }
+
+    for (let i = 1; i < nThreads; i++) {
+        res[0] = F.add(res[0], F.mul(xN[i - 1], res[i]));
+        xN[i] = F.mul(xN[i - 1], xN[0]);
+    }
+
+    return res[0];
+
+}
+
+
 function  degree(F, pol) {
     for (let i = pol.length - 1; i > 0; i--) {
         if(!F.eq(F.zero, pol.getElement(i))) return i;

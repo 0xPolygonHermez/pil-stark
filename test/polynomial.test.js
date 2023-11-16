@@ -2,7 +2,7 @@ const chai = require("chai");
 const { BigBuffer } = require("pilcom");
 const assert = chai.assert;
 const F3g = require("../src/helpers/f3g");
-const { polynomialDivision } = require("../src/helpers/polutils");
+const { polynomialDivision, evaluatePolynomial, fastEvaluatePolynomial } = require("../src/helpers/polutils");
 
 describe("test polinomial division", async function () {
     this.timeout(10000000);
@@ -40,4 +40,33 @@ describe("test polinomial division", async function () {
         assert(F.eq(polR.getElement(3), F.zero));
     });
 
+    it("should evaluate a polynomial", async () => {
+        let polynomial = new BigBuffer(4);
+        for (let i = 0; i < 4; i++) {
+            polynomial.setElement(i, F.e(i));
+        }
+
+        let x = F.e(2);
+        
+        const eval = evaluatePolynomial(F, polynomial, x);
+        const fastEval = fastEvaluatePolynomial(F, polynomial, x);
+
+        assert(F.eq(eval, F.e(34)));
+        assert(F.eq(fastEval, F.e(34)));
+    });
+    
+    it("should evaluate a polynomial in the extended field", async () => {
+        const N = 2**15;
+        let polynomial = new BigBuffer(N);
+        for (let i = 0; i < N; i++) {
+            polynomial.setElement(i, F.e(i));
+        }
+
+        let x = [F.e(2), F.e(1), F.e(3)];
+
+        const eval = evaluatePolynomial(F, polynomial, x);
+        const fastEval = fastEvaluatePolynomial(F, polynomial, x);
+
+        assert(F.eq(eval, fastEval));
+    })
 });

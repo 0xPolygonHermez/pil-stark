@@ -6,7 +6,7 @@ const Transcript = require("../helpers/transcript/transcript");
 const TranscriptBN128 = require("../helpers/transcript/transcript.bn128");
 const F3g = require("../helpers/f3g.js");
 
-const { buildZhInv, calculateH1H2, calculateZ } = require("../helpers/polutils.js");
+const { buildZhInv, calculateH1H2, calculateZ, minimalPol, polynomialDivision } = require("../helpers/polutils.js");
 const buildPoseidonGL = require("../helpers/hash/poseidon/poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 const FRI = require("./fri.js");
@@ -79,10 +79,10 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     ctx.q_2ns = new BigBuffer(starkInfo.qDim*ctx.Next);
     ctx.f_2ns = new BigBuffer(3*ctx.Next);
 
-    ctx.cm1_coefs = new BigBuffer(starkInfo.mapSectionsN.cm1_n*ctx.N);
-    ctx.cm2_coefs = new BigBuffer(starkInfo.mapSectionsN.cm2_n*ctx.N);
-    ctx.cm3_coefs = new BigBuffer(starkInfo.mapSectionsN.cm3_n*ctx.N);
-    ctx.const_coefs = new BigBuffer(starkInfo.nConstants*ctx.N);
+    ctx.cm1_n_coefs = new BigBuffer(starkInfo.mapSectionsN.cm1_n*ctx.N);
+    ctx.cm2_n_coefs = new BigBuffer(starkInfo.mapSectionsN.cm2_n*ctx.N);
+    ctx.cm3_n_coefs = new BigBuffer(starkInfo.mapSectionsN.cm3_n*ctx.N);
+    ctx.const_n_coefs = new BigBuffer(starkInfo.nConstants*ctx.N);
 
     ctx.x_n = new BigBuffer(N);
     let xx = F.one;
@@ -107,7 +107,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     ctx.const_n = new BigBuffer(starkInfo.nConstants*ctx.N);
     constPols.writeToBigBuffer(ctx.const_n, 0);
 
-    ctx.const_coefs = constTree.coefs;
+    ctx.const_n_coefs = constTree.coefs;
     ctx.const_2ns = constTree.elements;
 
 // This will calculate all the Q polynomials and extend commits
@@ -134,7 +134,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     }
 
     console.log("Merkelizing 1....");
-    const tree1 = await extendAndMerkelize(MH, ctx.cm1_n, ctx.cm1_coefs, ctx.cm1_2ns, starkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.nBitsExt );
+    const tree1 = await extendAndMerkelize(MH, ctx.cm1_n, ctx.cm1_n_coefs, ctx.cm1_2ns, starkInfo.mapSectionsN.cm1_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree1));
 
 ///////////
@@ -161,7 +161,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     console.log("Merkelizing 2....");
     if (global.gc) {global.gc();}
-    const tree2 = await extendAndMerkelize(MH, ctx.cm2_n, ctx.cm2_coefs, ctx.cm2_2ns, starkInfo.mapSectionsN.cm2_n, ctx.nBits, ctx.nBitsExt );
+    const tree2 = await extendAndMerkelize(MH, ctx.cm2_n, ctx.cm2_n_coefs, ctx.cm2_2ns, starkInfo.mapSectionsN.cm2_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree2));
 
 ///////////
@@ -210,7 +210,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     console.log("Merkelizing 3....");
     if (global.gc) {global.gc();}
-    const tree3 = await extendAndMerkelize(MH, ctx.cm3_n, ctx.cm3_coefs, ctx.cm3_2ns, starkInfo.mapSectionsN.cm3_n, ctx.nBits, ctx.nBitsExt );
+    const tree3 = await extendAndMerkelize(MH, ctx.cm3_n, ctx.cm3_n_coefs, ctx.cm3_2ns, starkInfo.mapSectionsN.cm3_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree3));
 
 ///////////
@@ -307,9 +307,45 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         transcript.put(ctx.evals[i]);
     }
 
-    ctx.evalsR = [];
+    if (global.gc) {global.gc();}
+    const xi = ctx.challenges[7];
+    const wxi = F.mul(ctx.challenges[7], F.w[nBits]);
+
     
-    // TODO: CALCULATE EVALS R
+    // Calculate mz, mwz
+    const nEvalsR = starkInfo.evMap.filter(ev => ev.stage === 1).length;
+    ctx.mz = new BigBuffer(nEvalsR);
+    ctx.mwz = new BigBuffer(nEvalsR);
+
+    const mz_coefs = minimalPol(F, xi);
+    const mwz_coefs = minimalPol(F, wxi);
+
+    ctx.evalsR = [];
+
+    const tmp_mz = new Array(nEvalsR);
+    const tmp_mwz = new Array(nEvalsR);
+
+    for (let i = 0; i < starkInfo.evMap.length; ++i) {
+        const ev = starkInfo.evMap[i];
+        if(!ev.stage === 1) continue;
+        const coefs = getPolCoefs(ev); //TODO: DEFINE
+        const divisor = ev.prime ? mwz_coefs : mz_coefs;
+        const residu = polynomialDivision(F, coefs, divisor);
+
+        // TODO: Calculate evalR;
+
+
+        // TODO: Calculate mz;
+
+    }
+
+    tmp_mz = F.batchInverse(tmp_mz);
+    tmp_mwz = F.batchInverse(tmp_mwz);
+
+    for(let i = 0; i < nEvalsR; ++i) {
+        ctx.mz.setElement(i, tmp_mz);
+        ctx.mwz.setElement(i, tmp_mwz);
+    }
 
     for (let i=0; i<ctx.evalsR.length; i++) {
         transcript.put(ctx.evalsR[i]);
@@ -317,8 +353,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     ctx.challenges[5] = transcript.getField(); // v1
     ctx.challenges[6] = transcript.getField(); // v2
-
-    // TODO: CALCULATE M
 
     ctx.challengefri[0] = ctx.challenges[6];
     for(let i = 1; i < starkInfo.nFriChallenges; i++) {
@@ -328,10 +362,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     console.log(ctx.challengefri);
     
 // Calculate xDivXSubXi, xDivX4SubWXi
-    if (global.gc) {global.gc();}
-    const xi = ctx.challenges[7];
-    const wxi = F.mul(ctx.challenges[7], F.w[nBits]);
-
     ctx.xDivXSubXi = new BigBuffer((N << extendBits)*3);
     ctx.xDivXSubWXi = new BigBuffer((N << extendBits)*3);
     let tmp_den = new Array(N << extendBits);
@@ -647,6 +677,10 @@ function getPolRef(ctx, starkInfo, idPol) {
         dim: p.dim
     };
     return polRef;
+}
+
+function getPolCoefs(ctx, starkInfo, ev) {
+    
 }
 
 function getPol(ctx, starkInfo, idPol) {
