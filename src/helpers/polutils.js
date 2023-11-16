@@ -1,3 +1,5 @@
+const { BigBuffer } = require("pilcom");
+
 module.exports.polMulAxi = function polMulAxi(F, p, init, acc) {
     let r = init;
     for (let i=0; i<p.length; i++) {
@@ -168,4 +170,32 @@ module.exports.minimalPol = function minimalPol(F, z) {
 
         return [c0,c1,c2];
     }
+}
+
+module.exports.polynomialDivision = function polynomialDivision(F, num, den) {
+    // Euclidean division
+    const numDegree = degree(F, num);
+    const denDegree = degree(F, den);
+
+    const polR = new BigBuffer(num.length);
+    polR.set(num);
+
+    const pol = new BigBuffer(num.length);
+
+    for (let i = numDegree - denDegree; i >= 0; i--) {
+        pol.setElement(i, F.div(polR.getElement(i + denDegree), den.getElement(denDegree)));
+        for (let j = 0; j <= denDegree; j++) {
+            polR.setElement(i + j, F.sub(polR.getElement(i + j), F.mul(pol.getElement(i), den.getElement(j))));
+        }
+    }
+
+    return polR;
+}
+
+function  degree(F, pol) {
+    for (let i = pol.length - 1; i > 0; i--) {
+        if(!F.eq(F.zero, pol.getElement(i))) return i;
+    } 
+
+    return 0;
 }
