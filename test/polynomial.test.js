@@ -17,33 +17,24 @@ describe("test polinomial division", async function () {
         // Divisor:   x^2 + 3x
         // Quotient:   2x - 9
         // Remainder:  27x + 2
-        const polDividend = new BigBuffer(4);
-        const polDivisor = new BigBuffer(3);
-
         console.log("Initializing...");
-        polDividend.setElement(0, 2n);
-        polDividend.setElement(1, 0n);
-        polDividend.setElement(2, F.e(-3n));
-        polDividend.setElement(3, 2n);
-
-        polDivisor.setElement(0, 0n);
-        polDivisor.setElement(1, 3n);
-        polDivisor.setElement(2, 1n);
+        const polDividend = [2n, 0n, F.e(-3n), 2n];
+        const polDivisor = [0n, 3n, 1n];
 
         const polRemainder = [2n, 27n];
 
         const polR = polynomialDivision(F, polDividend, polDivisor);
 
-        assert(F.eq(polR.getElement(0), polRemainder[0]));
-        assert(F.eq(polR.getElement(1), polRemainder[1]));
-        assert(F.eq(polR.getElement(2), F.zero));
-        assert(F.eq(polR.getElement(3), F.zero));
+        assert(F.eq(polR[0], polRemainder[0]));
+        assert(F.eq(polR[1], polRemainder[1]));
+        assert(F.eq(polR[2], F.zero));
+        assert(F.eq(polR[3], F.zero));
     });
 
     it("should evaluate a polynomial", async () => {
-        let polynomial = new BigBuffer(4);
+        let polynomial = new Array(4);
         for (let i = 0; i < 4; i++) {
-            polynomial.setElement(i, F.e(i));
+            polynomial[i] = F.e(i);
         }
 
         let x = F.e(2);
@@ -57,9 +48,9 @@ describe("test polinomial division", async function () {
     
     it("should evaluate a polynomial in the extended field", async () => {
         const N = 2**15;
-        let polynomial = new BigBuffer(N);
+        let polynomial = new Array(N);
         for (let i = 0; i < N; i++) {
-            polynomial.setElement(i, F.e(i));
+            polynomial[i] = F.e(i);
         }
 
         let x = [F.e(2), F.e(1), F.e(3)];

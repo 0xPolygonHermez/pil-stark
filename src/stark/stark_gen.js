@@ -6,7 +6,7 @@ const Transcript = require("../helpers/transcript/transcript");
 const TranscriptBN128 = require("../helpers/transcript/transcript.bn128");
 const F3g = require("../helpers/f3g.js");
 
-const { buildZhInv, calculateH1H2, calculateZ, minimalPol, polynomialDivision } = require("../helpers/polutils.js");
+const { buildZhInv, calculateH1H2, calculateZ, minimalPol, polynomialDivision, evaluatePolynomial } = require("../helpers/polutils.js");
 const buildPoseidonGL = require("../helpers/hash/poseidon/poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 const FRI = require("./fri.js");
@@ -322,21 +322,40 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     ctx.evalsR = [];
 
-    const tmp_mz = new Array(nEvalsR);
-    const tmp_mwz = new Array(nEvalsR);
+    let tmp_mz = new Array(nEvalsR);
+    let tmp_mwz = new Array(nEvalsR);
 
     for (let i = 0; i < starkInfo.evMap.length; ++i) {
         const ev = starkInfo.evMap[i];
-        if(!ev.stage === 1) continue;
-        const coefs = getPolCoefs(ev); //TODO: DEFINE
+        if(ev.stage !== 1) continue;
+        if (ev.type == "const") {
+            p = {
+                buffer: ctx.const_n_coefs,
+                deg: N,
+                offset: ev.id,
+                size: starkInfo.nConstants,
+                dim: 1
+            };
+        } else if (ev.type == "cm") {
+            p = getPolRef(ctx, starkInfo, starkInfo.cm_n[ev.id]);
+            p.buffer = ctx[`${p.section}_coefs`];
+        } else {
+            throw new Error("Invalid ev type: "+ ev.type);
+        }
+        const coefs = new Array(p.deg);
+        for(let k = 0; k < p.deg; k++) {
+            coefs[k] = p.buffer.getElement(p.offset + k*p.size);
+        }
         const divisor = ev.prime ? mwz_coefs : mz_coefs;
         const residu = polynomialDivision(F, coefs, divisor);
-
         // TODO: Calculate evalR;
+    }
 
-
-        // TODO: Calculate mz;
-
+    let x = F.shift;
+    for (let k=0; k< N<<extendBits; k++) {
+        tmp_mz[k] = evaluatePolynomial(F, mz_coefs, x);
+        tmp_mwz[k] = evaluatePolynomial(F, mwz_coefs, x);
+        x = F.mul(x, F.w[nBits + extendBits])
     }
 
     tmp_mz = F.batchInverse(tmp_mz);
@@ -366,7 +385,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     ctx.xDivXSubWXi = new BigBuffer((N << extendBits)*3);
     let tmp_den = new Array(N << extendBits);
     let tmp_denw = new Array(N << extendBits);
-    let x = F.shift;
+    x = F.shift;
     for (let k=0; k< N<<extendBits; k++) {
         tmp_den[k] = F.sub(x, xi);
         tmp_denw[k] = F.sub(x, wxi);
@@ -674,13 +693,10 @@ function getPolRef(ctx, starkInfo, idPol) {
         deg: starkInfo.mapDeg[p.section],
         offset: p.sectionPos,
         size: starkInfo.mapSectionsN[p.section],
-        dim: p.dim
+        dim: p.dim,
+        section: p.section,
     };
     return polRef;
-}
-
-function getPolCoefs(ctx, starkInfo, ev) {
-    
 }
 
 function getPol(ctx, starkInfo, idPol) {

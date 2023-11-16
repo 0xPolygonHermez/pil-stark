@@ -1,5 +1,3 @@
-const { BigBuffer } = require("pilcom");
-
 module.exports.polMulAxi = function polMulAxi(F, p, init, acc) {
     let r = init;
     for (let i=0; i<p.length; i++) {
@@ -177,15 +175,17 @@ module.exports.polynomialDivision = function polynomialDivision(F, num, den) {
     const numDegree = degree(F, num);
     const denDegree = degree(F, den);
 
-    const polR = new BigBuffer(num.length);
-    polR.set(num);
+    const polR = new Array(num.length);
+    for(let i = 0; i < num.length; i++) {
+        polR[i] = num[i];
+    }
 
-    const pol = new BigBuffer(num.length);
+    const pol = new Array(num.length);
 
     for (let i = numDegree - denDegree; i >= 0; i--) {
-        pol.setElement(i, F.div(polR.getElement(i + denDegree), den.getElement(denDegree)));
+        pol[i] = F.div(polR[i + denDegree], den[denDegree]);
         for (let j = 0; j <= denDegree; j++) {
-            polR.setElement(i + j, F.sub(polR.getElement(i + j), F.mul(pol.getElement(i), den.getElement(j))));
+            polR[i + j] =  F.sub(polR[i + j], F.mul(pol[i], den[j]));
         }
     }
 
@@ -196,7 +196,7 @@ module.exports.evaluatePolynomial = function evaluatePolynomial(F, polynomial, x
     let res = F.zero;
 
     for (let i = degree(F, polynomial) + 1; i > 0; i--) {
-        const currentCoefficient = polynomial.getElement(i - 1);
+        const currentCoefficient = polynomial[i - 1];
         res = F.add(currentCoefficient, F.mul(res, x));
     }
 
@@ -221,7 +221,7 @@ module.exports.fastEvaluatePolynomial = function fastEvaluatePolynomial(F, polyn
         let nCoefs =
             i === nThreads - 1 ? coefsThread + residualCoefs : coefsThread;
         for (let j = nCoefs; j > 0; j--) {
-            res[i] = F.add(polynomial.getElement(i * coefsThread + j - 1), F.mul(res[i], x));
+            res[i] = F.add(polynomial[i * coefsThread + j - 1], F.mul(res[i], x));
             if (i === 0) xN[0] = F.mul(xN[0], x);
         }
     }
@@ -238,7 +238,7 @@ module.exports.fastEvaluatePolynomial = function fastEvaluatePolynomial(F, polyn
 
 function  degree(F, pol) {
     for (let i = pol.length - 1; i > 0; i--) {
-        if(!F.eq(F.zero, pol.getElement(i))) return i;
+        if(!F.eq(F.zero, pol[i])) return i;
     } 
 
     return 0;
