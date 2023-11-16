@@ -107,6 +107,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
     ctx.const_n = new BigBuffer(starkInfo.nConstants*ctx.N);
     constPols.writeToBigBuffer(ctx.const_n, 0);
 
+    ctx.const_coefs = constTree.coefs;
     ctx.const_2ns = constTree.elements;
 
 // This will calculate all the Q polynomials and extend commits
@@ -160,7 +161,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     console.log("Merkelizing 2....");
     if (global.gc) {global.gc();}
-    const tree2 = await extendAndMerkelize(MH, ctx.cm2_n, ctx.cm2_2ns, starkInfo.mapSectionsN.cm2_n, ctx.nBits, ctx.nBitsExt );
+    const tree2 = await extendAndMerkelize(MH, ctx.cm2_n, ctx.cm2_coefs, ctx.cm2_2ns, starkInfo.mapSectionsN.cm2_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree2));
 
 ///////////
@@ -209,7 +210,7 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
 
     console.log("Merkelizing 3....");
     if (global.gc) {global.gc();}
-    const tree3 = await extendAndMerkelize(MH, ctx.cm3_n, ctx.cm3_2ns, starkInfo.mapSectionsN.cm3_n, ctx.nBits, ctx.nBitsExt );
+    const tree3 = await extendAndMerkelize(MH, ctx.cm3_n, ctx.cm3_coefs, ctx.cm3_2ns, starkInfo.mapSectionsN.cm3_n, ctx.nBits, ctx.nBitsExt );
     transcript.put(MH.root(tree3));
 
 ///////////
@@ -671,7 +672,7 @@ function getPol(ctx, starkInfo, idPol) {
 
 async function  extendAndMerkelize(MH, buffFrom, buffCoefs, buffTo, nPols, nBits, nBitsExt) {
 
-    await extend(buffFrom, buffTo, nPols, nBits, nBitsExt);
+    await extend(buffFrom, buffCoefs, buffTo, nPols, nBits, nBitsExt);
     return await merkelize(MH, buffTo, nPols, nBitsExt);
 }
 

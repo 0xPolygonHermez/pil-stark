@@ -26,6 +26,7 @@ module.exports = async function starkSetup(constPols, pil, starkStruct) {
     }
 
     const constTree = await MH.merkelize(constPolsArrayE, pil.nConstants, nExt);
+    constTree.coefs = constPolsArrayCoefs;
 
     return {
         constTree: constTree,

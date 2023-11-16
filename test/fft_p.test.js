@@ -108,19 +108,22 @@ describe("test fft", async function () {
             polsV[i] = extendPol(F, pols[i], extBits);
         }
 
+        const buffCoefs2 = new BigBuffer(n*nPols);
+        await ifft(buff, nPols, nBits, buffCoefs2);
+
         console.log("interpolate...");
         await interpolate(buff, buffCoefs, nPols, nBits, buffOut, nBits+extBits);
-
-        const buffOriginal = new BigBuffer(n*nPols);
-        ifft(buffCoefs, nPols, nBits, buffOriginal);
-
-        console.log(buffOriginal);
-        console.log(pols);
 
         console.log("check...");
         for (let i=0; i<nPols; i++) {
             for (let j=0; j<nExt; j++) {
                 assert(F.eq(polsV[i][j], buffOut.getElement(j*nPols + i)));
+            }
+        }
+
+        for(let i = 0; i < nPols; i++) {
+            for (let j=0; j<n; j++) {
+                assert(F.eq(buffCoefs2.getElement(j*nPols + i), buffCoefs.getElement(j*nPols + i)));
             }
         }
     });
@@ -226,6 +229,9 @@ describe("test fft", async function () {
             polsV[i] = extendPol(F, pols[i], extBits);
         }
 
+        const buffCoefs2 = new BigBuffer(n*nPols);
+        await ifft(buff, nPols, nBits, buffCoefs2);
+        
         console.log("fft...");
         await interpolate(buff, buffCoefs, nPols, nBits, buffOut, nBits+extBits);
 
@@ -233,6 +239,12 @@ describe("test fft", async function () {
         for (let i=0; i<nPols; i++) {
             for (let j=0; j<nExt; j++) {
                 assert(F.eq(polsV[i][j], buffOut.getElement(j*nPols + i)));
+            }
+        }
+
+        for(let i = 0; i < nPols; i++) {
+            for (let j=0; j<n; j++) {
+                assert(F.eq(buffCoefs2.getElement(j*nPols + i), buffCoefs.getElement(j*nPols + i)));
             }
         }
     });

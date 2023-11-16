@@ -59,6 +59,7 @@ async function run() {
 
     console.log("Start merkelizing..");
     const constTree = await MH.merkelize(constPolsArrayE, pil.nConstants, nExt);
+    constTree.coefs = constPolsArrayCoefs;
 
     const constRoot = MH.root(constTree);
 
