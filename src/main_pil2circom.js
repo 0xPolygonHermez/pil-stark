@@ -10,9 +10,7 @@ const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_pil2circom.js -o <verifier.circom> -p <pil.json> [-P <pilconfig.json>] -v <verification_key.json> -s <starkinfo.json> [--skipMain] [--enableInput] [--verkeyInput]")
-    .alias("p", "pil")
-    .alias("P", "pilconfig")
+    .usage("node main_pil2circom.js -o <verifier.circom> -v <verification_key.json> -s <starkinfo.json> [--skipMain] [--enableInput] [--verkeyInput]")
     .alias("s", "starkinfo")
     .alias("v", "verkey")
     .alias("o", "output")
@@ -21,13 +19,10 @@ const argv = require("yargs")
 async function run() {
     const F = new F3g();
 
-    const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
-    const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
     const starkInfoFIle = typeof(argv.starkinfo) === "string" ?  argv.starkinfo.trim() : "starkinfo.json";
     const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "mycircuit.verkey.json";
     const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "mycircuit.verifier.circom";
 
-    const pil = await compile(F, pilFile, null, pilConfig);
     const verKey = JSONbig.parse(await fs.promises.readFile(verKeyFile, "utf8"));
     const constRoot = verKey.constRoot;
 
@@ -39,7 +34,7 @@ async function run() {
         verkeyInput: argv.verkeyInput || false
     }
 
-    const verifier = await pil2circom(pil, constRoot, starkInfo, options);
+    const verifier = await pil2circom(constRoot, starkInfo, options);
 
     await fs.promises.writeFile(outputFile, verifier, "utf8");
 
