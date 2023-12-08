@@ -3,20 +3,11 @@ pragma custom_templates;
 
 
 function CMulAddF(ina, inb, inc) {
-
-    var A = (ina[0] + ina[1])  * (inb[0] + inb[1]);
-    var B = (ina[0] + ina[2])  * (inb[0] + inb[2]);
-    var C = (ina[1] + ina[2])  * (inb[1] + inb[2]);
-    var D = ina[0]*inb[0];
-    var E = ina[1]*inb[1];
-    var F = ina[2]*inb[2];
-    var G = D-E;
-
     var out[3];
 
-    out[0] = C+G-F+inc[0];
-    out[1] = A+C-E-E-D+inc[1];
-    out[2] = B-G+inc[2];
+    out[0] = ina[0]*inb[0] + 2*ina[2]*inb[1] + 2*ina[1]*inb[2] + inc[0];
+    out[1] = ina[1]*inb[0] + ina[0]*inb[1] + 2*ina[2]*inb[2] + inc[1];
+    out[2] = ina[2]*inb[0] + ina[1]*inb[1] + ina[0]*inb[2] + inc[2];
     return out;
 }
 

@@ -193,27 +193,25 @@ namespace Compressor(%N);
     PARTIALROUND2 * (a[<%- i %>]' - s<%- i %>_R21) = 0;
 <% } -%>
 
-    // CMUL GATE - Check that a * b in Fp³ using (X³ - X - 1) as a generator is performed correctly
+    // CMUL GATE - Check that a * b in Fp³ using (X³ - 2) as a generator is performed correctly
     // In this particular case, 
     // a = [a[3], a[4], a[5]]
     // b = [a[6], a[7], a[8]]
     // and this must be equal to [ a[9], a[10], a[11] ]
     
-    // Since the modulo is known (X³ - X - 1) we can calculate the coefficients in general form by calculating 
+    // Since the modulo is known (X³ - 2) we can calculate the coefficients in general form by calculating 
     // (a0 + a1*x + a2*x²)*(b0 + b1*x + b2*x²) and then using long division to get the residue when dividing by the modulo
-    // We get the following result: (a0*b0 + a1*b2 + a2*b1) + (a0*b1 + a1*b0 + a1*b2 + a2*b1 + a2*b2)x + (a0*b2 + a2*b2 + a2*b0 + a1*b1)x²
+    // We get the following result: (a0*b0 + 2*a2*b1 + 2*a1*b2) + (a1*b0 + a0*b1 + 2*a2*b2)X + (a2*b0 + a1*b1 + a0*b2)X²
     // This result can be expressed using this intermediate polyonials A,B,C,D,E,F that have less than degree 2
-    pol cA1 = (a[3] + a[4])  * (a[6] + a[7]);
-    pol cB1 = (a[3] + a[5])  * (a[6] + a[8]);
-    pol cC1 = (a[4] + a[5])  * (a[7] + a[8]);
-    pol cD1 = a[3]*a[6];
-    pol cE1 = a[4]*a[7];
-    pol cF1 = a[5]*a[8];
 
     // Whenever CMUL = 1, check that the CMul result matches with the values stored in a[9], a[10] and a[11] respectively
-    CMUL * (a[9] - (cC1 + cD1 - cE1 - cF1)) = 0;
-    CMUL * (a[10] - (cA1 + cC1 - 2*cE1 - cD1)) = 0;
-    CMUL * (a[11] - (cB1 - cD1 + cE1)) = 0;
+    pol cmul1 = (a[9] - (a[3]*a[6] + 2*a[5]*a[7] + 2*a[4]*a[8]));
+    pol cmul2 = (a[10] - (a[4]*a[6] + a[3]*a[7] + 2*a[5]*a[8]));
+    pol cmul3 = (a[11] - (a[5]*a[6] + a[4]*a[7] + a[3]*a[8]));
+
+    CMUL* cmul1 = 0;
+    CMUL* cmul2 = 0;
+    CMUL* cmul3 = 0;
 
     // Check that the plonk constraint stored in a[0], a[1], a[2] is correct
     g012*CMUL = 0;
@@ -262,15 +260,10 @@ namespace Compressor(%N);
 
 <% function CMulAdd(s, a0, a1, a2, b0, b1, b2, c0, c1, c2) {
     const code = [];
-    code.push(`    pol A${s} = (${a0} + ${a1})  * (${b0} + ${b1});`);
-    code.push(`    pol B${s} = (${a0} + ${a2})  * (${b0} + ${b2});`);
-    code.push(`    pol C${s} = (${a1} + ${a2})  * (${b1} + ${b2});`);
-    code.push(`    pol D${s} = ${a0} * ${b0};`);
-    code.push(`    pol E${s} = ${a1} * ${b1};`);
-    code.push(`    pol F${s} = ${a2} * ${b2};`);
-    code.push(`    pol acc${s}_0 = C${s}+ D${s} - E${s} - F${s} + ${c0};`);
-    code.push(`    pol acc${s}_1 = A${s}+ C${s}- 2*E${s} - D${s} + ${c1};`);
-    code.push(`    pol acc${s}_2 = B${s}- D${s} + E${s} + ${c2};`);
+    code.push(`    pol acc${s}_0 = ${a0}*${b0} + 2*${a2}*${b1} + 2*${a1}*${b2} + ${c0};`);
+    code.push(`    pol acc${s}_1 = ${a1}*${b0} + ${a0}*${b1} + 2*${a2}*${b2} + ${c1};`);
+    code.push(`    pol acc${s}_2 = ${a2}*${b0} + ${a1}*${b1} + ${a0}*${b2} + ${c2};`);
+
     code.push(`\n`);
     return code.join("\n");
 } -%>

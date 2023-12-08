@@ -34,7 +34,7 @@ describe("f3g", function () {
         const a = [1n, 2n, 3n];
         const b = [4n, 5n, 0xFFFFFFFF00000000n];
         const c = F.mul(a, b);
-        assert(F.eq(c, F.e([17, 23, 18])));
+        assert(F.eq(c, F.e([30, 7, 21])));
     });
 
     it("shoud do an inverse", async () => {

@@ -127,32 +127,25 @@ template GLCMulAdd() {
 
     var p=0xFFFFFFFF00000001;
 
-    signal A,B,C,D,E,F,G;
+    signal ad, ae, af, bd, be, bf, cd, ce, cf;
+    ad <== ina[0] * inb[0];
+    ae <== ina[1] * inb[0];
+    af <== ina[2] * inb[0];
+    bd <== ina[0] * inb[1];
+    be <== ina[1] * inb[1];
+    bf <== ina[2] * inb[1];
+    cd <== ina[0] * inb[2];
+    ce <== ina[1] * inb[2];
+    cf <== ina[2] * inb[2];
+
     signal m[3];
 
-    A <== (ina[0] + ina[1])  * (inb[0] + inb[1]);
-    B <== (ina[0] + ina[2])  * (inb[0] + inb[2]);
-    C <== (ina[1] + ina[2])  * (inb[1] + inb[2]);
-    D <== ina[0] * inb[0];
-    E <== ina[1] * inb[1];
-    F <== ina[2] * inb[2];
-    G <== D-E;
-
-    m[0] <== C+G-F + inc[0];
-    m[1] <== A+C-E-E-D + inc[1];
-    m[2] <== B-G + inc[2];
-
-    // m[0] = a1b1 + a1b2 + a2b1 + a2b2 + a0b0 - a1b1 - a2b2 
-    //     = a1b2 + a2b1 + a0b0 -> 3*ina.maxNum * inb.maxNum
-
-    // m[1] = a0b0 + a0b1 + a1b0 + a1b1 + a1b1 + a1b2 + a2b1 + a2b2 - a1b1 - a1b1 - a0b0 
-    //     = a0b1 + a1b0 + a1b2 + a2b1 + a2b2 -> 5*ina.maxNum * inb.maxNum
-    
-    // m[2] = a0b0 + a0b2 + a2b0 + a2b2 - a0b0 + a1b1 
-    //      = a0b2 + a2b0 + a2b2 + a1b1 -> 4*ina.maxNum * inb.maxNum
+    m[0] <== ad + 2*ce + 2*bf + inc[0];
+    m[1] <== bd + ae + 2*cf + inc[1];
+    m[2] <== cd + be + af + inc[2];
 
     //Since all the elements of the array takes the same tag value, we set as the max value 5*ina.maxNum * inb.maxNum
-    var maxQuotientBits = log2((5*ina.maxNum * inb.maxNum - 1) \ p) + 1;
+    var maxQuotientBits = log2((5*ina.maxNum * inb.maxNum + inc.maxNum - 1) \ p) + 1;
 
     signal k[3];
 
@@ -239,28 +232,24 @@ template GLCInv() {
     var cc = (in[2] * in[2]) % p;
 
     var aaa = (aa * in[0]) % p;
-    var aac = (aa * in[2]) % p;
     var abc = (ba * in[2]) % p;
-    var abb = (ba * in[1]) % p;
-    var acc = (ac * in[2]) % p;
     var bbb = (bb * in[1]) % p;
-    var bcc = (bc * in[2]) % p;
     var ccc = (cc * in[2]) % p;
 
-    var t = (-aaa -aac-aac +abc+abc+abc + abb - acc - bbb + bcc - ccc);
+    var t = (-aaa + 6*abc - 2*bbb - 4*ccc);
     while (t<0) t = t + p;
     t = t % p;
     var tinv = _inv1(t);
 
-    var i1 = (-aa -ac-ac +bc + bb - cc);
+    var i1 = (-aa + 2*bc);
     while (i1 <0) i1 = i1 + p;
     i1 = i1*tinv % p;
 
-    var i2 = (ba -cc);
+    var i2 = (ba - 2*cc);
     while (i2<0) i2 = i2 + p;
     i2 = i2*tinv % p;
 
-    var i3 =  (-bb +ac + cc);
+    var i3 = (-bb + ac);
     while (i3 <0) i3 = i3 + p;
     i3 = i3*tinv % p;
 

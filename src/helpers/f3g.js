@@ -5,7 +5,7 @@
 This is a field extension 3 of the goldilocks:
 
 Prime: 0xFFFFFFFF00000001
-Irreducible polynomial: x^3 - x -1
+Irreducible polynomial: x^3 - 2
 
 */
 const crypto = require("crypto");
@@ -87,15 +87,11 @@ module.exports = class F3g {
         } else if (typeof(b) == "bigint") {
             return [(a[0]*b) % this.p,  (a[1]*b) % this.p, (a[2]*b) % this.p];
         } else {
-            const A = (a[0] + a[1])  * (b[0] + b[1]);
-            const B = (a[0] + a[2])  * (b[0] + b[2]);
-            const C = (a[1] + a[2])  * (b[1] + b[2]);
-            const D = a[0]*b[0];
-            const E = a[1]*b[1];
-            const F = a[2]*b[2];
-            const G = D - E;
-
-            return [ (C + G - F)%this.p,  (A + C - E -E - D )%this.p,(B-G)%this.p ];
+            const out1 = a[0]*b[0] + 2n*a[2]*b[1] + 2n*a[1]*b[2];
+            const out2 = a[1]*b[0] + a[0]*b[1] + 2n*a[2]*b[2];
+            const out3 = a[2]*b[0] + a[1]*b[1] + a[0]*b[2];
+            
+            return [ out1 % this.p, out2 % this.p, out3 % this.p];
         }
     }
 
@@ -113,15 +109,11 @@ module.exports = class F3g {
         if (typeof(a) == "bigint") {
             return (a*a) % this.p;
         } else {
-            const A = (a[0] + a[1])  * (a[0] + a[1]);
-            const B = (a[0] + a[2])  * (a[0] + a[2]);
-            const C = (a[1] + a[2])  * (a[1] + a[2]);
-            const D = a[0]*a[0];
-            const E = a[1]*a[1];
-            const F = a[2]*a[2];
-            const G = D - E;
-
-            return [ (C + G - F)%this.p,  (A + C - E -E - D )%this.p,(B-G)%this.p ];
+            const out1 = a[0]*a[0] + 2n*a[2]*a[1] + 2n*a[1]*a[2];
+            const out2 = a[1]*a[0] + a[0]*a[1] + 2n*a[2]*a[2];
+            const out3 = a[2]*a[0] + a[1]*a[1] + a[0]*a[2];
+            
+            return [ out1 % this.p, out2 % this.p, out3 % this.p];
         }
 
     }
@@ -141,23 +133,19 @@ module.exports = class F3g {
             const cc = a[2] * a[2];
 
             const aaa = aa * a[0];
-            const aac = aa * a[2];
-            const abc = ba * a[2];
-            const abb = ba * a[1];
-            const acc = ac * a[2];
             const bbb = bb * a[1];
-            const bcc = bc * a[2];
             const ccc = cc * a[2];
+            const abc = ba * a[2];
 
-            let t = (-aaa -aac-aac +abc+abc+abc + abb - acc - bbb + bcc - ccc)%this.p;
+            let t = (-aaa + 6n*abc - 2n*bbb - 4n*ccc)%this.p;
 
             if (t<0n) t = t + this.p;
 
             const tinv = this._inv1(t);
 
-            let i1 = ((-aa -ac-ac +bc + bb - cc)*tinv) % this.p;
-            let i2 = ((ba -cc)*tinv) % this.p;
-            let i3 = ((-bb +ac + cc)*tinv) % this.p;
+            let i1 = ((-aa + 2n*bc)*tinv)%this.p;
+            let i2 = ((ba - 2n*cc)*tinv)%this.p;
+            let i3 = ((-bb + ac)*tinv)%this.p;
 
             if (i1<0) i1 = this.p+i1;
             if (i2<0) i2 = this.p+i2;
