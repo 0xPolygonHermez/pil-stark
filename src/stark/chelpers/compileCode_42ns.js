@@ -259,9 +259,8 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                             pushSrcArg(r.src[0]);
                             pushSrcArg(r.src[1]);
                             body.push(`     Goldilocks3::add(${lexp}, ${src[0]}, ${src[1]});`)
-                        } else if ((r.src[0].type === 'cm') && (r.src[1].type === 'tmp')) {
+                        } else if ((r.src[0].type === 'cm' && !r.src[0].prime) && (r.src[1].type === 'tmp')) {
                             assert(r.src[0].dim == 1);
-                            assert(!r.src[0].prime);
                             counters_ops[15] += 1;
                             ops.push(15);
                             opsString += "15, ";
@@ -269,6 +268,19 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                             pushSrcArg(r.src[0]);
                             pushSrcArg(r.src[1]);
                             body.push(`     Goldilocks3::add(${lexp}, ${src[0]}, ${src[1]});`)
+                        } else if ((r.src[1].type === 'cm' && !r.src[1].prime) && (r.src[0].type === 'tmp')) {
+                            assert(r.src[1].dim == 1);
+                            counters_ops[15] += 1;
+                            ops.push(15);
+                            opsString += "15, ";
+                            cont_ops += 1;
+                            pushSrcArg(r.src[1]);
+                            pushSrcArg(r.src[0]);
+                            body.push(`     Goldilocks3::add(${lexp}, ${src[1]}, ${src[0]});`)
+                        } else if ((r.src[1].type === 'cm' && r.src[1].prime) && (r.src[0].type === 'tmp')) {
+                            // TODO 4
+                        } else if ((r.src[0].type === 'cm' && r.src[0].prime) && (r.src[1].type === 'tmp')) {
+                            // TODO 4
                         } else if ((r.src[0].type === 'cm') && (r.src[1].type === 'challenge')) {
                             assert(r.src[0].dim == 1);
                             assert(!r.src[0].prime);
@@ -279,6 +291,16 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                             pushSrcArg(r.src[0]);
                             pushSrcArg(r.src[1]);
                             body.push(`     Goldilocks3::add(${lexp}, ${src[0]}, ${src[1]});`)
+                        } else if ((r.src[0].type === 'tmp' && r.src[0].dim == 3) && (r.src[1].type === 'number')) {
+                            // TODO 1
+                        } else if ((r.src[0].type === 'tmp' && r.src[0].dim == 3) && (r.src[1].type === 'const' && !r.src[1].prime)) {
+                            // TODO 3
+                        } else if ((r.src[1].type === 'tmp' && r.src[1].dim == 3) && (r.src[0].type === 'const' && !r.src[0].prime)) {
+                            // TODO 3
+                        } else if ((r.src[0].type === 'tmp' && r.src[0].dim == 3) && (r.src[1].type === 'const' && r.src[1].prime)) {
+                            // TODO 7
+                        } else if ((r.src[1].type === 'tmp' && r.src[1].dim == 3) && (r.src[0].type === 'const' && r.src[0].prime)) {
+                            // TODO 7
                         } else {
                             console.log(src[0], src[1]);
                             throw new Error("Option not considered!");
@@ -664,6 +686,8 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                         pushSrcArg(r.src[1]);
                         body.push(`     Goldilocks::mul(${lexp}, ${src[0]}, ${src[1]});`)
                         assert(!r.src[0].prime);
+                    } else if ((r.src[0].type === 'number') && (r.src[1].type === 'const' && !r.src[1].prime)) {
+                        // TODO 6
                     } else {
                         console.log(src[0], src[1]);
                         throw new Error("Option not considered!");
@@ -691,7 +715,7 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                             pushSrcArg(r.src[0]);
                             body.push(`     Goldilocks3::mul(${lexp}, ${src[1]}, ${src[0]});`)
 
-                        } else if ((r.src[0].type == 'const') && (r.src[1].type == 'tmp')) {
+                        } else if ((r.src[0].type == 'const' && !r.src[0].prime) && (r.src[1].type == 'tmp')) {
                             assert(r.src[0].dim == 1);
                             counters_ops[60] += 1;
                             ops.push(60);
@@ -700,7 +724,17 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                             pushSrcArg(r.src[0]);
                             pushSrcArg(r.src[1]);
                             body.push(`     Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
-                            assert(!r.src[0].prime);
+                        } else if ((r.src[1].type == 'const' && !r.src[1].prime) && (r.src[0].type == 'tmp')) {
+                            assert(r.src[1].dim == 1);
+                            counters_ops[60] += 1;
+                            ops.push(60);
+                            opsString += "60, ";
+                            cont_ops += 1;
+                            pushSrcArg(r.src[1]);
+                            pushSrcArg(r.src[0]);
+                            body.push(`     Goldilocks3::mul(${lexp}, ${src[1]}, ${src[0]});`)
+                        } else if ((r.src[1].type == 'const' && r.src[1].prime) && (r.src[0].type == 'tmp')) {
+                            // TODO 5
                         } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmp' && r.src[1].dim == 1)) {
                             counters_ops[61] += 1;
                             ops.push(61);
@@ -719,6 +753,15 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                             pushSrcArg(r.src[0]);
                             pushSrcArg(r.src[1]);
                             body.push(`     Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
+                        } else if ((r.src[1].type == 'cm' && !r.src[1].prime) && (r.src[0].type == 'challenge')) {
+                            assert(r.src[1].dim == 1);
+                            counters_ops[62] += 1;
+                            ops.push(62);
+                            opsString += "62, ";
+                            cont_ops += 1;
+                            pushSrcArg(r.src[1]);
+                            pushSrcArg(r.src[0]);
+                            body.push(`     Goldilocks3::mul(${lexp}, ${src[1]}, ${src[0]});`)
 
                         } else if ((r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'challenge')) {
                             assert(r.src[0].dim == 1);
@@ -729,7 +772,15 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                             pushSrcArg(r.src[0]);
                             pushSrcArg(r.src[1]);
                             body.push(`     Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
-
+                        } else if ((r.src[1].type == 'cm' && r.src[1].prime) && (r.src[0].type == 'challenge')) {
+                            assert(r.src[1].dim == 1);
+                            counters_ops[63] += 1;
+                            ops.push(63);
+                            opsString += "63, ";
+                            cont_ops += 1;
+                            pushSrcArg(r.src[1]);
+                            pushSrcArg(r.src[0]);
+                            body.push(`     Goldilocks3::mul(${lexp}, ${src[1]}, ${src[0]});`)
                         } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'cm' && !r.src[1].prime)) {
                             assert(r.src[1].dim == 1);
                             counters_ops[64] += 1;
@@ -757,7 +808,15 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                             pushSrcArg(r.src[1]);
                             pushSrcArg(r.src[0]);
                             body.push(`     Goldilocks3::mul(${lexp}, ${src[1]}, ${src[0]});`)
-
+                        } else if ((r.src[1].type == 'challenge') && (r.src[0].type == 'number')) {
+                            assert(r.src[0].dim == 1);
+                            counters_ops[66] += 1;
+                            ops.push(66);
+                            opsString += "66, ";
+                            cont_ops += 1;
+                            pushSrcArg(r.src[0]);
+                            pushSrcArg(r.src[1]);
+                            body.push(`     Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
                         } else if ((r.src[0].type == 'challenge') && (r.src[1].type == 'x')) {
                             assert(r.src[1].dim == 1);
                             counters_ops[67] += 1;
@@ -787,7 +846,14 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                             pushSrcArg(r.src[1]);
                             pushSrcArg(r.src[0]);
                             body.push(`     Goldilocks3::mul(${lexp}, ${src[1]}, ${src[0]});`)
-
+                        } else if ((r.src[0].type == 'challenge') && (r.src[1].type == 'const' && !r.src[1].prime)) {
+                            // TODO 2
+                        } else if ((r.src[1].type == 'challenge') && (r.src[0].type == 'const' && !r.src[0].prime)) {
+                            // TODO 2
+                        } else if ((r.src[0].type == 'challenge') && (r.src[1].type == 'const' && r.src[1].prime)) {
+                            // TODO 8
+                        } else if ((r.src[1].type == 'challenge') && (r.src[0].type == 'const' && r.src[0].prime)) {
+                            // TODO 8
                         } else {
                             console.log(src[0], src[1]);
                             throw new Error("Option not considered!");
