@@ -380,6 +380,7 @@ function getExpressionInfo(pil, expId) {
 }
 
 function buildLinearCode(ctx, loopPos) {
+    let tmps = {};
     let expAndExpPrims;
     if (loopPos == "i" || loopPos == "last") {
         expAndExpPrims = getExpAndExpPrimes();
@@ -394,7 +395,29 @@ function buildLinearCode(ctx, loopPos) {
                 (loopPos == "last")) continue;
         }
         for (let j=0; j< ctx.code[i].code.length; j++) {
-            res.push(ctx.code[i].code[j]);
+            const code = ctx.code[i].code[j];
+            
+            for(let k = 0; k < code.src.length; k++) {
+                const strSrc = code.src[k].type + "_" + code.src[k].id + "_" + code.src[k].prime;
+                if(tmps[strSrc]) {
+                    code.src[k] = tmps[strSrc];
+                }
+            }
+            
+            let addCode = code.op === "copy" ? false : true;
+            if(code.dest.type === "f") addCode = true;
+            if(code.dest.type === "exp" 
+                && ctx.pil.expressions[code.dest.id].keep
+                && !ctx.pil.expressions[code.dest.id].set) {
+                    ctx.pil.expressions[code.dest.id].set = true;
+                    addCode = true;
+                }
+            if(addCode) {
+                res.push(code);
+            } else {
+                const strDest = code.dest.type + "_" + code.dest.id + "_" + code.dest.prime;
+                tmps[strDest] = code.src[0];
+            }
         }
     }
 
