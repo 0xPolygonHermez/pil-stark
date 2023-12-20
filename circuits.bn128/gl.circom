@@ -152,7 +152,7 @@ template GLCMulAdd() {
     //      = a0b2 + a2b0 + a2b2 + a1b1 -> 4*ina.maxNum * inb.maxNum
 
     //Since all the elements of the array takes the same tag value, we set as the max value 5*ina.maxNum * inb.maxNum
-    var maxQuotientBits = log2((5*ina.maxNum * inb.maxNum - 1) \ p) + 1;
+    var maxQuotientBits = log2((5*ina.maxNum * inb.maxNum + inc.maxNum - 1) \ p) + 1;
 
     signal k[3];
 
