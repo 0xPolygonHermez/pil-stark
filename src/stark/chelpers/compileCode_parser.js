@@ -1856,14 +1856,37 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     argsString = argsString.slice(0, -2);
     argsString += "};"
 
+    let arrayOps = JSON.parse(opsString.replace("{", "[").replace("};", "]"));
+    console.log("Number of operations before join: ", arrayOps.length);
+
     // join operations
     if (functionName == "step42ns_first") {
         assert(0);
         //Not suported at this moment due to 2ns
     } else if (functionName == "step3_first") {
 
-        groupOps = " 0, 50,";
+        groupOps = " 0, 50, 50, 21, 53,";
         let countGroup = opsString.split(groupOps).length - 1;
+        cont_ops -= 4*countGroup;
+        opsString = opsString.replace(new RegExp(groupOps, "g"), " 121,");
+
+        groupOps = " 50, 50, 0, 50, 21, 50, 21, 50, 21, 53, 0,";
+        countGroup = opsString.split(groupOps).length - 1;
+        cont_ops -= 10*countGroup;
+        opsString = opsString.replace(new RegExp(groupOps, "g"), " 122,");
+
+        groupOps = " 53, 21, 0, 50,";
+        countGroup = opsString.split(groupOps).length - 1;
+        cont_ops -= 3*countGroup;
+        opsString = opsString.replace(new RegExp(groupOps, "g"), " 123,");
+
+        groupOps = " 12, 70, 12, 70, 12, 70, 12, 70,";
+        countGroup = opsString.split(groupOps).length - 1;
+        cont_ops -= 7*countGroup;
+        opsString = opsString.replace(new RegExp(groupOps, "g"), " 124,")
+
+        groupOps = " 0, 50,";
+        countGroup = opsString.split(groupOps).length - 1;
         cont_ops -= countGroup;
         opsString = opsString.replace(new RegExp(groupOps, "g"), " 115,");
 
@@ -1878,6 +1901,11 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             `uint64_t args3[NARGS_] = ${argsString}`
         ].join("\n");
     } else if (functionName == "step3prev_first") {
+        groupOps = " 12, 70, 12, 70, 12, 70, 12, 70,";
+        let countGroup = opsString.split(groupOps).length - 1;
+        cont_ops -= 7*countGroup;
+        opsString = opsString.replace(new RegExp(groupOps, "g"), " 124,");
+
         res = [
             `#define NOPS_ ${cont_ops}`,
             `#define NARGS_ ${cont_args}`,
@@ -1900,6 +1928,9 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             `uint64_t args2prev[NARGS_] = ${argsString}`
         ].join("\n");
     }
+
+    arrayOps = JSON.parse(opsString.replace("{", "[").replace("};", "]"));
+    console.log("Number of operations after join: ", arrayOps.length);
 
     return res;
 

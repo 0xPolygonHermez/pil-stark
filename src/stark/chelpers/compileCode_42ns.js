@@ -1023,31 +1023,64 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
     argsString = argsString.slice(0, -2);
     argsString += "};"
 
+    let arrayOps = JSON.parse(opsString.replace("{", "[").replace("};", "]"));
+    console.log("Number of operations before join: ", arrayOps.length);
+
     // join operations
-    groupOps = " 12, 70,";
+    // groupOps = " 12, 70,";
+    // let countGroup = opsString.split(groupOps).length - 1;
+    // cont_ops -= countGroup;
+    // opsString = opsString.replace(new RegExp(groupOps, "g"), " 84,");
+
+    // groupOps = " 0, 50,";
+    // countGroup = opsString.split(groupOps).length - 1;
+    // cont_ops -= countGroup;
+    // opsString = opsString.replace(new RegExp(groupOps, "g"), " 85,");
+
+    // groupOps = " 32, 47, 21, 32, 48,";
+    // countGroup = opsString.split(groupOps).length - 1;
+    // cont_ops -= 4 * countGroup;
+    // opsString = opsString.replace(new RegExp(groupOps, "g"), " 86,");
+
+    // groupOps = " 84, 84, 84, 84,";
+    // countGroup = opsString.split(groupOps).length - 1;
+    // cont_ops -= 3 * countGroup;
+    // opsString = opsString.replace(new RegExp(groupOps, "g"), " 87,");
+
+    // groupOps = " 21, 50, 21, 53, 0, 85, 50, 85, 21, 50,";
+    // countGroup = opsString.split(groupOps).length - 1;
+    // cont_ops -= 9 * countGroup;
+    // opsString = opsString.replace(new RegExp(groupOps, "g"), " 88,");
+
+    groupOps = " 0, 50, 50, 21, 53,";
     let countGroup = opsString.split(groupOps).length - 1;
-    cont_ops -= countGroup;
-    opsString = opsString.replace(new RegExp(groupOps, "g"), " 84,");
+    cont_ops -= 4*countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 93,");
+
+    groupOps = " 50, 50, 0, 50, 21, 50, 21, 50, 21, 53, 0,";
+    countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= 10*countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 94,");
+
+    groupOps = " 12, 70, 12, 70, 12, 70, 12, 70,";
+    countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= 7*countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 95,");
+
+    groupOps = " 53, 0, 53, 0, 53, 0,";
+    countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= 5*countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 96,");
+
+    groupOps = " 53, 21, 0, 50,";
+    countGroup = opsString.split(groupOps).length - 1;
+    cont_ops -= 3*countGroup;
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 97,");
 
     groupOps = " 0, 50,";
     countGroup = opsString.split(groupOps).length - 1;
     cont_ops -= countGroup;
-    opsString = opsString.replace(new RegExp(groupOps, "g"), " 85,");
-
-    groupOps = " 32, 47, 21, 32, 48,";
-    countGroup = opsString.split(groupOps).length - 1;
-    cont_ops -= 4 * countGroup;
-    opsString = opsString.replace(new RegExp(groupOps, "g"), " 86,");
-
-    groupOps = " 84, 84, 84, 84,";
-    countGroup = opsString.split(groupOps).length - 1;
-    cont_ops -= 3 * countGroup;
-    opsString = opsString.replace(new RegExp(groupOps, "g"), " 87,");
-
-    groupOps = " 21, 50, 21, 53, 0, 85, 50, 85, 21, 50,";
-    countGroup = opsString.split(groupOps).length - 1;
-    cont_ops -= 9 * countGroup;
-    opsString = opsString.replace(new RegExp(groupOps, "g"), " 88,");
+    opsString = opsString.replace(new RegExp(groupOps, "g"), " 98,");
 
 
     res = [
@@ -1061,6 +1094,9 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
         `uint64_t args42[NARGS_] = ${argsString}`
     ].join("\n");
 
+    arrayOps = JSON.parse(opsString.replace("{", "[").replace("};", "]"));
+    console.log("Number of operations after join: ", arrayOps.length);
+    
     return res;
 
     function getRef(r) {
