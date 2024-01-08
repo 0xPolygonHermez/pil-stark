@@ -2,7 +2,7 @@ const fs = require("fs");
 const version = require("../package").version;
 
 const pil2circom = require("./pil2circom.js");
-const F1Field = require("./f3g.js");
+const F3g = require("./helpers/f3g.js");
 const { compile } = require("pilcom");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 
@@ -19,7 +19,7 @@ const argv = require("yargs")
     .argv;
 
 async function run() {
-    const F = new F1Field();
+    const F = new F3g();
 
     const pilFile = typeof(argv.pil) === "string" ?  argv.pil.trim() : "mycircuit.pil";
     const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};

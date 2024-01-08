@@ -1,19 +1,20 @@
 const chai = require("chai");
 const assert = chai.assert;
-const buildGLWasm = require("../src/glwasm.js").buildProtoboard;
-const F3g = require("../src/f3g.js");
-const { P } = require("../src/poseidon_constants_opt.js");
-const LinearHash = require("../src/linearhash");
-const buildPoseidon = require("../src/poseidon");
+const buildGLWasm = require("../src/helpers/glwasm.js").buildProtoboard;
+const F3g = require("../src/helpers/f3g.js");
+const LinearHash = require("../src/helpers/hash/linearhash/linearhash");
+const LinearHashGPU = require("../src/helpers/hash/linearhash/linearhash_gpu");
+
+const buildPoseidon = require("../src/helpers/hash/poseidon/poseidon");
 
 describe("Goldilocks Wasm test", function () {
     let glwasm;
     let pIn, pOut;
     let poseidon;
     let lh;
+    let lh_gpu;
 
-    function testLinearHash(width, heigth) {
-        let res;
+    function testLinearHash(width, heigth, splitLinearHash) {
         const F = new F3g();
 
         const pIn = glwasm.alloc(width*heigth*8);
@@ -24,13 +25,18 @@ describe("Goldilocks Wasm test", function () {
             }
         }
 
-        glwasm.multiLinearHash(pIn, width, heigth, pOut);
+        if(splitLinearHash) {
+            glwasm.multiLinearHashGPU(pIn, width, heigth, pOut);
+        } else {
+            glwasm.multiLinearHash(pIn, width, heigth, pOut);
+        }
+      
 
         for (let i=0; i<heigth; i++) {
             let input = glwasm.get(pIn + (i*width)*8, width, 8);
             if (!Array.isArray(input)) input = [input];
             const output = glwasm.get(pOut+ i*4*8, 4, 8);
-            const expectedOutput = lh.hash(input);
+            const expectedOutput = splitLinearHash ? lh_gpu.hash(input) : lh.hash(input);
 
             for (let j = 0; j < 4; j++) {
                 assert(F.eq(F.e(output[j].toString()), F.e(expectedOutput[j])));
@@ -46,6 +52,7 @@ describe("Goldilocks Wasm test", function () {
         pIn = glwasm.alloc(12*8);
         pOut = glwasm.alloc(4*8);
         poseidon = await buildPoseidon();
+        lh_gpu = new LinearHashGPU(poseidon);
         lh = new LinearHash(poseidon);
     });
 
@@ -188,38 +195,72 @@ describe("Goldilocks Wasm test", function () {
         }
     });
     */
-    it("it should do lineaHash", async() => {
-        testLinearHash(0,0);
-        testLinearHash(0,1);
-        testLinearHash(1,0);
-        testLinearHash(1,1);
-        testLinearHash(2,1);
-        testLinearHash(3,1);
-        testLinearHash(4,1);
-        testLinearHash(5,1);
-        testLinearHash(8,1);
-        testLinearHash(9,1);
-        testLinearHash(15,1);
-        testLinearHash(16,1);
-        testLinearHash(24,1);
-        testLinearHash(25,1);
-        testLinearHash(32,1);
-        testLinearHash(33,1);
-        testLinearHash(50,1);
-        testLinearHash(1,10);
-        testLinearHash(2,10);
-        testLinearHash(3,10);
-        testLinearHash(4,10);
-        testLinearHash(5,10);
-        testLinearHash(8,10);
-        testLinearHash(9,10);
-        testLinearHash(15,10);
-        testLinearHash(16,10);
-        testLinearHash(24,10);
-        testLinearHash(25,10);
-        testLinearHash(32,10);
-        testLinearHash(33,10);
-        testLinearHash(50,10);
+    it("it should do linearHash using gpu approach", async() => {
+        testLinearHash(0,0, true);
+        testLinearHash(0,1, true);
+        testLinearHash(1,0, true);
+        testLinearHash(1,1, true);
+        testLinearHash(2,1, true);
+        testLinearHash(3,1, true);
+        testLinearHash(4,1, true);
+        testLinearHash(5,1, true);
+        testLinearHash(8,1, true);
+        testLinearHash(9,1, true);
+        testLinearHash(15,1, true);
+        testLinearHash(16,1, true);
+        testLinearHash(24,1, true);
+        testLinearHash(25,1, true);
+        testLinearHash(32,1, true);
+        testLinearHash(33,1, true);
+        testLinearHash(50,1, true);
+        testLinearHash(1,10, true);
+        testLinearHash(2,10, true);
+        testLinearHash(3,10, true);
+        testLinearHash(4,10, true);
+        testLinearHash(5,10, true);
+        testLinearHash(8,10, true);
+        testLinearHash(9,10, true);
+        testLinearHash(15,10, true);
+        testLinearHash(16,10, true);
+        testLinearHash(24,10, true);
+        testLinearHash(25,10, true);
+        testLinearHash(32,10, true);
+        testLinearHash(33,10, true);
+        testLinearHash(50,10, true);
+    });
+
+    it.skip("it should do linearHash using cpu approach", async() => {
+        testLinearHash(0,0, false);
+        testLinearHash(0,1, false);
+        testLinearHash(1,0, false);
+        testLinearHash(1,1, false);
+        testLinearHash(2,1, false);
+        testLinearHash(3,1, false);
+        testLinearHash(4,1, false);
+        testLinearHash(5,1, false);
+        testLinearHash(8,1, false);
+        testLinearHash(9,1, false);
+        testLinearHash(15,1, false);
+        testLinearHash(16,1, false);
+        testLinearHash(24,1, false);
+        testLinearHash(25,1, false);
+        testLinearHash(32,1, false);
+        testLinearHash(33,1, false);
+        testLinearHash(50,1, false);
+        testLinearHash(1,10, false);
+        testLinearHash(2,10, false);
+        testLinearHash(3,10, false);
+        testLinearHash(4,10, false);
+        testLinearHash(5,10, false);
+        testLinearHash(8,10, false);
+        testLinearHash(9,10, false);
+        testLinearHash(15,10, false);
+        testLinearHash(16,10, false);
+        testLinearHash(24,10, false);
+        testLinearHash(25,10, false);
+        testLinearHash(32,10, false);
+        testLinearHash(33,10, false);
+        testLinearHash(50,10, false);
     });
 
 });

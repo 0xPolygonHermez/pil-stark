@@ -2,6 +2,7 @@ pragma circom 2.1.0;
 
 include "gl.circom";
 include "bitify.circom";
+include "lessthangl.circom";
 
 
 function roots(i) {
@@ -88,7 +89,7 @@ template FFT(nBits, inv) {
     var N = 1<<nBits;
 
     signal input in[N][3];
-    signal output out[N][3];
+    signal output {maxNum} out[N][3];
 
     signal k[N][3];
 
@@ -115,22 +116,22 @@ template FFT(nBits, inv) {
         }
     }
 
+    signal outs[N][3];
+
     component n2bK[N][3];
     component n2bO[N][3];
     for (var i=0; i<N; i++) {
         for (var e=0; e<3; e++) {
             k[i][e] <-- sum[i][e] \ p;
-            out[i][e] <-- sum[i][e] % p;
+            outs[i][e] <-- sum[i][e] % p;
+
+            out[i][e] <== LessThan64Bits()(outs[i][e]);
 
             k[i][e]*p + out[i][e] === sum[i][e];
 
             n2bK[i][e] = Num2Bits(64+nBits+1);
             n2bK[i][e].in <== k[i][e];
             _ <== n2bK[i][e].out;
-
-            n2bO[i][e] = Num2Bits(64);
-            n2bO[i][e].in <== out[i][e];
-	        _ <== n2bO[i][e].out;
         }
     }
 }

@@ -1,0 +1,380 @@
+constant %N = 2**<%- nBits %>;
+
+// Global state machine
+// It is used to store various polynomials representing small lookup tables 
+namespace Global(%N);
+    pol constant L1;
+<% for (let i=12; i<nPublics; i+=12) { -%>
+    pol constant L<%- Math.floor(i/12) +1 %>;
+<% } -%>
+
+namespace Compressor(%N);
+    pol constant S[<%- committedPols %>];
+    pol constant C[18];
+    pol constant POSEIDONM;
+    pol constant POSEIDONCUSTFIRST;
+    pol constant POSEIDONP;
+    pol constant POSEIDONFIRST;
+    pol constant PARTIALROUND;
+    pol constant POSEIDONAFTERPART;
+    pol constant GATE;
+    pol constant GATE2;
+    pol constant CMUL;
+    pol constant EVPOL4;
+    pol constant FFT4;
+    pol constant TREESELECTOR4;
+    pol commit a[<%- committedPols %>];
+
+<% for (let i=0; i<nPublics; i++) { -%>
+    public pub<%- i%> = a[<%- i%12 %>](<%- Math.floor(i/12) %>);
+<% } -%>
+<% for (let i=0; i<nPublics; i++) { -%>
+    Global.L<%- Math.floor(i/12)+1 %> * (a[<%- i%12 %>] - :pub<%- i %>) = 0;
+<% } -%>
+
+    // Normal plonk gates
+
+    // C[0] -> Qm1
+    // C[1] -> Ql1
+    // C[2] -> Qr1
+    // C[3] -> Qo1
+    // C[4] -> Qc1
+    
+    // C[6] -> Qm2
+    // C[7] -> Ql2
+    // C[8] -> Qr2
+    // C[9] -> Qo2
+    // C[10]-> Qc2
+
+    // C[12] -> Qm3
+    // C[13] -> Ql3
+    // C[14] -> Qr3
+    // C[15] -> Qo3
+    // C[16] -> Qc3
+
+
+    pol a01 = a[0]*a[1];
+    pol g012 = C[0]*a01 + C[1]*a[0] + C[2]*a[1] + C[3]*a[2] + C[4];
+    g012*GATE = 0;
+
+    pol a34 = a[3]*a[4];
+    pol g345 = C[0]*a34 + C[1]*a[3] + C[2]*a[4] + C[3]*a[5] + C[4];
+    g345*GATE = 0;
+
+    pol a67 = a[6]*a[7];
+    pol g678 = C[6]*a67 + C[7]*a[6] + C[8]*a[7] + C[9]*a[8] + C[10];
+    g678*GATE = 0;
+
+    pol a910 = a[9]*a[10];
+    pol g91011 = C[6]*a910 + C[7]*a[9] + C[8]*a[10] + C[9]*a[11] + C[10];
+    g91011*GATE = 0;
+
+    pol a1213 = a[12]*a[13];
+    pol g121314 = C[12]*a1213 + C[13]*a[12] + C[14]*a[13] + C[15]*a[14] + C[16];
+    g121314*GATE2 = 0;
+
+    pol a1516 = a[15]*a[16];
+    pol g151617 = C[12]*a1516 + C[13]*a[15] + C[14]*a[16] + C[15]*a[17] + C[16];
+    g151617*GATE2 = 0;
+
+
+    // POSEIDON GATE - Check that a GL Poseidon round implemented with Neptune optimization is valid
+
+    // Each Poseidon hash is verified in 6 rows. Inputs -> Round 2 -> Round 4 -> Round 26 -> Round 28 -> Output. 
+    // At each row we verify two full rounds, and all the partial rounds are verified in a single step
+
+    // There are two diferent Poseidon custom gates: Poseidon and CustPoseidon. The first one is a regular hash of
+    // three inputs, while the second one hashes two inputs (the third one is zero). However, in CustPoseidon custom 
+    // gate the two values to hash (value and sibling) are sent unordered and the key specifying which element is the
+    // first one and which is the second one is also provided. 
+    
+    // Order the each of the GL Poseidon inputs according to the key, which is stored in a[8]
+    
+    pol custPoseidonInput0 = a[8] * (a[0] - a[4]) + a[4];
+    pol custPoseidonInput1 = a[8] * (a[1] - a[5]) + a[5];
+    pol custPoseidonInput2 = a[8] * (a[2] - a[6]) + a[6];
+    pol custPoseidonInput3 = a[8] * (a[3] - a[7]) + a[7];
+    pol custPoseidonInput4 = a[8] * (a[4] - a[0]) + a[0];
+    pol custPoseidonInput5 = a[8] * (a[5] - a[1]) + a[1];
+    pol custPoseidonInput6 = a[8] * (a[6] - a[2]) + a[2];
+    pol custPoseidonInput7 = a[8] * (a[7] - a[3]) + a[3];
+
+    pol checkBinary = a[8] * (a[8] - 1);
+    POSEIDONCUSTFIRST * checkBinary = 0;
+
+<% for(let r = 0; r < 24; ++r) { -%>
+<% if(r === 12) { -%>
+<% for(let i = 0; i < 12; ++i) { -%>
+<% let sumArray = []; -%>
+<% for(let j = 0; j < 12; ++j) { sumArray.push(`${M[j][i]} * a${j}_R`); } -%>
+    pol poseidonM<%- i %> = <%- sumArray.join(" + ") -%>;
+<% } -%>
+<% } -%>
+<%  if(r < 12) { -%>
+    // Calculate the 7th power of the <%- r %>th element
+<%  if(r < 8) { -%>
+    pol inp<%- r %> = POSEIDONCUSTFIRST * (custPoseidonInput<%- r %> - a[<%- r %>]) + a[<%- r %>] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * <%- C[r] %>;
+<%  } else { -%>
+    pol inp<%- r %> = POSEIDONCUSTFIRST * (-a[<%- r %>]) + a[<%- r %>] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * <%- C[r] %>;
+<%  } -%>
+<%  if (r > 0) { -%>
+    pol inputP<%- r %> = PARTIALROUND * (s0_R<%- r - 1 %> - inp<%- r %>) + inp<%- r %>;
+    pol constC<%- r %> = PARTIALROUND * (<%- C[60 + r] %> - C[<%- r %>]) + C[<%- r %>];
+    pol a<%- r %>_2 = inputP<%- r %> * inputP<%- r %>;
+    pol a<%- r %>_4 = a<%- r %>_2 * a<%- r %>_2;
+    pol a<%- r %>_6 = a<%- r %>_4 * a<%- r %>_2;
+    pol a<%- r %>_R = a<%- r %>_6 * inputP<%- r %> + constC<%- r %>;
+<%  } else { -%>
+    // Calculate the 7th power of the <%- r %>th element
+    pol constC<%- r %> = PARTIALROUND * (<%- C[60 + r] %> - C[<%- r %>]) + C[<%- r %>];
+    pol a<%- r %>_2 = inp<%- r %> * inp<%- r %>;
+    pol a<%- r %>_4 = a<%- r %>_2 * a<%- r %>_2;
+    pol a<%- r %>_6 = a<%- r %>_4 * a<%- r %>_2;
+    pol a<%- r %>_R = a<%- r %>_6 * inp<%- r %> + constC<%- r %>;
+<%  } -%>
+<% } else { -%>
+<%  if (r < 22) { -%>
+
+    // Calculate the 7th power of the <%- r %>th element
+    pol inputP<%- r %> = PARTIALROUND * (s0_R<%- r - 1 %> - poseidonM<%- r - 12 %>) + poseidonM<%- r - 12 %>;
+    pol constC_<%- r %> = PARTIALROUND * <%- C[60 + r] %> + (POSEIDONFIRST + POSEIDONCUSTFIRST) * <%- C[12 + r] %> + POSEIDONP * <%- C[36 + r] %> + POSEIDONAFTERPART * <%- C[82 + r] %>;
+    pol a<%- r %>_2 = inputP<%- r %> * inputP<%- r %>;
+    pol a<%- r %>_4 = a<%- r %>_2 * a<%- r %>_2;
+    pol a<%- r %>_6 = a<%- r %>_4 * a<%- r %>_2;
+    pol a<%- r %>_R = a<%- r %>_6 * inputP<%- r %> + constC_<%- r %>;
+<%  } else { -%>
+
+    pol constC_<%- r %> = POSEIDONAFTERPART * <%- C[82 + r] %> + POSEIDONP * <%- C[36 + r] %> + (POSEIDONFIRST + POSEIDONCUSTFIRST) * <%- C[12 + r] %>;
+    pol a<%- r %>_2 = poseidonM<%- r - 12 %> * poseidonM<%- r - 12 %>;
+    pol a<%- r %>_4 = a<%- r %>_2 * a<%- r %>_2;
+    pol a<%- r %>_6 = a<%- r %>_4 * a<%- r %>_2;
+    pol a<%- r %>_R = a<%- r %>_6 * poseidonM<%- r - 12 %> + constC_<%- r %>;
+<%  } -%>
+
+<% } -%>
+<% if(r < 22) { -%>
+<% let sumArray = []; -%>
+<%  for(let j = 0; j < 12; ++j) { -%>
+<%      if(r == 0) { -%>
+<%          if(j == 0) { -%>
+<%              sumArray.push(`${SS[23*r + j]} * a${r}_R`); -%>
+<%          } else { -%>
+<%              sumArray.push(`${SS[23*r + j]} * a[${j}]`); -%>
+<%          } -%>
+<%      } else { -%>
+<%          if(j == 0) { -%>
+<%              sumArray.push(`${SS[23*r + j]} * a${r}_R`); -%>
+<%          } else { -%>
+<%              sumArray.push(`${SS[23*r + j]} * s${j}_R${r - 1}`); -%>
+<%          } -%>
+<%      }  -%>
+<%  } -%>
+
+    pol s0_R<%- r  %> = <%- sumArray.join(" + ") %>;
+<%  for(let j = 1; j < 12; ++j) { -%>
+    pol s<%- j %>_R<%- r %> = <%- r === 0 ? `a[${j}]` : `s${j}_R${r - 1}` %> + a<%- r %>_R * <%- SS[23 * r + 11 + j] %>;
+<%  } -%>
+
+<%  } -%>
+<%  } -%>
+        
+
+<% for(let i = 0; i < 12; ++i) { -%>
+<% let sumArray = []; -%>
+<% for(let j = 0; j < 12; ++j) { sumArray.push(`${P[j][i]} * a${j + 12}_R`); } -%>
+    pol poseidonP<%- i + 1 %> = (a[<%- i %>]' - (<%- sumArray.join(" + ") -%>));
+<% } -%>
+    
+<% for(let i = 0; i < 12; ++i) { -%>
+    POSEIDONP * poseidonP<%- i + 1 %> = 0;
+<% } -%>
+     
+<% for(let i = 0; i < 12; ++i) { -%>
+<% let sumArray = []; -%>
+<% for(let j = 0; j < 12; ++j) { sumArray.push(`${M[j][i]} * a${j + 12}_R`); } -%>
+    pol poseidonM<%- i + 12 + 1 %> = (a[<%- i %>]' - (<%- sumArray.join(" + ") -%>));
+<% } -%>
+
+<% for(let i = 0; i < 12; ++i) { -%>
+    POSEIDONM * poseidonM<%- i + 12 + 1 %> = 0;
+<% } -%>
+
+<% for(let i = 0; i < 12; i++)  { -%>
+    PARTIALROUND * (a[<%- i %>]' - s<%- i %>_R21) = 0;
+<% } -%>
+
+    // CMUL GATE - Check that a * b in Fp³ using (X³ - X - 1) as a generator is performed correctly
+    // In this particular case, 
+    // a = [a[0], a[1], a[2]]
+    // b = [a[3], a[4], a[5]]
+    // and this must be equal to [ a[6], a[7], a[8] ]
+    
+    // Since the modulo is known (X³ - X - 1) we can calculate the coefficients in general form by calculating 
+    // (a0 + a1*x + a2*x²)*(b0 + b1*x + b2*x²) and then using long division to get the residue when dividing by the modulo
+    // We get the following result: (a0*b0 + a1*b2 + a2*b1) + (a0*b1 + a1*b0 + a1*b2 + a2*b1 + a2*b2)x + (a0*b2 + a2*b2 + a2*b0 + a1*b1)x²
+    // This result can be expressed using this intermediate polyonials A,B,C,D,E,F that have less than degree 2
+    pol cA1 = (a[0] + a[1])  * (a[3] + a[4]);
+    pol cB1 = (a[0] + a[2])  * (a[3] + a[5]);
+    pol cC1 = (a[1] + a[2])  * (a[4] + a[5]);
+    pol cD1 = a[0]*a[3];
+    pol cE1 = a[1]*a[4];
+    pol cF1 = a[2]*a[5];
+
+    // Whenever CMUL = 1, check that the CMul result matches with the values stored in a[6], a[7] and a[8] respectively
+    CMUL * (a[6] - (cC1 + cD1 - cE1 - cF1)) = 0;
+    CMUL * (a[7] - (cA1 + cC1 - 2*cE1 - cD1)) = 0;
+    CMUL * (a[8] - (cB1 - cD1 + cE1)) = 0;
+
+    // CMUL GATE - Check that a * b in Fp³ using (X³ - X - 1) as a generator is performed correctly
+    // In this particular case, 
+    // a = [a[9], a[10], a[11]]
+    // b = [a[12], a[13], a[14]]
+    // and this must be equal to [ a[15], a[16], a[17] ]
+
+    pol cA2 = (a[9] + a[10])  * (a[12] + a[13]);
+    pol cB2 = (a[9] + a[11])  * (a[12] + a[14]);
+    pol cC2 = (a[10] + a[11])  * (a[13] + a[14]);
+    pol cD2 = a[9]*a[12];
+    pol cE2 = a[10]*a[13];
+    pol cF2 = a[11]*a[14];
+
+    // Whenever CMUL = 1, check that the CMul result matches with the values stored in a[15], a[16] and a[17] respectively
+    CMUL * (a[15] - (cC2 + cD2 - cE2 - cF2)) = 0;
+    CMUL * (a[16] - (cA2 + cC2 - 2*cE2 - cD2)) = 0;
+    CMUL * (a[17] - (cB2 - cD2 + cE2)) = 0;
+
+    // FFT4
+
+    pol g0  = C[0]*a[0] + C[1]*a[3] + C[2]*a[6] + C[3]*a[9]  + C[6]*a[0] + C[7]*a[3];
+    pol g3  = C[0]*a[0] - C[1]*a[3] + C[4]*a[6] - C[5]*a[9]  + C[6]*a[0] - C[7]*a[3];
+    pol g6  = C[0]*a[0] + C[1]*a[3] - C[2]*a[6] - C[3]*a[9]  + C[6]*a[6] + C[8]*a[9];
+    pol g9  = C[0]*a[0] - C[1]*a[3] - C[4]*a[6] + C[5]*a[9]  + C[6]*a[6] - C[8]*a[9];
+
+    pol g1  = C[0]*a[1] + C[1]*a[4] + C[2]*a[7] + C[3]*a[10] + C[6]*a[1] + C[7]*a[4];
+    pol g4  = C[0]*a[1] - C[1]*a[4] + C[4]*a[7] - C[5]*a[10] + C[6]*a[1] - C[7]*a[4];
+    pol g7  = C[0]*a[1] + C[1]*a[4] - C[2]*a[7] - C[3]*a[10] + C[6]*a[7] + C[8]*a[10];
+    pol g10 = C[0]*a[1] - C[1]*a[4] - C[4]*a[7] + C[5]*a[10] + C[6]*a[7] - C[8]*a[10];
+
+    pol g2  = C[0]*a[2] + C[1]*a[5] + C[2]*a[8] + C[3]*a[11] + C[6]*a[2] + C[7]*a[5];
+    pol g5  = C[0]*a[2] - C[1]*a[5] + C[4]*a[8] - C[5]*a[11] + C[6]*a[2] - C[7]*a[5];
+    pol g8  = C[0]*a[2] + C[1]*a[5] - C[2]*a[8] - C[3]*a[11] + C[6]*a[8] + C[8]*a[11];
+    pol g11 = C[0]*a[2] - C[1]*a[5] - C[4]*a[8] + C[5]*a[11] + C[6]*a[8] - C[8]*a[11];
+
+    FFT4 * (a[0]' - g0) = 0;
+    FFT4 * (a[1]' - g1) = 0;
+    FFT4 * (a[2]' - g2) = 0;
+    FFT4 * (a[3]' - g3) = 0;
+    FFT4 * (a[4]' - g4) = 0;
+    FFT4 * (a[5]' - g5) = 0;
+    FFT4 * (a[6]' - g6) = 0;
+    FFT4 * (a[7]' - g7) = 0;
+    FFT4 * (a[8]' - g8) = 0;
+    FFT4 * (a[9]' - g9) = 0;
+    FFT4 * (a[10]' - g10) = 0;
+    FFT4 * (a[11]' - g11) = 0;
+
+    // EVPOL4 - Check that the polynomial evaluation is valid
+    // Evaluate p(x) = d0*x⁴ + d1*x³ + d2*x²+ d3*x + d4 at point z = a[3]' + a[4]'x + a[5]'x² where
+    // d0 = a[0]' + a[1]' * x + a[2]' * x²
+    // d1 = a[9] + a[10] * x + a[11] * x²
+    // d2 = a[6] + a[7] * x + a[8] * x²
+    // d3 = a[3] + a[4] * x + a[5] * x²
+    // d4 = a[0] + a[1] * x + a[2] * x²
+    // The result must be equal to a[6]' + a[7]' * x + a[8]' * x²
+    // The evaluation is performed using the Horner's rule, which means that p(x) is rewritten as
+    // p(x) = (d0 * x + d1)*x + d2)*x + d3)*x + d4
+    // Note: All operations are performed in Fp³ and so multiplications are performed using CMulAdd
+
+<% function CMulAdd(s, a0, a1, a2, b0, b1, b2, c0, c1, c2) {
+    const code = [];
+    code.push(`    pol A${s} = (${a0} + ${a1})  * (${b0} + ${b1});`);
+    code.push(`    pol B${s} = (${a0} + ${a2})  * (${b0} + ${b2});`);
+    code.push(`    pol C${s} = (${a1} + ${a2})  * (${b1} + ${b2});`);
+    code.push(`    pol D${s} = ${a0} * ${b0};`);
+    code.push(`    pol E${s} = ${a1} * ${b1};`);
+    code.push(`    pol F${s} = ${a2} * ${b2};`);
+    code.push(`    pol acc${s}_0 = C${s}+ D${s} - E${s} - F${s} + ${c0};`);
+    code.push(`    pol acc${s}_1 = A${s}+ C${s}- 2*E${s} - D${s} + ${c1};`);
+    code.push(`    pol acc${s}_2 = B${s}- D${s} + E${s} + ${c2};`);
+    code.push(`\n`);
+    return code.join("\n");
+} -%>
+
+    // Calculate acc = d0 * x + d1 
+<%- CMulAdd("1", "a[0]'", "a[1]'", "a[2]'", "a[3]'", "a[4]'", "a[5]'", "a[9]", "a[10]", "a[11]") -%>
+    // Calculate acc2 = acc * x + d2 
+<%- CMulAdd("2", "acc1_0", "acc1_1", "acc1_2", "a[3]'", "a[4]'", "a[5]'", "a[6]", "a[7]", "a[8]") -%>
+    // Calculate acc3 = acc2 * x + d3 
+<%- CMulAdd("3", "acc2_0", "acc2_1", "acc2_2", "a[3]'", "a[4]'", "a[5]'", "a[3]", "a[4]", "a[5]") -%>
+    // Calculate p = acc4 * x + d4 
+<%- CMulAdd("4", "acc3_0", "acc3_1", "acc3_2", "a[3]'", "a[4]'", "a[5]'", "a[0]", "a[1]", "a[2]") -%>
+
+    // Whenever EVPOL4 = 1, check that the evaluation result matches with the values stored in a[6]', a[7]' and a[8]' respectively
+    EVPOL4 * (a[6]' - acc4_0) = 0;
+    EVPOL4 * (a[7]' - acc4_1) = 0;
+    EVPOL4 * (a[8]' - acc4_2) = 0;
+
+    // TREESELECTOR4 GATE - Check that given 4 values and a key, checks that the output is correct
+    // The tree is created as follows: if key = 0, even values are pushed up the tree, if the key = 1 the odd ones are pushed.
+    // Therefore, we need to check that 
+    // key == [0,0] -> [value1, value2, value3, value4] -> [value1, value3] -> [value1]
+    // key == [1,0] -> [value1, value2, value3, value4] -> [value2, value4] -> [value2]
+    // key == [0,1] -> [value1, value2, value3, value4] -> [value1, value3] -> [value3]
+    // key == [1,1] -> [value1, value2, value3, value4] -> [value2, value4] -> [value4]
+
+    // The values are stored from a[0], a[1], a[2] // a[3], a[4], a[5] // a[6], a[7], a[8] // a[9], a[10], a[11] 
+    // The key is stored in [a[12], a[13]]
+    // The output is stored in [a[14], a[15], a[16]]
+
+    pol checkBinaryKey1 = a[12]*(1 - a[12]);
+    pol checkBinaryKey2 = a[13]*(1 - a[13]);
+    TREESELECTOR4 * checkBinaryKey1 = 0;
+    TREESELECTOR4 * checkBinaryKey2 = 0;
+
+    // keys1 will only be 1 if both a[12], a[13] are zero
+    pol keys1 = (1 - a[12])*(1 - a[13]);
+    pol treeSelect1_1 = keys1 * (a[0] - a[14]);
+    pol treeSelect1_2 = keys1 * (a[1] - a[15]);
+    pol treeSelect1_3 = keys1 * (a[2] - a[16]);
+    TREESELECTOR4 * treeSelect1_1 = 0;
+    TREESELECTOR4 * treeSelect1_2 = 0;
+    TREESELECTOR4 * treeSelect1_3 = 0;
+
+    // keys2 will only be 1 if a[12] equals 1 and a[13] equals 0
+    pol keys2 = (a[12])*(1 - a[13]);
+    pol treeSelect2_1 = keys2 * (a[3] - a[14]);
+    pol treeSelect2_2 = keys2 * (a[4] - a[15]);
+    pol treeSelect2_3 = keys2 * (a[5] - a[16]);
+    TREESELECTOR4 * treeSelect2_1 = 0;
+    TREESELECTOR4 * treeSelect2_2 = 0;
+    TREESELECTOR4 * treeSelect2_3 = 0;
+
+    // keys3 will only be 1 if a[12] equals 0 and a[13] equals 1
+    pol keys3 = (1 - a[12])*(a[13]);
+    pol treeSelect3_1 = keys3 * (a[6] - a[14]);
+    pol treeSelect3_2 = keys3 * (a[7] - a[15]);
+    pol treeSelect3_3 = keys3 * (a[8] - a[16]);
+    TREESELECTOR4 * treeSelect3_1 = 0;
+    TREESELECTOR4 * treeSelect3_2 = 0;
+    TREESELECTOR4 * treeSelect3_3 = 0;
+
+    // keys4 will only be 1 if a[12] and a[13] equals 1 
+    pol keys4 = (a[12])*(a[13]);
+    pol treeSelect4_1 = keys4 * (a[9] - a[14]);
+    pol treeSelect4_2 = keys4 * (a[10] - a[15]);
+    pol treeSelect4_3 = keys4 * (a[11] - a[16]);
+    TREESELECTOR4 * treeSelect4_1 = 0;
+    TREESELECTOR4 * treeSelect4_2 = 0;
+    TREESELECTOR4 * treeSelect4_3 = 0;
+
+
+    // Check connection equations of Plonk
+<% 
+    let a = [];
+    let S = [];
+    for(let i = 0; i < committedPols; ++i) {
+        a.push(`a[${i}]`);
+        S.push(`S[${i}]`);
+    }
+-%>
+    { <%- a.join(',') %> } connect { <%- S.join(',')  %> }

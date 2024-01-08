@@ -2,37 +2,27 @@ pragma circom 2.1.0;
 
 include "gl.circom";
 
+// Given a polynomial p(X) of degree lower than n over the GL³ field, and an evaluation point x from GL³,
+// it computes p(x) using Horner's method: 
+//                          p(x) = p₀ + x(p₁ + x(p₂ + ... + x(pₙ₋₁))).
 template EvalPol(n) {
-    signal input pol[n][3];
-    signal input x[3];
-    signal output out[3];
+    signal input {maxNum} pol[n][3];
+    signal input {maxNum} x[3];
+    signal output {maxNum} out[3];
 
-    component cmul[n-1];
-
+    signal {maxNum} cmul[n-1][3];
+    cmul.maxNum = 0xFFFFFFFFFFFFFFFF;
+    
     for (var i=1; i<n; i++) {
-        cmul[i-1] = GLCMulAdd();
         if (i==1) {
-            cmul[i-1].ina[0] <== pol[n-1][0];
-            cmul[i-1].ina[1] <== pol[n-1][1];
-            cmul[i-1].ina[2] <== pol[n-1][2];
+            cmul[i-1] <== GLCMulAdd()(pol[n - 1], x, pol[n - 2]);
         } else {
-            cmul[i-1].ina[0] <== cmul[i-2].out[0];
-            cmul[i-1].ina[1] <== cmul[i-2].out[1];
-            cmul[i-1].ina[2] <== cmul[i-2].out[2];
+            cmul[i-1] <== GLCMulAdd()(cmul[i - 2], x, pol[n - i - 1]);
         }
-        cmul[i-1].inb[0] <== x[0];
-        cmul[i-1].inb[1] <== x[1];
-        cmul[i-1].inb[2] <== x[2];
-
-        cmul[i-1].inc[0] <== pol[n-i-1][0];
-        cmul[i-1].inc[1] <== pol[n-i-1][1];
-        cmul[i-1].inc[2] <== pol[n-i-1][2];
     }
 
     if (n>1) {
-        out[0] <== cmul[n-2].out[0];
-        out[1] <== cmul[n-2].out[1];
-        out[2] <== cmul[n-2].out[2];
+        out <== cmul[n-2];
     } else {
         out <== pol[n-1];
 
