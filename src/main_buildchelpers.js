@@ -39,10 +39,15 @@ async function run() {
             if (!cpart.includes("parser")) {
                 code = `#include "goldilocks_cubic_extension.hpp"\n#include "zhInv.hpp"\n#include "starks.hpp"\n#include "constant_pols_starks.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
                 ext2 = ext;
-            } else {
+            } else if(cpart.includes("parser_hpp")) {
                 code = cCode[cpart];
-                cpart = cpart.replace(/_/g, ".");
+                cpart = cpart.replace("parser_hpp", "parser").replace(/_/g, ".");
                 ext2 = ".hpp";
+            } else if(cpart.includes("parser_cpp")) {
+                let cpartName = cpart.replace("parser_cpp", "parser").replace(/_/g, ".");
+                code = `#include "goldilocks_cubic_extension.hpp"\n#include "zhInv.hpp"\n#include "starks.hpp"\n#include "constant_pols_starks.hpp"\n#include "${classInclude}"\n#include "${leftFilename.substring(leftFilename.lastIndexOf("/") + 1)}.${cpartName}.hpp" \n#include <immintrin.h>\n\n` + cCode[cpart];
+                cpart = cpart.replace("parser_cpp", "parser").replace(/_/g, ".");
+                ext2 = ".cpp";
             }
             await fs.promises.writeFile(leftFilename + '.' + cpart + ext2, code, "utf8");
         }
