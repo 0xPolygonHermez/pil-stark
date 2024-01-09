@@ -1,6 +1,5 @@
 const compileCode_52ns = require("./compileCode_52ns.js")
 const compileCode_parser = require("./compileCode_parser_new.js")
-const compileCode_42ns = require("./compileCode_42ns.js")
 
 module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
@@ -95,16 +94,13 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        // const step42nsParser = compileCode_parser(starkInfo, config, "step42ns_first", starkInfo.step42ns.first, "2ns");
-        // code.push(step42nsParser.parserHPPCode);
-        // result.step42ns_parser_hpp = code.join("\n\n") + "\n";
-        // code.length = 0;
-        // if(step42nsParser.parserCPPCode) {
-        //     result.step42ns_parser_cpp = step42nsParser.parserCPPCode;
-        // }
-        code.push(compileCode_42ns(starkInfo, "step42ns_first", starkInfo.step42ns.first, "2ns"));
+        const step42nsParser = compileCode_parser(starkInfo, config, "step42ns_first", starkInfo.step42ns.first, "2ns");
+        code.push(step42nsParser.parserHPPCode);
         result.step42ns_parser_hpp = code.join("\n\n") + "\n";
         code.length = 0;
+        if(step42nsParser.parserCPPCode) {
+            result.step42ns_parser_cpp = step42nsParser.parserCPPCode;
+        }
     }
     code.push(compileCode("step42ns_first", starkInfo.step42ns.first, "2ns"));
     code.push(compileCode("step42ns_i", starkInfo.step42ns.first, "2ns"));
