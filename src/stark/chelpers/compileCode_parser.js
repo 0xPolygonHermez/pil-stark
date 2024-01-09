@@ -1901,7 +1901,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         ].join("\n");
     }
 
-    return res;
+    return {parserHPPCode: res};
 
 
     function getRef(r) {

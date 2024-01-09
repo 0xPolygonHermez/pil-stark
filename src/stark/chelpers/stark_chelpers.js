@@ -1,5 +1,5 @@
 const compileCode_52ns = require("./compileCode_52ns.js")
-const compileCode_parser = require("./compileCode_parser.js")
+const compileCode_parser = require("./compileCode_parser_new.js")
 const compileCode_42ns = require("./compileCode_42ns.js")
 
 module.exports = async function buildCHelpers(starkInfo, config = {}) {
@@ -38,9 +38,13 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(starkInfo, config, "step2prev_first", starkInfo.step2prev.first, "n"));
-        result.step2prev_parser = code.join("\n\n") + "\n";
+        const step2PrevParser = compileCode_parser(starkInfo, config, "step2prev_first", starkInfo.step2prev.first, "n")
+        code.push(step2PrevParser.parserHPPCode);
+        result.step2prev_parser_hpp = code.join("\n\n") + "\n";
         code.length = 0;
+        if(step2PrevParser.parserCPPCode) {
+            result.step2prev_parser_cpp = step2PrevParser.parserCPPCode;
+        }
     }
 
     code.push(compileCode("step2prev_first", starkInfo.step2prev.first, "n"));
@@ -53,9 +57,13 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(starkInfo, config, "step3prev_first", starkInfo.step3prev.first, "n"));
-        result.step3prev_parser = code.join("\n\n") + "\n";
+        const step3PrevParser = compileCode_parser(starkInfo, config, "step3prev_first", starkInfo.step3prev.first, "n")
+        code.push(step3PrevParser.parserHPPCode);
+        result.step3prev_parser_hpp = code.join("\n\n") + "\n";
         code.length = 0;
+        if(step3PrevParser.parserCPPCode) {
+            result.step3prev_parser_cpp = step3PrevParser.parserCPPCode;
+        }
     }
 
     code.push(compileCode("step3prev_first", starkInfo.step3prev.first, "n"));
@@ -68,9 +76,13 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(starkInfo, config, "step3_first", starkInfo.step3.first, "n"));
-        result.step3_parser = code.join("\n\n") + "\n";
+        const step3Parser = compileCode_parser(starkInfo, config, "step3_first", starkInfo.step3.first, "n");
+        code.push(step3Parser.parserHPPCode);
+        result.step3_parser_hpp = code.join("\n\n") + "\n";
         code.length = 0;
+        if(step3Parser.parserCPPCode) {
+            result.step3_parser_cpp = step3Parser.parserCPPCode;
+        }
     }
 
     code.push(compileCode("step3_first", starkInfo.step3.first, "n"));
@@ -83,8 +95,15 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
+        // const step42nsParser = compileCode_parser(starkInfo, config, "step42ns_first", starkInfo.step42ns.first, "2ns");
+        // code.push(step42nsParser.parserHPPCode);
+        // result.step42ns_parser_hpp = code.join("\n\n") + "\n";
+        // code.length = 0;
+        // if(step42nsParser.parserCPPCode) {
+        //     result.step42ns_parser_cpp = step42nsParser.parserCPPCode;
+        // }
         code.push(compileCode_42ns(starkInfo, "step42ns_first", starkInfo.step42ns.first, "2ns"));
-        result.step42ns_parser = code.join("\n\n") + "\n";
+        result.step42ns_parser_hpp = code.join("\n\n") + "\n";
         code.length = 0;
     }
     code.push(compileCode("step42ns_first", starkInfo.step42ns.first, "2ns"));
@@ -98,7 +117,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
     if (optcodes && multipleCodeFiles) {
         code.push(compileCode_52ns(starkInfo, "step52ns_first", starkInfo.step52ns.first, "2ns"));
-        result.step52ns_parser = code.join("\n\n") + "\n";
+        result.step52ns_parser_hpp = code.join("\n\n") + "\n";
         code.length = 0;
     }
 
