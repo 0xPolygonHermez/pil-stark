@@ -1,4 +1,5 @@
 const { assert } = require("chai");
+const { findPatterns } = require("./helpers");
 
 var dbg = 0;
 
@@ -111,17 +112,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     if(argsString !== "{") argsString = argsString.substring(0, argsString.lastIndexOf(","));
     argsString += "};"
 
-    const parserHPP = [
-        `#define NOPS_ ${cont_ops}`,
-        `#define NARGS_ ${cont_args}`,
-        `#define NTEMP1_ ${count1d}`,
-        `#define NTEMP3_ ${count3d}`,
-        "\n",
-        `uint64_t op${step}[NOPS_] = ${opsString}`,
-        "\n",
-        `uint64_t args${step}[NARGS_] = ${argsString}`
-    ];
-
     const parserCPP = [
         "#pragma omp parallel for",
         `   for (uint64_t i = 0; i < nrows; i+= nrowsBatch) {`,
@@ -159,8 +149,48 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             ].join("\n");
             parserCPP.push(q);
         } else {
-            parserCPP.push(writeOperation(i, op, step));
+            const operationCase = [
+                `           case ${i}: {`,
+                `               // operation: ${op.op}`,
+                `               // dest: ${op.dest_type} - offset: ${op.dest_prime ? 1 : 0} - dim: ${op.dest_dim}`,
+                `               // src0: ${op.src0_type} - offset: ${op.src0_prime ? 1 : 0} - dim: ${op.src0_dim}`,
+            ];
+        
+            if(op.op !== "copy") {
+                operationCase.push(`               // src1: ${op.src1_type} - offset: ${op.src1_prime ? 1 : 0} - dim: ${op.src1_dim}`);
+            }
+            operationCase.push(...[
+                writeOperation(op),
+                "                break;",
+                "            }",
+            ])
+            parserCPP.push(operationCase.join("\n"));
         }
+    }
+
+    const opsArray = opsString.substring(1, opsString.length - 2).split(", ");
+    // TODO: WHY 0.03. Fix this
+    const patterns = findPatterns(opsArray, Math.ceil(cont_ops*0.03));
+
+    let n = operations.length;
+    for(let i = 0; i < patterns.length; ++i) {
+        const groupOps = patterns[i].join(", ") + ",";
+        let countGroup = opsString.split(groupOps).length - 1;
+        cont_ops -= (patterns[i].length - 1)*countGroup;
+        opsString = opsString.replace(new RegExp(groupOps, "g"), `${n},`);
+        const patternCase = [
+            `           case ${n}: {`,
+            `               // ${n} -> cases ${groupOps.substring(0, groupOps.length - 1)}`,
+        ];
+        for(let j = 0; j < patterns[i].length; ++j) {
+            patternCase.push(writeOperation(JSON.parse(operations[patterns[i][j]])));
+        }
+        patternCase.push(...[
+            "                break;",
+            "            }",
+        ]);
+        parserCPP.push(patternCase.join("\n"));
+        n++;
     }
 
     parserCPP.push(...[
@@ -178,12 +208,25 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     parserCPP.unshift(`void ${config.className}::step${step}_parser_first_avx(StepsParams &params, uint64_t nrows, uint64_t nrowsBatch) {`);
     parserCPP.push("}");
        
+    const parserHPP = [
+        `#define NOPS_ ${cont_ops}`,
+        `#define NARGS_ ${cont_args}`,
+        `#define NTEMP1_ ${count1d}`,
+        `#define NTEMP3_ ${count3d}`,
+        "\n",
+        `uint64_t op${step}[NOPS_] = ${opsString}`,
+        "\n",
+        `uint64_t args${step}[NARGS_] = ${argsString}`
+    ];
+
+    console.log("Number of operations before join: ", ops.length, " - Number of operations after join: ", cont_ops);
+
     const parserCPPCode = parserCPP.join("\n");
     const parserHPPCode = parserHPP.join("\n");
 
     return {parserHPPCode, parserCPPCode};
 
-    function writeOperation(n, operation, step) {
+    function writeOperation(operation) {
         let name = operation.dest_dim === 1 ? `Goldilocks::${operation.op}` : `Goldilocks3::${operation.op}`;
         if(operation.op === "mul" && operation.src1_dim === 1 && operation.src1_type === "tmp" && operation.src0_dim === 1 && operation.src0_type === "tmp") name += "t";
         if(operation.dest_dim === 3) {
@@ -301,16 +344,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
 
         name = name.substring(0, name.lastIndexOf(", ")) + ");";
         
-        const operationCall = [
-            `           case ${n}: {`,
-            `               // operation: ${operation.op}`,
-            `               // dest: ${operation.dest_type} - offset: ${operation.dest_prime ? 1 : 0} - dim: ${operation.dest_dim}`,
-            `               // src0: ${operation.src0_type} - offset: ${operation.src0_prime ? 1 : 0} - dim: ${operation.src0_dim}`,
-        ];
-
-        if(operation.op !== "copy") {
-            operationCall.push(`               // src1: ${operation.src1_type} - offset: ${operation.src1_prime ? 1 : 0} - dim: ${operation.src1_dim}`);
-        }
+        const operationCall = [];
 
         if(offsetDest !== "" || offsetSrc0 !== "" || offsetSrc1 !== "") {
             const offsetLoop = [ "               for (uint64_t j = 0; j < AVX_SIZE_; ++j) {"];
@@ -324,8 +358,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         operationCall.push(...[
             `                ${name}`,
             `                i_args += ${c_args};`,
-            "                break;",
-            "            }"
         ])
         
         return operationCall.join("\n").replace(/i_args \+ 0/, "i_args");
