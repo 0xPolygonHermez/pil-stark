@@ -12,6 +12,8 @@ const argv = require("yargs")
     .alias("C", "cls")
     .alias("m", "multiple")
     .alias("o", "optcodes")
+    .string("minReps")
+    .string("minOpsReduced")
     .argv;
 
 async function run() {
@@ -23,7 +25,20 @@ async function run() {
 
     const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
-    const cCode = await buildCHelpers(starkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes: optcodes } : {});
+    const config = {};
+    if(argv.minReps) {
+        const repetitions = parseInt(argv.minReps);
+        if(repetitions < 3) throw new Error("Minimum number of repetitions must be 3");
+        config.minRepetitions = repetitions;
+    }
+
+    if(argv.minOpsReduced) {
+        const operationsReduced = parseInt(argv.minOpsReduced);
+        if(operationsReduced < 5) throw new Error("Minimum operations reduced must be 5");
+        config.minReducedOperations = operationsReduced;
+    }
+
+    const cCode = await buildCHelpers(starkInfo, multipleCodeFiles ? { ...config, multipleCodeFiles: true, className: cls, optcodes: optcodes } : config);
 
     if (multipleCodeFiles) {
         const baseDir = path.dirname(chelpersFile);

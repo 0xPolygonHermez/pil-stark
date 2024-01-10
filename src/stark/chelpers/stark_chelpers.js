@@ -112,6 +112,13 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     }
 
     if (optcodes && multipleCodeFiles) {
+        // const step52nsParser = compileCode_parser(starkInfo, config, "step52ns_first", starkInfo.step52ns.first, "2ns");
+        // code.push(step52nsParser.parserHPPCode);
+        // result.step52ns_parser_hpp = code.join("\n\n") + "\n";
+        // code.length = 0;
+        // if(step52nsParser.parserCPPCode) {
+        //     result.step52ns_parser_cpp = step52nsParser.parserCPPCode;
+        // }
         code.push(compileCode_52ns(starkInfo, "step52ns_first", starkInfo.step52ns.first, "2ns"));
         result.step52ns_parser_hpp = code.join("\n\n") + "\n";
         code.length = 0;
