@@ -196,12 +196,8 @@ function getExpDim(pil, exp, maxDeg) {
         case "addc":
         case "mulc":
         case "neg":
-            let md = 1;
-            for (let i=0; i<exp.values.length; i++) {
-                const d = getExpDim(pil, exp.values[i], maxDeg);
-                if (d>md) md=d;
-            }
-            return md;
+            const d = Math.max(...exp.values.map(v => getExpDim(pil, v, maxDeg)));
+            return d;
         case "mul":
             return getExpDim(pil, exp.values[0], maxDeg) + getExpDim(pil, exp.values[1], maxDeg)
         case "muladd":
