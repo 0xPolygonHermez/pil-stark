@@ -14,6 +14,10 @@ module.exports.addIntermediatePolynomials = function addIntermediatePolynomials(
     
     res.imExpsList = imExps;
     res.imExp2cm = {};
+
+    res.nImPols = res.imExpsList.length;
+    res.nConstraints += res.nImPols;
+    
     for (let i=0; i<imExps.length; i++) {
         res.imExp2cm[res.imExpsList[i]] = res.nCommitments++;
         res.nCm3++;

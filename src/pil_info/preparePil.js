@@ -30,6 +30,9 @@ module.exports.preparePil = function preparePil(F, pil, starkStruct) {
 
     generateConstraintPolynomial(res, expressions, constraints);
 
+    res.nConstraints = constraints.length;
+
+
     return {res, expressions, constraints}
 }
 
