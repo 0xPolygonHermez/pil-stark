@@ -16,13 +16,13 @@ module.exports = function starkInfoGen(pil, starkStruct) {
  
     let newExpressions;
     let maxDeg = (1 << (res.starkStruct.nBitsExt- res.starkStruct.nBits)) + 1;
-    const imInfo = calculateIntermediatePolynomials(expressions, res.cExpId, maxDeg);
+    const imInfo = calculateIntermediatePolynomials(expressions, res.cExpId, maxDeg, res.qDim);
     addIntermediatePolynomials(res, expressions, imInfo.imExps, imInfo.qDeg);
     newExpressions = imInfo.newExpressions;
     
     generatePilCode(res, pil, newExpressions);
 
-    map(res, newExpressions);       
+    map(res, newExpressions);
 
     console.log("--------------------- POLINOMIALS INFO ---------------------")
     console.log(`Columns stage 1: ${res.nCm1} -> Columns in the basefield: ${res.mapSectionsN.cm1_2ns}`);

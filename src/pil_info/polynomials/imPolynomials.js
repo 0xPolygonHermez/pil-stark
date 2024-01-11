@@ -39,14 +39,16 @@ module.exports.addIntermediatePolynomials = function addIntermediatePolynomials(
     }
 }
 
-module.exports.calculateIntermediatePolynomials = function calculateIntermediatePolynomials(expressions, cExpId, maxQDeg) {
+module.exports.calculateIntermediatePolynomials = function calculateIntermediatePolynomials(expressions, cExpId, maxQDeg, qDim) {
     let d = 2;
 
     const cExp = expressions[cExpId];
-    let [imExps, qDeg] = calculateImPols(expressions, cExp, d++);
+    let [imExps, qDeg] = calculateImPols(expressions, cExp, d);
+    let addedBasefieldCols = calculateAddedCols(d++, expressions, imExps, qDeg, qDim);
     while(imExps.length > 0 && d <= maxQDeg) {
-        let [imExpsP, qDegP] = calculateImPols(expressions, cExp, d++);
-        if ((maxQDeg && imExpsP.length + qDegP < imExps.length + qDeg) 
+        let [imExpsP, qDegP] = calculateImPols(expressions, cExp, d);
+        let newAddedBasefieldCols = calculateAddedCols(d++, expressions, imExpsP, qDegP, qDim);
+        if ((maxQDeg && newAddedBasefieldCols < addedBasefieldCols) 
             || (!maxQDeg && imExpsP.length === 0)) {
             [imExps, qDeg] = [imExpsP, qDegP];
         }
@@ -56,6 +58,21 @@ module.exports.calculateIntermediatePolynomials = function calculateIntermediate
     return {newExpressions: expressions, imExps, qDeg};
 }
 
+
+function calculateAddedCols(maxDeg, expressions, imExps, qDeg, qDim) {
+    let qCols = qDeg * qDim;
+    let imCols = 0;
+    for(let i = 0; i < imExps.length; i++) {
+        
+       imCols += expressions[imExps[i]].dim;
+    }
+    let addedCols = qCols + imCols;
+    console.log(`maxDeg: ${maxDeg}, nIm: ${imExps.length}, d: ${qDeg}, addedCols in the basefield: ${addedCols} (${qCols} + ${imCols})`);
+
+    return addedCols;
+}
+
+
 function calculateImPols(expressions, _exp, maxDeg) {
 
     const imExpressions = [];
@@ -64,8 +81,6 @@ function calculateImPols(expressions, _exp, maxDeg) {
 
     [re, rd] = _calculateImPols(expressions, _exp, imExpressions, maxDeg);
 
-    console.log(`maxDeg: ${maxDeg}, nIm: ${Object.keys(re).length}, d: ${rd}`);
-
     return [re, Math.max(rd, absMaxD) - 1];  // We divide the exp polynomial by 1.
 
     function _calculateImPols(expressions, exp, imExpressions, maxDeg) {
@@ -73,7 +88,7 @@ function calculateImPols(expressions, _exp, maxDeg) {
             return [false, -1];
         }
         if(["add", "sub", "neg"].indexOf(exp.op)  >= 0) {
-            let md =0;
+            let md = 0;
             for (let i=0; i<exp.values.length; i++) {
                 [imExpressions , d] = _calculateImPols(expressions, exp.values[i], imExpressions, maxDeg);
                 if (d>md) md = d;
@@ -88,7 +103,7 @@ function calculateImPols(expressions, _exp, maxDeg) {
             if (["number", "public", "challenge"].indexOf(exp.values[1].op) >= 0 ) {
                 return _calculateImPols(expressions, exp.values[0], imExpressions, maxDeg);
             }
-            const maxDegHere = getExpDim(expressions, exp, maxDeg);
+            const maxDegHere = exp.expDeg;
             if (maxDegHere <= maxDeg) {
                 return [imExpressions, maxDegHere];
             }
@@ -146,38 +161,4 @@ function calculateImPols(expressions, _exp, maxDeg) {
         }
     }
 
-}
-
-
-function getExpDim(expressions, exp, maxDeg) {
-    switch (exp.op) {
-        case "add":
-        case "sub":
-        case "addc":
-        case "mulc":
-        case "neg":
-            let md = 1;
-            for (let i=0; i<exp.values.length; i++) {
-                const d = getExpDim(expressions, exp.values[i], maxDeg);
-                if (d>md) md=d;
-            }
-            return md;
-        case "mul":
-            return getExpDim(expressions, exp.values[0], maxDeg) + getExpDim(expressions, exp.values[1], maxDeg)
-        case "muladd":
-            return Math.max(getExpDim(expressions, exp.values[0], maxDeg) + getExpDim(expressions, exp.values[1], maxDeg), getExpDim(expressions, exp.values[2], maxDeg));
-        case "cm": return 1;
-        case "const": return 1;
-        case "exp": 
-            if(exp.dim && exp.dim[maxDeg] >= 0) return exp.dim[maxDeg];
-            if(!exp.dim) exp.dim = {};
-            exp.dim[maxDeg] = getExpDim(expressions, expressions[exp.id], maxDeg);
-            return exp.dim[maxDeg];
-        case "number": return 0;
-        case "public": return 0;
-        case "challenge": return 0;
-        case "eval": return 0;
-        case "x": return 1;
-        default: throw new Error("Exp op not defined: " + exp.op);
-    }
 }

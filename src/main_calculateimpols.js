@@ -1,3 +1,4 @@
+const { info } = require("console");
 const fs = require("fs");
 const version = require("../package").version;
 
@@ -19,8 +20,9 @@ async function run() {
     const expressions = infoPil.expressions;
     const maxDeg  = infoPil.maxDeg;
     const cExpId = infoPil.cExpId;
+    const qDim = infoPil.qDim;
 
-    const imPols = calculateIntermediatePolynomials(expressions, cExpId, maxDeg);
+    const imPols = calculateIntermediatePolynomials(expressions, cExpId, maxDeg, qDim);
 
     await fs.promises.writeFile(imPolsFile, JSON.stringify(imPols, null, 1), "utf8");
 

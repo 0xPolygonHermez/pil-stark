@@ -1,4 +1,5 @@
 const ExpressionOps = require("../../helpers/expressionops");
+const { getExpDim } = require("../helpers");
 
 module.exports.generateConstraintPolynomial = function generateConstraintPolynomial(res, expressions, constraints) {
 
@@ -19,4 +20,6 @@ module.exports.generateConstraintPolynomial = function generateConstraintPolynom
     res.cExpId = expressions.length;
     cExp.stage = 4;
     expressions.push(cExp);
+
+    res.qDim = getExpDim(expressions, res.cmDims, res.cExpId);
 }

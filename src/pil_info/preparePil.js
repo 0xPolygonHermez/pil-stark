@@ -2,6 +2,7 @@
 
 const { generatePolynomials } = require("./generatePolynomials");
 const { generateConstraintPolynomial } = require("../pil_info/polynomials/constraintPolynomial");
+const { getExpDim } = require("./helpers");
 
 
 module.exports.preparePil = function preparePil(F, pil, starkStruct) {
@@ -24,43 +25,72 @@ module.exports.preparePil = function preparePil(F, pil, starkStruct) {
 
     res.publics = publicsInfo;
     
+    res.cmDims = [];
+
+    for(let i = 0; i < res.nCm1; ++i) {
+        res.cmDims[i] = 1;
+    }
+
+    for(let i = 0; i < res.puCtx.length; ++i) {
+        const dim = Math.max(getExpDim(expressions, res.cmDims, res.puCtx[i].fExpId), getExpDim(expressions, res.cmDims, res.puCtx[i].tExpId));
+        res.cmDims[res.nCm1 + i*2] = dim;
+        res.cmDims[res.nCm1 + i*2 + 1] = dim;
+    }
+
+    for(let i = res.nCm2; i < res.nCm3; ++i) {
+        res.cmDims[i] = 3;
+    }
+
     for(let i = 0; i < constraints.length; ++i) {
-        addInfoExpressions(expressions, expressions[constraints[i].e]);
+        addInfoExpressions(res, expressions, expressions[constraints[i].e]);
     }
 
     generateConstraintPolynomial(res, expressions, constraints);
 
     res.nConstraints = constraints.length;
 
+    delete res.cmDims;
 
     return {res, expressions, constraints}
 }
 
 
-function addInfoExpressions(expressions, exp) {
+function addInfoExpressions(res, expressions, exp) {
     if("expDeg" in exp) return;
 
     if (exp.op == "exp") {
         if (expressions[exp.id].expDeg) {
             exp.expDeg = expressions[exp.id].expDeg;
+            exp.dim = expressions[exp.id].dim;
         }
         if (!exp.expDeg) {
-            addInfoExpressions(expressions, expressions[exp.id]);
+            addInfoExpressions(res, expressions, expressions[exp.id]);
             exp.expDeg = expressions[exp.id].expDeg;
+            exp.dim = expressions[exp.id].dim;
         }
-    } else if (["x", "cm", "const"].includes(exp.op)) {
+    } else if (["x", "const"].includes(exp.op)) {
         exp.expDeg = 1;
-    } else if (["challenge", "eval", "number", "public"].includes(exp.op)) {
+        exp.dim = 1;
+    } else if (exp.op === "cm") {
+        exp.expDeg = 1;
+        exp.dim = res.cmDims[exp.id];
+    } else if (["number", "public"].includes(exp.op)) {
         exp.expDeg = 0;
+        exp.dim = 1;
+    } else if (["challenge", "eval"].includes(exp.op)) {
+        exp.expDeg = 0;
+        exp.dim = 3;
     } else if(exp.op === "neg") {
-        addInfoExpressions(expressions, exp.values[0]);
+        addInfoExpressions(res, expressions, exp.values[0]);
         exp.expDeg = exp.values[0].expDeg;
+        exp.dim = exp.values[0].dim;
     } else if(["add", "sub", "mul"].includes(exp.op)) {
-        addInfoExpressions(expressions, exp.values[0]);
-        addInfoExpressions(expressions, exp.values[1]);
+        addInfoExpressions(res, expressions, exp.values[0]);
+        addInfoExpressions(res, expressions, exp.values[1]);
         const lhsDeg = exp.values[0].expDeg;
         const rhsDeg = exp.values[1].expDeg;
         exp.expDeg = exp.op === "mul" ? lhsDeg + rhsDeg : Math.max(lhsDeg, rhsDeg);
+        exp.dim = Math.max(exp.values[0].dim, exp.values[1].dim);
     } else {
         throw new Error("Exp op not defined: "+ exp.op);
     }
