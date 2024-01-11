@@ -74,6 +74,16 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
 
     res.publics = pil.publics;
 
+    console.log("--------------------- POLINOMIALS INFO ---------------------")
+    console.log(`Columns stage 1: ${res.nCm1} -> Columns in the basefield: ${res.mapSectionsN.cm1_2ns}`);
+    console.log(`Columns stage 2: ${res.nCm2} -> Columns in the basefield: ${res.mapSectionsN.cm2_2ns}`);
+    console.log(`Columns stage 3: ${res.nCm3} (${res.nImPols} intermediate polinomials) -> Columns in the basefield: ${res.mapSectionsN.cm3_2ns}`);
+    console.log(`Columns stage 4: ${res.nCm4} -> Columns in the basefield: ${res.mapSectionsN.cm4_2ns}`);
+    console.log(`Total Columns: ${res.nCm1 + res.nCm2 + res.nCm3 + res.nCm4} -> Total Columns in the basefield: ${res.mapSectionsN.cm1_2ns + res.mapSectionsN.cm2_2ns + res.mapSectionsN.cm3_2ns + res.mapSectionsN.cm4_2ns}`);
+    console.log(`Total Constraints: ${res.nConstraints}`)
+    console.log(`Number of evaluations: ${res.evMap.length}`)
+    console.log("------------------------------------------------------------")
+
     return res;
 
 }

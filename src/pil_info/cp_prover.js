@@ -64,6 +64,9 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns) {
         pilCodeGen(ctx, res.imExpsList[i]);
     }
 
+    res.nImPols = res.imExpsList.length;
+    res.nConstraints = pil.polIdentities.length + res.nImPols;
+    
     res.step3 = buildCode(ctx);
 
     // This variables are already calculated by expanding the ones in deg n
