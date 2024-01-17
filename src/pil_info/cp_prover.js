@@ -64,6 +64,9 @@ module.exports = function generateConstraintPolynomial(res, pil, ctx, ctx2ns) {
         pilCodeGen(ctx, res.imExpsList[i]);
     }
 
+    res.nImPols = res.imExpsList.length;
+    res.nConstraints = pil.polIdentities.length + res.nImPols;
+    
     res.step3 = buildCode(ctx);
 
     // This variables are already calculated by expanding the ones in deg n
@@ -193,12 +196,8 @@ function getExpDim(pil, exp, maxDeg) {
         case "addc":
         case "mulc":
         case "neg":
-            let md = 1;
-            for (let i=0; i<exp.values.length; i++) {
-                const d = getExpDim(pil, exp.values[i], maxDeg);
-                if (d>md) md=d;
-            }
-            return md;
+            const d = Math.max(...exp.values.map(v => getExpDim(pil, v, maxDeg)));
+            return d;
         case "mul":
             return getExpDim(pil, exp.values[0], maxDeg) + getExpDim(pil, exp.values[1], maxDeg)
         case "muladd":

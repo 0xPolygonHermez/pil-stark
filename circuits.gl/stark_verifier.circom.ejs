@@ -251,7 +251,7 @@ class Transcript {
 */ 
 template Transcript() {
 
-    signal input publics[<%- pil.publics.length %>];
+    signal input publics[<%- starkInfo.nPublics %>];
     signal input rootC[4];
     signal input root1[4]; 
     signal input root2[4]; 
@@ -272,7 +272,7 @@ template Transcript() {
 <%
     const transcript = new Transcript();
     transcript.put("rootC", 4);
-    transcript.put("publics", pil.publics.length);
+    transcript.put("publics", starkInfo.nPublics);
     transcript.put("root1", 4);
     transcript.getField("challenges[0]", 3);
     transcript.getField("challenges[1]", 3);
@@ -351,7 +351,7 @@ template parallel VerifyEvaluations() {
     signal input challenges4[3];
     signal input challenges7[3];
     signal input evals[<%- starkInfo.evMap.length %>][3];
-    signal input publics[<%- pil.publics.length %>];
+    signal input publics[<%- starkInfo.nPublics %>];
     signal input enable;
 
     // zMul stores all the powers of z (which is stored in challenge7) up to nBits, i.e, [z, z^2, ..., z^nBits]
@@ -530,7 +530,7 @@ template parallel VerifyFinalPol() {
     }
 }
 template StarkVerifier() {
-    signal input publics[<%- pil.publics.length %>]; // constant polynomials
+    signal input publics[<%- starkInfo.nPublics %>]; // constant polynomials
     signal input root1[4]; // Merkle tree root of the evaluations of all trace polynomials
     signal input root2[4]; // Merkle tree root of the evaluations of polynomials h1 and h2 used for the plookup
     signal input root3[4]; // Merkle tree root of the evaluations of the grand product polynomials (Z) 

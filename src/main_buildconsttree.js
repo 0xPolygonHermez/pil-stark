@@ -3,10 +3,8 @@ const version = require("../package").version;
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 
 const F3g = require("./helpers/f3g.js");
-const { newConstantPolsArray, compile, BigBuffer } = require("pilcom");
-const buildMerkleHashGL = require("./helpers/hash/merklehash/merklehash_p.js");
-const buildMerkleHashBN128 = require("./helpers/hash/merklehash/merklehash_bn128_p.js");
-const {interpolate} = require("./helpers/fft/fft_p");
+const { newConstantPolsArray, compile } = require("pilcom");
+const { buildConstTree } = require("./stark/stark_buildConstTree");
 
 const argv = require("yargs")
     .version(version)
@@ -32,37 +30,10 @@ async function run() {
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
     const pil = await compile(F, pilFile, null, pilConfig);
 
-    const nBits = starkStruct.nBits;
-    const nBitsExt = starkStruct.nBitsExt;
-    const nExt = 1 << nBitsExt;
-
-    const constPols = newConstantPolsArray(pil);
+    const constPols = newConstantPolsArray(pil, F);
     await constPols.loadFromFile(constFile);
 
-    const constBuff  = constPols.writeToBuff();
-
-    const constPolsArrayE = new BigBuffer(nExt*pil.nConstants);
-
-    await interpolate(constBuff, pil.nConstants, nBits, constPolsArrayE, nBitsExt );
-
-    let MH;
-    if (starkStruct.verificationHashType == "GL") {
-        MH = await buildMerkleHashGL(starkStruct.splitLinearHash);
-    } else if (starkStruct.verificationHashType == "BN128") {
-        MH = await buildMerkleHashBN128();
-    } else {
-        throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
-    }
-
-
-    console.log("Start merkelizing..");
-    const constTree = await MH.merkelize(constPolsArrayE, pil.nConstants, nExt);
-
-    const constRoot = MH.root(constTree);
-
-    const verKey = {
-        constRoot: constRoot
-    };
+    const {MH, constTree, verKey} = await buildConstTree(starkStruct, pil, constPols);
 
     await fs.promises.writeFile(verKeyFile, JSONbig.stringify(verKey, null, 1), "utf8");
 
@@ -78,4 +49,3 @@ run().then(()=> {
     console.log(err.stack);
     process.exit(1);
 });
-

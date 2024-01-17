@@ -1,9 +1,9 @@
 const fs = require("fs");
 const version = require("../../package").version;
 
-const { compile, newCommitPolsArray } = require("pilcom");
+const { compile } = require("pilcom");
 const F3g = require("../helpers/f3g.js");
-const { WitnessCalculatorBuilder } = require("circom_runtime");
+const { compressorExec, readExecFile } = require("./compressor_exec");
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 
 
@@ -32,13 +32,8 @@ async function run() {
 
     const pil = await compile(F, pilFile, null, pilConfig);
 
-    const cmPols = newCommitPolsArray(pil);
-
-    const N = cmPols.Compressor.a[0].length;
-
-    const nCols =cmPols.Compressor.a.length;
     
-    const { nAdds, nSMap, addsBuff, sMapBuff } = await readExecFile(execFile, nCols);
+    const exec = await readExecFile(execFile, pil.references["Compressor.a"].len);
 
     const fd =await fs.promises.open(wasmFile, "r");
     const st =await fd.stat();
@@ -46,25 +41,7 @@ async function run() {
     await fd.read(wasm, 0, st.size);
     await fd.close();
 
-    
-
-    const wc = await WitnessCalculatorBuilder(wasm);
-    const w = await wc.calculateWitness(input);
-
-    for (let i=0; i<nAdds; i++) {
-        w.push( F.add( F.mul( w[addsBuff[i*4]], addsBuff[i*4 + 2]), F.mul( w[addsBuff[i*4+1]],  addsBuff[i*4+3]  )));
-    }
-
-    for (let i=0; i<nSMap; i++) {
-        for (let j=0; j<nCols; j++) {
-            if (sMapBuff[nCols*i+j] != 0) {
-                cmPols.Compressor.a[j][i] = w[sMapBuff[nCols*i+j]];
-            } else {
-                cmPols.Compressor.a[j][i] = 0n;
-            }
-        }
-    }
-
+    const cmPols = await compressorExec(F, pil, wasm, input, exec);
 
     await cmPols.saveToFile(commitFile);
 
@@ -79,25 +56,3 @@ run().then(()=> {
     console.log(err.stack);
     process.exit(1);
 });
-
-
-async function readExecFile(execFile, nCols) {
-
-    const fd =await fs.promises.open(execFile, "r");
-    const buffH = new BigUint64Array(2);
-    await fd.read(buffH, 0, 2*8);
-    const nAdds= Number(buffH[0]);
-    const nSMap= Number(buffH[1]);
-
-
-    const addsBuff = new BigUint64Array(nAdds*4);
-    await fd.read(addsBuff, 0, nAdds*4*8);
-
-    const sMapBuff = new BigUint64Array(nSMap*nCols);
-    await fd.read(sMapBuff, 0, nSMap*nCols*8);
-
-    await fd.close();
-
-    return { nAdds, nSMap, addsBuff, sMapBuff };
-
-}

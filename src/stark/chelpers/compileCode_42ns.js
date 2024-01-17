@@ -34,7 +34,7 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
     var cont_args = 0;
     var argsString = "{ "
 
-    var counters_ops = new Array(84).fill(0);
+    var counters_ops = new Array(93).fill(0);
 
     const nBits = starkInfo.starkStruct.nBits;
     const nBitsExt = starkInfo.starkStruct.nBitsExt;
@@ -441,21 +441,28 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                         ops.push(38);
                         opsString += "38, ";
                         cont_ops += 1;
-                    } else if ((r.src[0].type === 'const') && (r.src[1].type === 'cm')) {
+                    } else if ((r.src[0].type === 'const' && !r.src[0].prime) && (r.src[1].type === 'cm' && !r.src[1].prime)) {
                         counters_ops[39] += 1;
                         ops.push(39);
                         opsString += "39, ";
                         cont_ops += 1;
-                        assert(!r.src[0].prime);
-                        assert(!r.src[1].prime);
-                    } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'const')) {
+                    } else if ((r.src[1].type === 'const' && !r.src[1].prime) && (r.src[0].type === 'cm' && !r.src[0].prime)) {
+                        counters_ops[91] += 1;
+                        ops.push(91);
+                        opsString += "91, ";
+                        cont_ops += 1;
+                    } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'const' && !r.src[1].prime)) {
                         counters_ops[40] += 1;
                         ops.push(40);
                         opsString += "40, ";
                         cont_ops += 1;
-                        assert(!r.src[1].prime);
+                    } else if ((r.src[1].type === 'tmp') && (r.src[0].type === 'const' && !r.src[0].prime)) {
+                        counters_ops[92] += 1;
+                        ops.push(92);
+                        opsString += "92, ";
+                        cont_ops += 1;
                     } else {
-                        console.log(src[0], src[1]);
+                        console.log(r.src[0], r.src[1]);
                         throw new Error("Option not considered!");
                     }
 
@@ -463,11 +470,15 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
 
                     if (r.src[0].dim == 1 || r.src[1].dim == 1) {
                         counters_sub[1] += 1;
-                        if ((r.src[0].type === 'cm') && (r.src[1].type === 'number')) {
-                            assert(!r.src[0].prime);
+                        if ((r.src[0].type === 'cm' && !r.src[0].prime) && (r.src[1].type === 'number')) {
                             counters_ops[41] += 1;
                             ops.push(41);
                             opsString += "41, ";
+                            cont_ops += 1;
+                        } else if ((r.src[0].type === 'cm' && r.src[0].prime) && (r.src[1].type === 'number')) {
+                            counters_ops[89] += 1;
+                            ops.push(89);
+                            opsString += "89, ";
                             cont_ops += 1;
                         } else {
                             console.log(src[0], src[1]);
@@ -618,8 +629,7 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                         pushSrcArg(r.src[0]);
                         pushSrcArg(r.src[1]);
                         body.push(`     Goldilocks::mul(${lexp}, ${src[0]}, ${src[1]});`)
-                    } else if ((r.src[0].type == 'const') && (r.src[1].type == 'cm' && !r.src[1].prime)) {
-                        assert(!r.src[0].prime);
+                    } else if ((r.src[0].type == 'const' && !r.src[0].prime) && (r.src[1].type == 'cm' && !r.src[1].prime)) {
                         counters_ops[54] += 1;
                         ops.push(54);
                         opsString += "54, ";
@@ -627,7 +637,14 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                         pushSrcArg(r.src[1]);
                         pushSrcArg(r.src[0]);
                         body.push(`     Goldilocks::mul(${lexp}, ${src[1]}, ${src[0]});`)
-
+                    } else if ((r.src[1].type == 'const' && !r.src[1].prime) && (r.src[0].type == 'cm' && !r.src[0].prime)) {
+                        counters_ops[54] += 1;
+                        ops.push(54);
+                        opsString += "54, ";
+                        cont_ops += 1;
+                        pushSrcArg(r.src[0]);
+                        pushSrcArg(r.src[1]);
+                        body.push(`     Goldilocks::mul(${lexp}, ${src[1]}, ${src[0]});`)
                     } else if ((r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'const' && !r.src[1].prime)) {
                         counters_ops[55] += 1;
                         ops.push(55);
@@ -637,6 +654,14 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                         pushSrcArg(r.src[1]);
                         body.push(`     Goldilocks::mul(${lexp}, ${src[0]}, ${src[1]});`)
 
+                    } else if ((r.src[1].type == 'cm' && r.src[1].prime) && (r.src[0].type == 'const' && !r.src[0].prime)) {
+                        counters_ops[55] += 1;
+                        ops.push(55);
+                        opsString += "55, ";
+                        cont_ops += 1;
+                        pushSrcArg(r.src[1]);
+                        pushSrcArg(r.src[0]);
+                        body.push(`     Goldilocks::mul(${lexp}, ${src[0]}, ${src[1]});`)
                     } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'cm' && !r.src[1].prime)) {
                         counters_ops[56] += 1;
                         ops.push(56);
@@ -664,6 +689,14 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                         pushSrcArg(r.src[1]);
                         body.push(`     Goldilocks::mul(${lexp}, ${src[0]}, ${src[1]});`)
                         assert(!r.src[0].prime);
+                    } else if ((r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'const' && r.src[1].prime)) {
+                        counters_ops[90] += 1;
+                        ops.push(90);
+                        opsString += "90, ";
+                        cont_ops += 1;
+                        pushSrcArg(r.src[0]);
+                        pushSrcArg(r.src[1]);
+                        body.push(`     Goldilocks::mul(${lexp}, ${src[0]}, ${src[1]});`)
                     } else {
                         console.log(src[0], src[1]);
                         throw new Error("Option not considered!");
@@ -859,7 +892,14 @@ module.exports = function compileCode_42ns(starkInfo, functionName, code, dom) {
                             pushSrcArg(r.src[0]);
                             pushSrcArg(r.src[1]);
                             body.push(`     Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
-
+                        } else if ((r.src[1].type == 'cm' && !r.src[1].prime) && (r.src[0].type == 'tmp')) {
+                            counters_ops[75] += 1;
+                            ops.push(75);
+                            opsString += "75, ";
+                            cont_ops += 1;
+                            pushSrcArg(r.src[1]);
+                            pushSrcArg(r.src[0]);
+                            body.push(`     Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
                         } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'challenge')) {
                             counters_ops[76] += 1;
                             ops.push(76);
