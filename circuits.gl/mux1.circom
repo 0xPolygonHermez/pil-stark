@@ -14,3 +14,11 @@ template MultiMux1(n) {
 
     }
 }
+
+template Mux1() { 
+    signal input c[2];  // Constants
+    signal input s;   // Selector
+    signal output out;
+
+    out <== (c[1] - c[0])*s + c[0];
+}

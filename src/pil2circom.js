@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 
-module.exports = async function pil2circom(pil, constRoot, starkInfo, options) {
+module.exports = async function pil2circom(constRoot, starkInfo, options) {
 
     options = options || {};
     starkStruct = starkInfo.starkStruct;
@@ -29,7 +29,6 @@ module.exports = async function pil2circom(pil, constRoot, starkInfo, options) {
         starkInfo: starkInfo,
         starkStruct: starkStruct,
         constRoot: constRoot,
-        pil: pil,
         options: options
     };
 
