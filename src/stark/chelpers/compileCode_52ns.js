@@ -36,7 +36,7 @@ module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
     var argsString = "{ "
 
 
-    var counters_ops = new Array(16).fill(0);
+    var counters_ops = new Array(22).fill(0);
     const nBits = starkInfo.starkStruct.nBits;
     const nBitsExt = starkInfo.starkStruct.nBitsExt;
     var counters_add = new Array(4).fill(0);
@@ -72,7 +72,6 @@ module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
         if (r.src[0].type == 'tmp' && r.src.length > 1 && r.src[1].type == 'tmp') {
             if (r.src[0].id - r.src[1].id > 2 || r.src[0].id - r.src[1].id < -2) {
 
-                //console.log("pivot: ", r.dest.id, r.src[0].id, r.src[1].id);
                 let a1 = r.dest.id;
                 let a2 = r.src[0].id;
                 let a3 = r.src[1].id;
@@ -211,24 +210,45 @@ module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
                             ++counters_ops[14];
                         }
                     } else {
-                        body.push(`     Goldilocks3::sub0(${lexp}, ${src[0]}, ${src[1]});`)
-                        ops.push(11);
-                        ++counters_ops[11];
-                        opsString += "11, ";
-                        str = src[0];
-                        size = parseInt(str.substring(str.lastIndexOf(" ")));
-                        auxstr = str.substring(str.indexOf("[") + 1);
-                        offset = parseInt(auxstr.substring(0, auxstr.indexOf(" ")));
-                        str = src[1];
-                        auxstr = str.substring(str.indexOf("[") + 1);
-                        evid = parseInt(auxstr.substring(0, auxstr.indexOf("]")));
-                        args.push(offset);
-                        args.push(size);
-                        args.push(evid);
-                        argsString += `${offset}, `;
-                        argsString += `${size}, `;
-                        argsString += `${evid}, `;
-                        cont_args += 3;
+                        if(lexp === "tmp") {
+                            body.push(`     Goldilocks3::sub0(${lexp}, ${src[0]}, ${src[1]});`)
+                            ops.push(21);
+                            ++counters_ops[21];
+                            opsString += "21, ";
+                            str = src[0];
+                            size = parseInt(str.substring(str.lastIndexOf(" ")));
+                            auxstr = str.substring(str.indexOf("[") + 1);
+                            offset = parseInt(auxstr.substring(0, auxstr.indexOf(" ")));
+                            str = src[1];
+                            auxstr = str.substring(str.indexOf("[") + 1);
+                            evid = parseInt(auxstr.substring(0, auxstr.indexOf("]")));
+                            args.push(offset);
+                            args.push(size);
+                            args.push(evid);
+                            argsString += `${offset}, `;
+                            argsString += `${size}, `;
+                            argsString += `${evid}, `;
+                            cont_args += 3;
+                        } else if(lexp === "tmp2") {
+                            body.push(`     Goldilocks3::sub0(${lexp}, ${src[0]}, ${src[1]});`)
+                            ops.push(11);
+                            ++counters_ops[11];
+                            opsString += "11, ";
+                            str = src[0];
+                            size = parseInt(str.substring(str.lastIndexOf(" ")));
+                            auxstr = str.substring(str.indexOf("[") + 1);
+                            offset = parseInt(auxstr.substring(0, auxstr.indexOf(" ")));
+                            str = src[1];
+                            auxstr = str.substring(str.indexOf("[") + 1);
+                            evid = parseInt(auxstr.substring(0, auxstr.indexOf("]")));
+                            args.push(offset);
+                            args.push(size);
+                            args.push(evid);
+                            argsString += `${offset}, `;
+                            argsString += `${size}, `;
+                            argsString += `${evid}, `;
+                            cont_args += 3;
+                        } else throw new Error("Case not considered");
                     }
                 } else {
                     throw new Error("Invalid dim");
