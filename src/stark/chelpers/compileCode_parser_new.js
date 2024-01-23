@@ -58,18 +58,95 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     let ID3D = new Array(maxid).fill(-1);
     let { count1d, count3d } = getIdMaps(maxid, ID1D, ID3D, code);
 
+    const possibleDestinationsDim1 = [ "commit1", "tmp1" ];
+    const possibleDestinationsDim3 = [ "commit3", "tmp3" ];
+   
+    const possibleSrcDim1 = [ "commit1", "const", "tmp1", "public", "x", "number" ];
+    const possibleSrcDim3 = [ "commit3", "tmp3", "challenge" ];
+
+    const possibleSrcStepFRI = ["tmp3", "challenge", "eval", "xDivXSubXi", "xDivXSubWXi"];
+
+    const operationTypes = ["add", "mul", "sub", "copy"];
+    for(let i = 0; i < operationTypes.length; i++) {
+        let op = operationTypes[i];
+
+        // Dim1 destinations
+        for(let j = 0; j < possibleDestinationsDim1.length; j++) {
+            let dest = possibleDestinationsDim1[j];
+            for(let k = 0; k < possibleSrcDim1.length; ++k) {
+                let src0 = possibleSrcDim1[k];
+                if(src0 === "x" && op !== "mul") continue;
+                if(op === "copy") {
+                    operations.push({op, dest, src0})
+                } else {
+                    let start = op === "sub" ? 0 : k;
+                    for (let l = start; l < possibleSrcDim1.length; ++l) {
+                        let src1 = possibleSrcDim1[l];
+                        if(src1 === "x" && (op !== "mul" || src0 === "x")) continue;
+                        console.log(src0, src1);
+                        operations.push({op, dest, src0, src1})
+                    }
+                }
+            }
+        }
+
+        // Dim3 destinations
+        for(let j = 0; j < possibleDestinationsDim3.length; j++) {
+            let dest = possibleDestinationsDim3[j];
+
+            // Dest dim 3, sources dimension 1 and 3
+            for(let k = 0; k < possibleSrcDim1.length; ++k) {
+                let src0 = possibleSrcDim1[k];
+                
+                if(op === "copy" || (src0 === "x" && op !== "mul")) continue;  
+                for (let l = 0; l < possibleSrcDim3.length; ++l) {
+                    let src1 = possibleSrcDim3[l];
+                    operations.push({op, dest, src0, src1});
+                    if(op === "sub") operations.push({op, dest, src0: src1, src1: src0})
+                }
+            }
+
+            for(let k = 0; k < possibleSrcDim3.length; ++k) {
+                let src0 = possibleSrcDim3[k];
+                if(op === "copy") operations.push({op, dest, src0})
+                let start = op === "sub" ? 0 : k;
+                for (let l = start; l < possibleSrcDim3.length; ++l) {
+                    let src1 = possibleSrcDim3[l];
+                    operations.push({op, dest, src0, src1})
+                }
+            }
+        }
+
+        // Step FRI
+        let dest = "tmp3";
+        for(let k = 0; k < possibleSrcStepFRI.length; ++k) {
+            let src0 = possibleSrcStepFRI[k];
+            if(["xDivXSubXi", "xDivXSubWXi"].includes(src0) && op !== "mul") continue;
+            if(op === "copy") {
+                operations.push({op, dest, src0})
+            } else {
+                let start = op === "sub" ? 0 : k;
+                for (let l = start; l < possibleSrcStepFRI.length; ++l) {
+                    let src1 = possibleSrcStepFRI[l];
+                    if(["xDivXSubXi", "xDivXSubWXi"].includes(src1) && op !== "mul") continue;
+                    if(["xDivXSubXi", "xDivXSubWXi"].includes(src0) && ["xDivXSubXi", "xDivXSubWXi"].includes(src1)) continue;
+                    operations.push({op, dest, src0, src1})
+                }
+            }
+        }
+    }
+
+    operations.push({ op: "mul", dest: "q", src0: "tmp3", src1: "Zi"});
+    operations.push({ op: "copy", dest: "f", src0: "tmp3"});
+    
     for (let j = 0; j < code.length; j++) {
         const r = code[j];
         pushResArg(r, r.dest.type);
         ++cont_ops;
         
         let operation = getOperation(r);
-        if (!operations.find(c => c === JSON.stringify(operation))) {
-            operations.push(JSON.stringify(operation));
-        }
-
-        let opsIndex = operations.indexOf(JSON.stringify(operation));
-        if (opsIndex === -1) throw new Error("Operation not found: " + JSON.stringify(operation));
+        let opsIndex = operations.findIndex(op => op.op === operation.op && op.dest === operation.dest && op.src0 === operation.src0 && (operation.op === "copy" || op.src1 === operation.src1));
+        if (opsIndex === -1) throw new Error("Operation not considered: " + JSON.stringify(operation));
 
         ops.push(opsIndex);
         opsString += `${opsIndex}, `;
@@ -218,8 +295,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             }
         }
 
-        let addOffset = false;
-        if(["commit", "const"].includes(operation.src0_type) && ["commit", "const"].includes(operation.src1_type) && (!operation.src0_prime || !operation.src1_prime)) addOffset = true;
+        name += writeType(operation.src0);
 
         name += writeType(operation.src0_type, operation.src0_prime);
 
