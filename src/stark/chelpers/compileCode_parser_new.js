@@ -1,21 +1,21 @@
 const { assert } = require("chai");
-const { findPatterns, getIdMaps } = require("./helpers");
-
-var dbg = 0;
+const { getIdMaps } = require("./helpers");
 
 const operationsMap = {
-    "public": 1,
-    "x": 2,
-    "commit": 3,
-    "tmp": 4,
-    "const": 5,
+    "commit1": 1,
+    "const": 2,
+    "tmp1": 3,
+    "public": 4,
+    "x": 5,
     "number": 6,
-    "challenge": 7, 
-    "eval": 8,
-    "xDivXSubXi": 9,
-    "xDivXSubWXi": 10, 
-    "q": 11, 
-    "f": 12,
+    "commit3": 7,
+    "tmp3": 8,
+    "challenge": 9, 
+    "eval": 10,
+    "xDivXSubXi": 11,
+    "xDivXSubWXi": 12, 
+    "q": 13, 
+    "f": 14,
 }
 
 module.exports = function compileCode_parser(starkInfo, config, functionName, code, dom) {
@@ -34,10 +34,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
 
     const nBits = starkInfo.starkStruct.nBits;
     const nBitsExt = starkInfo.starkStruct.nBitsExt;
-    var counters_add = 0;
-    var counters_sub = 0;
-    var counters_mul = 0;
-    var counters_copy = 0;
 
     let step;
 
@@ -80,30 +76,9 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
 
         if(!counters_ops[opsIndex]) counters_ops[opsIndex] = 0;
         counters_ops[opsIndex] += 1;
-        if(operation.op === "add") {
-            ++counters_add;
-        } else if(operation.op === "sub") {
-            ++counters_sub;
-        } else if(operation.op === "mul") {
-            ++counters_mul;
-        } else if(operation.op === "copy") {
-            ++counters_copy;
-        }
     }
 
     assert(cont_ops == ops.length);
-
-    if (dbg) {
-        console.log(functionName);
-        console.log(counters_add);
-        console.log(counters_sub);
-        console.log(counters_mul);
-        console.log("\n");
-        console.log(counters_ops)
-        console.log("NOPS: ", cont_ops, ops.length);
-        console.log("NARGS: ", cont_args, args.length);
-    }
-    assert(cont_ops == counters_add + counters_sub + counters_mul + counters_copy)
 
     console.log("\n", functionName);
     console.log("NOPS: ", cont_ops, ops.length);
@@ -155,12 +130,12 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             const operationCase = [
                 `           case ${i}: {`,
                 `               // operation: ${op.op}`,
-                `               // dest: ${op.dest_type} - offset: ${op.dest_prime ? 1 : 0} - dim: ${op.dest_dim}`,
-                `               // src0: ${op.src0_type} - offset: ${op.src0_prime ? 1 : 0} - dim: ${op.src0_dim}`,
+                `               // dest: ${op.dest_type} - offset: ${op.dest_prime ? 1 : 0}`,
+                `               // src0: ${op.src0_type} - offset: ${op.src0_prime ? 1 : 0}`,
             ];
         
             if(op.op !== "copy") {
-                operationCase.push(`               // src1: ${op.src1_type} - offset: ${op.src1_prime ? 1 : 0} - dim: ${op.src1_dim}`);
+                operationCase.push(`               // src1: ${op.src1_type} - offset: ${op.src1_prime ? 1 : 0}`);
             }
             operationCase.push(...[
                 writeOperation(op),
@@ -171,35 +146,9 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         }
     }
 
-    // Join operations
-    const opsArray = opsString.substring(1, opsString.length - 2).split(", ");
-    const patterns = findPatterns(opsArray, config.minRepetitions, config.minReducedOperations);
-
-    let n = operations.length;
-    for(let i = 0; i < patterns.length; ++i) {
-        const groupOps = patterns[i].join(", ") + ",";
-        let countGroup = opsString.split(groupOps).length - 1;
-        console.log(`Case ${n} -> Operations ${groupOps.substring(0, groupOps.length - 1)}`)
-        cont_ops -= (patterns[i].length - 1)*countGroup;
-        opsString = opsString.replace(new RegExp(groupOps, "g"), `${n},`);
-        const patternCase = [
-            `           case ${n}: {`,
-            `               // ${n} -> cases ${groupOps.substring(0, groupOps.length - 1)}`,
-        ];
-        for(let j = 0; j < patterns[i].length; ++j) {
-            patternCase.push(writeOperation(JSON.parse(operations[patterns[i][j]])));
-        }
-        patternCase.push(...[
-            "                break;",
-            "            }",
-        ]);
-        parserCPP.push(patternCase.join("\n"));
-        n++;
-    }
-
     parserCPP.push(...[
         "              default: {",
-        `                  std::cout << " Wrong operation in step42ns_first!" << std::endl;`,
+        `                  std::cout << " Wrong operation in step${step}_first!" << std::endl;`,
         "                  exit(1);",
         "              }",
         "          }",
@@ -223,52 +172,30 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         `uint64_t args${step}[NARGS_] = ${argsString}`
     ];
 
-    console.log("Number of operations before join: ", ops.length, " - Number of operations after join: ", cont_ops);
-
     const parserCPPCode = parserCPP.join("\n");
     const parserHPPCode = parserHPP.join("\n");
 
     return {parserHPPCode, parserCPPCode};
 
     function writeOperation(operation) {
-        let name = operation.dest_dim === 1 ? `Goldilocks::${operation.op}` : `Goldilocks3::${operation.op}`;
-        if(operation.op === "mul" && operation.src1_dim === 1 && operation.src1_type === "tmp" && operation.src0_dim === 1 && operation.src0_type === "tmp") name += "t";
-        if(operation.dest_dim === 3) {
-            if(["add", "sub", "mul"].includes(operation.op)) {
-                let dims = "";
-                if(operation.src0_dim === 1) {
-                    if(["number"].includes(operation.src0_type)) {
-                        dims += "1c";
-                    } else {
-                        dims += "1";
-                    }
-                } else if (operation.src0_dim === 3) {
-                    if(["challenge"].includes(operation.src0_type)) {
-                        dims += "3c";
-                    } else {
-                        dims += "3";
-                    }
-                }
+        let name = ["tmp1", "commit1"].includes(operation.dest_type) ? `Goldilocks::op` : `Goldilocks3::op`;
+        if(["tmp3", "commit3"].includes(operation.dest_type))  {
+            if(["add", "sub", "mul"].includes(operation.op) && 
+                (!["tmp3", "commit3"].includes(operation.src0_type) || !["tmp3", "commit3"].includes(operation.src1_type))) {
+                if(["public", "x", "commit1", "tmp1", "const"].includes(operation.src0_type)) name += "1";
+                if(operation.src0_type === "number") name += "1c";
+                if (["commit3", "tmp3"].includes(operation.src0_type)) name += "3";
+                if(operation.src0_type === "challenge") name += "3c";
 
-                if(operation.src1_dim === 1) {
-                    if(["number"].includes(operation.src1_type)) {
-                        dims += "1c";
-                    } else {
-                        dims += "1";
-                    }
-                } else if (operation.src1_dim === 3) {
-                    if(["challenge"].includes(operation.src1_type)) {
-                        dims += "3c";
-                    } else {
-                        dims += "3";
-                    }
-                }
-
-                if(dims !== "33") name += dims;
+                if(["public", "x", "commit1", "tmp1", "const"].includes(operation.src1_type)) name += "1";
+                if(operation.src1_type === "number") name += "1c";
+                if (["commit3", "tmp3"].includes(operation.src1_type)) name += "3";
+                if(operation.src1_type === "challenge") name += "3c";
             }
         }
         
         name += "_avx(";
+        name += `OPERATION::${operation.op}, `;
 
         let offsetDest = "";
         let offsetSrc0 = "";
@@ -280,64 +207,39 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
 
         c_args = 0;
 
-        name += writeType(operation.dest_type, operation.dest_dim, operation.dest_prime);
+        name += writeType(operation.dest_type, operation.dest_prime);
 
-        if(operation.dest_prime) {
-            if(operation.dest_type !== "tmp") {
+        if(["commit1", "commit3"].includes(operation.dest_type)) {
+            if (operation.dest_prime) {
                 offsetDest = `                  offsetsDest[j] = args${step}[i_args + ${c_args++}] + (((i + j) + args${step}[i_args + ${c_args++}]) % args${step}[i_args + ${c_args++}]) * args${step}[i_args + ${c_args++}];`,
                 name += "offsetsDest, ";
+            } else {
+                name += `args${step}[i_args + ${c_args - 1}], `;
             }
-        } else if (operation.dest_type === "commit") {
-            name += `args${step}[i_args + ${c_args - 1}], `;
         }
 
         let addOffset = false;
         if(["commit", "const"].includes(operation.src0_type) && ["commit", "const"].includes(operation.src1_type) && (!operation.src0_prime || !operation.src1_prime)) addOffset = true;
 
-        name += writeType(operation.src0_type, operation.src0_dim, operation.src0_prime, addOffset);
+        name += writeType(operation.src0_type, operation.src0_prime);
 
-        if(operation.src0_prime) {
-            if(!["commit", "const"].includes(operation.src0_type)) throw new Error("Invalid src0 type with prime");
+        if(["commit1", "commit3", "const"].includes(operation.src0_prime) && operation.src0_prime) {
             let numPols = operation.src0_type === "const" ? "numConstPols" : `args${step}[i_args + ${c_args+3}]`;
             offsetSrc0 = `                  offsetsSrc0[j] = args${step}[i_args + ${c_args++}] + (((i + j) + args${step}[i_args + ${c_args++}]) % args${step}[i_args + ${c_args++}]) * ${numPols};`;
             if(operation.src0_type !== "const") c_args++;
-        } else if (addOffset) {
-            let numPols = operation.src0_type === "const" ? "numConstPols" : `args${step}[i_args + ${c_args+1}]`;
-            offsetSrc0 = `                  offsetsSrc0[j] = args${step}[i_args + ${c_args++}] + (i + j) * ${numPols};`;
-            if(operation.src0_type !== "const") c_args++;
-        }
-
-        if(operation.src0_prime || addOffset) {
             offsetSrc0Call = "offsetsSrc0, ";
-        } else if(operation.src0_type === "commit" && !operation.src0_prime) {
-                offsetSrc0Call = `args${step}[i_args + ${c_args - 1}], `;
-        } else if (operation.src0_type === "const" && !operation.src0_prime) {
-                offsetSrc0Call = "numConstPols, ";
         } else if (operation.src0_type === "x") {
-                offsetSrc0Call = `params.x_${dom}.offset(), `;
+            offsetSrc0Call = `params.x_${dom}.offset(), `;
         }
-
 
         if(operation.op !== "copy") {
-            name += writeType(operation.src1_type, operation.src1_dim, operation.src1_prime, addOffset);
+            name += writeType(operation.src1_type, operation.src1_prime);
 
-            if(operation.src1_prime) {
-                if(!["commit", "const"].includes(operation.src1_type)) throw new Error("Invalid src1 type with prime");
+            if(["commit1", "commit3", "const"].includes(operation.src1_type) && operation.src1_prime) {
                 let numPols = operation.src1_type === "const" ? "numConstPols" : `args${step}[i_args + ${c_args+3}]`;
                 offsetSrc1 = `                  offsetsSrc1[j] = args${step}[i_args + ${c_args++}] + (((i + j) + args${step}[i_args + ${c_args++}]) % args${step}[i_args + ${c_args++}]) * ${numPols};`;
                 if(operation.src1_type !== "const") c_args++;  
-            } else if(addOffset) {
-                let numPols = operation.src0_type === "const" ? "numConstPols" : `args${step}[i_args + ${c_args+1}]`;
-                offsetSrc1 = `                  offsetsSrc1[j] = args${step}[i_args + ${c_args++}] + (i + j) * ${numPols};`;
-                if(operation.src1_type !== "const") c_args++;
-            }
-
-            if(operation.src1_prime || addOffset) {
                 offsetSrc1Call = "offsetsSrc1, ";
-            } else if(operation.src1_type === "commit" && !operation.src1_prime) {
-                offsetSrc1Call = `args${step}[i_args + ${c_args - 1}], `;
-            } else if (operation.src1_type === "const" && !operation.src1_prime) {
-                offsetSrc1Call = "numConstPols, ";
             } else if (operation.src1_type === "x") {
                 offsetSrc1Call = `params.x_${dom}.offset(), `;
             }
@@ -367,25 +269,24 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         return operationCall.join("\n").replace(/i_args \+ 0/, "i_args");
     }
 
-    function writeType(type, dim, offset, addOffset = false) {
+    function writeType(type, offset) {
         switch (type) {
             case "public":
                 return `params.publicInputs[args${step}[i_args + ${c_args++}]], `;
-            case "tmp":
-                if(dim === 1) {
-                    return `tmp1[args${step}[i_args + ${c_args++}]], `
-                } else if (dim === 3) {
-                    return `tmp3[args${step}[i_args + ${c_args++}]], `
-                } else throw new Error("Invalid dim");
-            case "commit":
-                if(offset || addOffset) {
+            case "tmp1":
+                return `tmp1[args${step}[i_args + ${c_args++}]], `; 
+            case "tmp3":
+                    return `tmp3[args${step}[i_args + ${c_args++}]], `;
+            case "commit1":
+            case "commit3":
+                if(offset) {
                     return `&params.pols[0], `;
                 } else {
                     return `&params.pols[args${step}[i_args + ${c_args++}] + i * args${step}[i_args + ${c_args++}]], `;
                 }
             case "const":
                 let constPols = dom === "n" ? "&params.pConstPols" : `&params.pConstPols2ns`;
-                if(offset || addOffset) {
+                if(offset) {
                     return `${constPols}->getElement(0, 0), `;
                 } else {
                     return `${constPols}->getElement(args${step}[i_args + ${c_args++}], i), `;
@@ -417,27 +318,33 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     function getOperation(r) {
         const _op = {};
         _op.op = r.op;
-        _op.dest_type = ["cm", "tmpExp"].includes(r.dest.type) ? "commit" : r.dest.type;
-        _op.dest_dim = r.dest.dim;
-        _op.dest_prime = r.dest.prime;
+        if(["cm", "tmpExp"].includes(r.dest.type)) {
+            _op.dest_type = `commit${r.dest.dim}`;
+        } else if(r.dest.type === "tmp") {
+            _op.dest_type = `tmp${r.dest.dim}`;
+        } else {
+            _op.dest_type = r.dest.type;
+        }
+	_op.dest_prime = r.dest.prime;
 
         if(_op.op !== "sub") {
             r.src.sort((a, b) => {
-                if(a.dim !== b.dim) {
-                    return a.dim - b.dim;
-                } else {
-                    let opA = ["cm", "tmpExp"].includes(a.type) ? operationsMap["commit"] : a.type === "number" && _op.op === "mul" ? 1 : operationsMap[a.type];
-                    let opB = ["cm", "tmpExp"].includes(b.type) ? operationsMap["commit"] : b.type === "number" && _op.op === "mul" ? 1 : operationsMap[b.type];
-                    return opA - opB;
-                }
+                let opA =  ["cm", "tmpExp"].includes(a.type) ? operationsMap[`commit${a.dim}`] : a.type === "tmp" ? operationsMap[`tmp${a.dim}`] : operationsMap[a.type];
+                let opB = ["cm", "tmpExp"].includes(b.type) ? operationsMap[`commit${b.dim}`] : b.type === "tmp" ? operationsMap[`tmp${b.dim}`] : operationsMap[b.type];
+                return opA - opB;
             });
         }
 
         for(let i = 0; i < r.src.length; i++) {
             pushSrcArg(r.src[i], r.src[i].type);
-            _op[`src${i}_type`] = ["cm", "tmpExp"].includes(r.src[i].type) ? "commit" : r.src[i].type;
-            _op[`src${i}_dim`] = r.src[i].dim;
-            _op[`src${i}_prime`] = r.src[i].type === "tmp" ? false : r.src[i].prime;
+            if(["cm", "tmpExp"].includes(r.src[i].type)) {
+                _op[`src${i}_type`] = `commit${r.src[i].dim}`;
+            } else if(r.src[i].type === "tmp") {
+                _op[`src${i}_type`] =  `tmp${r.src[i].dim}`;
+            } else {
+                _op[`src${i}_type`] = r.src[i].type;
+            }
+	    _op[`src${i}_prime`] = r.src[i].type === "tmp" ? false : r.src[i].prime;
         }
 
         return _op;
@@ -506,35 +413,18 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                 break;
             }
             case "const": {
-                if (dom == "n") {
-                    if (r.prime) {
-                        args.push(r.id);
-                        args.push(1);
-                        args.push(N);
-                        argsString += `${r.id}, `;
-                        argsString += `1, `;
-                        argsString += `${N}, `;
-                        cont_args += 3;
-                    } else {
-                        args.push(r.id);
-                        argsString += `${r.id}, `;
-                        cont_args += 1;
-                    }
-                } else if (dom == "2ns") {
-                    if (r.prime) {
-                        args.push(r.id);
-                        args.push(next);
-                        args.push(N);
-                        argsString += `${r.id}, `;
-                        argsString += `${next}, `;
-                        argsString += `${N}, `;
-                        cont_args += 3;
-                    } else {
-                        args.push(r.id);
-                        argsString += `${r.id}, `;
-                        cont_args += 1;
-                    }
+                let offset = r.prime ? next : 0;
+                let evalArgs = [];
+                evalArgs.push(r.id);
+                argsString += `${r.id}, `;
+                if(r.prime) {
+                    evalArgs.push(offset);
+                    evalArgs.push(N);
+                    argsString += `${offset}, `;
+                    argsString += `${N}, `;
                 }
+ 		cont_args += evalArgs.length;
+		args.push(...evalArgs);
                 break;
             }
             case "tmpExp": {
@@ -573,19 +463,10 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                 cont_args += 1;
                 break;
             }
-            case "public": {
-                args.push(r.id);
-                argsString += `${r.id}, `;
-                cont_args += 1;
-                break;
-            }
-            case "challenge": {
-                args.push(r.id);
-                argsString += `${r.id}, `;
-                cont_args += 1;
-                break;
-            }
-            case "eval": {
+            case "public":
+            case "challenge":
+            case "eval": 
+            {
                 args.push(r.id);
                 argsString += `${r.id}, `;
                 cont_args += 1;
@@ -599,45 +480,21 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         let offset = starkInfo.mapOffsets[p.section];
         offset += p.sectionPos;
         let size = starkInfo.mapSectionsN[p.section];
-        if (p.dim == 1) {
-            if (prime) {
-                args.push(Number(offset));
-                args.push(Number(next));
-                args.push(Number(N));
-                args.push(Number(size));
-                argsString += `${offset}, `;
-                argsString += `${next}, `;
-                argsString += `${N}, `;
-                argsString += `${size}, `;
-                cont_args += 4;
-
-            } else {
-                args.push(Number(offset));
-                args.push(Number(size));
-                argsString += `${offset}, `;
-                argsString += `${size}, `;
-                cont_args += 2;
-            }
-        } else if (p.dim == 3) {
-            if (prime) {
-                args.push(Number(offset));
-                args.push(Number(next));
-                args.push(Number(N));
-                args.push(Number(size));
-                argsString += `${offset}, `;
-                argsString += `${next}, `;
-                argsString += `${N}, `;
-                argsString += `${size}, `;
-                cont_args += 4;
-            } else {
-                args.push(Number(offset));
-                args.push(Number(size));
-                argsString += `${offset}, `;
-                argsString += `${size}, `;
-                cont_args += 2;
-            }
-        } else {
-            throw new Error("invalid dim");
+        let offset_prime = prime ? next : 0;
+        let evalArgs = [];
+        evalArgs.push(Number(offset));
+        if(prime) {
+            evalArgs.push(Number(offset_prime));
+            evalArgs.push(Number(N));
         }
+        evalArgs.push(Number(size));
+        argsString += `${offset}, `;
+        if(prime) {
+            argsString += `${offset_prime}, `;
+            argsString += `${N}, `;
+        }
+        argsString += `${size}, `;
+        cont_args += evalArgs.length;
+        args.push(...evalArgs);
     }
 }
