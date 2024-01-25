@@ -58,86 +58,96 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     let ID3D = new Array(maxid).fill(-1);
     let { count1d, count3d } = getIdMaps(maxid, ID1D, ID3D, code);
 
+    // const possibleDestinationsDim1 = [ "commit1", "commit1p", "tmp1" ];
+    // const possibleDestinationsDim3 = [ "commit3", "commit3p", "tmp3" ];
+   
+    // const possibleSrcDim1 = [ "commit1", "commit1p", "const", "constp", "tmp1", "public", "x", "number" ];
+    // const possibleSrcDim3 = [ "commit3", "commit3p", "tmp3", "challenge" ];
+
     const possibleDestinationsDim1 = [ "commit1", "tmp1" ];
     const possibleDestinationsDim3 = [ "commit3", "tmp3" ];
    
     const possibleSrcDim1 = [ "commit1", "const", "tmp1", "public", "x", "number" ];
     const possibleSrcDim3 = [ "commit3", "tmp3", "challenge" ];
 
-    const possibleSrcStepFRI = ["tmp3", "challenge", "eval", "xDivXSubXi", "xDivXSubWXi"];
+    // Dim1 destinations
+    for(let j = 0; j < possibleDestinationsDim1.length; j++) {
+        let dest_type = possibleDestinationsDim1[j] === "commit1p" ? "commit1" : possibleDestinationsDim1[j];
+        // let dest_prime = possibleDestinationsDim1[j] === "commit1p" ? true : false;
+        let dest_prime = possibleDestinationsDim1[j] === "commit1" ? true : false;
+        for(let k = 0; k < possibleSrcDim1.length; ++k) {
+            let src0_type = ["commit1p", "constp"].includes(possibleSrcDim1[k]) ? possibleSrcDim1[k].substring(0, possibleSrcDim1[k].length - 1) : possibleSrcDim1[k];
+            // let src0_prime = ["commit1p", "constp"].includes(possibleSrcDim1[k]) ? true : false;
+            let src0_prime = ["commit1", "const"].includes(possibleSrcDim1[k]) ? true : false;
+            if(["commit1", "const", "tmp1"].includes(src0_type)) operations.push({dest_type, dest_prime, src0_type, src0_prime}); // Copy operation
+            if(src0_type === "x") continue;
+            for (let l = 0; l < possibleSrcDim1.length; ++l) {
+                let src1_type = ["commit1p", "constp"].includes(possibleSrcDim1[l]) ? possibleSrcDim1[l].substring(0, possibleSrcDim1[l].length - 1) : possibleSrcDim1[l];
+                // let src1_prime = ["commit1p", "constp"].includes(possibleSrcDim1[l]) ? true : false;
+                let src1_prime = ["commit1", "const"].includes(possibleSrcDim1[l]) ? true : false;
+                if(src1_type === "x") continue;
+                operations.push({dest_type, dest_prime, src0_type, src0_prime, src1_type, src1_prime})
+            } 
+        }
+    }
 
-    const operationTypes = ["add", "mul", "sub", "copy"];
-    for(let i = 0; i < operationTypes.length; i++) {
-        let op = operationTypes[i];
+    // Dim3 destinations
+    for(let j = 0; j < possibleDestinationsDim3.length; j++) {
+        let dest_type = possibleDestinationsDim3[j] === "commit3p" ? "commit3" : possibleDestinationsDim3[j];
+        // let dest_prime = possibleDestinationsDim3[j] === "commit3p" ? true : false;
+        let dest_prime = possibleDestinationsDim3[j] === "commit3" ? true : false;
 
-        // Dim1 destinations
-        for(let j = 0; j < possibleDestinationsDim1.length; j++) {
-            let dest = possibleDestinationsDim1[j];
-            for(let k = 0; k < possibleSrcDim1.length; ++k) {
-                let src0 = possibleSrcDim1[k];
-                if(src0 === "x" && op !== "mul") continue;
-                if(op === "copy") {
-                    operations.push({op, dest, src0})
-                } else {
-                    let start = op === "sub" ? 0 : k;
-                    for (let l = start; l < possibleSrcDim1.length; ++l) {
-                        let src1 = possibleSrcDim1[l];
-                        if(src1 === "x" && (op !== "mul" || src0 === "x")) continue;
-                        console.log(src0, src1);
-                        operations.push({op, dest, src0, src1})
-                    }
-                }
+        // Dest dim 3, sources dimension 1 and 3
+        for(let k = 0; k < possibleSrcDim1.length; ++k) {
+            let src0_type = ["commit1p", "constp"].includes(possibleSrcDim1[k]) ? possibleSrcDim1[k].substring(0, possibleSrcDim1[k].length - 1) : possibleSrcDim1[k];
+            // let src0_prime = ["commit1p", "constp"].includes(possibleSrcDim1[k]) ? true : false;
+            let src0_prime = ["commit1", "const"].includes(possibleSrcDim1[k]) ? true : false;
+            for (let l = 0; l < possibleSrcDim3.length; ++l) {
+                let src1_type = possibleSrcDim3[l] === "commit3p" ? "commit3" : possibleSrcDim3[l];
+                // let src1_prime = possibleSrcDim3[l] === "commit3p" ? true : false;
+                let src1_prime = possibleSrcDim3[l] === "commit3" ? true : false;
+                operations.push({dest_type, dest_prime, src0_type, src0_prime, src1_type, src1_prime})
             }
         }
 
-        // Dim3 destinations
-        for(let j = 0; j < possibleDestinationsDim3.length; j++) {
-            let dest = possibleDestinationsDim3[j];
-
-            // Dest dim 3, sources dimension 1 and 3
-            for(let k = 0; k < possibleSrcDim1.length; ++k) {
-                let src0 = possibleSrcDim1[k];
-                
-                if(op === "copy" || (src0 === "x" && op !== "mul")) continue;  
-                for (let l = 0; l < possibleSrcDim3.length; ++l) {
-                    let src1 = possibleSrcDim3[l];
-                    operations.push({op, dest, src0, src1});
-                    if(op === "sub") operations.push({op, dest, src0: src1, src1: src0})
-                }
-            }
-
-            for(let k = 0; k < possibleSrcDim3.length; ++k) {
-                let src0 = possibleSrcDim3[k];
-                if(op === "copy") operations.push({op, dest, src0})
-                let start = op === "sub" ? 0 : k;
-                for (let l = start; l < possibleSrcDim3.length; ++l) {
-                    let src1 = possibleSrcDim3[l];
-                    operations.push({op, dest, src0, src1})
-                }
+        // TODO: IS THIS NECESSARY
+        for(let k = 0; k < possibleSrcDim3.length; ++k) {
+            let src0_type = possibleSrcDim3[k] === "commit3p" ? "commit3" : possibleSrcDim3[k];
+            let src0_prime = possibleSrcDim3[k] === "commit3" ? true : false;
+            
+            for (let l = 0; l < possibleSrcDim1.length; ++l) {
+                let src1_type = ["commit1p", "constp"].includes(possibleSrcDim1[l]) ? possibleSrcDim1[l].substring(0, possibleSrcDim1[l].length - 1) : possibleSrcDim1[l];
+                // let src0_prime = ["commit1p", "constp"].includes(possibleSrcDim1[k]) ? true : false;
+                let src1_prime = ["commit1", "const"].includes(possibleSrcDim1[l]) ? true : false;
+                if(src1_type === "x") continue;
+                operations.push({dest_type, dest_prime, src0_type, src0_prime, src1_type, src1_prime});
             }
         }
 
-        // Step FRI
-        let dest = "tmp3";
-        for(let k = 0; k < possibleSrcStepFRI.length; ++k) {
-            let src0 = possibleSrcStepFRI[k];
-            if(["xDivXSubXi", "xDivXSubWXi"].includes(src0) && op !== "mul") continue;
-            if(op === "copy") {
-                operations.push({op, dest, src0})
-            } else {
-                let start = op === "sub" ? 0 : k;
-                for (let l = start; l < possibleSrcStepFRI.length; ++l) {
-                    let src1 = possibleSrcStepFRI[l];
-                    if(["xDivXSubXi", "xDivXSubWXi"].includes(src1) && op !== "mul") continue;
-                    if(["xDivXSubXi", "xDivXSubWXi"].includes(src0) && ["xDivXSubXi", "xDivXSubWXi"].includes(src1)) continue;
-                    operations.push({op, dest, src0, src1})
-                }
+        for(let k = 0; k < possibleSrcDim3.length; ++k) {
+            let src0_type = possibleSrcDim3[k] === "commit3p" ? "commit3" : possibleSrcDim3[k];
+            // let src0_prime = possibleSrcDim3[k] === "commit3p" ? true : false;
+            let src0_prime = possibleSrcDim3[k] === "commit3" ? true : false;
+            if(["commit3", "tmp3"].includes(src0_type)) operations.push({dest_type, dest_prime, src0_type, src0_prime}); // Copy operation
+            for (let l = 0; l < possibleSrcDim3.length; ++l) {
+                let src1_type = possibleSrcDim3[l] === "commit3p" ? "commit3" : possibleSrcDim3[l];
+                // let src1_prime = possibleSrcDim3[l] === "commit3p" ? true : false;
+                let src1_prime = possibleSrcDim3[l] === "commit3" ? true : false;
+                operations.push({dest_type, dest_prime, src0_type, src0_prime, src1_type, src1_prime})
             }
         }
     }
 
-    operations.push({ op: "mul", dest: "q", src0: "tmp3", src1: "Zi"});
-    operations.push({ op: "copy", dest: "f", src0: "tmp3"});
+    // Step FRI
+    operations.push({ dest_type: "tmp3", dest_prime: false, src0_type: "eval", src0_prime: false});
+    operations.push({ dest_type: "tmp3", dest_prime: false, src0_type: "challenge", src0_prime: false, src1_type: "eval", src1_prime: "false"});
+    operations.push({ dest_type: "tmp3", dest_prime: false, src0_type: "tmp3", src0_prime: false, src1_type: "eval", src1_prime: "false"});
+    
+    operations.push({ dest_type: "tmp3", dest_prime: false, src0_type: "tmp3", src0_prime: false, src1_type: "xDivXSubXi", src1_prime: false});
+    operations.push({ dest_type: "tmp3", dest_prime: false, src0_type: "tmp3", src0_prime: false, src1_type: "xDivXSubWXi", src1_prime: false});
+
+    operations.push({ dest_type: "q", dest_prime: false, src0_type: "tmp3", src0_prime: false, src1_type: "Zi", src1_prime: false});
+    operations.push({ dest_type: "f", dest_prime: false, src0_type: "tmp3", src0_prime: false});
     
     for (let j = 0; j < code.length; j++) {
         const r = code[j];
@@ -145,7 +155,10 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         ++cont_ops;
         
         let operation = getOperation(r);
-        let opsIndex = operations.findIndex(op => op.op === operation.op && op.dest === operation.dest && op.src0 === operation.src0 && (operation.op === "copy" || op.src1 === operation.src1));
+        let opsIndex = operations.findIndex(op => 
+            op.dest_type === operation.dest_type && op.dest_prime === operation.dest_prime
+            && op.src0_type === operation.src0_type && op.src0_prime === operation.src0_prime
+            && ((!op.hasOwnProperty("src1_type")) || (op.src1_type === operation.src1_type && op.src1_prime === operation.src1_prime)));
         if (opsIndex === -1) throw new Error("Operation not considered: " + JSON.stringify(operation));
 
         ops.push(opsIndex);
@@ -181,7 +194,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     ];
        
     for(let i = 0; i < operations.length; i++) {
-        const op = JSON.parse(operations[i]);
+        const op = operations[i];
         if(op.dest_type === "q") {
             const q = [
                 `           case ${i}: {`,
@@ -206,12 +219,11 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         } else {
             const operationCase = [
                 `           case ${i}: {`,
-                `               // operation: ${op.op}`,
                 `               // dest: ${op.dest_type} - offset: ${op.dest_prime ? 1 : 0}`,
                 `               // src0: ${op.src0_type} - offset: ${op.src0_prime ? 1 : 0}`,
             ];
         
-            if(op.op !== "copy") {
+            if(op.src1_type) {
                 operationCase.push(`               // src1: ${op.src1_type} - offset: ${op.src1_prime ? 1 : 0}`);
             }
             operationCase.push(...[
@@ -256,14 +268,12 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
 
     function writeOperation(operation) {
         let name = ["tmp1", "commit1"].includes(operation.dest_type) ? `Goldilocks::op` : `Goldilocks3::op`;
-        if(["tmp3", "commit3"].includes(operation.dest_type))  {
-            if(["add", "sub", "mul"].includes(operation.op) && 
-                (!["tmp3", "commit3"].includes(operation.src0_type) || !["tmp3", "commit3"].includes(operation.src1_type))) {
+        if(["tmp3", "commit3"].includes(operation.dest_type) && operation.src1_type)  {
+            if((!["tmp3", "commit3"].includes(operation.src0_type) || !["tmp3", "commit3"].includes(operation.src1_type))) {
                 if(["public", "x", "commit1", "tmp1", "const"].includes(operation.src0_type)) name += "1";
                 if(operation.src0_type === "number") name += "1c";
                 if (["commit3", "tmp3"].includes(operation.src0_type)) name += "3";
                 if(operation.src0_type === "challenge") name += "3c";
-
                 if(["public", "x", "commit1", "tmp1", "const"].includes(operation.src1_type)) name += "1";
                 if(operation.src1_type === "number") name += "1c";
                 if (["commit3", "tmp3"].includes(operation.src1_type)) name += "3";
@@ -295,8 +305,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             }
         }
 
-        name += writeType(operation.src0);
-
         name += writeType(operation.src0_type, operation.src0_prime);
 
         if(["commit1", "commit3", "const"].includes(operation.src0_prime) && operation.src0_prime) {
@@ -308,7 +316,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             offsetSrc0Call = `params.x_${dom}.offset(), `;
         }
 
-        if(operation.op !== "copy") {
+        if(operation.src1_type) {
             name += writeType(operation.src1_type, operation.src1_prime);
 
             if(["commit1", "commit3", "const"].includes(operation.src1_type) && operation.src1_prime) {
@@ -386,7 +394,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             case "xDivXSubWXi":
                 return "params.xDivXSubWXi[i], ";
             default:
-                throw new Error("Invalid type");
+                throw new Error("Invalid type: " + type);
         }
 
     }
@@ -401,9 +409,10 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         } else {
             _op.dest_type = r.dest.type;
         }
-	_op.dest_prime = r.dest.prime;
+	    // _op.dest_prime = r.dest.type === "tmp" ? false : r.dest.prime || false;
+        _op.dest_prime = r.dest.type === "tmp" ? false : ["cm", "tmpExp"].includes(r.dest.type) ? true : r.dest.prime || false;
 
-        if(_op.op !== "sub") {
+        if(r.op !== "sub") {
             r.src.sort((a, b) => {
                 let opA =  ["cm", "tmpExp"].includes(a.type) ? operationsMap[`commit${a.dim}`] : a.type === "tmp" ? operationsMap[`tmp${a.dim}`] : operationsMap[a.type];
                 let opB = ["cm", "tmpExp"].includes(b.type) ? operationsMap[`commit${b.dim}`] : b.type === "tmp" ? operationsMap[`tmp${b.dim}`] : operationsMap[b.type];
@@ -420,7 +429,8 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             } else {
                 _op[`src${i}_type`] = r.src[i].type;
             }
-	    _op[`src${i}_prime`] = r.src[i].type === "tmp" ? false : r.src[i].prime;
+	    // _op[`src${i}_prime`] = r.src[i].type === "tmp" ? false : r.src[i].prime || false;
+        _op[`src${i}_prime`] = r.src[i].type === "tmp" ? false : ["cm", "tmpExp", "const"].includes(r.src[i].type) ? true : r.src[i].prime || false;
         }
 
         return _op;
