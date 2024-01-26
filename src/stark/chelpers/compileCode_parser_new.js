@@ -1,5 +1,12 @@
 const { assert } = require("chai");
-const { getIdMaps } = require("./helpers");
+const { getIdMaps, getAllOperations } = require("./helpers");
+
+const operationsTypeMap = {
+    "add": 0,
+    "sub": 1,
+    "mul": 2,
+    "copy": 3,
+}
 
 const operationsMap = {
     "commit1": 1,
@@ -19,8 +26,6 @@ const operationsMap = {
 }
 
 module.exports = function compileCode_parser(starkInfo, config, functionName, code, dom) {
-
-    const operations = [];
 
     var ops = [];
     var cont_ops = 0;
@@ -58,108 +63,34 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     let ID3D = new Array(maxid).fill(-1);
     let { count1d, count3d } = getIdMaps(maxid, ID1D, ID3D, code);
 
-    // const possibleDestinationsDim1 = [ "commit1", "commit1p", "tmp1" ];
-    // const possibleDestinationsDim3 = [ "commit3", "commit3p", "tmp3" ];
-   
-    // const possibleSrcDim1 = [ "commit1", "commit1p", "const", "constp", "tmp1", "public", "x", "number" ];
-    // const possibleSrcDim3 = [ "commit3", "commit3p", "tmp3", "challenge" ];
+    let isGeneric = true;
+    let includesEnds = false;
 
-    const possibleDestinationsDim1 = [ "commit1", "tmp1" ];
-    const possibleDestinationsDim3 = [ "commit3", "tmp3" ];
-   
-    const possibleSrcDim1 = [ "commit1", "const", "tmp1", "public", "x", "number" ];
-    const possibleSrcDim3 = [ "commit3", "tmp3", "challenge" ];
-
-    // Dim1 destinations
-    for(let j = 0; j < possibleDestinationsDim1.length; j++) {
-        let dest_type = possibleDestinationsDim1[j] === "commit1p" ? "commit1" : possibleDestinationsDim1[j];
-        // let dest_prime = possibleDestinationsDim1[j] === "commit1p" ? true : false;
-        let dest_prime = possibleDestinationsDim1[j] === "commit1" ? true : false;
-        for(let k = 0; k < possibleSrcDim1.length; ++k) {
-            let src0_type = ["commit1p", "constp"].includes(possibleSrcDim1[k]) ? possibleSrcDim1[k].substring(0, possibleSrcDim1[k].length - 1) : possibleSrcDim1[k];
-            // let src0_prime = ["commit1p", "constp"].includes(possibleSrcDim1[k]) ? true : false;
-            let src0_prime = ["commit1", "const"].includes(possibleSrcDim1[k]) ? true : false;
-            if(["commit1", "const", "tmp1"].includes(src0_type)) operations.push({dest_type, dest_prime, src0_type, src0_prime}); // Copy operation
-            if(src0_type === "x") continue;
-            for (let l = 0; l < possibleSrcDim1.length; ++l) {
-                let src1_type = ["commit1p", "constp"].includes(possibleSrcDim1[l]) ? possibleSrcDim1[l].substring(0, possibleSrcDim1[l].length - 1) : possibleSrcDim1[l];
-                // let src1_prime = ["commit1p", "constp"].includes(possibleSrcDim1[l]) ? true : false;
-                let src1_prime = ["commit1", "const"].includes(possibleSrcDim1[l]) ? true : false;
-                if(src1_type === "x") continue;
-                operations.push({dest_type, dest_prime, src0_type, src0_prime, src1_type, src1_prime})
-            } 
-        }
-    }
-
-    // Dim3 destinations
-    for(let j = 0; j < possibleDestinationsDim3.length; j++) {
-        let dest_type = possibleDestinationsDim3[j] === "commit3p" ? "commit3" : possibleDestinationsDim3[j];
-        // let dest_prime = possibleDestinationsDim3[j] === "commit3p" ? true : false;
-        let dest_prime = possibleDestinationsDim3[j] === "commit3" ? true : false;
-
-        // Dest dim 3, sources dimension 1 and 3
-        for(let k = 0; k < possibleSrcDim1.length; ++k) {
-            let src0_type = ["commit1p", "constp"].includes(possibleSrcDim1[k]) ? possibleSrcDim1[k].substring(0, possibleSrcDim1[k].length - 1) : possibleSrcDim1[k];
-            // let src0_prime = ["commit1p", "constp"].includes(possibleSrcDim1[k]) ? true : false;
-            let src0_prime = ["commit1", "const"].includes(possibleSrcDim1[k]) ? true : false;
-            for (let l = 0; l < possibleSrcDim3.length; ++l) {
-                let src1_type = possibleSrcDim3[l] === "commit3p" ? "commit3" : possibleSrcDim3[l];
-                // let src1_prime = possibleSrcDim3[l] === "commit3p" ? true : false;
-                let src1_prime = possibleSrcDim3[l] === "commit3" ? true : false;
-                operations.push({dest_type, dest_prime, src0_type, src0_prime, src1_type, src1_prime})
-            }
-        }
-
-        // TODO: IS THIS NECESSARY
-        for(let k = 0; k < possibleSrcDim3.length; ++k) {
-            let src0_type = possibleSrcDim3[k] === "commit3p" ? "commit3" : possibleSrcDim3[k];
-            let src0_prime = possibleSrcDim3[k] === "commit3" ? true : false;
-            
-            for (let l = 0; l < possibleSrcDim1.length; ++l) {
-                let src1_type = ["commit1p", "constp"].includes(possibleSrcDim1[l]) ? possibleSrcDim1[l].substring(0, possibleSrcDim1[l].length - 1) : possibleSrcDim1[l];
-                // let src0_prime = ["commit1p", "constp"].includes(possibleSrcDim1[k]) ? true : false;
-                let src1_prime = ["commit1", "const"].includes(possibleSrcDim1[l]) ? true : false;
-                if(src1_type === "x") continue;
-                operations.push({dest_type, dest_prime, src0_type, src0_prime, src1_type, src1_prime});
-            }
-        }
-
-        for(let k = 0; k < possibleSrcDim3.length; ++k) {
-            let src0_type = possibleSrcDim3[k] === "commit3p" ? "commit3" : possibleSrcDim3[k];
-            // let src0_prime = possibleSrcDim3[k] === "commit3p" ? true : false;
-            let src0_prime = possibleSrcDim3[k] === "commit3" ? true : false;
-            if(["commit3", "tmp3"].includes(src0_type)) operations.push({dest_type, dest_prime, src0_type, src0_prime}); // Copy operation
-            for (let l = 0; l < possibleSrcDim3.length; ++l) {
-                let src1_type = possibleSrcDim3[l] === "commit3p" ? "commit3" : possibleSrcDim3[l];
-                // let src1_prime = possibleSrcDim3[l] === "commit3p" ? true : false;
-                let src1_prime = possibleSrcDim3[l] === "commit3" ? true : false;
-                operations.push({dest_type, dest_prime, src0_type, src0_prime, src1_type, src1_prime})
-            }
-        }
-    }
-
-    // Step FRI
-    operations.push({ dest_type: "tmp3", dest_prime: false, src0_type: "eval", src0_prime: false});
-    operations.push({ dest_type: "tmp3", dest_prime: false, src0_type: "challenge", src0_prime: false, src1_type: "eval", src1_prime: "false"});
-    operations.push({ dest_type: "tmp3", dest_prime: false, src0_type: "tmp3", src0_prime: false, src1_type: "eval", src1_prime: "false"});
-    
-    operations.push({ dest_type: "tmp3", dest_prime: false, src0_type: "tmp3", src0_prime: false, src1_type: "xDivXSubXi", src1_prime: false});
-    operations.push({ dest_type: "tmp3", dest_prime: false, src0_type: "tmp3", src0_prime: false, src1_type: "xDivXSubWXi", src1_prime: false});
-
-    operations.push({ dest_type: "q", dest_prime: false, src0_type: "tmp3", src0_prime: false, src1_type: "Zi", src1_prime: false});
-    operations.push({ dest_type: "f", dest_prime: false, src0_type: "tmp3", src0_prime: false});
+    const operations = isGeneric ? getAllOperations() : [];
     
     for (let j = 0; j < code.length; j++) {
         const r = code[j];
+        args.push(operationsTypeMap[r.op]);
+        argsString += `${operationsTypeMap[r.op]}, `;
+        ++cont_args;
         pushResArg(r, r.dest.type);
         ++cont_ops;
         
         let operation = getOperation(r);
         let opsIndex = operations.findIndex(op => 
-            op.dest_type === operation.dest_type && op.dest_prime === operation.dest_prime
-            && op.src0_type === operation.src0_type && op.src0_prime === operation.src0_prime
-            && ((!op.hasOwnProperty("src1_type")) || (op.src1_type === operation.src1_type && op.src1_prime === operation.src1_prime)));
-        if (opsIndex === -1) throw new Error("Operation not considered: " + JSON.stringify(operation));
+            op.dest_type === operation.dest_type
+            && op.src0_type === operation.src0_type
+            && ((!op.hasOwnProperty("src1_type")) || (op.src1_type === operation.src1_type)));
+        
+            
+        if (opsIndex === -1) {
+            if(isGeneric) {
+                throw new Error("Operation not considered: " + JSON.stringify(operation));
+            } else {
+                opsIndex = operations.length;
+                operations.push(operation);
+            }
+        }
 
         ops.push(opsIndex);
         opsString += `${opsIndex}, `;
@@ -169,6 +100,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     }
 
     assert(cont_ops == ops.length);
+    assert(cont_args == args.length);
 
     console.log("\n", functionName);
     console.log("NOPS: ", cont_ops, ops.length);
@@ -180,24 +112,33 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     if(argsString !== "{") argsString = argsString.substring(0, argsString.lastIndexOf(","));
     argsString += "};"
 
+
     const parserCPP = [
+        `void ${config.className}::parser_avx(StepsParams &params, uint64_t rowStart, uint64_t rowEnd, uint64_t nrowsBatch, uint64_t domainSize) {`,
+        "    bool includesEnds = rowEnd == domainSize || rowStart == 0;",
         "#pragma omp parallel for",
-        `   for (uint64_t i = 0; i < nrows; i+= nrowsBatch) {`,
-        "      int i_args = 0;",
-        "      __m256i tmp1[NTEMP1_];",
-        "      Goldilocks3::Element_avx tmp3[NTEMP3_];",
-        "      uint64_t offsetsDest[4], offsetsSrc0[4], offsetsSrc1[4];",
-        "      uint64_t numConstPols = params.pConstPols->numPols();",
-        "      \n",
-        "      for (int kk = 0; kk < NOPS_; ++kk) {",
-        `          switch (op${step}[kk]) {`,
+        `    for (uint64_t i = rowStart; i < rowEnd; i+= nrowsBatch) {`,
+        "        int i_args = 0;",
+        "        __m256i tmp1[NTEMP1_];",
+        "        Goldilocks3::Element_avx tmp3[NTEMP3_];",
     ];
+    if(includesEnds) {
+        parserCPP.push("        uint64_t offsetsDest[4], offsetsSrc0[4], offsetsSrc1[4];");
+    } else {
+        parserCPP.push("        uint64_t offsetDest, offsetSrc0, offsetSrc1;");
+    }
+    parserCPP.push(...[
+        "        uint64_t numConstPols = params.pConstPols->numPols();",
+        "        \n",
+        "        for (int kk = 0; kk < NOPS_; ++kk) {",
+        `            switch (op${step}[kk]) {`,
+    ]);
        
     for(let i = 0; i < operations.length; i++) {
         const op = operations[i];
         if(op.dest_type === "q") {
             const q = [
-                `           case ${i}: {`,
+                `            case ${i}: {`,
                 "               Goldilocks::Element tmp_inv[3];",
                 "               Goldilocks::Element ti0[4];",
                 "               Goldilocks::Element ti1[4];",
@@ -217,17 +158,19 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             ].join("\n");
             parserCPP.push(q);
         } else {
-            const operationCase = [
-                `           case ${i}: {`,
-                `               // dest: ${op.dest_type} - offset: ${op.dest_prime ? 1 : 0}`,
-                `               // src0: ${op.src0_type} - offset: ${op.src0_prime ? 1 : 0}`,
-            ];
-        
+
+            let operationDescription = `                // DEST: ${op.dest_type} - SRC0: ${op.src0_type}`;
             if(op.src1_type) {
-                operationCase.push(`               // src1: ${op.src1_type} - offset: ${op.src1_prime ? 1 : 0}`);
+                operationDescription += ` - SRC1: ${op.src1_type}`;
             }
+            const operationCase = [
+                `            case ${i}: {`,
+                operationDescription,
+            ];
+            
+            operationCase.push(writeOperation(op, includesEnds));
+
             operationCase.push(...[
-                writeOperation(op),
                 "                break;",
                 "            }",
             ])
@@ -247,7 +190,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         "   }"
         ]);
 
-    parserCPP.unshift(`void ${config.className}::step${step}_parser_first_avx(StepsParams &params, uint64_t nrows, uint64_t nrowsBatch) {`);
     parserCPP.push("}");
        
     const parserHPP = [
@@ -260,13 +202,13 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         "\n",
         `uint64_t args${step}[NARGS_] = ${argsString}`
     ];
-
+    
     const parserCPPCode = parserCPP.join("\n");
     const parserHPPCode = parserHPP.join("\n");
 
     return {parserHPPCode, parserCPPCode};
 
-    function writeOperation(operation) {
+    function writeOperation(operation, includesEnds = false) {
         let name = ["tmp1", "commit1"].includes(operation.dest_type) ? `Goldilocks::op` : `Goldilocks3::op`;
         if(["tmp3", "commit3"].includes(operation.dest_type) && operation.src1_type)  {
             if((!["tmp3", "commit3"].includes(operation.src0_type) || !["tmp3", "commit3"].includes(operation.src1_type))) {
@@ -282,7 +224,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         }
         
         name += "_avx(";
-        name += `OPERATION::${operation.op}, `;
 
         let offsetDest = "";
         let offsetSrc0 = "";
@@ -291,58 +232,74 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         let offsetSrc0Call = "";
         let offsetSrc1Call = "";
         
+        name += `i_args, `;
 
-        c_args = 0;
+        c_args = 1;
 
-        name += writeType(operation.dest_type, operation.dest_prime);
+        name += writeType(operation.dest_type, includesEnds);
 
         if(["commit1", "commit3"].includes(operation.dest_type)) {
-            if (operation.dest_prime) {
-                offsetDest = `                  offsetsDest[j] = args${step}[i_args + ${c_args++}] + (((i + j) + args${step}[i_args + ${c_args++}]) % args${step}[i_args + ${c_args++}]) * args${step}[i_args + ${c_args++}];`,
-                name += "offsetsDest, ";
+            let numPols = `args${step}[i_args + ${c_args+2}]`;
+            if (operation.dest_prime && includesEnds) {
+                    offsetDest = `                  offsetsDest[j] = args${step}[i_args + ${c_args}] + (((i + j) + args${step}[i_args + ${c_args+1}]) % domainSize) * ${numPols};`,
+                    name += "offsetsDest, ";
             } else {
-                name += `args${step}[i_args + ${c_args - 1}], `;
+                name += `${numPols}, `;
             }
         }
+        c_args += nArgs(operation.dest_type);
+        name += "\n                    ";
 
-        name += writeType(operation.src0_type, operation.src0_prime);
+        name += writeType(operation.src0_type, includesEnds);
 
-        if(["commit1", "commit3", "const"].includes(operation.src0_prime) && operation.src0_prime) {
-            let numPols = operation.src0_type === "const" ? "numConstPols" : `args${step}[i_args + ${c_args+3}]`;
-            offsetSrc0 = `                  offsetsSrc0[j] = args${step}[i_args + ${c_args++}] + (((i + j) + args${step}[i_args + ${c_args++}]) % args${step}[i_args + ${c_args++}]) * ${numPols};`;
-            if(operation.src0_type !== "const") c_args++;
-            offsetSrc0Call = "offsetsSrc0, ";
+        if(["commit1", "commit3", "const"].includes(operation.src0_type) && operation.src0_prime) {
+            let numPols = operation.src0_type === "const" ? "numConstPols" : `args${step}[i_args + ${c_args+2}]`;
+            if(includesEnds) {
+                offsetSrc0 = `                  offsetsSrc0[j] = args${step}[i_args + ${c_args}] + (((i + j) + args${step}[i_args + ${c_args+1}]) % domainSize) * ${numPols};`;
+                offsetSrc0Call = "offsetsSrc0, ";
+            } else {
+                offsetSrc0Call += `${numPols}, `;
+            }
         } else if (operation.src0_type === "x") {
             offsetSrc0Call = `params.x_${dom}.offset(), `;
         }
+        c_args += nArgs(operation.src0_type);
+        name += "\n                    ";
 
         if(operation.src1_type) {
-            name += writeType(operation.src1_type, operation.src1_prime);
+            name += writeType(operation.src1_type, includesEnds);
 
             if(["commit1", "commit3", "const"].includes(operation.src1_type) && operation.src1_prime) {
-                let numPols = operation.src1_type === "const" ? "numConstPols" : `args${step}[i_args + ${c_args+3}]`;
-                offsetSrc1 = `                  offsetsSrc1[j] = args${step}[i_args + ${c_args++}] + (((i + j) + args${step}[i_args + ${c_args++}]) % args${step}[i_args + ${c_args++}]) * ${numPols};`;
-                if(operation.src1_type !== "const") c_args++;  
-                offsetSrc1Call = "offsetsSrc1, ";
+                let numPols = operation.src1_type === "const" ? "numConstPols" : `args${step}[i_args + ${c_args+2}]`;
+                if(includesEnds) {
+                    offsetSrc1 = `                  offsetsSrc1[j] = args${step}[i_args + ${c_args}] + (((i + j) + args${step}[i_args + ${c_args+1}]) % domainSize) * ${numPols};`;
+                    offsetSrc1Call = "offsetsSrc1, ";
+                } else {
+                    offsetSrc1Call += `${numPols}, `;
+                }
             } else if (operation.src1_type === "x") {
                 offsetSrc1Call = `params.x_${dom}.offset(), `;
             }
+            c_args += nArgs(operation.src1_type);
+            name += "\n                    ";
         }
 
+        
         name += offsetSrc0Call;
         name += offsetSrc1Call;
-
-        name = name.substring(0, name.lastIndexOf(", ")) + ");";
+        name = name.substring(0, name.lastIndexOf(", ")) + "\n                );";
         
         const operationCall = [];
 
-        if(offsetDest !== "" || offsetSrc0 !== "" || offsetSrc1 !== "") {
-            const offsetLoop = [ "               for (uint64_t j = 0; j < AVX_SIZE_; ++j) {"];
-            if(offsetDest !== "") offsetLoop.push(offsetDest);
-            if(offsetSrc0 !== "") offsetLoop.push(offsetSrc0);
-            if(offsetSrc1 !== "") offsetLoop.push(offsetSrc1);
-            offsetLoop.push("               }");
-            operationCall.push(...offsetLoop);
+        if(includesEnds) {
+            if(offsetDest !== "" || offsetSrc0 !== "" || offsetSrc1 !== "") {
+                const offsetLoop = [ "               for (uint64_t j = 0; j < AVX_SIZE_; ++j) {"];
+                if(offsetDest !== "") offsetLoop.push(offsetDest);
+                if(offsetSrc0 !== "") offsetLoop.push(offsetSrc0);
+                if(offsetSrc1 !== "") offsetLoop.push(offsetSrc1);
+                offsetLoop.push("               }");
+                operationCall.push(...offsetLoop);
+            }
         }
 
         operationCall.push(...[
@@ -353,34 +310,34 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         return operationCall.join("\n").replace(/i_args \+ 0/, "i_args");
     }
 
-    function writeType(type, offset) {
+    function writeType(type, includesEnds = false) {
         switch (type) {
             case "public":
-                return `params.publicInputs[args${step}[i_args + ${c_args++}]], `;
+                return `params.publicInputs[args${step}[i_args + ${c_args}]], `;
             case "tmp1":
-                return `tmp1[args${step}[i_args + ${c_args++}]], `; 
+                return `tmp1[args${step}[i_args + ${c_args}]], `; 
             case "tmp3":
-                    return `tmp3[args${step}[i_args + ${c_args++}]], `;
+                    return `tmp3[args${step}[i_args + ${c_args}]], `;
             case "commit1":
             case "commit3":
-                if(offset) {
+                if(includesEnds) {
                     return `&params.pols[0], `;
                 } else {
-                    return `&params.pols[args${step}[i_args + ${c_args++}] + i * args${step}[i_args + ${c_args++}]], `;
+                    return `&params.pols[args${step}[i_args + ${c_args}] + (i + args${step}[i_args + ${c_args+1}]) * args${step}[i_args + ${c_args+2}]], `;
                 }
             case "const":
                 let constPols = dom === "n" ? "&params.pConstPols" : `&params.pConstPols2ns`;
-                if(offset) {
+                if(includesEnds) {
                     return `${constPols}->getElement(0, 0), `;
                 } else {
-                    return `${constPols}->getElement(args${step}[i_args + ${c_args++}], i), `;
+                    return `${constPols}->getElement(args${step}[i_args + ${c_args}], i), `;
                 }
             case "challenge":
-                return `(Goldilocks3::Element &)*params.challenges[args${step}[i_args + ${c_args++}]], `;
+                return `(Goldilocks3::Element &)*params.challenges[args${step}[i_args + ${c_args}]], `;
             case "x":
                 return `params.x_${dom}[i], `;
             case "number":
-                return `Goldilocks::fromU64(args${step}[i_args + ${c_args++}]), `;
+                return `Goldilocks::fromU64(args${step}[i_args + ${c_args}]), `;
             case "Zi": 
                 return "params.zi.zhInv(i), ";
             case "q":
@@ -388,7 +345,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             case "f": 
                 return "params.f_2ns[i * 3], ";
             case "eval":
-                return `&evals_[args${step}[i_args + ${c_args++}] * 3], `;
+                return `&evals_[args${step}[i_args + ${c_args}] * 3], `;
             case "xDivXSubXi": 
                 return "params.xDivXSubXi[i], ";
             case "xDivXSubWXi":
@@ -396,7 +353,32 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             default:
                 throw new Error("Invalid type: " + type);
         }
+    }
 
+    function nArgs(type) {
+        switch (type) {
+            case "x":
+            case "Zi":
+            case "q":
+            case "xDivXSubXi":
+            case "xDivXSubWXi":
+            case "f":
+                return 0; 
+            case "public":            
+            case "tmp1":
+            case "tmp3":
+            case "challenge":
+            case "eval":
+            case "number":
+                return 1;
+            case "const":
+                return 2;
+            case "commit1":
+            case "commit3":
+                return 3;  
+            default:
+                throw new Error("Invalid type: " + type);
+        }
     }
 
     function getOperation(r) {
@@ -409,8 +391,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         } else {
             _op.dest_type = r.dest.type;
         }
-	    // _op.dest_prime = r.dest.type === "tmp" ? false : r.dest.prime || false;
-        _op.dest_prime = r.dest.type === "tmp" ? false : ["cm", "tmpExp"].includes(r.dest.type) ? true : r.dest.prime || false;
+        _op.dest_prime = (r.dest.type !== "tmp" && r.dest.prime) || false;
 
         if(r.op !== "sub") {
             r.src.sort((a, b) => {
@@ -429,8 +410,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             } else {
                 _op[`src${i}_type`] = r.src[i].type;
             }
-	    // _op[`src${i}_prime`] = r.src[i].type === "tmp" ? false : r.src[i].prime || false;
-        _op[`src${i}_prime`] = r.src[i].type === "tmp" ? false : ["cm", "tmpExp", "const"].includes(r.src[i].type) ? true : r.src[i].prime || false;
+            _op[`src${i}_prime`] = (r.src[i].type !== "tmp" && r.src[i].prime) || false;
         }
 
         return _op;
@@ -499,18 +479,15 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                 break;
             }
             case "const": {
-                let offset = r.prime ? next : 0;
-                let evalArgs = [];
-                evalArgs.push(r.id);
+                let offset_prime = r.prime ? next : 0;
+
+                args.push(r.id);
+                args.push(offset_prime);
+
                 argsString += `${r.id}, `;
-                if(r.prime) {
-                    evalArgs.push(offset);
-                    evalArgs.push(N);
-                    argsString += `${offset}, `;
-                    argsString += `${N}, `;
-                }
- 		cont_args += evalArgs.length;
-		args.push(...evalArgs);
+                argsString += `${offset_prime}, `;
+                
+                cont_args += 2;
                 break;
             }
             case "tmpExp": {
@@ -563,24 +540,19 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
 
     function evalMap_(polId, prime) {
         let p = starkInfo.varPolMap[polId];
-        let offset = starkInfo.mapOffsets[p.section];
-        offset += p.sectionPos;
-        let size = starkInfo.mapSectionsN[p.section];
+
+        let offset = starkInfo.mapOffsets[p.section] + p.sectionPos;
         let offset_prime = prime ? next : 0;
-        let evalArgs = [];
-        evalArgs.push(Number(offset));
-        if(prime) {
-            evalArgs.push(Number(offset_prime));
-            evalArgs.push(Number(N));
-        }
-        evalArgs.push(Number(size));
+        let size = starkInfo.mapSectionsN[p.section];
+
+        args.push(Number(offset));
+        args.push(Number(offset_prime));
+        args.push(Number(size));
+
         argsString += `${offset}, `;
-        if(prime) {
-            argsString += `${offset_prime}, `;
-            argsString += `${N}, `;
-        }
-        argsString += `${size}, `;
-        cont_args += evalArgs.length;
-        args.push(...evalArgs);
+        argsString += `${offset_prime}, `;
+        argsString += `${N}, `;
+        
+        cont_args += 3;
     }
 }
