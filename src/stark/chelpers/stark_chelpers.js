@@ -4,7 +4,7 @@ const { compileCode } = require("./helpers.js");
 
 module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
-    const isGeneric = config && config.isGeneric || false;
+    const isGeneric = config && config.isGeneric || true;
 
     let result = {};
 
