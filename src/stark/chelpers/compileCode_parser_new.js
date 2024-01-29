@@ -25,7 +25,7 @@ const operationsMap = {
     "f": 14,
 }
 
-module.exports = function compileCode_parser(starkInfo, config, functionName, code, dom) {
+module.exports = function compileCode_parser(starkInfo, config, code, dom, stage, executeBefore) {
 
     var ops = [];
     var cont_ops = 0;
@@ -40,20 +40,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     const nBits = starkInfo.starkStruct.nBits;
     const nBitsExt = starkInfo.starkStruct.nBitsExt;
 
-    let step;
-
-    if (functionName == "step3_first") {
-        step = "3";
-    } else if (functionName == "step3prev_first") {
-        step = "3prev";
-    } else if (functionName == "step2prev_first") {
-        step = "2prev";
-    } else if (functionName == "step42ns_first") {
-        step = "42ns";
-    } else if (functionName == "step52ns_first") {
-        step = "52ns";
-    } else throw new Error(`Invalid function name: ${functionName}`)
-
     const next = (dom == "n" ? 1 : 1 << (nBitsExt - nBits)).toString();
     const N = (dom == "n" ? (1 << nBits) : (1 << nBitsExt)).toString();
 
@@ -64,7 +50,6 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     let { count1d, count3d } = getIdMaps(maxid, ID1D, ID3D, code);
 
     let isGeneric = true;
-    let includesEnds = false;
 
     const operations = isGeneric ? getAllOperations() : [];
     
@@ -102,10 +87,10 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
     assert(cont_ops == ops.length);
     assert(cont_args == args.length);
 
-    console.log("\n", functionName);
-    console.log("NOPS: ", cont_ops, ops.length);
-    console.log("NARGS: ", cont_args, args.length);
-    console.log("DIFF OPERATIONS: ", operations.length);
+    console.log("Number of operations: ", cont_ops, ops.length);
+    console.log("Number of arguments: ", cont_args, args.length);
+    console.log("Different operations types: ", operations.length);
+    console.log("--------------------------------");
 
     if(opsString !== "{") opsString = opsString.substring(0, opsString.lastIndexOf(","));
     opsString += "};"
@@ -114,25 +99,18 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
 
 
     const parserCPP = [
-        `void ${config.className}::parser_avx(StepsParams &params, uint64_t rowStart, uint64_t rowEnd, uint64_t nrowsBatch, uint64_t domainSize) {`,
-        "    bool includesEnds = rowEnd == domainSize || rowStart == 0;",
+        `void ${config.className}::parser_avx(StepsParams &params, ParserParams &parserParams, uint64_t rowStart, uint64_t rowEnd, uint64_t nrowsBatch, bool const includesEnds) {`,
         "#pragma omp parallel for",
         `    for (uint64_t i = rowStart; i < rowEnd; i+= nrowsBatch) {`,
         "        int i_args = 0;",
-        "        __m256i tmp1[NTEMP1_];",
-        "        Goldilocks3::Element_avx tmp3[NTEMP3_];",
-    ];
-    if(includesEnds) {
-        parserCPP.push("        uint64_t offsetsDest[4], offsetsSrc0[4], offsetsSrc1[4];");
-    } else {
-        parserCPP.push("        uint64_t offsetDest, offsetSrc0, offsetSrc1;");
-    }
-    parserCPP.push(...[
+        "        __m256i tmp1[parserParams.nTemp1];",
+        "        Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
+        "        uint64_t offsetDest, offsetSrc0, offsetSrc1;",
         "        uint64_t numConstPols = params.pConstPols->numPols();",
         "        \n",
-        "        for (int kk = 0; kk < NOPS_; ++kk) {",
-        `            switch (op${step}[kk]) {`,
-    ]);
+        "        for (int kk = 0; kk < parserParams.nOps; ++kk) {",
+        `            switch (parserParams.ops[kk]) {`,
+    ];
        
     for(let i = 0; i < operations.length; i++) {
         const op = operations[i];
@@ -143,9 +121,9 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                 "               Goldilocks::Element ti0[4];",
                 "               Goldilocks::Element ti1[4];",
                 "               Goldilocks::Element ti2[4];",
-                `               Goldilocks::store_avx(ti0, tmp3[args${step}[i_args]][0]);`,
-                `               Goldilocks::store_avx(ti1, tmp3[args${step}[i_args]][1]);`,
-                `               Goldilocks::store_avx(ti2, tmp3[args${step}[i_args]][2]);`,
+                `               Goldilocks::store_avx(ti0, tmp3[parserParams.args[i_args]][0]);`,
+                `               Goldilocks::store_avx(ti1, tmp3[parserParams.args[i_args]][1]);`,
+                `               Goldilocks::store_avx(ti2, tmp3[parserParams.args[i_args]][2]);`,
                 "               for (uint64_t j = 0; j < AVX_SIZE_; ++j) {",
                 "                   tmp_inv[0] = ti0[j];",
                 "                   tmp_inv[1] = ti1[j];",
@@ -168,9 +146,19 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                 operationDescription,
             ];
             
-            operationCase.push(writeOperation(op, includesEnds));
-
             operationCase.push(...[
+                "                if(!includesEnds) {",
+                `    ${writeOperation(op, false)}`,
+                "                } else {",
+                `    ${writeOperation(op, true)}`,
+                "                }",
+            ]);
+
+            let numberArgs = 1 + nArgs(op.dest_type) + nArgs(op.src0_type);
+            if(op.src1_type) numberArgs += nArgs(op.src1_type);
+            
+            operationCase.push(...[
+                `                i_args += ${numberArgs};`,
                 "                break;",
                 "            }",
             ])
@@ -180,13 +168,13 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
 
     parserCPP.push(...[
         "              default: {",
-        `                  std::cout << " Wrong operation in step${step}_first!" << std::endl;`,
+        `                  std::cout << " Wrong operation!" << std::endl;`,
         "                  exit(1);",
         "              }",
         "          }",
         "       }",
-        `       if (i_args != NARGS_) std::cout << " " << i_args << " - " << NARGS_ << std::endl;`,
-        "       assert(i_args == NARGS_);",
+        `       if (i_args != parserParams.nArgs) std::cout << " " << i_args << " - " << parserParams.nArgs << std::endl;`,
+        "       assert(i_args == parserParams.nArgs);",
         "   }"
         ]);
 
@@ -198,15 +186,27 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         `#define NTEMP1_ ${count1d}`,
         `#define NTEMP3_ ${count3d}`,
         "\n",
-        `uint64_t op${step}[NOPS_] = ${opsString}`,
+        `uint64_t ops[NOPS_] = ${opsString}`,
         "\n",
-        `uint64_t args${step}[NARGS_] = ${argsString}`
+        `uint64_t args[NARGS_] = ${argsString}`
     ];
     
     const parserCPPCode = parserCPP.join("\n");
     const parserHPPCode = parserHPP.join("\n");
 
-    return {parserHPPCode, parserCPPCode};
+    const stageInfo = {
+        stage,
+        executeBefore: executeBefore ? 1 : 0,
+        domainSize: dom === "n" ? (1 << nBits) : (1 << nBitsExt),
+        nTemp1: count1d,
+        nTemp3: count3d,
+        nOps: cont_ops,
+        ops,
+        nArgs: cont_args,
+        args: args.map(v => typeof v === 'string' && v.endsWith('ULL') ? parseInt(v.replace('ULL', '')) : v),
+    }
+    
+    return {parserHPPCode, parserCPPCode, stageInfo};
 
     function writeOperation(operation, includesEnds = false) {
         let name = ["tmp1", "commit1"].includes(operation.dest_type) ? `Goldilocks::op` : `Goldilocks3::op`;
@@ -223,121 +223,93 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             }
         }
         
-        name += "_avx(";
-
-        let offsetDest = "";
-        let offsetSrc0 = "";
-        let offsetSrc1 = "";
-
-        let offsetSrc0Call = "";
-        let offsetSrc1Call = "";
-        
+        name += "_avx(";        
         name += `i_args, `;
 
         c_args = 1;
 
         name += writeType(operation.dest_type, includesEnds);
 
-        if(["commit1", "commit3"].includes(operation.dest_type)) {
-            let numPols = `args${step}[i_args + ${c_args+2}]`;
-            if (operation.dest_prime && includesEnds) {
-                    offsetDest = `                  offsetsDest[j] = args${step}[i_args + ${c_args}] + (((i + j) + args${step}[i_args + ${c_args+1}]) % domainSize) * ${numPols};`,
-                    name += "offsetsDest, ";
-            } else {
-                name += `${numPols}, `;
-            }
-        }
+        let {offset: offsetDest, offsetCall: offsetDestCall} = getOffset(operation.dest_type, operation.dest_prime, includesEnds, "dest");
+        if(offsetDestCall) name += offsetDestCall;
+
         c_args += nArgs(operation.dest_type);
-        name += "\n                    ";
+        name += "\n                        ";
 
         name += writeType(operation.src0_type, includesEnds);
 
-        if(["commit1", "commit3", "const"].includes(operation.src0_type) && operation.src0_prime) {
-            let numPols = operation.src0_type === "const" ? "numConstPols" : `args${step}[i_args + ${c_args+2}]`;
-            if(includesEnds) {
-                offsetSrc0 = `                  offsetsSrc0[j] = args${step}[i_args + ${c_args}] + (((i + j) + args${step}[i_args + ${c_args+1}]) % domainSize) * ${numPols};`;
-                offsetSrc0Call = "offsetsSrc0, ";
-            } else {
-                offsetSrc0Call += `${numPols}, `;
-            }
-        } else if (operation.src0_type === "x") {
-            offsetSrc0Call = `params.x_${dom}.offset(), `;
-        }
+        let {offset: offsetSrc0, offsetCall: offsetSrc0Call} = getOffset(operation.src0_type, operation.src0_prime, includesEnds, "src0");
+
         c_args += nArgs(operation.src0_type);
-        name += "\n                    ";
+        name += "\n                        ";
+
+        let offsetSrc1;
+        let offsetSrc1Call;
 
         if(operation.src1_type) {
             name += writeType(operation.src1_type, includesEnds);
 
-            if(["commit1", "commit3", "const"].includes(operation.src1_type) && operation.src1_prime) {
-                let numPols = operation.src1_type === "const" ? "numConstPols" : `args${step}[i_args + ${c_args+2}]`;
-                if(includesEnds) {
-                    offsetSrc1 = `                  offsetsSrc1[j] = args${step}[i_args + ${c_args}] + (((i + j) + args${step}[i_args + ${c_args+1}]) % domainSize) * ${numPols};`;
-                    offsetSrc1Call = "offsetsSrc1, ";
-                } else {
-                    offsetSrc1Call += `${numPols}, `;
-                }
-            } else if (operation.src1_type === "x") {
-                offsetSrc1Call = `params.x_${dom}.offset(), `;
-            }
+            let offsets = getOffset(operation.src1_type, operation.src1_prime, includesEnds, "src1");
+            if(offsets.offset) offsetSrc1 = offsets.offset;
+            if(offsets.offsetCall) offsetSrc1Call = offsets.offsetCall;
+
             c_args += nArgs(operation.src1_type);
-            name += "\n                    ";
+            name += "\n                        ";
         }
 
         
-        name += offsetSrc0Call;
-        name += offsetSrc1Call;
-        name = name.substring(0, name.lastIndexOf(", ")) + "\n                );";
+        if(offsetSrc0Call) name += offsetSrc0Call;
+        if(offsetSrc1Call) name += offsetSrc1Call;
+
+        name = name.substring(0, name.lastIndexOf(", ")) + "\n                    );";
         
         const operationCall = [];
 
         if(includesEnds) {
-            if(offsetDest !== "" || offsetSrc0 !== "" || offsetSrc1 !== "") {
-                const offsetLoop = [ "               for (uint64_t j = 0; j < AVX_SIZE_; ++j) {"];
-                if(offsetDest !== "") offsetLoop.push(offsetDest);
-                if(offsetSrc0 !== "") offsetLoop.push(offsetSrc0);
-                if(offsetSrc1 !== "") offsetLoop.push(offsetSrc1);
-                offsetLoop.push("               }");
+            if(offsetDest || offsetSrc0 || offsetSrc1) {
+                const offsetLoop = [ "                for (uint64_t j = 0; j < AVX_SIZE_; ++j) {"];
+                if(offsetDest) offsetLoop.push(offsetDest);
+                if(offsetSrc0) offsetLoop.push(offsetSrc0);
+                if(offsetSrc1) offsetLoop.push(offsetSrc1);
+                offsetLoop.push("                    }");
                 operationCall.push(...offsetLoop);
             }
+            operationCall.push(`                    ${name}`);
+        } else {
+            operationCall.push(`                ${name}`);
         }
 
-        operationCall.push(...[
-            `                ${name}`,
-            `                i_args += ${c_args};`,
-        ])
-        
         return operationCall.join("\n").replace(/i_args \+ 0/, "i_args");
     }
 
     function writeType(type, includesEnds = false) {
         switch (type) {
             case "public":
-                return `params.publicInputs[args${step}[i_args + ${c_args}]], `;
+                return `params.publicInputs[parserParams.args[i_args + ${c_args}]], `;
             case "tmp1":
-                return `tmp1[args${step}[i_args + ${c_args}]], `; 
+                return `tmp1[parserParams.args[i_args + ${c_args}]], `; 
             case "tmp3":
-                    return `tmp3[args${step}[i_args + ${c_args}]], `;
+                    return `tmp3[parserParams.args[i_args + ${c_args}]], `;
             case "commit1":
             case "commit3":
                 if(includesEnds) {
                     return `&params.pols[0], `;
                 } else {
-                    return `&params.pols[args${step}[i_args + ${c_args}] + (i + args${step}[i_args + ${c_args+1}]) * args${step}[i_args + ${c_args+2}]], `;
+                    return `&params.pols[parserParams.args[i_args + ${c_args}] + (i + parserParams.args[i_args + ${c_args+1}]) * parserParams.args[i_args + ${c_args+2}]], `;
                 }
             case "const":
                 let constPols = dom === "n" ? "&params.pConstPols" : `&params.pConstPols2ns`;
                 if(includesEnds) {
                     return `${constPols}->getElement(0, 0), `;
                 } else {
-                    return `${constPols}->getElement(args${step}[i_args + ${c_args}], i), `;
+                    return `${constPols}->getElement(parserParams.args[i_args + ${c_args}], i), `;
                 }
             case "challenge":
-                return `(Goldilocks3::Element &)*params.challenges[args${step}[i_args + ${c_args}]], `;
+                return `(Goldilocks3::Element &)*params.challenges[parserParams.args[i_args + ${c_args}]], `;
             case "x":
                 return `params.x_${dom}[i], `;
             case "number":
-                return `Goldilocks::fromU64(args${step}[i_args + ${c_args}]), `;
+                return `Goldilocks::fromU64(parserParams.args[i_args + ${c_args}]), `;
             case "Zi": 
                 return "params.zi.zhInv(i), ";
             case "q":
@@ -345,7 +317,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             case "f": 
                 return "params.f_2ns[i * 3], ";
             case "eval":
-                return `&evals_[args${step}[i_args + ${c_args}] * 3], `;
+                return `&evals_[parserParams.args[i_args + ${c_args}] * 3], `;
             case "xDivXSubXi": 
                 return "params.xDivXSubXi[i], ";
             case "xDivXSubWXi":
@@ -353,6 +325,33 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             default:
                 throw new Error("Invalid type: " + type);
         }
+    }
+
+    function getOffset(type, prime, includesEnds = false, operand) {
+        if(!["src0", "src1", "dest"].includes(operand)) throw new Error("Invalid type: " + operand);
+        const strideTypes = ["commit1", "commit3"];
+        if(operand !== "dest") strideTypes.push("const");
+
+        let offset;
+        let offsetCall;
+
+        if(!includesEnds) {
+            if(["commit1", "commit3", "const"].includes(type) && prime) {
+                let numPols = type === "const" ? "numConstPols" : `parserParams.args[i_args + ${c_args+2}]`;
+                offsetCall = `${numPols}, `;
+            } else if (type === "x") {
+                offsetCall = `params.x_${dom}.offset(), `;
+            }
+        } else {
+            let offsetName = `offsets${operand[0].toUpperCase() + operand.substring(1)}`;
+            if(["commit1", "commit3", "const"].includes(type) && prime) {
+                let numPols = type === "const" ? "numConstPols" : `parserParams.args[i_args + ${c_args+2}]`;
+                offset = `                        ${offsetName}[j] = parserParams.args[i_args + ${c_args}] + (((i + j) + parserParams.args[i_args + ${c_args+1}]) % parserParams.domainSize) * ${numPols};`;
+                offsetCall = `${offsetName}, `;
+            }
+        }
+
+        return {offset, offsetCall};
     }
 
     function nArgs(type) {
