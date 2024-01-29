@@ -18,7 +18,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
     var cont_args = 0;
     var argsString = "{"
 
-    var counters_ops = [];
+    var counters_ops = new Array(operations.length).fill(0);
 
     const nBits = starkInfo.starkStruct.nBits;
     const nBitsExt = starkInfo.starkStruct.nBitsExt;
@@ -56,17 +56,12 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         ops.push(opsIndex);
         opsString += `${opsIndex}, `;
 
-        if(!counters_ops[opsIndex]) counters_ops[opsIndex] = 0;
         counters_ops[opsIndex] += 1;
     }
 
     assert(cont_ops == ops.length);
     assert(cont_args == args.length);
 
-    console.log("Number of operations: ", cont_ops, ops.length);
-    console.log("Number of arguments: ", cont_args, args.length);
-    console.log("Different operations types: ", operations.length);
-    console.log("--------------------------------");
 
     if(opsString !== "{") opsString = opsString.substring(0, opsString.lastIndexOf(","));
     opsString += "};"
@@ -85,7 +80,19 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         args: args.map(v => typeof v === 'string' && v.endsWith('ULL') ? parseInt(v.replace('ULL', '')) : v),
     }
     
-    return stageInfo;
+    const operationsUsed = counters_ops.reduce((acc, currentValue, currentIndex) => {
+        if (currentValue !== 0) {
+          acc.push(currentIndex);
+        }
+        return acc;
+    }, []);
+
+    console.log("Number of operations: ", cont_ops);
+    console.log("Number of arguments: ", cont_args);
+    console.log("Different operations types: ", operationsUsed.length, " of ", operations.length);
+    console.log("--------------------------------");
+
+    return {operationsUsed, stageInfo};
 
     function pushResArg(r, type) {
         let eDst;
