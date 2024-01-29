@@ -12,18 +12,20 @@ const argv = require("yargs")
     .alias("C", "cls")
     .alias("m", "multiple")
     .alias("o", "optcodes")
+    .alias("b", "binfile")
     .argv;
 
 async function run() {
     const cls = typeof (argv.cls) === "string" ? argv.cls.trim() : "Stark";
     const starkInfoFile = typeof (argv.starkinfo) === "string" ? argv.starkinfo.trim() : "mycircuit.starkinfo.json";
     const chelpersFile = typeof (argv.chelpers) === "string" ? argv.chelpers.trim() : "mycircuit.chelpers.cpp";
+    const binFile = typeof (argv.binfile) === "string" ? argv.binfile.trim() : "mycircuit.chelpers.bin";
     const multipleCodeFiles = argv.multiple;
     const optcodes = argv.optcodes;
 
     const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
-    const cCode = await buildCHelpers(starkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes: optcodes } : config);
+    const cCode = await buildCHelpers(starkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes, binFile } : config);
 
     if (multipleCodeFiles) {
         const baseDir = path.dirname(chelpersFile);
