@@ -3,6 +3,7 @@ const path = require("path");
 const version = require("../package").version;
 
 const buildCHelpers = require("./stark/chelpers/stark_chelpers.js");
+const { writeCHelpersFile } = require("./stark/chelpers/binFile.js");
 
 const argv = require("yargs")
     .version(version)
@@ -12,18 +13,20 @@ const argv = require("yargs")
     .alias("C", "cls")
     .alias("m", "multiple")
     .alias("o", "optcodes")
+    .alias("b", "binfile")
     .argv;
 
 async function run() {
     const cls = typeof (argv.cls) === "string" ? argv.cls.trim() : "Stark";
     const starkInfoFile = typeof (argv.starkinfo) === "string" ? argv.starkinfo.trim() : "mycircuit.starkinfo.json";
     const chelpersFile = typeof (argv.chelpers) === "string" ? argv.chelpers.trim() : "mycircuit.chelpers.cpp";
+    const binFile = typeof (argv.binfile) === "string" ? argv.binfile.trim() : "mycircuit.chelpers.bin";
     const multipleCodeFiles = argv.multiple;
     const optcodes = argv.optcodes;
 
     const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
-    const cCode = await buildCHelpers(starkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes: optcodes } : {});
+    const {code:cCode, cHelpersInfo} = await buildCHelpers(starkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes } : {});
 
     if (multipleCodeFiles) {
         const baseDir = path.dirname(chelpersFile);
@@ -49,6 +52,8 @@ async function run() {
     } else {
         await fs.promises.writeFile(chelpersFile, cCode, "utf8");
     }
+
+    await writeCHelpersFile(binFile, cHelpersInfo);
 
     console.log("files Generated Correctly");
 }

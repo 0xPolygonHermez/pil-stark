@@ -424,7 +424,22 @@ module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
         `uint64_t args52[NARGS_] = ${argsString}`
     ].join("\n");
 
-    return res;
+    let stage = 5;
+    let executeBefore = 1;
+
+    const stageInfo = {
+        stage,
+        executeBefore,
+        domainSize: (1 << nBitsExt),
+        nTemp1: 0,
+        nTemp3: 3,
+        nOps: cont_ops,
+        ops,
+        nArgs: cont_args,
+        args: args.map(v => typeof v === 'string' && v.endsWith('ULL') ? parseInt(v.replace('ULL', '')) : v),
+    }
+    
+    return stageInfo;
 
     function getRef(r, op, karg) {
         ++refcount;
