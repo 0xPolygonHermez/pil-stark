@@ -205,7 +205,7 @@ module.exports.generateParser = function generateParser(code = []) {
     function writeType(type, includesEnds = false) {
         switch (type) {
             case "public":
-                return `params.publicInputs[parserParams.args[i_args + ${c_args}]], `;
+                return `${includesEnds ? "&" : ""}params.publicInputs[parserParams.args[i_args + ${c_args}]], `;
             case "tmp1":
                 return `tmp1[parserParams.args[i_args + ${c_args}]], `; 
             case "tmp3":
@@ -224,19 +224,19 @@ module.exports.generateParser = function generateParser(code = []) {
                     return `constPols->getElement(parserParams.args[i_args + ${c_args}], i), `;
                 }
             case "challenge":
-                return `(Goldilocks3::Element &)*params.challenges[parserParams.args[i_args + ${c_args}]], `;
+                return `${includesEnds ? "&" : ""}params.challenges[parserParams.args[i_args + ${c_args}]], `;
             case "x":
                 return `x[i], `;
             case "number":
-                return `Goldilocks::fromU64(parserParams.args[i_args + ${c_args}]), `;
+                return `${includesEnds ? "&" : ""}Goldilocks::fromU64(parserParams.args[i_args + ${c_args}]), `;
             case "Zi": 
-                return "params.zi.zhInv(i), ";
+                return `${includesEnds ? "&" : ""}params.zi.zhInv(i), `;
             case "q":
                 "params.q_2ns[i * 3], ";
             case "f": 
                 return "params.f_2ns[i * 3], ";
             case "eval":
-                return `&params.evals[parserParams.args[i_args + ${c_args}] * 3], `;
+                return `params.evals[parserParams.args[i_args + ${c_args}] * 3], `;
             case "xDivXSubXi": 
                 return "params.xDivXSubXi[i], ";
             case "xDivXSubWXi":
@@ -260,15 +260,21 @@ module.exports.generateParser = function generateParser(code = []) {
                 let numPols = type === "const" ? "numConstPols" : `parserParams.args[i_args + ${c_args+2}]`;
                 offset = `                        ${offsetName}[j] = parserParams.args[i_args + ${c_args}] + (((i + j) + parserParams.args[i_args + ${c_args+1}]) % parserParams.domainSize) * ${numPols};`;
                 offsetCall = `${offsetName}, `;
-            } else if (type === "x") {
-                offsetCall = `x.offset(), `;
+            } else if (["x", "xDivXSubXi", "xDivXSubWXi", "eval"].includes(type)) {
+                offsetCall = `${type}.offset(), `;
+            } else if (["challenges", "Zi", "public", "number"].includes(type)) {
+                offset = `                        ${offsetName}[j] = 0;`;
+            } else if (type === "tmp3") {
+                offset = `                        ${offsetName}[j] = 3;`;
+            } else if (type === "tmp1") {
+                offset = `                        ${offsetName}[j] = 1;`;
             }
         } else {
             if(["commit1", "commit3", "const"].includes(type)) {
                 let numPols = type === "const" ? "numConstPols" : `parserParams.args[i_args + ${c_args+2}]`;
                 offsetCall = `${numPols}, `;
-            } else if (type === "x") {
-                offsetCall = `x.offset(), `;
+            } else if (["x", "xDivXSubXi", "xDivXSubWXi"].includes(type)) {
+                offsetCall = `${type}.offset(), `;
             }
         }
     
