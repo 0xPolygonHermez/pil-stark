@@ -3,6 +3,7 @@ const path = require("path");
 const version = require("../package").version;
 
 const buildCHelpers = require("./stark/chelpers/stark_chelpers.js");
+const { writeCHelpersFile } = require("./stark/chelpers/binFile.js");
 
 const argv = require("yargs")
     .version(version)
@@ -22,10 +23,11 @@ async function run() {
     const binFile = typeof (argv.binfile) === "string" ? argv.binfile.trim() : "mycircuit.chelpers.bin";
     const multipleCodeFiles = argv.multiple;
     const optcodes = argv.optcodes;
+    const isGeneric = argv.generic;
 
     const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
-    const cCode = await buildCHelpers(starkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes, binFile } : config);
+    const {code: cCode, cHelpersInfo } = await buildCHelpers(starkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes, isGeneric } : config);
 
     if (multipleCodeFiles) {
         const baseDir = path.dirname(chelpersFile);
@@ -42,8 +44,7 @@ async function run() {
                 code = `#include "goldilocks_cubic_extension.hpp"\n#include "zhInv.hpp"\n#include "starks.hpp"\n#include "constant_pols_starks.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
                 ext2 = ext;
             } else if(cpart.includes("parser_cpp")) {
-                let cpartName = cpart.replace("parser_cpp", "parser").replace(/_/g, ".");
-                code = `#include "goldilocks_cubic_extension.hpp"\n#include "zhInv.hpp"\n#include "starks.hpp"\n#include "constant_pols_starks.hpp"\n#include "${classInclude}"\n#include "${leftFilename.substring(leftFilename.lastIndexOf("/") + 1)}.${cpartName}.hpp" \n#include <immintrin.h>\n\n` + cCode[cpart];
+                code = `#include "chelpers.hpp"\n\n` + cCode[cpart];
                 cpart = cpart.replace("parser_cpp", "parser").replace(/_/g, ".");
                 ext2 = ".cpp";
             }
@@ -52,6 +53,8 @@ async function run() {
     } else {
         await fs.promises.writeFile(chelpersFile, cCode, "utf8");
     }
+
+    await writeCHelpersFile(binFile, cHelpersInfo);
 
     console.log("files Generated Correctly");
 }
