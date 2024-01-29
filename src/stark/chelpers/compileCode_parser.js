@@ -1,2089 +1,498 @@
 const { assert } = require("chai");
+const { getIdMaps } = require("./helpers");
 
-var dbg = 0;
-var refcount = 0;
-var refpols = 0;
-var reftem = 0;
-var refconst = 0;
-var refchall = 0;
-var refnum = 0;
-var refevals = 0;
-var range_tem = new Array(4).fill(0);
-var range_const = new Array(8).fill(0);
-var range_chall = new Array(2).fill(0);
-var range_evals = new Array(2).fill(0);
+const operationsTypeMap = {
+    "add": 0,
+    "sub": 1,
+    "mul": 2,
+    "copy": 3,
+}
 
-const range_pols_1 = new Set();
-const range_pols_2 = new Set();
-const range_pols_3 = new Set();
-const range_pols_4 = new Set();
-const range_polsseq_1 = new Set();
-const range_polsseq_2 = new Set();
-const range_polsseq_3 = new Set();
-const range_polsseq_4 = new Set();
+const operationsMap = {
+    "commit1": 1,
+    "const": 2,
+    "tmp1": 3,
+    "public": 4,
+    "x": 5,
+    "number": 6,
+    "commit3": 7,
+    "tmp3": 8,
+    "challenge": 9, 
+    "eval": 10,
+    "xDivXSubXi": 11,
+    "xDivXSubWXi": 12, 
+    "q": 13, 
+    "f": 14,
+}
 
-
-
-module.exports = function compileCode_parser(starkInfo, config, functionName, code, dom, ret) {
+module.exports = function compileCode_parser(starkInfo, config, code, dom, stage, executeBefore) {
 
     var ops = [];
     var cont_ops = 0;
-    var opsString = "{ "
+    var opsString = "{"
     var args = [];
+    var c_args = 0;
     var cont_args = 0;
-    var argsString = "{ "
+    var argsString = "{"
 
-    var counters_ops = new Array(121).fill(0);
+    var counters_ops = [];
 
     const nBits = starkInfo.starkStruct.nBits;
     const nBitsExt = starkInfo.starkStruct.nBitsExt;
-    var counters_add = new Array(4).fill(0);
-    var counters_sub = new Array(4).fill(0);
-    var counters_mul = new Array(4).fill(0);
-    var counters_copy = 0;
-    refcount = 0;
-    refpols = 0;
-    reftem = 0;
-    refconst = 0;
-    refchall = 0;
-    refnum = 0;
-    refevals = 0;
-    range_tem = [- 1, -1, -1, -1];
-    range_chall = [- 1, -1];
-    range_evals = [- 1, -1];
-    range_const = [- 1, -1, -1, -1, -1, -1, -1, -1];
-    range_pols_1.clear();
-    range_pols_2.clear();
-    range_pols_3.clear();
-    range_pols_4.clear();
-    range_polsseq_1.clear();
-    range_polsseq_2.clear();
-    range_polsseq_3.clear();
-    range_polsseq_4.clear();
-
-
 
     const next = (dom == "n" ? 1 : 1 << (nBitsExt - nBits)).toString();
     const N = (dom == "n" ? (1 << nBits) : (1 << nBitsExt)).toString();
-    count_ops0 = 0;
-    count_args0 = 0;
-    count_ops1 = 0;
 
-    //Evaluate max and min temporal variable for tmp_ and tmp3_
+    // Evaluate max and min temporal variable for tmp_ and tmp3_
     let maxid = 100000;
     let ID1D = new Array(maxid).fill(-1);
     let ID3D = new Array(maxid).fill(-1);
-    let { count1d, count3d } = getIdMaps(maxid);
+    let { count1d, count3d } = getIdMaps(maxid, ID1D, ID3D, code);
 
+    let isGeneric = true;
+
+    const operations = isGeneric ? getAllOperations() : [];
+        
     for (let j = 0; j < code.length; j++) {
-        const src = [];
         const r = code[j];
-        /*if (!(r.dest.type == 'cm') && !(r.dest.type == 'tmpExp') && !(r.dest.type == 'tmp' && r.dest.dim == 1 && r.op == 'add' && r.src[0].type === "tmp" && r.src[1].type == "cm" && r.src[1].prime)
-            && !(r.dest.type == 'tmp' && r.dest.dim == 1 && r.op == 'mul' && (r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'number'))) {
-            pushResArg(r);
-            ++count_args0;
-        }*/
-        let lexp = getLRef(r);
-        for (k = 0; k < r.src.length; k++) {
-            src.push(getRef(r.src[k]));
-        }
+        args.push(operationsTypeMap[r.op]);
+        argsString += `${operationsTypeMap[r.op]}, `;
+        ++cont_args;
+        pushResArg(r, r.dest.type);
         ++cont_ops;
-        if (r.dest.type == 'tmp') {
-            ++count_ops0;
-            switch (r.op) {
-
-                case 'add': {
-
-                    if (r.dest.dim == 1) {
-                        if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
-                            throw new Error("Invalid dimension")
-                        }
-                        counters_add[0] += 1;
-                        if (r.src[0].type === "tmp") {
-
-                            switch (r.src[1].type) {
-                                case "tmp": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    counters_ops[0] += 1;
-                                    ops.push(0);
-                                    opsString += "0, ";
-                                    break;
-                                }
-                                case "cm": {
-                                    if (!r.src[1].prime) {
-                                        pushResArg(r);
-                                        pushSrcArg(r.src[0]);
-                                        pushSrcArg(r.src[1]);
-                                        counters_ops[1] += 1;
-                                        ops.push(1);
-                                        opsString += "1, ";
-                                    } else {
-                                        ++count_ops1;
-                                        pushResArg(r);
-                                        pushSrcArg(r.src[0]);
-                                        pushSrcArg(r.src[1]);
-                                        counters_ops[84] += 1;
-                                        ops.push(84);
-                                        opsString += "84, ";
-                                    }
-                                    break;
-                                }
-                                case "number": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    counters_ops[2] += 1;
-                                    ops.push(2);
-                                    opsString += "2, ";
-                                    break;
-                                }
-                                case "const": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    assert(!r.src[1].prime);
-                                    counters_ops[3] += 1;
-                                    ops.push(3);
-                                    opsString += "3, ";
-                                    break;
-                                }
-                                case "tmpExp": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    assert(!r.src[1].prime);
-                                    counters_ops[1] += 1;
-                                    ops.push(1);
-                                    opsString += "1, ";
-                                    break;
-                                }
-                                default: {
-                                    console.log(src[0], src[1]);
-                                    console.log(r.src[0].type, r.src[1].type);
-                                    throw new Error("Option not considered!");
-                                    break;
-                                }
-                            }
-                        } else if (r.src[1].type === "tmp") {
-
-                            switch (r.src[0].type) {
-                                case "tmp": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[1]);
-                                    pushSrcArg(r.src[0]);
-                                    counters_ops[0] += 1;
-                                    ops.push(0);
-                                    opsString += "0, ";
-                                    break;
-                                }
-                                case "cm": {
-                                    if (!r.src[0].prime) {
-                                        pushResArg(r);
-                                        pushSrcArg(r.src[1]);
-                                        pushSrcArg(r.src[0]);
-                                        counters_ops[1] += 1;
-                                        ops.push(1);
-                                        opsString += "1, ";
-                                    } else {
-                                        pushResArg(r);
-                                        pushSrcArg(r.src[1]);
-                                        pushSrcArg(r.src[0]);
-                                        ++count_ops1;
-                                        counters_ops[84] += 1;
-                                        ops.push(84);
-                                        opsString += "84, ";
-                                    }
-                                    break;
-                                }
-                                case "number": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[1]);
-                                    pushSrcArg(r.src[0]);
-                                    counters_ops[2] += 1;
-                                    ops.push(2);
-                                    opsString += "2, ";
-                                    break;
-                                }
-                                case "const": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[1]);
-                                    pushSrcArg(r.src[0]);
-                                    assert(!r.src[0].prime);
-                                    counters_ops[3] += 1;
-                                    ops.push(3);
-                                    opsString += "3, ";
-                                    break;
-                                } case "tmpExp": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[1]);
-                                    pushSrcArg(r.src[0]);
-                                    assert(!r.src[1].prime);
-                                    counters_ops[1] += 1;
-                                    ops.push(1);
-                                    opsString += "1, ";
-                                    break;
-                                }
-                                default: {
-                                    console.log(src[0], src[1]);
-                                    console.log(r.src[0].type, r.src[1].type);
-                                    throw new Error("Option not considered!");
-                                    break;
-                                }
-                            }
-                        } else {
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-
-                            if (r.src[0].type == "cm" && r.src[1].type == "cm") {
-                                if (r.src[0].prime && r.src[1].prime) {
-                                    counters_ops[5] += 1;
-                                    ops.push(5);
-                                    opsString += "5, ";
-                                } else {
-                                    assert(!r.src[1].prime);
-                                    assert(!r.src[0].prime);
-                                    counters_ops[4] += 1;
-                                    ops.push(4);
-                                    opsString += "4, ";
-                                }
-                            } else if (r.src[0].type == "cm" && r.src[1].type == "const") {
-                                counters_ops[6] += 1;
-                                ops.push(6);
-                                opsString += "6, ";
-                                assert(!r.src[1].prime);
-                                assert(!r.src[0].prime);
-                            } else if (r.src[0].type == "cm" && r.src[1].type == "number") {
-                                counters_ops[7] += 1;
-                                ops.push(7);
-                                opsString += "7, ";
-                                assert(!r.src[0].prime);
-                            } else if (r.src[0].type == "const" && r.src[1].type == "const") {
-                                if (r.src[0].prime && r.src[1].prime) {
-                                    counters_ops[9] += 1;
-                                    ops.push(9);
-                                    opsString += "9, ";
-                                } else {
-                                    counters_ops[8] += 1;
-                                    assert(!r.src[1].prime);
-                                    assert(!r.src[0].prime);
-                                    ops.push(8);
-                                    opsString += "8, ";
-                                }
-                            } else if (r.src[0].type == "const" && r.src[1].type == "number") {
-                                if (r.src[0].prime) {
-                                    counters_ops[11] += 1;
-                                    ops.push(11);
-                                    opsString += "11, ";
-                                } else {
-                                    assert(!r.src[0].prime);
-                                    counters_ops[10] += 1;
-                                    ops.push(10);
-                                    opsString += "10, ";
-                                }
-                            } else {
-                                throw new Error("Option not considered!");
-                            }
-
-                        }
-                    } else if (r.dest.dim == 3) {
-
-                        if (r.src[0].dim == 1 || r.src[1].dim == 1) {
-                            counters_add[1] += 1;
-
-                            if ((r.src[0].dim == 1) && (r.src[0].type === 'tmp') &&
-                                (r.src[1].dim == 3) && (r.src[1].type === 'tmp')) {
-                                counters_ops[12] += 1;
-                                ops.push(12);
-                                opsString += "12, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[1].dim == 1) && (r.src[1].type === 'tmp') &&
-                                (r.src[0].dim == 3) && (r.src[0].type === 'tmp')) {
-                                counters_ops[12] += 1;
-                                ops.push(12);
-                                opsString += "12, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-                            } else if ((r.src[0].type === 'number') && (r.src[1].type === 'challenge')) {
-                                assert(r.src[0].dim == 1);
-                                counters_ops[13] += 1;
-                                opsString += "13, ";
-                                ops.push(13);
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'challenge')) {
-                                assert(r.src[0].dim == 1);
-                                counters_ops[14] += 1;
-                                ops.push(14);
-                                opsString += "14, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'cm') && (r.src[1].type === 'tmp')) {
-                                assert(r.src[0].dim == 1);
-                                assert(!r.src[0].prime);
-                                counters_ops[15] += 1;
-                                ops.push(15);
-                                opsString += "15, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'cm') && (r.src[1].type === 'challenge')) {
-                                assert(r.src[0].dim == 1);
-                                assert(!r.src[0].prime);
-                                counters_ops[16] += 1;
-                                ops.push(16);
-                                opsString += "16, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'tmpExp') && (r.src[1].type === 'challenge')) {
-
-                                assert(r.src[0].dim == 1);
-                                assert(!r.src[0].prime);
-                                counters_ops[16] += 1;
-                                ops.push(16);
-                                opsString += "16, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'tmpExp') && (r.src[1].type === 'tmp')) {
-
-                                assert(!r.src[0].prime);
-                                counters_ops[15] += 1;
-                                ops.push(15);
-                                opsString += "15, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[1].type === 'tmpExp') && (r.src[0].type === 'tmp')) {
-                                assert(!r.src[1].prime);
-                                counters_ops[15] += 1;
-                                ops.push(15);
-                                opsString += "15, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-                            } else {
-                                console.log(src[0], src[1]);
-                                console.log(r.src[0].type, r.src[1].type);
-                                throw new Error("Option not considered!");
-                            }
-                        } else {
-                            assert(r.src[0].dim == 3 && r.src[1].dim == 3);
-                            counters_add[2] += 1;
-                            if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmp')) {
-                                counters_ops[17] += 1;
-                                ops.push(17);
-                                opsString += "17, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'challenge')) {
-                                counters_ops[18] += 1;
-                                ops.push(18);
-                                opsString += "18, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'cm') && (r.src[1].type === 'tmp')) {
-                                assert(!r.src[0].prime);
-                                counters_ops[19] += 1;
-                                ops.push(19);
-                                opsString += "19, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'cm')) {
-                                assert(!r.src[1].prime);
-                                counters_ops[19] += 1;
-                                ops.push(19);
-                                opsString += "19, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-                            } else if ((r.src[0].type === 'cm') && (r.src[1].type === 'challenge')) {
-                                assert(!r.src[0].prime);
-                                counters_ops[20] += 1;
-                                ops.push(20);
-                                opsString += "20, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmpExp')) {
-                                assert(!r.src[1].prime);
-                                counters_ops[19] += 1;
-                                ops.push(19);
-                                opsString += "19, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-
-                            } else if ((r.src[1].type === 'tmp') && (r.src[0].type === 'tmpExp')) {
-                                assert(!r.src[0].prime);
-                                counters_ops[19] += 1;
-                                ops.push(19);
-                                opsString += "19, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[0].type === 'tmpExp') && (r.src[1].type === 'challenge')) {
-                                assert(!r.src[0].prime);
-                                counters_ops[20] += 1;
-                                ops.push(20);
-                                opsString += "20, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            }
-                            else {
-                                console.log(src[0], src[1]);
-                                console.log(r.src[0].type, r.src[1].type);
-                                throw new Error("Option not considered!");
-                            }
-
-                        }
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                case 'sub': {
-                    pushResArg(r);
-                    pushSrcArg(r.src[0]);
-                    pushSrcArg(r.src[1]);
-                    if (r.dest.dim == 1) {
-                        if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
-                            throw new Error("Invalid dimension")
-                        }
-                        counters_sub[0] += 1;
-                        if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmp')) {
-                            counters_ops[21] += 1;
-                            ops.push(21);
-                            opsString += "21, ";
-                        } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'cm' && !r.src[1].prime)) {
-                            counters_ops[22] += 1;
-                            ops.push(22);
-                            opsString += "22, ";
-                        } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'cm' && r.src[1].prime)) {
-                            counters_ops[23] += 1;
-                            ops.push(23);
-                            opsString += "23, ";
-                        } else if ((r.src[0].type === 'cm' && !r.src[0].prime) && (r.src[1].type === 'tmp')) {
-                            counters_ops[24] += 1;
-                            ops.push(24);
-                            opsString += "24, ";
-                        } else if ((r.src[0].type === 'cm' && r.src[0].prime) && (r.src[1].type === 'tmp')) {
-                            counters_ops[25] += 1;
-                            ops.push(25);
-                            opsString += "25, ";
-                        } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'number')) {
-                            counters_ops[26] += 1;
-                            ops.push(26);
-                            opsString += "26, ";
-                        } else if ((r.src[0].type === 'number') && (r.src[1].type === 'tmp')) {
-                            counters_ops[27] += 1;
-                            ops.push(27);
-                            opsString += "27, ";
-                        } else if ((r.src[0].type === 'cm' && !r.src[0].prime) && (r.src[1].type === 'number')) {
-                            counters_ops[28] += 1;
-                            ops.push(28);
-                            opsString += "28, ";
-                        } else if ((r.src[0].type === 'cm' && r.src[0].prime) && (r.src[1].type === 'number')) {
-                            counters_ops[29] += 1;
-                            ops.push(29);
-                            opsString += "29, ";
-                        } else if ((r.src[0].type === 'number') && (r.src[1].type === 'cm' && !r.src[1].prime)) {
-                            counters_ops[30] += 1;
-                            ops.push(30);
-                            opsString += "30, ";
-                        } else if ((r.src[0].type === 'number') && (r.src[1].type === 'cm' && r.src[1].prime)) {
-                            counters_ops[31] += 1;
-                            ops.push(31);
-                            opsString += "31, ";
-                        } else if ((r.src[0].type === 'number') && (r.src[1].type === 'const' && !r.src[1].prime)) {
-                            counters_ops[32] += 1;
-                            ops.push(32);
-                            opsString += "32, ";
-                        } else if ((r.src[0].type === 'number') && (r.src[1].type === 'const' && r.src[1].prime)) {
-                            counters_ops[33] += 1;
-                            ops.push(33);
-                            opsString += "33, ";
-                        } else if ((r.src[0].type === 'cm') && (r.src[1].type === 'public')) {
-                            assert(!r.src[0].prime);
-                            counters_ops[34] += 1;
-                            ops.push(34);
-                            opsString += "34, ";
-                        } else if ((r.src[0].type === 'cm' && r.src[0].prime) && (r.src[1].type === 'cm' && !r.src[1].prime)) {
-                            counters_ops[35] += 1;
-                            ops.push(35);
-                            opsString += "35, ";
-                        } else if ((r.src[0].type === 'cm' && !r.src[0].prime) && (r.src[1].type === 'cm' && r.src[1].prime)) {
-                            counters_ops[36] += 1;
-                            ops.push(36);
-                            opsString += "36, ";
-                        } else if ((r.src[0].type === 'cm' && !r.src[0].prime) && (r.src[1].type === 'cm' && !r.src[1].prime)) {
-                            counters_ops[37] += 1;
-                            ops.push(37);
-                            opsString += "37, ";
-                        } else if ((r.src[0].type === 'cm' && r.src[0].prime) && (r.src[1].type === 'cm' && r.src[1].prime)) {
-                            counters_ops[38] += 1;
-                            ops.push(38);
-                            opsString += "38, ";
-                        } else if ((r.src[0].type === 'const') && (r.src[1].type === 'cm')) {
-                            counters_ops[39] += 1;
-                            ops.push(39);
-                            opsString += "39, ";
-                            assert(!r.src[0].prime);
-                            assert(!r.src[1].prime);
-                        } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'const')) {
-                            counters_ops[40] += 1;
-                            ops.push(40);
-                            opsString += "40, ";
-                            assert(!r.src[1].prime);
-                        } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmpExp')) {
-                            assert(!r.src[1].prime);
-                            counters_ops[22] += 1;
-                            ops.push(22);
-                            opsString += "22, ";
-                        } else if ((r.src[1].type === 'tmp') && (r.src[0].type === 'tmpExp')) {
-                            assert(!r.src[0].prime);
-                            counters_ops[24] += 1;
-                            ops.push(24);
-                            opsString += "24, ";
-                        } else {
-                            console.log(src[0], src[1]);
-                            console.log(r.src[0].type, r.src[1].type);
-                            throw new Error("Option not considered!");
-                        }
-
-                    } else if (r.dest.dim == 3) {
-
-                        if (r.src[0].dim == 1 || r.src[1].dim == 1) {
-                            counters_sub[1] += 1;
-                            if ((r.src[0].type === 'cm') && (r.src[1].type === 'number')) {
-                                assert(!r.src[0].prime);
-                                counters_ops[41] += 1;
-                                ops.push(41);
-                                opsString += "41, ";
-                            } else {
-                                console.log(src[0], src[1]);
-                                console.log(r.src[0].type, r.src[1].type);
-                                throw new Error("Option not considered!");
-                            }
-                        } else {
-                            assert(r.src[0].dim == 3 && r.src[1].dim == 3);
-                            counters_sub[2] += 1;
-                            if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmp')) {
-                                counters_ops[42] += 1;
-                                ops.push(42);
-                                opsString += "42, ";
-                            } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'challenge')) {
-                                counters_ops[43] += 1;
-                                ops.push(43);
-                                opsString += "43, ";
-                            } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'cm')) {
-                                assert(!r.src[1].prime);
-                                counters_ops[44] += 1;
-                                ops.push(44);
-                                opsString += "44, ";
-                            } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmpExp')) {
-                                assert(!r.src[1].prime);
-                                counters_ops[44] += 1;
-                                ops.push(44);
-                                opsString += "44, ";
-                            }
-                            else {
-                                console.log(src[0], src[1]);
-                                console.log(r.src[0].type, r.src[1].type);
-                                throw new Error("Option not considered!");
-                            }
-                        }
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                case 'mul': {
-                    if (r.dest.dim == 1) {
-                        if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
-                            throw new Error("Invalid dimension")
-                        }
-                        counters_mul[0] += 1;
-                        if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmp')) {
-                            counters_ops[45] += 1;
-                            ops.push(45);
-                            opsString += "45, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-
-                        } else if ((r.src[0].type == 'number') && (r.src[1].type == 'tmp')) {
-                            counters_ops[46] += 1;
-                            ops.push(46);
-                            opsString += "46, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-
-                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'number')) {
-                            counters_ops[46] += 1;
-                            ops.push(46);
-                            opsString += "46, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[1]);
-                            pushSrcArg(r.src[0]);
-
-                        } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                            counters_ops[47] += 1;
-                            ops.push(47);
-                            opsString += "47, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else if ((r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                            counters_ops[48] += 1;
-                            ops.push(48);
-                            opsString += "48, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-
-                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'const' && !r.src[1].prime)) {
-                            counters_ops[49] += 1;
-                            ops.push(49);
-                            opsString += "49, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'cm' && !r.src[1].prime)) {
-                            counters_ops[50] += 1;
-                            ops.push(50);
-                            opsString += "50, "
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'cm' && r.src[1].prime)) {
-                            counters_ops[51] += 1;
-                            ops.push(51);
-                            opsString += "51, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else if ((r.src[1].type == 'cm' && !r.src[1].prime) && (r.src[0].type == 'cm' && r.src[0].prime)) {
-                            counters_ops[51] += 1;
-                            ops.push(51);
-                            opsString += "51, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[1]);
-                            pushSrcArg(r.src[0]);
-                        } else if ((r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'cm' && r.src[1].prime)) {
-                            counters_ops[52] += 1;
-                            ops.push(52);
-                            opsString += "52, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        }
-                        else if ((r.src[0].type == 'number') && (r.src[1].type == 'cm')) {
-                            assert(!r.src[1].prime);
-                            counters_ops[53] += 1;
-                            ops.push(53);
-                            opsString += "53, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'number')) {
-                            counters_ops[53] += 1;
-                            opsString += "53, ";
-                            ops.push(53);
-                            pushResArg(r);
-                            pushSrcArg(r.src[1]);
-                            pushSrcArg(r.src[0]);
-
-                        } else if ((r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'number')) {
-                            counters_ops[85] += 1;
-                            opsString += "85, ";
-                            ops.push(85);
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'const')) {
-                            assert(!r.src[1].prime);
-                            counters_ops[54] += 1;
-                            ops.push(54);
-                            opsString += "54, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-
-                        } else if ((r.src[0].type == 'const') && (r.src[1].type == 'cm' && !r.src[1].prime)) {
-                            assert(!r.src[0].prime);
-                            counters_ops[54] += 1;
-                            ops.push(54);
-                            opsString += "54, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[1]);
-                            pushSrcArg(r.src[0]);
-                        } else if ((r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'const' && !r.src[1].prime)) {
-                            counters_ops[55] += 1;
-                            ops.push(55);
-                            opsString += "55, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'cm' && !r.src[1].prime)) {
-                            counters_ops[56] += 1;
-                            ops.push(56);
-                            opsString += "56, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'cm' && r.src[1].prime)) {
-                            counters_ops[57] += 1;
-                            ops.push(57);
-                            opsString += "57, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmpExp' && !r.src[1].prime)) {
-                            counters_ops[56] += 1;
-                            ops.push(56);
-                            opsString += "56, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else if ((r.src[0].type == 'const' && !r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                            counters_ops[58] += 1;
-                            ops.push(58);
-                            opsString += "58, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else {
-                            console.log(src[0], src[1]);
-                            console.log(r.src[0].type, r.src[1].type);
-                            throw new Error("Option not considered!");
-                        }
-                    } else if (r.dest.dim == 3) {
-                        if (r.src[0].dim == 1 || r.src[1].dim == 1) {
-                            counters_mul[1] += 1;
-                            if ((r.src[0].type == 'tmp') && (r.src[1].type == 'challenge')) {
-                                assert(r.src[0].dim == 1);
-                                counters_ops[59] += 1;
-                                ops.push(59);
-                                opsString += "59, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[1].type == 'tmp') && (r.src[0].type == 'challenge')) {
-                                assert(r.src[1].dim == 1);
-                                counters_ops[59] += 1;
-                                ops.push(59);
-                                opsString += "59, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-                            } else if ((r.src[0].type == 'const') && (r.src[1].type == 'tmp')) {
-                                assert(r.src[0].dim == 1);
-                                counters_ops[60] += 1;
-                                ops.push(60);
-                                opsString += "60, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                                assert(!r.src[0].prime);
-                            } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmp' && r.src[1].dim == 1)) {
-                                counters_ops[61] += 1;
-                                ops.push(61);
-                                opsString += "61, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-                            } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmpExp' && r.src[1].dim == 1)) {
-                                assert(!r.src[1].prime);
-                                counters_ops[64] += 1;
-                                ops.push(64);
-                                opsString += "64, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-
-                            } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'challenge')) {
-                                assert(r.src[0].dim == 1);
-                                counters_ops[62] += 1;
-                                ops.push(62);
-                                opsString += "62, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'challenge')) {
-                                assert(r.src[0].dim == 1);
-                                counters_ops[63] += 1;
-                                ops.push(63);
-                                opsString += "63, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'cm' && !r.src[1].prime)) {
-                                assert(r.src[1].dim == 1);
-                                counters_ops[64] += 1;
-                                opsString += "64, ";
-                                ops.push(64);
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-                            } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'cm' && r.src[1].prime)) {
-                                assert(r.src[1].dim == 1);
-                                counters_ops[65] += 1;
-                                ops.push(65);
-                                opsString += "65, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-                            } else if ((r.src[0].type == 'challenge') && (r.src[1].type == 'number')) {
-                                assert(r.src[1].dim == 1);
-                                counters_ops[66] += 1;
-                                ops.push(66);
-                                opsString += "66, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-
-                            } else if ((r.src[0].type == 'challenge') && (r.src[1].type == 'x')) {
-                                assert(r.src[1].dim == 1);
-                                counters_ops[67] += 1;
-                                ops.push(67);
-                                opsString += "67, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-
-                            } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'x')) {
-                                assert(r.src[1].dim == 1);
-                                counters_ops[68] += 1;
-                                ops.push(68);
-                                opsString += "68, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-
-                            } else if ((r.src[0].type === 'tmpExp' && r.src[0].prime) && (r.src[1].type === 'challenge')) {
-
-                                counters_ops[63] += 1;
-                                ops.push(63);
-                                opsString += "63, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            }  else if ((r.src[0].type === 'tmpExp' && !r.src[0].prime) && (r.src[1].type === 'challenge')) {
-                                counters_ops[62] += 1;
-                                ops.push(62);
-                                opsString += "62, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else {
-                                console.log(src[0], src[1]);
-                                console.log(r.src[0].type, r.src[1].type);
-                                throw new Error("Option not considered!");
-                            }
-
-
-                        } else {
-                            assert(r.src[0].dim == 3 && r.src[1].dim == 3);
-                            counters_mul[2] += 1;
-                            if ((r.src[0].type == 'challenge') && (r.src[1].type == 'tmp')) {
-                                counters_ops[70] += 1;
-                                ops.push(70);
-                                opsString += "70, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'challenge')) {
-                                counters_ops[70] += 1;
-                                ops.push(70);
-                                opsString += "70, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-
-                            } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmp')) {
-                                counters_ops[71] += 1;
-                                ops.push(71);
-                                opsString += "71, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'cm' && !r.src[1].prime)) {
-                                counters_ops[72] += 1;
-                                ops.push(72);
-                                opsString += "72, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'challenge')) {
-                                counters_ops[73] += 1;
-                                ops.push(73);
-                                opsString += "73, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                                counters_ops[74] += 1;
-                                ops.push(74);
-                                opsString += "74, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                                counters_ops[75] += 1;
-                                ops.push(75);
-                                opsString += "75, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'challenge')) {
-                                counters_ops[76] += 1;
-                                ops.push(76);
-                                opsString += "76, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'cm' && !r.src[1].prime)) {
-                                counters_ops[77] += 1;
-                                ops.push(77);
-                                opsString += "77, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else if ((r.src[0].type == 'tmpExp' && r.src[0].prime) && (r.src[1].type == 'challenge')) {
-                                //92: 76
-                                pushResArg(r);
-                                counters_ops[73] += 1;
-                                ops.push(73);
-                                opsString += "73, ";
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            }
-                            else {
-                                console.log(src[0], src[1]);
-                                console.log(r.src[0].type, r.src[1].type);
-                                throw new Error("Option not considered!");
-                            }
-
-
-                        }
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                case 'copy': {
-                    ++counters_copy;
-                    if (r.dest.dim == 1) {
-                        if (r.src[0].dim != 1) {
-                            throw new Error("Invalid dimension")
-                        }
-                        pushResArg(r);
-                        pushSrcArg(r.src[0]);
-                        if (r.dest.type == 'tmp') {
-                            if (r.src[0].type == 'tmp') {
-                                counters_ops[78] += 1;
-                                ops.push(78);
-                                opsString += "78, ";
-                            } else if (r.src[0].type == 'cm' && !r.src[0].prime) {
-                                counters_ops[79] += 1;
-                                ops.push(79);
-                                opsString += "79, ";
-                            } else if (r.src[0].type == 'cm' && r.src[0].prime) {
-                                counters_ops[80] += 1;
-                                ops.push(80);
-                                opsString += "80, ";
-                            } else if (r.src[0].type == 'number') {
-                                counters_ops[81] += 1;
-                                ops.push(81);
-                                opsString += "81, ";
-                            } else if (r.src[0].type == 'const' && !r.src[0].prime) {
-                                counters_ops[82] += 1;
-                                ops.push(82);
-                                opsString += "82, ";
-                            } else if (r.src[0].type == 'const' && r.src[0].prime) {
-                                counters_ops[83] += 1;
-                                ops.push(83);
-                                opsString += "83, ";
-                            } else if (r.src[0].type == 'tmpExp' && !r.src[0].prime) {
-                                counters_ops[79] += 1;
-                                ops.push(79);
-                                opsString += "79, ";
-                            } else {
-                                console.log(r.src[0].type);
-                                console.log(r.src[0].type);
-                                throw new Error("Option not considered!");
-                            }
-                        } else {
-                            console.log(r.dest.type, r.src[0].type);
-                            throw new Error("Option not considered!");
-                        }
-                    } else if (r.dest.dim == 3) {
-                        throw new Error("Option not considered!");
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                default: throw new Error("Invalid op:" + c[j].op);
-            }
-        } else if ((r.dest.type == 'cm' || r.dest.type == 'tmpExp') && !r.dest.prime) {
-            /**
-             * 
-             * 
-             *  Dest /= cm
-             * 
-             */
-            switch (r.op) {
-                case 'add': {
-
-                    if (r.dest.dim == 1) {
-                        if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
-                            throw new Error("Invalid dimension")
-                        }
-                        counters_add[0] += 1;
-                        if (r.src[0].type === "tmp") {
-
-                            switch (r.src[1].type) {
-                                case "tmp": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    counters_ops[86] += 1;
-                                    ops.push(86);
-                                    opsString += "86, ";
-                                    break;
-                                }
-                                case "cm": {
-                                    if (!r.src[1].prime) {
-                                        pushResArg(r);
-                                        pushSrcArg(r.src[0]);
-                                        pushSrcArg(r.src[1]);
-                                        counters_ops[87] += 1;
-                                        ops.push(87);
-                                        opsString += "87, ";
-                                    } else {
-                                        assert(0);
-                                    }
-                                    break;
-                                }
-                                case "tmpExp": {
-                                    assert(!r.src[1].prime);
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    counters_ops[87] += 1;
-                                    ops.push(87);
-                                    opsString += "87, ";
-                                    break;
-                                }
-                                default: {
-                                    console.log(src[0], src[1]);
-                                    console.log(r.src[0].type, r.src[1].type);
-                                    throw new Error("Option not considered!");
-                                    break;
-                                }
-                            }
-                        } else if (r.src[1].type === "tmp") {
-                            switch (r.src[0].type) {
-                                case "cm": {
-                                    if (!r.src[0].prime) {
-                                        pushResArg(r);
-                                        pushSrcArg(r.src[1]);
-                                        pushSrcArg(r.src[0]);
-                                        counters_ops[87] += 1;
-                                        ops.push(87);
-                                        opsString += "87, ";
-                                    } else {
-                                        assert(0);
-                                    }
-                                    break;
-                                } case "tmpExp": {
-                                    assert(!r.src[0].prime);
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[1]);
-                                    pushSrcArg(r.src[0]);
-                                    counters_ops[87] += 1;
-                                    ops.push(87);
-                                    opsString += "87, ";
-                                    break;
-                                }
-                                default: {
-                                    console.log(src[0], src[1]);
-                                    console.log(r.src[0].type, r.src[1].type);
-                                    throw new Error("Option not considered!");
-                                    break;
-                                }
-                            }
-                        } else if (r.src[1].type === "cm") {
-                            switch (r.src[0].type) {
-                                case "cm": {
-                                    if (!r.src[0].prime) {
-                                        pushResArg(r);
-                                        pushSrcArg(r.src[1]);
-                                        pushSrcArg(r.src[0]);
-                                        counters_ops[118] += 1;
-                                        ops.push(118);
-                                        opsString += "118, ";
-                                    } else {
-                                        assert(0);
-                                    }
-                                    break;
-                                } case "tmpExp": {
-                                    assert(!r.src[0].prime);
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[1]);
-                                    pushSrcArg(r.src[0]);
-                                    counters_ops[118] += 1;
-                                    ops.push(118);
-                                    opsString += "118, ";
-                                    break;
-                                }
-                                default: {
-                                    console.log(src[0], src[1]);
-                                    console.log(r.src[0].type, r.src[1].type);
-                                    throw new Error("Option not considered!");
-                                    break;
-                                }
-                            }
-                        } else {
-                            throw new Error("Option not considered!");
-                        }
-
-
-                    } else if (r.dest.dim == 3) {
-
-                        if (r.src[0].dim == 1 || r.src[1].dim == 1) {
-                            counters_add[1] += 1;
-
-                            if ((r.src[0].dim == 1) && (r.src[0].type === 'tmp') &&
-                                (r.src[1].dim == 3) && (r.src[1].type === 'tmp')) {
-                                counters_ops[88] += 1;
-                                ops.push(88);
-                                opsString += "88, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[1].dim == 1) && (r.src[1].type === 'tmp') &&
-                                (r.src[0].dim == 3) && (r.src[0].type === 'tmp')) {
-                                counters_ops[88] += 1;
-                                ops.push(88);
-                                opsString += "88, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-                            } else {
-                                console.log(src[0], src[1]);
-                                console.log(r.src[0].type, r.src[1].type);
-                                throw new Error("Option not considered!");
-                            }
-                        } else {
-                            assert(r.src[0].dim == 3 && r.src[1].dim == 3);
-                            counters_add[2] += 1;
-                            if ((r.src[0].type === 'tmp') && (r.src[1].type === 'challenge')) {
-                                counters_ops[90] += 1;
-                                ops.push(90);
-                                opsString += "90, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'cm') && (r.src[1].type === 'tmp')) {
-                                assert(!r.src[0].prime);
-                                counters_ops[89] += 1;
-                                ops.push(89);
-                                opsString += "89, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmpExp')) {
-                                assert(!r.src[1].prime);
-                                counters_ops[89] += 1;
-                                ops.push(89);
-                                opsString += "89, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-
-                            } else if ((r.src[1].type === 'tmp') && (r.src[0].type === 'tmpExp')) {
-                                assert(!r.src[0].prime);
-                                counters_ops[89] += 1;
-                                ops.push(89);
-                                opsString += "89, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[1].type === 'tmp') && (r.src[0].type === 'tmp')) {
-                                counters_ops[116] += 1;
-                                ops.push(116);
-                                opsString += "116, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else {
-                                console.log(src[0], src[1]);
-                                console.log(r.src[0].type, r.src[1].type);
-                                throw new Error("Option not considered!");
-                            }
-
-                        }
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                case 'sub': {
-                    pushResArg(r);
-                    pushSrcArg(r.src[0]);
-                    pushSrcArg(r.src[1]);
-                    if (r.dest.dim == 1) {
-                        if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
-                            throw new Error("Invalid dimension")
-                        }
-                        counters_sub[0] += 1;
-                        if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmp')) {
-                            counters_ops[92] += 1;
-                            ops.push(92);
-                            opsString += "92, ";
-                        } else if ((r.src[0].type === 'number') && (r.src[1].type === 'tmp')) {
-                            counters_ops[93] += 1;
-                            ops.push(93);
-                            opsString += "93, ";
-                        } else {
-                            console.log(src[0], src[1]);
-                            console.log(r.src[0].type, r.src[1].type);
-                            throw new Error("Option not considered!");
-                        }
-
-                    } else if (r.dest.dim == 3) {
-                        counters_sub[2] += 1;
-                        if(r.src[0].type === "tmp" && r.src[1].type === "tmp") {
-                            assert(r.src[0].dim == 3 && r.src[1].dim == 3);
-                            counters_ops[97] += 1;
-                            ops.push(97);
-                            opsString += "97, ";
-                        } else {
-                            console.log(r.src[0], r.src[1]);
-                            throw new Error("Option not considered!");
-                        }    
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                case 'mul': {
-                    if (r.dest.dim == 1) {
-                        if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
-                            throw new Error("Invalid dimension")
-                        }
-                        counters_mul[0] += 1;
-                        if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmp')) {
-                            counters_ops[94] += 1;
-                            ops.push(94);
-                            opsString += "94, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-
-                        } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                            counters_ops[95] += 1;
-                            ops.push(95);
-                            opsString += "95, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-
-                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'cm' && !r.src[1].prime)) {
-                            counters_ops[95] += 1;
-                            ops.push(95);
-                            opsString += "95, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[1]);
-                            pushSrcArg(r.src[0]);
-                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmpExp' && !r.src[1].prime)) {
-                            counters_ops[95] += 1;
-                            ops.push(95);
-                            opsString += "95, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[1]);
-                            pushSrcArg(r.src[0]);
-
-                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'const' && !r.src[1].prime)) {
-                            counters_ops[96] += 1;
-                            ops.push(96);
-                            opsString += "96, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else if ((r.src[0].type == 'tmpExp' && !r.src[0].prime) && (r.src[1].type == 'const' && !r.src[1].prime)) {
-                            counters_ops[99] += 1;
-                            ops.push(99);
-                            opsString += "99, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'const' && !r.src[1].prime)) {
-                            counters_ops[99] += 1;
-                            ops.push(99);
-                            opsString += "99, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-
-
-                        } else if ((r.src[0].type == 'const' && !r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                            counters_ops[96] += 1;
-                            ops.push(96);
-                            opsString += "96, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[1]);
-                            pushSrcArg(r.src[0]);
-
-                        } else {
-                            console.log(src[0], src[1]);
-                            console.log(r.src[0].type, r.src[1].type);
-                            throw new Error("Option not considered!");
-                        }
-                    } else if (r.dest.dim == 3) {
-                        if (r.src[0].dim == 1 || r.src[1].dim == 1) {
-                            counters_mul[1] += 1;
-                            console.log(src[0], src[1]);
-                            console.log(r.src[0].type, r.src[1].type);
-                            throw new Error("Option not considered!");
-
-                        } else {
-                            assert(r.src[0].dim == 3 && r.src[1].dim == 3);
-                            counters_mul[2] += 1;
-                            if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmp')) {
-                                counters_ops[98] += 1;
-                                ops.push(98);
-                                opsString += "98, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                                counters_ops[120] += 1;
-                                ops.push(120);
-                                opsString += "120, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else {
-                                console.log(src[0], src[1]);
-                                console.log(r.src[0].type, r.src[1].type);
-                                throw new Error("Option not considered!");
-                            }
-                        }
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                case 'copy': {
-                    ++counters_copy;
-                    if (r.dest.dim == 1) {
-                        if (r.src[0].dim != 1) {
-                            throw new Error("Invalid dimension")
-                        }
-                        pushResArg(r);
-                        pushSrcArg(r.src[0]);
-                        if (r.dest.type == 'cm' && !r.dest.prime && r.src[0].type == 'tmp') {
-                            counters_ops[100] += 1;
-                            ops.push(100);
-                            opsString += "100, ";
-                        } else if (r.dest.type == 'tmpExp' && !r.dest.prime && r.src[0].type == 'tmp') {
-                            counters_ops[100] += 1;
-                            ops.push(100);
-                            opsString += "100, ";
-                        } else if (r.dest.type == 'tmpExp' && !r.dest.prime && r.src[0].type == 'cm' && !r.src[0].prime) {
-                            counters_ops[117] += 1;
-                            ops.push(117);
-                            opsString += "117, ";
-                        } else if (r.dest.type == 'tmpExp' && !r.dest.prime && r.src[0].type == 'const' && !r.src[0].prime) {
-                            counters_ops[91] += 1;
-                            ops.push(91);
-                            opsString += "91, ";
-                        } else {
-                            console.log(r.dest.type, r.src[0].type);
-                            throw new Error("Option not considered!");
-                        }
-
-                    } else if (r.dest.dim == 3) {
-                        throw new Error("Option not considered!");
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                default: throw new Error("Invalid op:" + c[j].op);
-            }
-        } else if ((r.dest.type == 'cm' || r.dest.type == 'tmpExp') && r.dest.prime) {
-            /**
-            * 
-            * 
-            *  Dest /= cm
-            * 
-            */
-            switch (r.op) {
-                case 'add': {
-
-                    if (r.dest.dim == 1) {
-                        if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
-                            throw new Error("Invalid dimension")
-                        }
-                        counters_add[0] += 1;
-                        if (r.src[0].type === "tmp") {
-
-                            switch (r.src[1].type) {
-                                case "tmp": {
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    counters_ops[101] += 1;
-                                    ops.push(101);
-                                    opsString += "101, ";
-                                    break;
-                                }
-                                case "cm": {
-                                    if (!r.src[1].prime) {
-                                        pushResArg(r);
-                                        pushSrcArg(r.src[0]);
-                                        pushSrcArg(r.src[1]);
-                                        counters_ops[102] += 1;
-                                        ops.push(102);
-                                        opsString += "102, ";
-                                    } else {
-                                        pushResArg(r);
-                                        pushSrcArg(r.src[0]);
-                                        pushSrcArg(r.src[1]);
-                                        counters_ops[114] += 1;
-                                        ops.push(114);
-                                        opsString += "114, ";
-                                    }
-                                    break;
-                                }
-                                case "tmpExp": {
-                                    assert(!r.src[1].prime);
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[0]);
-                                    pushSrcArg(r.src[1]);
-                                    counters_ops[102] += 1;
-                                    ops.push(102);
-                                    opsString += "102, ";
-                                    break;
-                                }
-                                default: {
-                                    console.log(src[0], src[1]);
-                                    console.log(r.src[0].type, r.src[1].type);
-                                    throw new Error("Option not considered!");
-                                    break;
-                                }
-                            }
-                        } else if (r.src[1].type === "tmp") {
-                            switch (r.src[0].type) {
-                                case "cm": {
-                                    if (!r.src[0].prime) {
-                                        pushResArg(r);
-                                        pushSrcArg(r.src[1]);
-                                        pushSrcArg(r.src[0]);
-                                        counters_ops[102] += 1;
-                                        ops.push(102);
-                                        opsString += "102, ";
-                                    } else {
-                                        pushResArg(r);
-                                        pushSrcArg(r.src[1]);
-                                        pushSrcArg(r.src[0]);
-                                        counters_ops[114] += 1;
-                                        ops.push(114);
-                                        opsString += "114, ";
-                                    }
-                                    break;
-                                } case "tmpExp": {
-                                    assert(!r.src[0].prime);
-                                    pushResArg(r);
-                                    pushSrcArg(r.src[1]);
-                                    pushSrcArg(r.src[0]);
-                                    counters_ops[102] += 1;
-                                    ops.push(102);
-                                    opsString += "102, ";
-                                    break;
-                                }
-                                default: {
-                                    console.log(src[0], src[1]);
-                                    console.log(r.src[0].type, r.src[1].type);
-                                    throw new Error("Option not considered!");
-                                    break;
-                                }
-                            }
-                        } else {
-                            throw new Error("Option not considered!");
-                        }
-
-
-                    } else if (r.dest.dim == 3) {
-
-                        if (r.src[0].dim == 1 || r.src[1].dim == 1) {
-                            counters_add[1] += 1;
-
-                            if ((r.src[0].dim == 1) && (r.src[0].type === 'tmp') &&
-                                (r.src[1].dim == 3) && (r.src[1].type === 'tmp')) {
-                                counters_ops[103] += 1;
-                                ops.push(103);
-                                opsString += "103, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[1].dim == 1) && (r.src[1].type === 'tmp') &&
-                                (r.src[0].dim == 3) && (r.src[0].type === 'tmp')) {
-                                counters_ops[103] += 1;
-                                ops.push(103);
-                                opsString += "103, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-                            } else {
-                                console.log(src[0], src[1]);
-                                console.log(r.src[0].type, r.src[1].type);
-                                throw new Error("Option not considered!");
-                            }
-                        } else {
-                            assert(r.src[0].dim == 3 && r.src[1].dim == 3);
-                            counters_add[2] += 1;
-                            if ((r.src[0].type === 'tmp') && (r.src[1].type === 'challenge')) {
-                                counters_ops[105] += 1;
-                                ops.push(105);
-                                opsString += "105, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'cm') && (r.src[1].type === 'tmp')) {
-                                assert(!r.src[0].prime);
-                                counters_ops[104] += 1;
-                                ops.push(104);
-                                opsString += "104, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-                            } else if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmpExp')) {
-                                assert(!r.src[1].prime);
-                                counters_ops[104] += 1;
-                                ops.push(104);
-                                opsString += "104, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[1]);
-                                pushSrcArg(r.src[0]);
-
-                            } else if ((r.src[1].type === 'tmp') && (r.src[0].type === 'tmpExp')) {
-                                assert(!r.src[0].prime);
-                                counters_ops[104] += 1;
-                                ops.push(104);
-                                opsString += "104, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else {
-                                console.log(src[0], src[1]);
-                                console.log(r.src[0].type, r.src[1].type);
-                                throw new Error("Option not considered!");
-                            }
-
-                        }
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                case 'sub': {
-                    pushResArg(r);
-                    pushSrcArg(r.src[0]);
-                    pushSrcArg(r.src[1]);
-                    if (r.dest.dim == 1) {
-                        if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
-                            throw new Error("Invalid dimension")
-                        }
-                        counters_sub[0] += 1;
-                        if ((r.src[0].type === 'tmp') && (r.src[1].type === 'tmp')) {
-                            counters_ops[106] += 1;
-                            ops.push(106);
-                            opsString += "106, ";
-                        } else if ((r.src[0].type === 'number') && (r.src[1].type === 'tmp')) {
-                            counters_ops[107] += 1;
-                            ops.push(107);
-                            opsString += "107, ";
-                        } else {
-                            console.log(src[0], src[1]);
-                            console.log(r.src[0].type, r.src[1].type);
-                            throw new Error("Option not considered!");
-                        }
-
-                    } else if (r.dest.dim == 3) {
-                        assert(0);
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                case 'mul': {
-                    if (r.dest.dim == 1) {
-                        if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
-                            throw new Error("Invalid dimension")
-                        }
-                        counters_mul[0] += 1;
-                        if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmp')) {
-                            counters_ops[108] += 1;
-                            ops.push(108);
-                            opsString += "108, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-
-                        } else if ((r.src[0].type == 'cm' && !r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                            counters_ops[109] += 1;
-                            ops.push(109);
-                            opsString += "109, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-
-                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'cm' && !r.src[1].prime)) {
-                            counters_ops[109] += 1;
-                            ops.push(109);
-                            opsString += "109, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[1]);
-                            pushSrcArg(r.src[0]);
-
-                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'const' && !r.src[1].prime)) {
-                            counters_ops[110] += 1;
-                            ops.push(110);
-                            opsString += "110, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-
-                        } else if ((r.src[0].type == 'const' && !r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                            counters_ops[110] += 1;
-                            ops.push(110);
-                            opsString += "110, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[1]);
-                            pushSrcArg(r.src[0]);
-
-                        } else if ((r.src[0].type == 'const' && r.src[0].prime) && (r.src[1].type == 'tmp')) {
-                            counters_ops[111] += 1;
-                            ops.push(111);
-                            opsString += "111, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-
-                        } else if ((r.src[0].type == 'tmp') && (r.src[1].type == 'const' && r.src[1].prime)) {
-                            counters_ops[111] += 1;
-                            ops.push(111);
-                            opsString += "111, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[1]);
-                            pushSrcArg(r.src[0]);
-                        } else if ((r.src[0].type == 'cm' && r.src[0].prime) && (r.src[1].type == 'const' && r.src[1].prime)) {
-                            counters_ops[119] += 1;
-                            ops.push(119);
-                            opsString += "119, ";
-                            pushResArg(r);
-                            pushSrcArg(r.src[0]);
-                            pushSrcArg(r.src[1]);
-                        } else {
-                            console.log(src[0], src[1]);
-                            console.log(r.src[0].type, r.src[1].type);
-                            throw new Error("Option not considered!");
-                        }
-                    } else if (r.dest.dim == 3) {
-                        if (r.src[0].dim == 1 || r.src[1].dim == 1) {
-                            counters_mul[1] += 1;
-                            console.log(src[0], src[1]);
-                            console.log(r.src[0].type, r.src[1].type);
-                            throw new Error("Option not considered!");
-
-                        } else {
-                            assert(r.src[0].dim == 3 && r.src[1].dim == 3);
-                            counters_mul[2] += 1;
-                            if ((r.src[0].type == 'tmp') && (r.src[1].type == 'tmp')) {
-                                counters_ops[112] += 1;
-                                ops.push(112);
-                                opsString += "112, ";
-                                pushResArg(r);
-                                pushSrcArg(r.src[0]);
-                                pushSrcArg(r.src[1]);
-
-                            } else {
-                                console.log(src[0], src[1]);
-                                console.log(r.src[0].type, r.src[1].type);
-                                throw new Error("Option not considered!");
-                            }
-                        }
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                case 'copy': {
-                    ++counters_copy;
-                    if (r.dest.dim == 1) {
-                        if (r.src[0].dim != 1) {
-                            throw new Error("Invalid dimension")
-                        }
-                        pushResArg(r);
-                        pushSrcArg(r.src[0]);
-                        if (r.dest.type == 'cm' && r.src[0].type == 'tmp') {
-                            counters_ops[113] += 1;
-                            ops.push(113);
-                            opsString += "113, ";
-                        } else if (r.dest.type == 'tmpExp' && r.src[0].type == 'tmp') {
-                            counters_ops[113] += 1;
-                            ops.push(113);
-                            opsString += "113, ";
-                        } else {
-                            console.log(r.dest.type, r.src[0].type);
-                            throw new Error("Option not considered!");
-                        }
-
-                    } else if (r.dest.dim == 3) {
-                        throw new Error("Option not considered!");
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                default: throw new Error("Invalid op:" + c[j].op);
-            }
-        } else {
-            assert(r.dest.type == 'q');
-            if (r.op == 'mul' && (r.src[0].type == 'tmp') && (r.src[1].type == 'Zi')) {
-                counters_mul[1] += 1;
-                assert(r.src[1].dim == 1);
-                counters_ops[69] += 1;
-                ops.push(69);
-                opsString += "69, ";
-                pushResArg(r);
-                pushSrcArg(r.src[1]);
-                pushSrcArg(r.src[0]);
-
+        
+        let operation = getOperation(r);
+        let opsIndex = operations.findIndex(op => 
+            op.dest_type === operation.dest_type
+            && op.src0_type === operation.src0_type
+            && ((!op.hasOwnProperty("src1_type")) || (op.src1_type === operation.src1_type)));
+        
+            
+        if (opsIndex === -1) {
+            if(isGeneric) {
+                throw new Error("Operation not considered: " + JSON.stringify(operation));
             } else {
-                console.log(src[0], src[1]);
-                console.log(r.src[0].type, r.src[1].type);
-                throw new Error("Option not considered!");
+                opsIndex = operations.length;
+                operations.push(operation);
             }
         }
+
+        ops.push(opsIndex);
+        opsString += `${opsIndex}, `;
+
+        if(!counters_ops[opsIndex]) counters_ops[opsIndex] = 0;
+        counters_ops[opsIndex] += 1;
     }
+
     assert(cont_ops == ops.length);
+    assert(cont_args == args.length);
 
-    if (dbg) {
-        console.log(functionName);
-        console.log(counters_add);
-        console.log(counters_sub);
-        console.log(counters_mul);
-        console.log("Refs:", refcount);
-        console.log("Refs pols:", refpols);
-        console.log("           ", range_pols_1, range_polsseq_1);
-        console.log("           ", range_pols_2, range_polsseq_2);
-        console.log("           ", range_pols_3, range_polsseq_3);
-        console.log("           ", range_pols_4, range_polsseq_4);
-        console.log("Refs temp:", reftem, ":");
-        console.log("           ", range_tem[0], range_tem[1]);
-        console.log("           ", range_tem[2], range_tem[3]);
-        console.log("Refs const:", refconst, ":");
-        console.log("           ", range_const[0], range_const[1]);
-        console.log("           ", range_const[2], range_const[3]);
-        console.log("           ", range_const[4], range_const[5]);
-        console.log("           ", range_const[6], range_const[7]);
-        console.log("Refs chall:", refchall, ":", range_chall[0], range_chall[1]);
-        console.log("Refs num", refnum);
-        console.log("Refs evals", refevals, ":", range_evals);
-        console.log("rest =", refcount - refpols - reftem - refconst - refchall - refnum - refevals);
-        console.log("\n");
-        console.log(counters_ops)
-        console.log("NOPS: ", cont_ops, ops.length);
-        console.log("NARGS: ", cont_args, args.length);
-        //process.stdout.write(JSON.stringify(ops));
-        //process.stdout.write(JSON.stringify(args));
+    console.log("Number of operations: ", cont_ops, ops.length);
+    console.log("Number of arguments: ", cont_args, args.length);
+    console.log("Different operations types: ", operations.length);
+    console.log("--------------------------------");
 
-    }
-    sumadd = counters_add[0] + counters_add[1] + counters_add[2] + counters_add[3];
-    sumsub = counters_sub[0] + counters_sub[1] + counters_sub[2] + counters_sub[3];
-    summul = counters_mul[0] + counters_mul[1] + counters_mul[2] + counters_mul[3];
-    assert(cont_ops == sumadd + sumsub + summul + counters_copy)
-
-    console.log("\n", functionName);
-    console.log("NOPS: ", cont_ops, ops.length);
-    console.log("NARGS: ", cont_args, args.length);
-    process.stdout.write(JSON.stringify(counters_ops));
-
-    let count_zeros = 0;
-    for (let i = 0; i < counters_ops.length; i++) {
-        if (counters_ops[i] === 0) {
-            count_zeros++;
-        }
-    }
-    console.log("\nNon used code:", count_zeros, "\n")
-
-    let res;
-    opsString = opsString.slice(0, -2);
+    if(opsString !== "{") opsString = opsString.substring(0, opsString.lastIndexOf(","));
     opsString += "};"
-    argsString = argsString.slice(0, -2);
+    if(argsString !== "{") argsString = argsString.substring(0, argsString.lastIndexOf(","));
     argsString += "};"
 
-    // join operations
-    if (functionName == "step42ns_first") {
-        assert(0);
-        //Not suported at this moment due to 2ns
-    } else if (functionName == "step3_first") {
 
-        groupOps = " 0, 50,";
-        let countGroup = opsString.split(groupOps).length - 1;
-        cont_ops -= countGroup;
-        opsString = opsString.replace(new RegExp(groupOps, "g"), " 115,");
+    const parserCPP = [
+        `void ${config.className}::parser_avx(StepsParams &params, ParserParams &parserParams, uint64_t rowStart, uint64_t rowEnd, uint64_t nrowsBatch, bool const includesEnds) {`,
+        "#pragma omp parallel for",
+        `    for (uint64_t i = rowStart; i < rowEnd; i+= nrowsBatch) {`,
+        "        int i_args = 0;",
+        "        __m256i tmp1[parserParams.nTemp1];",
+        "        Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
+        "        uint64_t offsetDest, offsetSrc0, offsetSrc1;",
+        "        uint64_t numConstPols = params.pConstPols->numPols();",
+        "        \n",
+        "        for (int kk = 0; kk < parserParams.nOps; ++kk) {",
+        `            switch (parserParams.ops[kk]) {`,
+    ];
+       
+    for(let i = 0; i < operations.length; i++) {
+        const op = operations[i];
+        if(op.dest_type === "q") {
+            const q = [
+                `            case ${i}: {`,
+                "               Goldilocks::Element tmp_inv[3];",
+                "               Goldilocks::Element ti0[4];",
+                "               Goldilocks::Element ti1[4];",
+                "               Goldilocks::Element ti2[4];",
+                `               Goldilocks::store_avx(ti0, tmp3[parserParams.args[i_args]][0]);`,
+                `               Goldilocks::store_avx(ti1, tmp3[parserParams.args[i_args]][1]);`,
+                `               Goldilocks::store_avx(ti2, tmp3[parserParams.args[i_args]][2]);`,
+                "               for (uint64_t j = 0; j < AVX_SIZE_; ++j) {",
+                "                   tmp_inv[0] = ti0[j];",
+                "                   tmp_inv[1] = ti1[j];",
+                "                   tmp_inv[2] = ti2[j];",
+                "                   Goldilocks3::mul((Goldilocks3::Element &)(params.q_2ns[(i + j) * 3]), params.zi.zhInv((i + j)),(Goldilocks3::Element &)tmp_inv);",
+                "               }",
+                "               i_args += 1;",
+                "               break;",
+                "           }",
+            ].join("\n");
+            parserCPP.push(q);
+        } else {
 
-        res = [
-            `#define NOPS_ ${cont_ops}`,
-            `#define NARGS_ ${cont_args}`,
-            `#define NTEMP1_ ${count1d}`,
-            `#define NTEMP3_ ${count3d}`,
-            "\n",
-            `uint64_t op3[NOPS_] = ${opsString}`,
-            "\n",
-            `uint64_t args3[NARGS_] = ${argsString}`
-        ].join("\n");
-    } else if (functionName == "step3prev_first") {
-        res = [
-            `#define NOPS_ ${cont_ops}`,
-            `#define NARGS_ ${cont_args}`,
-            `#define NTEMP1_ ${count1d}`,
-            `#define NTEMP3_ ${count3d}`,
-            "\n",
-            `uint64_t op3prev[NOPS_] = ${opsString}`,
-            "\n",
-            `uint64_t args3prev[NARGS_] = ${argsString}`
-        ].join("\n");
-    } else if (functionName == "step2prev_first") {
-        res = [
-            `#define NOPS_ ${cont_ops}`,
-            `#define NARGS_ ${cont_args}`,
-            `#define NTEMP1_ ${count1d}`,
-            `#define NTEMP3_ ${count3d}`,
-            "\n",
-            `uint64_t op2prev[NOPS_] = ${opsString}`,
-            "\n",
-            `uint64_t args2prev[NARGS_] = ${argsString}`
-        ].join("\n");
-    }
+            let operationDescription = `                // DEST: ${op.dest_type} - SRC0: ${op.src0_type}`;
+            if(op.src1_type) {
+                operationDescription += ` - SRC1: ${op.src1_type}`;
+            }
+            const operationCase = [
+                `            case ${i}: {`,
+                operationDescription,
+            ];
+            
+            operationCase.push(...[
+                "                if(!includesEnds) {",
+                `    ${writeOperation(op, false)}`,
+                "                } else {",
+                `    ${writeOperation(op, true)}`,
+                "                }",
+            ]);
 
-    return {parserHPPCode: res};
-
-
-    function getRef(r) {
-        ++refcount;
-        switch (r.type) {
-            case "tmp": {
-                ++reftem;
-                if (r.dim == 1) {
-                    if (r.id < range_tem[0] || range_tem[0] === -1) range_tem[0] = r.id;
-                    if (r.id > range_tem[1] || range_tem[1] === -1) range_tem[1] = r.id;
-                    return `tmp1[${r.id}]`;
-
-                } else if (r.dim == 3) {
-                    if (r.id < range_tem[2] || range_tem[2] === -1) range_tem[2] = r.id;
-                    if (r.id > range_tem[3] || range_tem[3] === -1) range_tem[3] = r.id;
-                    return `tmp3[${r.id}]`;
-
-                } else {
-                    throw new Error("Invalid dim");
-                }
-            }
-            case "const": {
-                ++refconst;
-                if (dom == "n") {
-                    if (r.prime) {
-                        if (r.id < range_const[0] || range_const[0] === -1) range_const[0] = r.id;
-                        if (r.id > range_const[1] || range_const[1] === -1) range_const[1] = r.id;
-                        return ` params.pConstPols->getElement(${r.id},(i+1)%${N})`;
-
-                    } else {
-                        if (r.id < range_const[2] || range_const[2] === -1) range_const[2] = r.id;
-                        if (r.id > range_const[3] || range_const[3] === -1) range_const[3] = r.id;
-                        return ` params.pConstPols->getElement(${r.id},i)`;
-                    }
-                } else if (dom == "2ns") {
-                    if (r.prime) {
-                        if (r.id < range_const[4] || range_const[4] === -1) range_const[4] = r.id;
-                        if (r.id > range_const[5] || range_const[5] === -1) range_const[5] = r.id;
-                        return `params.pConstPols2ns->getElement(${r.id},(i+${next})%${N})`;
-                    } else {
-                        if (r.id < range_const[6] || range_const[6] === -1) range_const[6] = r.id;
-                        if (r.id > range_const[7] || range_const[7] === -1) range_const[7] = r.id;
-                        return `params.pConstPols2ns->getElement(${r.id},i)`;
-                    }
-                } else {
-                    throw new Error("Invalid dom");
-                }
-            }
-            case "tmpExp": {
-                if (dom == "n") {
-                    return evalMap(starkInfo.tmpExp_n[r.id], r.prime)
-                } else if (dom == "2ns") {
-                    throw new Error("Invalid dom");
-                } else {
-                    throw new Error("Invalid dom");
-                }
-            }
-            case "cm": {
-                if (dom == "n") {
-                    return evalMap(starkInfo.cm_n[r.id], r.prime)
-                } else if (dom == "2ns") {
-                    return evalMap(starkInfo.cm_2ns[r.id], r.prime)
-                } else {
-                    throw new Error("Invalid dom");
-                }
-            }
-            case "q": {
-                if (dom == "n") {
-                    throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    return evalMap(starkInfo.qs[r.id], r.prime)
-                } else {
-                    throw new Error("Invalid dom");
-                }
-            }
-            case "number": {
-                ++refnum;
-                return `Goldilocks::fromU64(${BigInt(r.value).toString()}ULL)`;
-            }
-            case "public": {
-                return `params.publicInputs[${r.id}]`;
-            }
-            case "challenge": {
-                ++refchall;
-                if (r.id < range_chall[0] || range_chall[0] === -1) range_chall[0] = r.id;
-                if (r.id > range_chall[1] || range_chall[1] === -1) range_chall[1] = r.id;
-                return `(Goldilocks3::Element &)*params.challenges[${r.id}]`;
-            }
-            case "eval": {
-                ++refevals;
-                if (r.id < range_evals[0] || range_evals[0] === -1) range_evals[0] = r.id;
-                if (r.id > range_evals[1] || range_evals[1] === -1) range_evals[1] = r.id;
-                return `(Goldilocks3::Element &)*params.evals[${r.id}]`;
-            }
-            case "xDivXSubXi": return `(Goldilocks3::Element &)*params.xDivXSubXi[i]`;
-            case "xDivXSubWXi": return `(Goldilocks3::Element &)*params.xDivXSubWXi[i]`;
-            case "x": {
-                if (dom == "n") {
-                    return `(Goldilocks::Element &)*params.x_n[i]`;
-                } else if (dom == "2ns") {
-                    return `(Goldilocks::Element &)*params.x_2ns[i]`;
-                } else {
-                    throw new Error("Invalid dom");
-                }
-            }
-            case "Zi": return `params.zi.zhInv(i)`;
-            default: throw new Error("Invalid reference type get: " + r.type);
+            let numberArgs = 1 + nArgs(op.dest_type) + nArgs(op.src0_type);
+            if(op.src1_type) numberArgs += nArgs(op.src1_type);
+            
+            operationCase.push(...[
+                `                i_args += ${numberArgs};`,
+                "                break;",
+                "            }",
+            ])
+            parserCPP.push(operationCase.join("\n"));
         }
     }
 
-    function getLRef(r) {
-        let eDst;
-        switch (r.dest.type) {
-            case "tmp": {
+    parserCPP.push(...[
+        "              default: {",
+        `                  std::cout << " Wrong operation!" << std::endl;`,
+        "                  exit(1);",
+        "              }",
+        "          }",
+        "       }",
+        `       if (i_args != parserParams.nArgs) std::cout << " " << i_args << " - " << parserParams.nArgs << std::endl;`,
+        "       assert(i_args == parserParams.nArgs);",
+        "   }"
+        ]);
 
-                if (r.dest.dim == 1) {
-                    eDst = `tmp1[${r.dest.id}]`;
-                } else if (r.dest.dim == 3) {
-                    eDst = `tmp3[${r.dest.id}]`;
-                } else {
-                    throw new Error("Invalid dim");
-                }
-                break;
+    parserCPP.push("}");
+       
+    
+    const parserCPPCode = parserCPP.join("\n");
+
+    const stageInfo = {
+        stage,
+        executeBefore: executeBefore ? 1 : 0,
+        domainSize: dom === "n" ? (1 << nBits) : (1 << nBitsExt),
+        nTemp1: count1d,
+        nTemp3: count3d,
+        nOps: cont_ops,
+        ops,
+        nArgs: cont_args,
+        args: args.map(v => typeof v === 'string' && v.endsWith('ULL') ? parseInt(v.replace('ULL', '')) : v),
+    }
+    
+    return {parserCPPCode, stageInfo};
+
+    function writeOperation(operation, includesEnds = false) {
+        let name = ["tmp1", "commit1"].includes(operation.dest_type) ? `Goldilocks::op` : `Goldilocks3::op`;
+        if(["tmp3", "commit3"].includes(operation.dest_type) && operation.src1_type)  {
+            if((!["tmp3", "commit3"].includes(operation.src0_type) || !["tmp3", "commit3"].includes(operation.src1_type))) {
+                if(["public", "x", "commit1", "tmp1", "const"].includes(operation.src0_type)) name += "1";
+                if(operation.src0_type === "number") name += "1c";
+                if (["commit3", "tmp3"].includes(operation.src0_type)) name += "3";
+                if(operation.src0_type === "challenge") name += "3c";
+                if(["public", "x", "commit1", "tmp1", "const"].includes(operation.src1_type)) name += "1";
+                if(operation.src1_type === "number") name += "1c";
+                if (["commit3", "tmp3"].includes(operation.src1_type)) name += "3";
+                if(operation.src1_type === "challenge") name += "3c";
             }
-            case "q": {
-                if (dom == "n") {
-                    throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    eDst = `(Goldilocks3::Element &)(params.q_2ns[i * 3])`
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
-            case "cm": {
-                if (dom == "n") {
-                    eDst = evalMap(starkInfo.cm_n[r.dest.id], r.dest.prime)
-                } else if (dom == "2ns") {
-                    eDst = evalMap(starkInfo.cm_2ns[r.dest.id], r.dest.prime)
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
-            case "tmpExp": {
-                if (dom == "n") {
-                    eDst = evalMap(starkInfo.tmpExp_n[r.dest.id], r.dest.prime)
-                } else if (dom == "2ns") {
-                    throw new Error("Invalid dom");
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
-            case "f": {
-                if (dom == "n") {
-                    throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    eDst = `(Goldilocks3::Element &)(params.f_2ns[i * 3])`
-                } else {
-                    throw new Error("Invalid dom");
-                }
-            }
-                break;
-            default: throw new Error("Invalid reference type set: " + r.dest.type);
         }
-        return eDst;
+        
+        name += "_avx(";        
+        name += `i_args, `;
+
+        c_args = 1;
+
+        name += writeType(operation.dest_type, includesEnds);
+
+        let {offset: offsetDest, offsetCall: offsetDestCall} = getOffset(operation.dest_type, includesEnds, "dest");
+        if(offsetDestCall) name += offsetDestCall;
+
+        c_args += nArgs(operation.dest_type);
+        name += "\n                        ";
+
+        name += writeType(operation.src0_type, includesEnds);
+
+        let {offset: offsetSrc0, offsetCall: offsetSrc0Call} = getOffset(operation.src0_type, includesEnds, "src0");
+        if(offsetSrc0Call) name += offsetSrc0Call;
+
+        c_args += nArgs(operation.src0_type);
+        name += "\n                        ";
+
+        let offsetSrc1;
+
+        if(operation.src1_type) {
+            name += writeType(operation.src1_type, includesEnds);
+
+            let offsets = getOffset(operation.src1_type, includesEnds, "src1");
+            if(offsets.offset) offsetSrc1 = offsets.offset;
+            if(offsets.offsetCall) name += offsets.offsetCall;
+
+            c_args += nArgs(operation.src1_type);
+            name += "\n                        ";
+        }
+
+        name = name.substring(0, name.lastIndexOf(", ")) + "\n                    );";
+        
+        const operationCall = [];
+
+        if(includesEnds) {
+            if(offsetDest || offsetSrc0 || offsetSrc1) {
+                const offsetLoop = [ "                for (uint64_t j = 0; j < AVX_SIZE_; ++j) {"];
+                if(offsetDest) offsetLoop.push(offsetDest);
+                if(offsetSrc0) offsetLoop.push(offsetSrc0);
+                if(offsetSrc1) offsetLoop.push(offsetSrc1);
+                offsetLoop.push("                    }");
+                operationCall.push(...offsetLoop);
+            }
+            operationCall.push(`                    ${name}`);
+        } else {
+            operationCall.push(`                ${name}`);
+        }
+
+        return operationCall.join("\n").replace(/i_args \+ 0/, "i_args");
     }
 
-    function pushResArg(r) {
+    function writeType(type, includesEnds = false) {
+        switch (type) {
+            case "public":
+                return `params.publicInputs[parserParams.args[i_args + ${c_args}]], `;
+            case "tmp1":
+                return `tmp1[parserParams.args[i_args + ${c_args}]], `; 
+            case "tmp3":
+                    return `tmp3[parserParams.args[i_args + ${c_args}]], `;
+            case "commit1":
+            case "commit3":
+                if(includesEnds) {
+                    return `&params.pols[0], `;
+                } else {
+                    return `&params.pols[parserParams.args[i_args + ${c_args}] + (i + parserParams.args[i_args + ${c_args+1}]) * parserParams.args[i_args + ${c_args+2}]], `;
+                }
+            case "const":
+                let constPols = dom === "n" ? "&params.pConstPols" : `&params.pConstPols2ns`;
+                if(includesEnds) {
+                    return `${constPols}->getElement(0, 0), `;
+                } else {
+                    return `${constPols}->getElement(parserParams.args[i_args + ${c_args}], i), `;
+                }
+            case "challenge":
+                return `(Goldilocks3::Element &)*params.challenges[parserParams.args[i_args + ${c_args}]], `;
+            case "x":
+                return `params.x_${dom}[i], `;
+            case "number":
+                return `Goldilocks::fromU64(parserParams.args[i_args + ${c_args}]), `;
+            case "Zi": 
+                return "params.zi.zhInv(i), ";
+            case "q":
+                "params.q_2ns[i * 3], ";
+            case "f": 
+                return "params.f_2ns[i * 3], ";
+            case "eval":
+                return `&params.evals[parserParams.args[i_args + ${c_args}] * 3], `;
+            case "xDivXSubXi": 
+                return "params.xDivXSubXi[i], ";
+            case "xDivXSubWXi":
+                return "params.xDivXSubWXi[i], ";
+            default:
+                throw new Error("Invalid type: " + type);
+        }
+    }
+
+    function getOffset(type, includesEnds = false, operand) {
+        if(!["src0", "src1", "dest"].includes(operand)) throw new Error("Invalid type: " + operand);
+        const strideTypes = ["commit1", "commit3"];
+        if(operand !== "dest") strideTypes.push("const");
+
+        let offset;
+        let offsetCall;
+
+        if(includesEnds) {
+            let offsetName = `offsets${operand[0].toUpperCase() + operand.substring(1)}`;
+            if(["commit1", "commit3", "const"].includes(type)) {
+                let numPols = type === "const" ? "numConstPols" : `parserParams.args[i_args + ${c_args+2}]`;
+                offset = `                        ${offsetName}[j] = parserParams.args[i_args + ${c_args}] + (((i + j) + parserParams.args[i_args + ${c_args+1}]) % parserParams.domainSize) * ${numPols};`;
+                offsetCall = `${offsetName}, `;
+            } else if (type === "x") {
+                offsetCall = `params.x_${dom}.offset(), `;
+            }
+        } else {
+            if(["commit1", "commit3", "const"].includes(type)) {
+                let numPols = type === "const" ? "numConstPols" : `parserParams.args[i_args + ${c_args+2}]`;
+                offsetCall = `${numPols}, `;
+            } else if (type === "x") {
+                offsetCall = `params.x_${dom}.offset(), `;
+            }
+        }
+    
+        return {offset, offsetCall};
+    }
+
+    function nArgs(type) {
+        switch (type) {
+            case "x":
+            case "Zi":
+            case "q":
+            case "xDivXSubXi":
+            case "xDivXSubWXi":
+            case "f":
+                return 0; 
+            case "public":            
+            case "tmp1":
+            case "tmp3":
+            case "challenge":
+            case "eval":
+            case "number":
+                return 1;
+            case "const":
+                return 2;
+            case "commit1":
+            case "commit3":
+                return 3;  
+            default:
+                throw new Error("Invalid type: " + type);
+        }
+    }
+
+    function getOperation(r) {
+        const _op = {};
+        _op.op = r.op;
+        if(["cm", "tmpExp"].includes(r.dest.type)) {
+            _op.dest_type = `commit${r.dest.dim}`;
+        } else if(r.dest.type === "tmp") {
+            _op.dest_type = `tmp${r.dest.dim}`;
+        } else {
+            _op.dest_type = r.dest.type;
+        }
+        
+        if(r.op !== "sub") {
+            r.src.sort((a, b) => {
+                let opA =  ["cm", "tmpExp"].includes(a.type) ? operationsMap[`commit${a.dim}`] : a.type === "tmp" ? operationsMap[`tmp${a.dim}`] : operationsMap[a.type];
+                let opB = ["cm", "tmpExp"].includes(b.type) ? operationsMap[`commit${b.dim}`] : b.type === "tmp" ? operationsMap[`tmp${b.dim}`] : operationsMap[b.type];
+                return opA - opB;
+            });
+        }
+
+        for(let i = 0; i < r.src.length; i++) {
+            pushSrcArg(r.src[i], r.src[i].type);
+            if(["cm", "tmpExp"].includes(r.src[i].type)) {
+                _op[`src${i}_type`] = `commit${r.src[i].dim}`;
+            } else if(r.src[i].type === "tmp") {
+                _op[`src${i}_type`] =  `tmp${r.src[i].dim}`;
+            } else {
+                _op[`src${i}_type`] = r.src[i].type;
+            }
+        }
+
+        return _op;
+    }
+
+
+    function getAllOperations() {
+        const operations = [];
+
+        const possibleDestinationsDim1 = [ "commit1", "tmp1" ];
+        const possibleDestinationsDim3 = [ "commit3", "tmp3" ];
+    
+        const possibleSrcDim1 = [ "commit1", "const", "tmp1", "public", "x", "number" ];
+        const possibleSrcDim3 = [ "commit3", "tmp3", "challenge" ];
+
+        // Dim1 destinations
+        for(let j = 0; j < possibleDestinationsDim1.length; j++) {
+            let dest_type = possibleDestinationsDim1[j];
+            for(let k = 0; k < possibleSrcDim1.length; ++k) {
+                let src0_type = possibleSrcDim1[k];
+                if(["commit1", "const", "tmp1"].includes(src0_type)) operations.push({dest_type, src0_type}); // Copy operation
+                if(src0_type === "x") continue;
+                for (let l = 0; l < possibleSrcDim1.length; ++l) {
+                    let src1_type = possibleSrcDim1[l];
+                    if(src1_type === "x") continue;
+                    operations.push({dest_type, src0_type, src1_type})
+                } 
+            }
+        }
+
+        // Dim3 destinations
+        for(let j = 0; j < possibleDestinationsDim3.length; j++) {
+            let dest_type = possibleDestinationsDim3[j];
+
+            // Dest dim 3, sources dimension 1 and 3
+            for(let k = 0; k < possibleSrcDim1.length; ++k) {
+                let src0_type = possibleSrcDim1[k];
+                for (let l = 0; l < possibleSrcDim3.length; ++l) {
+                    let src1_type = possibleSrcDim3[l];
+                    operations.push({dest_type, src0_type, src1_type})
+                }
+            }
+
+            // Dest dim 3, sources dimension 3 and 1
+            for(let k = 0; k < possibleSrcDim3.length; ++k) {
+                let src0_type = possibleSrcDim3[k];
+                
+                for (let l = 0; l < possibleSrcDim1.length; ++l) {
+                    let src1_type = possibleSrcDim1[l];
+                    if(src1_type === "x") continue;
+                    operations.push({dest_type, src0_type, src1_type});
+                }
+            }
+
+            for(let k = 0; k < possibleSrcDim3.length; ++k) {
+                let src0_type = possibleSrcDim3[k];
+                if(["commit3", "tmp3"].includes(src0_type)) operations.push({dest_type, src0_type}); // Copy operation
+                for (let l = 0; l < possibleSrcDim3.length; ++l) {
+                    let src1_type = possibleSrcDim3[l];
+                    operations.push({dest_type, src0_type, src1_type})
+                }
+            }
+        }
+
+        // Step FRI
+        operations.push({ dest_type: "tmp3", src0_type: "eval"});
+        operations.push({ dest_type: "tmp3", src0_type: "challenge", src1_type: "eval"});
+        operations.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "eval"});
+
+        operations.push({ dest_type: "tmp3", src0_type: "commit1", src1_type: "eval"});
+        operations.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "commit1"});
+
+        operations.push({ dest_type: "tmp3", src0_type: "commit3", src1_type: "eval"});
+        operations.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "commit3"});
+
+        operations.push({ dest_type: "tmp3", src0_type: "const", src1_type: "eval"});
+        operations.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "const"});
+        
+        operations.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubXi"});
+        operations.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubWXi"});
+
+        operations.push({ dest_type: "q", src0_type: "tmp3", src1_type: "Zi"});
+        operations.push({ dest_type: "f", src0_type: "tmp3"});
+
+        return operations;
+    }
+
+    function pushResArg(r, type) {
         let eDst;
-        switch (r.dest.type) {
+        switch (type) {
             case "tmp": {
                 if (r.dest.dim == 1) {
                     args.push(ID1D[r.dest.id]);
                     argsString += `${ID1D[r.dest.id]}, `;
-                    //argsString += `${r.dest.id}, `;
                 } else {
                     assert(r.dest.dim == 3);
                     args.push(ID3D[r.dest.id]);
                     argsString += `${ID3D[r.dest.id]}, `;
-                    //argsString += `${r.dest.id}, `;
                 }
                 cont_args += 1;
                 break;
@@ -2114,102 +523,43 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
             case "f": {
                 break;
             }
-                break;
             default: throw new Error("Invalid reference type set: " + r.dest.type);
         }
         return eDst;
     }
 
-    function evalMap(polId, prime) {
-        let p = starkInfo.varPolMap[polId];
-        ++refpols;
-        if (!p) {
-            console.log("xx");
-        }
-        let offset = starkInfo.mapOffsets[p.section];
-        offset += p.sectionPos;
-        let size = starkInfo.mapSectionsN[p.section];
-        if (p.dim == 1) {
-            if (prime) {
-                range_pols_1.add(size);
-                range_polsseq_1.add(p.section);
-                return `params.pols[${offset} + ((i + ${next})%${N})*${size}]`;
 
-            } else {
-                range_pols_2.add(size);
-                range_polsseq_2.add(p.section);
-                return `params.pols[${offset} + i*${size}]`;
-            }
-        } else if (p.dim == 3) {
-            if (prime) {
-                range_pols_3.add(size);
-                range_polsseq_3.add(p.section);
-                return `(Goldilocks3::Element &)(params.pols[${offset} + ((i + ${next})%${N})*${size}])`;
-            } else {
-                range_pols_4.add(size);
-                range_polsseq_4.add(p.section);
-                return `(Goldilocks3::Element &)(params.pols[${offset} + i*${size}])`;
-            }
-        } else {
-            throw new Error("invalid dim");
-        }
-    }
-
-    function pushSrcArg(r) {
-        switch (r.type) {
+    function pushSrcArg(r, type) {
+        switch (type) {
             case "tmp": {
                 if (r.dim == 1) {
                     args.push(ID1D[r.id]);
                     argsString += `${ID1D[r.id]}, `;
-                    //argsString += `${r.id}, `;
-
                 } else {
                     assert(r.dim == 3);
                     args.push(ID3D[r.id]);
                     argsString += `${ID3D[r.id]}, `;
-                    //argsString += `${r.id}, `;
 
                 }
                 cont_args += 1;
                 break;
             }
             case "const": {
-                if (dom == "n") {
-                    if (r.prime) {
-                        args.push(r.id);
-                        args.push(1);
-                        args.push(N);
-                        argsString += `${r.id}, `;
-                        argsString += `1, `;
-                        argsString += `${N}, `;
-                        cont_args += 3;
-                    } else {
-                        args.push(r.id);
-                        argsString += `${r.id}, `;
-                        cont_args += 1;
-                    }
-                } else if (dom == "2ns") {
-                    if (r.prime) {
-                        args.push(r.id);
-                        args.push(next);
-                        args.push(N);
-                        argsString += `${r.id}, `;
-                        argsString += `${next}, `;
-                        argsString += `${N}, `;
-                        cont_args += 3;
-                    } else {
-                        args.push(r.id);
-                        argsString += `${r.id}, `;
-                        cont_args += 1;
-                    }
-                }
+                let offset_prime = r.prime ? next : 0;
+
+                args.push(r.id);
+                args.push(offset_prime);
+
+                argsString += `${r.id}, `;
+                argsString += `${offset_prime}, `;
+                
+                cont_args += 2;
                 break;
             }
             case "tmpExp": {
                 if (dom == "n") {
                     evalMap_(starkInfo.tmpExp_n[r.id], r.prime)
                 } else if (dom == "2ns") {
-                    console.log("hola ", r.type);
                     throw new Error("Invalid dom");
                 } else {
                     throw new Error("Invalid dom");
@@ -2242,19 +592,10 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
                 cont_args += 1;
                 break;
             }
-            case "public": {
-                args.push(r.id);
-                argsString += `${r.id}, `;
-                cont_args += 1;
-                break;
-            }
-            case "challenge": {
-                args.push(r.id);
-                argsString += `${r.id}, `;
-                cont_args += 1;
-                break;
-            }
-            case "eval": {
+            case "public":
+            case "challenge":
+            case "eval": 
+            {
                 args.push(r.id);
                 argsString += `${r.id}, `;
                 cont_args += 1;
@@ -2265,177 +606,19 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
 
     function evalMap_(polId, prime) {
         let p = starkInfo.varPolMap[polId];
-        let offset = starkInfo.mapOffsets[p.section];
-        offset += p.sectionPos;
+
+        let offset = starkInfo.mapOffsets[p.section] + p.sectionPos;
+        let offset_prime = prime ? next : 0;
         let size = starkInfo.mapSectionsN[p.section];
-        if (p.dim == 1) {
-            if (prime) {
-                args.push(Number(offset));
-                args.push(Number(next));
-                args.push(Number(N));
-                args.push(Number(size));
-                argsString += `${offset}, `;
-                argsString += `${next}, `;
-                argsString += `${N}, `;
-                argsString += `${size}, `;
-                cont_args += 4;
 
-            } else {
-                args.push(Number(offset));
-                args.push(Number(size));
-                argsString += `${offset}, `;
-                argsString += `${size}, `;
-                cont_args += 2;
-            }
-        } else if (p.dim == 3) {
-            if (prime) {
-                args.push(Number(offset));
-                args.push(Number(next));
-                args.push(Number(N));
-                args.push(Number(size));
-                argsString += `${offset}, `;
-                argsString += `${next}, `;
-                argsString += `${N}, `;
-                argsString += `${size}, `;
-                cont_args += 4;
-            } else {
-                args.push(Number(offset));
-                args.push(Number(size));
-                argsString += `${offset}, `;
-                argsString += `${size}, `;
-                cont_args += 2;
-            }
-        } else {
-            throw new Error("invalid dim");
-        }
+        args.push(Number(offset));
+        args.push(Number(offset_prime));
+        args.push(Number(size));
+
+        argsString += `${offset}, `;
+        argsString += `${offset_prime}, `;
+        argsString += `${N}, `;
+        
+        cont_args += 3;
     }
-
-    function getIdMaps(maxid) {
-
-        let Ini1D = new Array(maxid).fill(-1);
-        let End1D = new Array(maxid).fill(-1);
-
-        let Ini3D = new Array(maxid).fill(-1);
-        let End3D = new Array(maxid).fill(-1);
-
-
-        for (let j = 0; j < code.length; j++) {
-            const r = code[j];
-            if (r.dest.type == 'tmp') {
-
-                let id_ = r.dest.id;
-                let dim_ = r.dest.dim;
-                assert(id_ >= 0 && id_ < maxid);
-
-                if (dim_ == 1) {
-                    if (Ini1D[id_] == -1) {
-                        Ini1D[id_] = j;
-                        End1D[id_] = j;
-                    } else {
-                        End1D[id_] = j;
-                    }
-                } else {
-                    assert(dim_ == 3);
-                    if (Ini3D[id_] == -1) {
-                        Ini3D[id_] = j;
-                        End3D[id_] = j;
-                    } else {
-                        End3D[id_] = j;
-                    }
-                }
-            }
-            for (k = 0; k < r.src.length; k++) {
-                if (r.src[k].type == 'tmp') {
-
-                    let id_ = r.src[k].id;
-                    let dim_ = r.src[k].dim;
-                    assert(id_ >= 0 && id_ < maxid);
-
-                    if (dim_ == 1) {
-                        if (Ini1D[id_] == -1) {
-                            Ini1D[id_] = j;
-                            End1D[id_] = j;
-                        } else {
-                            End1D[id_] = j;
-                        }
-                    } else {
-                        assert(dim_ == 3);
-                        if (Ini3D[id_] == -1) {
-                            Ini3D[id_] = j;
-                            End3D[id_] = j;
-                        } else {
-                            End3D[id_] = j;
-                        }
-                    }
-                }
-            }
-        }
-        const segments1D = [];
-        const segments3D = [];
-        for (let j = 0; j < maxid; j++) {
-            if (Ini1D[j] >= 0) {
-                segments1D.push([Ini1D[j], End1D[j], j])
-            }
-            if (Ini3D[j] >= 0) {
-                segments3D.push([Ini3D[j], End3D[j], j])
-            }
-        }
-        subsets1D = temporalsSubsets(segments1D);
-        subsets3D = temporalsSubsets(segments3D);
-        /*let count1d = 0;
-        let count3d = 0;
-        for (let j = 0; j < maxid; j++) {
-            if (Ini1D[j] >= 0) {
-                ID1D[j] = count1d;
-                ++count1d;
-            }
-            if (Ini3D[j] >= 0) {
-                ID3D[j] = count3d;
-                ++count3d;
-            }
-        }*/
-        let count1d = 0;
-        for (s of subsets1D) {
-            for (a of s) {
-                ID1D[a[2]] = count1d;
-            }
-            ++count1d;
-        }
-        let count3d = 0;
-        for (s of subsets3D) {
-            for (a of s) {
-                ID3D[a[2]] = count3d;
-            }
-            ++count3d;
-        }
-        console.log(count1d, count3d, subsets1D.length, subsets3D.length);
-        return { count1d, count3d };
-    }
-
-    function temporalsSubsets(segments) {
-        segments.sort((a, b, key) => a[1] - b[1]);
-        const result = [];
-        for (const s of segments) {
-            let inserted = false;
-            for (a of result) {
-                if (!isIntersecting(s, a[a.length - 1])) {
-                    a.push(s);
-                    inserted = true;
-                    break;
-                }
-            }
-            if (!inserted) {
-                result.push([s]);
-            }
-        }
-        return result;
-    }
-
-    function isIntersecting(segment1, segment2) {
-        const [start1, end1, key1] = segment1;
-        const [start2, end2, key2] = segment2;
-        return start2 <= end1 && start1 <= end2;
-    }
-
-
 }
