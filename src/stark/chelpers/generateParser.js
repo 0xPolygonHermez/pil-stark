@@ -15,32 +15,9 @@ const operationsMap = {
     "f": 14,
 }
 
-module.exports.generateParser = function generateParser(code = []) {
-
-    let operations;
+module.exports.generateParser = function generateParser(operations, operationsUsed) {
 
     var c_args = 0;
-
-    if(code.length === 0) {
-        operations = getAllOperations();
-    } else {
-        operations = [];
-        for (let j = 0; j < code.length; j++) {
-            const r = code[j];
-            let operation = module.exports.getOperation(r);
-    
-            let opsIndex = operations.findIndex(op => 
-                op.dest_type === operation.dest_type
-                && op.src0_type === operation.src0_type
-                && ((!op.hasOwnProperty("src1_type")) || (op.src1_type === operation.src1_type)));
-            
-            if (opsIndex === -1) {
-                opsIndex = operations.length;
-                operations.push(operation);
-            }
-        }
-    }
-    
 
     const parserCPP = [
         `void CHelpers::parser_avx(StepsParams &params, ParserParams &parserParams, uint64_t rowStart, uint64_t rowEnd, uint64_t nrowsBatch, bool const includesEnds) {`,
@@ -60,56 +37,34 @@ module.exports.generateParser = function generateParser(code = []) {
        
     for(let i = 0; i < operations.length; i++) {
         const op = operations[i];
-        if(op.dest_type === "q") {
-            const q = [
-                `            case ${i}: {`,
-                "               Goldilocks::Element tmp_inv[3];",
-                "               Goldilocks::Element ti0[4];",
-                "               Goldilocks::Element ti1[4];",
-                "               Goldilocks::Element ti2[4];",
-                `               Goldilocks::store_avx(ti0, tmp3[parserParams.args[i_args]][0]);`,
-                `               Goldilocks::store_avx(ti1, tmp3[parserParams.args[i_args]][1]);`,
-                `               Goldilocks::store_avx(ti2, tmp3[parserParams.args[i_args]][2]);`,
-                "               for (uint64_t j = 0; j < AVX_SIZE_; ++j) {",
-                "                   tmp_inv[0] = ti0[j];",
-                "                   tmp_inv[1] = ti1[j];",
-                "                   tmp_inv[2] = ti2[j];",
-                "                   Goldilocks3::mul((Goldilocks3::Element &)(params.q_2ns[(i + j) * 3]), params.zi.zhInv((i + j)),(Goldilocks3::Element &)tmp_inv);",
-                "               }",
-                "               i_args += 1;",
-                "               break;",
-                "           }",
-            ].join("\n");
-            parserCPP.push(q);
-        } else {
-
-            let operationDescription = `                // DEST: ${op.dest_type} - SRC0: ${op.src0_type}`;
-            if(op.src1_type) {
-                operationDescription += ` - SRC1: ${op.src1_type}`;
-            }
-            const operationCase = [
-                `            case ${i}: {`,
-                operationDescription,
-            ];
-            
-            operationCase.push(...[
-                "                if(!includesEnds) {",
-                `    ${writeOperation(op, false)}`,
-                "                } else {",
-                `    ${writeOperation(op, true)}`,
-                "                }",
-            ]);
-
-            let numberArgs = 1 + nArgs(op.dest_type) + nArgs(op.src0_type);
-            if(op.src1_type) numberArgs += nArgs(op.src1_type);
-            
-            operationCase.push(...[
-                `                i_args += ${numberArgs};`,
-                "                break;",
-                "            }",
-            ])
-            parserCPP.push(operationCase.join("\n"));
+        if(operationsUsed && !operationsUsed.includes(i)) continue;
+        let operationDescription = `                // DEST: ${op.dest_type} - SRC0: ${op.src0_type}`;
+        if(op.src1_type) {
+            operationDescription += ` - SRC1: ${op.src1_type}`;
         }
+        const operationCase = [
+            `            case ${i}: {`,
+            operationDescription,
+        ];
+        
+        operationCase.push(...[
+            "                if(!includesEnds) {",
+            `    ${writeOperation(op, false)}`,
+            "                } else {",
+            `    ${writeOperation(op, true)}`,
+            "                }",
+        ]);
+
+        let numberArgs = 1 + nArgs(op.dest_type) + nArgs(op.src0_type);
+        if(op.src1_type) numberArgs += nArgs(op.src1_type);
+        
+        operationCase.push(...[
+            `                i_args += ${numberArgs};`,
+            "                break;",
+            "            }",
+        ])
+        parserCPP.push(operationCase.join("\n"));
+        
     }
 
     parserCPP.push(...[
@@ -130,7 +85,7 @@ module.exports.generateParser = function generateParser(code = []) {
     const parserCPPCode = parserCPP.join("\n");
 
     
-    return {operations, parserCPPCode};
+    return parserCPPCode;
 
     function writeOperation(operation, includesEnds = false) {
         let name = ["tmp1", "commit1"].includes(operation.dest_type) ? `Goldilocks::op` : `Goldilocks3::op`;
@@ -306,87 +261,87 @@ module.exports.generateParser = function generateParser(code = []) {
                 throw new Error("Invalid type: " + type);
         }
     }
+}
 
-    function getAllOperations() {
-        const operations = [];
+module.exports.getAllOperations = function getAllOperations() {
+    const operations = [];
 
-        const possibleDestinationsDim1 = [ "commit1", "tmp1" ];
-        const possibleDestinationsDim3 = [ "commit3", "tmp3" ];
+    const possibleDestinationsDim1 = [ "commit1", "tmp1" ];
+    const possibleDestinationsDim3 = [ "commit3", "tmp3" ];
+
+    const possibleSrcDim1 = [ "commit1", "const", "tmp1", "public", "x", "number" ];
+    const possibleSrcDim3 = [ "commit3", "tmp3", "challenge" ];
+
+    // Dim1 destinations
+    for(let j = 0; j < possibleDestinationsDim1.length; j++) {
+        let dest_type = possibleDestinationsDim1[j];
+        for(let k = 0; k < possibleSrcDim1.length; ++k) {
+            let src0_type = possibleSrcDim1[k];
+            if(["commit1", "const", "tmp1"].includes(src0_type)) operations.push({dest_type, src0_type}); // Copy operation
+            if(src0_type === "x") continue;
+            for (let l = 0; l < possibleSrcDim1.length; ++l) {
+                let src1_type = possibleSrcDim1[l];
+                if(src1_type === "x") continue;
+                operations.push({dest_type, src0_type, src1_type})
+            } 
+        }
+    }
+
+    // Dim3 destinations
+    for(let j = 0; j < possibleDestinationsDim3.length; j++) {
+        let dest_type = possibleDestinationsDim3[j];
+
+        // Dest dim 3, sources dimension 1 and 3
+        for(let k = 0; k < possibleSrcDim1.length; ++k) {
+            let src0_type = possibleSrcDim1[k];
+            for (let l = 0; l < possibleSrcDim3.length; ++l) {
+                let src1_type = possibleSrcDim3[l];
+                operations.push({dest_type, src0_type, src1_type})
+            }
+        }
+
+        // Dest dim 3, sources dimension 3 and 1
+        for(let k = 0; k < possibleSrcDim3.length; ++k) {
+            let src0_type = possibleSrcDim3[k];
+            
+            for (let l = 0; l < possibleSrcDim1.length; ++l) {
+                let src1_type = possibleSrcDim1[l];
+                if(src1_type === "x") continue;
+                operations.push({dest_type, src0_type, src1_type});
+            }
+        }
+
+        for(let k = 0; k < possibleSrcDim3.length; ++k) {
+            let src0_type = possibleSrcDim3[k];
+            if(["commit3", "tmp3"].includes(src0_type)) operations.push({dest_type, src0_type}); // Copy operation
+            for (let l = 0; l < possibleSrcDim3.length; ++l) {
+                let src1_type = possibleSrcDim3[l];
+                operations.push({dest_type, src0_type, src1_type})
+            }
+        }
+    }
+
+    // Step FRI
+    operations.push({ dest_type: "tmp3", src0_type: "eval"});
+    operations.push({ dest_type: "tmp3", src0_type: "challenge", src1_type: "eval"});
+    operations.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "eval"});
+
+    operations.push({ dest_type: "tmp3", src0_type: "commit1", src1_type: "eval"});
+    operations.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "commit1"});
+
+    operations.push({ dest_type: "tmp3", src0_type: "commit3", src1_type: "eval"});
+    operations.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "commit3"});
+
+    operations.push({ dest_type: "tmp3", src0_type: "const", src1_type: "eval"});
+    operations.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "const"});
     
-        const possibleSrcDim1 = [ "commit1", "const", "tmp1", "public", "x", "number" ];
-        const possibleSrcDim3 = [ "commit3", "tmp3", "challenge" ];
+    operations.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubXi"});
+    operations.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubWXi"});
 
-        // Dim1 destinations
-        for(let j = 0; j < possibleDestinationsDim1.length; j++) {
-            let dest_type = possibleDestinationsDim1[j];
-            for(let k = 0; k < possibleSrcDim1.length; ++k) {
-                let src0_type = possibleSrcDim1[k];
-                if(["commit1", "const", "tmp1"].includes(src0_type)) operations.push({dest_type, src0_type}); // Copy operation
-                if(src0_type === "x") continue;
-                for (let l = 0; l < possibleSrcDim1.length; ++l) {
-                    let src1_type = possibleSrcDim1[l];
-                    if(src1_type === "x") continue;
-                    operations.push({dest_type, src0_type, src1_type})
-                } 
-            }
-        }
+    operations.push({ dest_type: "q", src0_type: "tmp3", src1_type: "Zi"});
+    operations.push({ dest_type: "f", src0_type: "tmp3"});
 
-        // Dim3 destinations
-        for(let j = 0; j < possibleDestinationsDim3.length; j++) {
-            let dest_type = possibleDestinationsDim3[j];
-
-            // Dest dim 3, sources dimension 1 and 3
-            for(let k = 0; k < possibleSrcDim1.length; ++k) {
-                let src0_type = possibleSrcDim1[k];
-                for (let l = 0; l < possibleSrcDim3.length; ++l) {
-                    let src1_type = possibleSrcDim3[l];
-                    operations.push({dest_type, src0_type, src1_type})
-                }
-            }
-
-            // Dest dim 3, sources dimension 3 and 1
-            for(let k = 0; k < possibleSrcDim3.length; ++k) {
-                let src0_type = possibleSrcDim3[k];
-                
-                for (let l = 0; l < possibleSrcDim1.length; ++l) {
-                    let src1_type = possibleSrcDim1[l];
-                    if(src1_type === "x") continue;
-                    operations.push({dest_type, src0_type, src1_type});
-                }
-            }
-
-            for(let k = 0; k < possibleSrcDim3.length; ++k) {
-                let src0_type = possibleSrcDim3[k];
-                if(["commit3", "tmp3"].includes(src0_type)) operations.push({dest_type, src0_type}); // Copy operation
-                for (let l = 0; l < possibleSrcDim3.length; ++l) {
-                    let src1_type = possibleSrcDim3[l];
-                    operations.push({dest_type, src0_type, src1_type})
-                }
-            }
-        }
-
-        // Step FRI
-        operations.push({ dest_type: "tmp3", src0_type: "eval"});
-        operations.push({ dest_type: "tmp3", src0_type: "challenge", src1_type: "eval"});
-        operations.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "eval"});
-
-        operations.push({ dest_type: "tmp3", src0_type: "commit1", src1_type: "eval"});
-        operations.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "commit1"});
-
-        operations.push({ dest_type: "tmp3", src0_type: "commit3", src1_type: "eval"});
-        operations.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "commit3"});
-
-        operations.push({ dest_type: "tmp3", src0_type: "const", src1_type: "eval"});
-        operations.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "const"});
-        
-        operations.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubXi"});
-        operations.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubWXi"});
-
-        operations.push({ dest_type: "q", src0_type: "tmp3", src1_type: "Zi"});
-        operations.push({ dest_type: "f", src0_type: "tmp3"});
-
-        return operations;
-    } 
+    return operations;
 }
 
 module.exports.getOperation = function getOperation(r) {
