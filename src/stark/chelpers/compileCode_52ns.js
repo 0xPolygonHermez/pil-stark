@@ -431,6 +431,7 @@ module.exports = function compileCode_52ns(starkInfo, functionName, code, dom) {
         stage,
         executeBefore,
         domainSize: (1 << nBitsExt),
+        domainExtended: 1,
         nTemp1: 0,
         nTemp3: 3,
         nOps: cont_ops,

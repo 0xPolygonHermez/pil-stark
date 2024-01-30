@@ -1918,6 +1918,7 @@ module.exports = function compileCode_parser(starkInfo, config, functionName, co
         stage,
         executeBefore,
         domainSize: dom === "n" ? (1 << nBits) : (1 << nBitsExt),
+        domainExtended: 0,
         nTemp1: count1d,
         nTemp3: count3d,
         nOps: cont_ops,
