@@ -23,7 +23,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         "#define PARSER_GENERIC true\n",
         "class CHelpersSteps {",
         "    public:",
-        "        void calculateExpressions(StarkInfo starkInfo, StepsParams &params, ParserParams &parserParams);",
+        "        void calculateExpressions(StarkInfo starkInfo, StepsParams &params, ParserParams &parserParams, bool domainExtended);",
         "    private:",
         "#ifdef PARSER_AVX",
         "    #ifdef PARSER_GENERIC",
