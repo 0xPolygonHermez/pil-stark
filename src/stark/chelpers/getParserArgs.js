@@ -72,6 +72,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         stage,
         executeBefore: executeBefore ? 1 : 0,
         domainSize: dom === "n" ? (1 << nBits) : (1 << nBitsExt),
+        domainExtended: dom === "n" ? 0 : 1,
         nTemp1: count1d,
         nTemp3: count3d,
         nOps: cont_ops,
