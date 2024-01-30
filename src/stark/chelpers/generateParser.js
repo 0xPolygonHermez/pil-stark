@@ -26,10 +26,9 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         "    uint64_t numConstPols = params.pConstPols->numPols();",
         "    Polinomial &x = domainExtended ? params.x_2ns : params.x_n;", 
         "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
-        
-        "        __m256i tmp1[parserParams.nTemp1];",
-        "        Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
-        "        uint64_t offsetsDest[4], offsetsSrc0[4], offsetsSrc1[4];",
+        "    __m256i tmp1[parserParams.nTemp1];",
+        "    Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
+        "    uint64_t offsetsDest[4], offsetsSrc0[4], offsetsSrc1[4];",
         "#pragma omp parallel for private(tmp1, tmp3, offsetsDest, offsetsSrc0, offsetsSrc1)",
         `    for (uint64_t i = rowStart; i < rowEnd; i+= nrowsBatch) {`,
         "        uint64_t i_args = 0;",
