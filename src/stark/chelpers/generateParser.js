@@ -187,7 +187,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             case "Zi": 
                 return `${includesEnds ? "&" : ""}params.zi.zhInv(i), `;
             case "q":
-                "params.q_2ns[i * 3], ";
+                return "params.q_2ns[i * 3], ";
             case "f": 
                 return "params.f_2ns[i * 3], ";
             case "eval":
