@@ -4,8 +4,6 @@ const { compileCode } = require("./helpers.js");
 
 module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
-    const isGeneric = config && config.isGeneric || true;
-
     let result = {};
 
     const code = [];
@@ -14,74 +12,160 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
     const cHelpersInfo = [];
 
+    const cHelpersStepsHppParserAVX = [];
+    const cHelpersStepsHppExpressions = [];
+
+    const nStages = 3;
+
+    const cHelpersStepsHpp = [
+        `#include "chelpers.hpp"\n\n`,
+        "#define PARSER_AVX true",
+        "#define PARSER_GENERIC true\n",
+        "class CHelpersSteps {",
+        "    public:",
+        "        void calculateExpressions(StarkInfo starkInfo, StepsParams &params, ParserParams &parserParams);",
+        "    private:",
+        "#ifdef PARSER_AVX",
+        "    #ifdef PARSER_GENERIC",
+        "        void parser_avx(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds);",
+        "    #else",
+    ];
+
+    const cHelpersStepsCpp = [
+        `#include "chelpers_steps.hpp"\n`,
+        `void calculateExpressions(StarkInfo starkInfo, StepsParams &params, ParserParams &parserParams, bool domainExtended) {`,
+        `    uint32_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;`,
+        `    uint32_t nrowsBatch = 4;`,
+        `    uint32_t rowStart = 0;`,
+        `    uint32_t rowEnd = domainSize - nrowsBatch;`,
+        `#ifdef PARSER_AVX`,
+        "    #ifdef PARSER_GENERIC",
+        `        parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, domainExtended, true);`,
+        `        parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, domainExtended, false);`,
+        `        parser_avx(params, parserParams, rowEnd, nrowsBatch, domainSize, domainExtended, true);`,
+        
+    ];
+
+    const cHelpersStepsCppParserAVX = ["    #else", `        switch (parserParams.stage) {`];
+    const cHelpersStepsCppExpressions = ["#else", `    switch (parserParams.stage) {`];
+
     let operations = getAllOperations();
 
-    if(isGeneric) result.generic_parser_cpp = generateParser(operations);
+    result.generic_parser_cpp = generateParser(operations);
 
-    if (optcodes && multipleCodeFiles) {
-        const {stageInfo: step2PrevStageInfo, operationsUsed} = getParserArgs(starkInfo, operations, starkInfo.step2prev.first, "n", 2, true);
-        if(!isGeneric) result.step2prev_parser_cpp = generateParser(operations, operationsUsed);
-        cHelpersInfo.push(step2PrevStageInfo);
+    for(let i = 1; i < nStages - 1; ++i) {
+        let stage = i + 1;
+        generateCode(stage, `step${stage}`, starkInfo[`step${stage}prev`].first, "n");
+        
+        cHelpersStepsCppParserAVX.push(...[
+            `            case ${stage}:`,
+            `                CHelpersSteps::step${stage}_parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, false, true);`,
+            `                CHelpersSteps::step${stage}_parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, false, false);`,
+            `                CHelpersSteps::step${stage}_parser_avx(params, parserParams, rowEnd, nrowsBatch, domainSize, false, true);`,
+            `                break;`
+        ])
+        cHelpersStepsCppExpressions.push(...[
+            `        case ${stage}:`,
+            `            CHelpersSteps::step${stage}(params, domainSize);`,
+            `            break;`
+        ])
     }
 
-    code.push(compileCode(`${config.className}::step2prev`, starkInfo, starkInfo.step2prev.first, "n"));
+    generateCode(nStages, `step${nStages}`, starkInfo[`step${nStages}prev`].first, "n", false);
+    generateCode(nStages, `step${nStages}_after`, starkInfo[`step${nStages}`].first, "n", false);
+    cHelpersStepsCppParserAVX.push(...[
+        `            case ${nStages}:`,
+        "                if(parserParams.executeBefore) {",
+        `                    CHelpersSteps::step${nStages}_parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, false, true);`,
+        `                    CHelpersSteps::step${nStages}_parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, false, false);`,
+        `                    CHelpersSteps::step${nStages}_parser_avx(params, parserParams, rowEnd, nrowsBatch, domainSize, false, true);`,
+        "                } else {",
+        `                    CHelpersSteps::step${nStages}_after_parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, false, true);`,
+        `                    CHelpersSteps::step${nStages}_after_parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, false, false);`,
+        `                    CHelpersSteps::step${nStages}_after_parser_avx(params, parserParams, rowEnd, nrowsBatch, domainSize, false, true);`,
+        "                }",
+        `                break;`
+    ])
+    cHelpersStepsCppExpressions.push(...[
+        `        case ${nStages}:`,
+        "            if(parserParams.executeBefore) {",
+        `               CHelpersSteps::step${nStages}(params, domainSize);`,
+        "            } else {",
+        `               CHelpersSteps::step${nStages}_after(params, domainSize);`,
+        "            }",
+        `            break;`
+    ])
+
+    generateCode(nStages + 1, `step${nStages + 1}`, starkInfo[`step${nStages + 1}2ns`].first, "2ns");
+    cHelpersStepsCppParserAVX.push(...[
+        `            case ${nStages + 1}:`,
+        `                CHelpersSteps::step${nStages + 1}_parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, true, true);`,
+        `                CHelpersSteps::step${nStages + 1}_parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, true, false);`,
+        `                CHelpersSteps::step${nStages + 1}_parser_avx(params, parserParams, rowEnd, nrowsBatch, domainSize, true, true);`,
+        `                break;`
+    ])
+    cHelpersStepsCppExpressions.push(...[
+        `        case ${nStages + 1}:`,
+        `            CHelpersSteps::step${nStages + 1}(params, domainSize);`,
+        `            break;`
+    ])
+
+    generateCode(nStages + 2, `step${nStages + 2}`, starkInfo[`step${nStages + 2}2ns`].first, "2ns");
+    cHelpersStepsCppParserAVX.push(...[
+        `            case ${nStages + 2}:`,
+        `                CHelpersSteps::step${nStages + 2}_parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, true, true);`,
+        `                CHelpersSteps::step${nStages + 2}_parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, true, false);`,
+        `                CHelpersSteps::step${nStages + 2}_parser_avx(params, parserParams, rowEnd, nrowsBatch, domainSize, true, true);`,
+        `                break;`
+    ])
+    cHelpersStepsCppExpressions.push(...[
+        `        case ${nStages + 2}:`,
+        `            CHelpersSteps::step${nStages + 2}(params, domainSize);`,
+        `            break;`
+    ])
+
+    cHelpersStepsCpp.push(...[...cHelpersStepsCppParserAVX, "        }"]);
+    cHelpersStepsCpp.push("    #endif");
+    cHelpersStepsCpp.push(...[...cHelpersStepsCppExpressions, "    }"]);
+    cHelpersStepsCpp.push(...[
+        "#endif",
+        "}",
+    ]);
+
+
+    result.chelpers_steps_cpp = cHelpersStepsCpp.join("\n");
+
+    cHelpersStepsHpp.push(...cHelpersStepsHppParserAVX);
+    cHelpersStepsHpp.push("    #endif");
+    cHelpersStepsHpp.push("#else")
+    cHelpersStepsHpp.push(...cHelpersStepsHppExpressions);
+    cHelpersStepsHpp.push("#endif")
+    cHelpersStepsHpp.push("};");
+
+    result.chelpers_steps_hpp = cHelpersStepsHpp.join("\n"); 
 
     if (multipleCodeFiles) {
-        result.step2 = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    if (optcodes && multipleCodeFiles) {
-        const {stageInfo: step3PrevStageInfo, operationsUsed} = getParserArgs(starkInfo, operations, starkInfo.step3prev.first, "n", 3, true)
-        if(!isGeneric) result.step3prev_parser_cpp = generateParser(operations, operationsUsed);
-        cHelpersInfo.push(step3PrevStageInfo);
-
-    }
-
-    code.push(compileCode(`${config.className}::step3prev`, starkInfo, starkInfo.step3prev.first, "n"));
-
-    if (multipleCodeFiles) {
-        result.step3prev = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    if (optcodes && multipleCodeFiles) {
-        const {stageInfo: step3StageInfo, operationsUsed} = getParserArgs(starkInfo, operations, starkInfo.step3.first, "n", 3, false);
-        if(!isGeneric) result.step3_parser_cpp = generateParser(operations, operationsUsed);
-        cHelpersInfo.push(step3StageInfo);
-    }
-
-    code.push(compileCode(`${config.className}::step3`, starkInfo, starkInfo.step3.first, "n"));
-
-    if (multipleCodeFiles) {
-        result.step3 = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    if (optcodes && multipleCodeFiles) {
-        const {stageInfo: step42nsStageInfo, operationsUsed} = getParserArgs(starkInfo, operations, starkInfo.step42ns.first, "2ns", 4, true);
-        if(!isGeneric) result.step42ns_parser_cpp = generateParser(operations, operationsUsed);
-        cHelpersInfo.push(step42nsStageInfo);
-    }
-    code.push(compileCode(`${config.className}::step42ns`, starkInfo, starkInfo.step42ns.first, "2ns"));
-
-    if (multipleCodeFiles) {
-        result.step42ns = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    if (optcodes && multipleCodeFiles) {
-        const {stageInfo: step52nsStageInfo, operationsUsed} = getParserArgs(starkInfo, operations, starkInfo.step52ns.first, "2ns", 5, true);
-        if(!isGeneric) result.step52ns_parser_cpp = generateParser(operations, operationsUsed);
-        cHelpersInfo.push(step52nsStageInfo);
-    }
-
-    code.push(compileCode(`${config.className}::step52ns`, starkInfo, starkInfo.step52ns.first, "2ns"));
-
-    if (multipleCodeFiles) {
-        result.step52ns = code.join("\n\n") + "\n";
         return {code: result, cHelpersInfo }
+    } else {
+        return {code: code.join("\n\n"), cHelpersInfo };
     }
 
-    return {code: code.join("\n\n"), cHelpersInfo };
+    function generateCode(stage, stageName, stageCode, dom, executeBefore = true) {
+        console.log("Generating code for " + stageName);
+        if (optcodes && multipleCodeFiles) {
+            const {stageInfo, operationsUsed} = getParserArgs(starkInfo, operations, stageCode, dom, stage, executeBefore);
+            result[`${stageName}_parser_cpp`] = generateParser(operations, stageName, operationsUsed);
+            cHelpersInfo.push(stageInfo);
+        }
+    
+        code.push(compileCode(`CHelpersSteps::${stageName}`, starkInfo, stageCode, dom));
+        cHelpersStepsHppExpressions.push(`        void ${stageName}(StepsParams &params, uint32_t N);`);
+
+        if (multipleCodeFiles) {
+            result[stageName + "_cpp"] = code.join("\n\n") + "\n";
+            code.length = 0;
+        }
+
+        cHelpersStepsHppParserAVX.push(`        void ${stageName}_parser_avx(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds);`);
+    }
 }

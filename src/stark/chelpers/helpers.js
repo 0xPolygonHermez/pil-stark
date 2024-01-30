@@ -244,14 +244,14 @@ module.exports.compileCode = function compileCode(functionName, starkInfo, code,
                     if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
                         throw new Error("Invalid dimension")
                     }
-                    body.push(`     Goldilocks::add(${lexp}, ${src[0]}, ${src[1]});`)
+                    body.push(`      Goldilocks::add(${lexp}, ${src[0]}, ${src[1]});`)
                 } else if (r.dest.dim == 3) {
                     if (((r.src[0].dim == 1) || r.src[1].dim == 3)) {
-                        body.push(`     Goldilocks3::add(${lexp}, ${src[0]}, ${src[1]});`)
+                        body.push(`      Goldilocks3::add(${lexp}, ${src[0]}, ${src[1]});`)
                     } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                        body.push(`     Goldilocks3::add(${lexp}, ${src[1]}, ${src[0]});`)
+                        body.push(`      Goldilocks3::add(${lexp}, ${src[1]}, ${src[0]});`)
                     } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                        body.push(`     Goldilocks3::add(${lexp}, ${src[0]}, ${src[1]});`)
+                        body.push(`      Goldilocks3::add(${lexp}, ${src[0]}, ${src[1]});`)
                     } else {
                         throw new Error("Invalid dimension")
                     }
@@ -265,14 +265,14 @@ module.exports.compileCode = function compileCode(functionName, starkInfo, code,
                     if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
                         throw new Error("Invalid dimension")
                     }
-                    body.push(`     Goldilocks::sub(${lexp}, ${src[0]}, ${src[1]});`)
+                    body.push(`      Goldilocks::sub(${lexp}, ${src[0]}, ${src[1]});`)
                 } else if (r.dest.dim == 3) {
                     if (((r.src[0].dim == 1) || r.src[1].dim == 3)) {
-                        body.push(`     Goldilocks3::sub(${lexp}, ${src[0]}, ${src[1]});`)
+                        body.push(`      Goldilocks3::sub(${lexp}, ${src[0]}, ${src[1]});`)
                     } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                        body.push(`     Goldilocks3::sub(${lexp}, ${src[0]}, ${src[1]});`)
+                        body.push(`      Goldilocks3::sub(${lexp}, ${src[0]}, ${src[1]});`)
                     } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                        body.push(`     Goldilocks3::sub(${lexp}, ${src[0]}, ${src[1]});`)
+                        body.push(`      Goldilocks3::sub(${lexp}, ${src[0]}, ${src[1]});`)
                     } else {
                         throw new Error("Invalid dimension")
                     }
@@ -286,14 +286,14 @@ module.exports.compileCode = function compileCode(functionName, starkInfo, code,
                     if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
                         throw new Error("Invalid dimension")
                     }
-                    body.push(`     Goldilocks::mul(${lexp}, ${src[0]}, ${src[1]});`)
+                    body.push(`      Goldilocks::mul(${lexp}, ${src[0]}, ${src[1]});`)
                 } else if (r.dest.dim == 3) {
                     if (((r.src[0].dim == 1) || r.src[1].dim == 3)) {
-                        body.push(`     Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
+                        body.push(`      Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
                     } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                        body.push(`     Goldilocks3::mul(${lexp}, ${src[1]}, ${src[0]});`)
+                        body.push(`      Goldilocks3::mul(${lexp}, ${src[1]}, ${src[0]});`)
                     } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                        body.push(`     Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
+                        body.push(`      Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
                     } else {
                         throw new Error("Invalid dimension")
                     }
@@ -307,12 +307,12 @@ module.exports.compileCode = function compileCode(functionName, starkInfo, code,
                     if (r.src[0].dim != 1) {
                         throw new Error("Invalid dimension")
                     }
-                    body.push(`     Goldilocks::copy(${lexp}, ${src[0]});`)
+                    body.push(`      Goldilocks::copy(${lexp}, ${src[0]});`)
                 } else if (r.dest.dim == 3) {
                     if (r.src[0].dim == 1) {
-                        body.push(`     Goldilocks3::copy(${lexp}, ${src[0]});`)
+                        body.push(`      Goldilocks3::copy(${lexp}, ${src[0]});`)
                     } else if (r.src[0].dim == 3) {
-                        body.push(`     Goldilocks3::copy(${lexp}, ${src[0]});`)
+                        body.push(`      Goldilocks3::copy(${lexp}, ${src[0]});`)
                     } else {
                         throw new Error("Invalid dimension")
                     }
@@ -334,14 +334,22 @@ module.exports.compileCode = function compileCode(functionName, starkInfo, code,
     let res;
     if (ret) {
         res = [
-            `Goldilocks::Element ${functionName}(StepsParams &params, uint64_t i) {`,
-            ...body,
+            `#include "chelpers_steps.hpp"\n`,
+            `Goldilocks::Element ${functionName}(StepsParams &params, uint64_t N) {`,
+            "#pragma omp parallel for",
+            "   for (uint64_t i = 0; i < N; i++) {",
+            `${body.join('\n')}`,
+            `   }`,
             `}`
         ].join("\n");
     } else {
         res = [
-            `void ${functionName}(StepsParams &params, uint64_t i) {`,
-            ...body,
+            `#include "chelpers_steps.hpp"\n`,
+            `void ${functionName}(StepsParams &params, uint64_t N) {`,
+            "#pragma omp parallel for",
+            "   for (uint64_t i = 0; i < N; i++) {",
+            `${body.join('\n')}`,
+            `   }`,
             `}`
         ].join("\n");
     }
@@ -420,9 +428,9 @@ module.exports.compileCode = function compileCode(functionName, starkInfo, code,
         switch (r.dest.type) {
             case "tmp": {
                 if (r.dest.dim == 1) {
-                    body.push(`     Goldilocks::Element tmp_${r.dest.id};`);
+                    body.push(`      Goldilocks::Element tmp_${r.dest.id};`);
                 } else if (r.dest.dim == 3) {
-                    body.push(`     Goldilocks3::Element tmp_${r.dest.id};`);
+                    body.push(`      Goldilocks3::Element tmp_${r.dest.id};`);
                 } else {
                     throw new Error("Invalid dim");
                 }

@@ -9,7 +9,7 @@ const operationsTypeMap = {
     "copy": 3,
 }
 
-module.exports.getParserArgs = function getParserArgs(starkInfo, operations, code, dom, stage, executeBefore) {
+module.exports.getParserArgs = function getParserArgs(starkInfo, operations, code, dom, stage, executeBefore = true) {
 
     var ops = [];
     var cont_ops = 0;
@@ -71,8 +71,6 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
     const stageInfo = {
         stage,
         executeBefore: executeBefore ? 1 : 0,
-        domainSize: dom === "n" ? (1 << nBits) : (1 << nBitsExt),
-        domainExtended: dom === "n" ? 0 : 1,
         nTemp1: count1d,
         nTemp3: count3d,
         nOps: cont_ops,
