@@ -19,7 +19,11 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
     let specific = false;
 
-    const cHelpersStepsHpp = [`#include "chelpers.hpp"\n\n`];
+    const cHelpersStepsHpp = [
+        "#ifndef CHELPERS_STEPS_HPP",
+        "#define CHELPERS_STEPS_HPP",
+        `#include "chelpers.hpp"\n\n`
+    ];
 
     if(specific) cHelpersStepsHpp.push(...["#define PARSER_AVX true","#define PARSER_GENERIC true\n"]);
     cHelpersStepsHpp.push(...[
@@ -39,11 +43,11 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         cHelpersStepsHpp.push("        void parser_avx(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds);");
     }
 
-    const cHelpersStepsCpp = [`#include "chelpers_steps.hpp`];
+    const cHelpersStepsCpp = [`#include "chelpers_steps.hpp"`];
     if(specific) cHelpersStepsCpp.push("#if defined(PARSER_AVX) && defined(PARSER_GENERIC)");
 
     cHelpersStepsCpp.push(...[
-        `\nvoid calculateExpressions(StarkInfo starkInfo, StepsParams &params, ParserParams &parserParams, bool domainExtended) {`,
+        `\nvoid CHelpersSteps::calculateExpressions(StarkInfo starkInfo, StepsParams &params, ParserParams &parserParams, bool domainExtended) {`,
         `    uint32_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;`,
         `    uint32_t nrowsBatch = 4;`,
         `    uint32_t rowStart = 0;`,
@@ -51,9 +55,9 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     ]);
     if(specific) cHelpersStepsCpp.push("#if defined(PARSER_AVX) && defined(PARSER_GENERIC)");
     cHelpersStepsCpp.push(...[
-        `    parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, domainExtended, true);`,
-        `    parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, domainExtended, false);`,
-        `    parser_avx(params, parserParams, rowEnd, nrowsBatch, domainSize, domainExtended, true);`,
+        `    CHelpersSteps::parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, domainExtended, true);`,
+        `    CHelpersSteps::parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, domainExtended, false);`,
+        `    CHelpersSteps::parser_avx(params, parserParams, rowEnd, domainSize, nrowsBatch, domainSize, domainExtended, true);`,
     ]);
     if(specific) cHelpersStepsCpp.push("#endif");
 
@@ -158,6 +162,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     }
     
     cHelpersStepsHpp.push("};");
+    cHelpersStepsHpp.push("\n#endif");
 
     result.chelpers_steps_hpp = cHelpersStepsHpp.join("\n"); 
 
