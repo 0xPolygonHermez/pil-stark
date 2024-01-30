@@ -12,46 +12,58 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
     const cHelpersInfo = [];
 
-    const cHelpersStepsHppParserAVX = [];
-    const cHelpersStepsHppExpressions = [];
+    const cHelpersStepsHppParserAVX = ["#if defined(PARSER_AVX) && !defined(PARSER_GENERIC)"];
+    const cHelpersStepsHppExpressions = ["#ifndef PARSER_AVX"];
 
     const nStages = 3;
 
-    const cHelpersStepsHpp = [
-        `#include "chelpers.hpp"\n\n`,
-        "#define PARSER_AVX true",
-        "#define PARSER_GENERIC true\n",
+    let specific = false;
+
+    const cHelpersStepsHpp = [`#include "chelpers.hpp"\n\n`];
+
+    if(specific) cHelpersStepsHpp.push(...["#define PARSER_AVX true","#define PARSER_GENERIC true\n"]);
+    cHelpersStepsHpp.push(...[
         "class CHelpersSteps {",
         "    public:",
         "        void calculateExpressions(StarkInfo starkInfo, StepsParams &params, ParserParams &parserParams, bool domainExtended);",
         "    private:",
-        "#ifdef PARSER_AVX",
-        "    #ifdef PARSER_GENERIC",
-        "        void parser_avx(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds);",
-        "    #else",
-    ];
+    ]);
 
-    const cHelpersStepsCpp = [
-        `#include "chelpers_steps.hpp"\n`,
-        `void calculateExpressions(StarkInfo starkInfo, StepsParams &params, ParserParams &parserParams, bool domainExtended) {`,
+    if(specific) {
+        cHelpersStepsHpp.push(...[
+            "#if defined(PARSER_AVX) && defined(PARSER_GENERIC)",
+            "        void parser_avx(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds);",
+            "#endif",
+        ]);
+    } else {
+        cHelpersStepsHpp.push("        void parser_avx(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds);");
+    }
+
+    const cHelpersStepsCpp = [`#include "chelpers_steps.hpp`];
+    if(specific) cHelpersStepsCpp.push("#if defined(PARSER_AVX) && defined(PARSER_GENERIC)");
+
+    cHelpersStepsCpp.push(...[
+        `\nvoid calculateExpressions(StarkInfo starkInfo, StepsParams &params, ParserParams &parserParams, bool domainExtended) {`,
         `    uint32_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;`,
         `    uint32_t nrowsBatch = 4;`,
         `    uint32_t rowStart = 0;`,
         `    uint32_t rowEnd = domainSize - nrowsBatch;`,
-        `#ifdef PARSER_AVX`,
-        "    #ifdef PARSER_GENERIC",
-        `        parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, domainExtended, true);`,
-        `        parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, domainExtended, false);`,
-        `        parser_avx(params, parserParams, rowEnd, nrowsBatch, domainSize, domainExtended, true);`,
-        
-    ];
+    ]);
+    if(specific) cHelpersStepsCpp.push("#if defined(PARSER_AVX) && defined(PARSER_GENERIC)");
+    cHelpersStepsCpp.push(...[
+        `    parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, domainExtended, true);`,
+        `    parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, domainExtended, false);`,
+        `    parser_avx(params, parserParams, rowEnd, nrowsBatch, domainSize, domainExtended, true);`,
+    ]);
+    if(specific) cHelpersStepsCpp.push("#endif");
 
-    const cHelpersStepsCppParserAVX = ["    #else", `        switch (parserParams.stage) {`];
-    const cHelpersStepsCppExpressions = ["#else", `    switch (parserParams.stage) {`];
+
+    const cHelpersStepsCppParserAVX = ["#if defined(PARSER_AVX) && !defined(PARSER_GENERIC)", `        switch (parserParams.stage) {`];
+    const cHelpersStepsCppExpressions = ["#ifndef PARSER_AVX", `    switch (parserParams.stage) {`];
 
     let operations = getAllOperations();
 
-    result.generic_parser_cpp = generateParser(operations);
+    let totalSubsetOperationsUsed = [];
 
     for(let i = 1; i < nStages - 1; ++i) {
         let stage = i + 1;
@@ -124,25 +136,36 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         `            break;`
     ])
 
-    cHelpersStepsCpp.push(...[...cHelpersStepsCppParserAVX, "        }"]);
-    cHelpersStepsCpp.push("    #endif");
-    cHelpersStepsCpp.push(...[...cHelpersStepsCppExpressions, "    }"]);
-    cHelpersStepsCpp.push(...[
-        "#endif",
-        "}",
-    ]);
+    cHelpersStepsCppParserAVX.push("    }\n", "#endif");
+    cHelpersStepsCppExpressions.push("    }\n", "#endif");
+
+    if(specific) {
+        cHelpersStepsCpp.push(...cHelpersStepsCppParserAVX);
+        cHelpersStepsCpp.push(...cHelpersStepsCppExpressions);
+    }
+
+    cHelpersStepsCpp.push("}");
 
 
     result.chelpers_steps_cpp = cHelpersStepsCpp.join("\n");
 
-    cHelpersStepsHpp.push(...cHelpersStepsHppParserAVX);
-    cHelpersStepsHpp.push("    #endif");
-    cHelpersStepsHpp.push("#else")
-    cHelpersStepsHpp.push(...cHelpersStepsHppExpressions);
-    cHelpersStepsHpp.push("#endif")
+    cHelpersStepsHppParserAVX.push("#endif");
+    cHelpersStepsHppExpressions.push("#endif")
+
+    if(specific) {
+        cHelpersStepsHpp.push(...cHelpersStepsHppParserAVX);
+        cHelpersStepsHpp.push(...cHelpersStepsHppExpressions);
+    }
+    
     cHelpersStepsHpp.push("};");
 
     result.chelpers_steps_hpp = cHelpersStepsHpp.join("\n"); 
+
+    console.log("Generating generic parser with all " + totalSubsetOperationsUsed.length + " operations used");
+    console.log("Total subset of operations used: " + totalSubsetOperationsUsed.sort().join(", "));
+    console.log("--------------------------------");
+
+    result.generic_parser_cpp = generateParser(operations, totalSubsetOperationsUsed);
 
     if (multipleCodeFiles) {
         return {code: result, cHelpersInfo }
@@ -154,7 +177,10 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         console.log("Generating code for " + stageName);
         if (optcodes && multipleCodeFiles) {
             const {stageInfo, operationsUsed} = getParserArgs(starkInfo, operations, stageCode, dom, stage, executeBefore);
-            result[`${stageName}_parser_cpp`] = generateParser(operations, stageName, operationsUsed);
+            result[`${stageName}_parser_cpp`] = generateParser(operations, operationsUsed, stageName);
+            for(let j = 0; j < operationsUsed.length; ++j) {
+                if(!totalSubsetOperationsUsed.includes(operationsUsed[j])) totalSubsetOperationsUsed.push(operationsUsed[j]);
+            }
             cHelpersInfo.push(stageInfo);
         }
     

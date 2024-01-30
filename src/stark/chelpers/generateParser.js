@@ -15,11 +15,11 @@ const operationsMap = {
     "f": 14,
 }
 
-module.exports.generateParser = function generateParser(operations, stageName, operationsUsed) {
+module.exports.generateParser = function generateParser(operations, operationsUsed, stageName) {
 
     let c_args = 0;
 
-    let parserName = stageName && operationsUsed ? `${stageName}_parser_avx` : "parser_avx";
+    let parserName = operationsUsed && stageName ? `${stageName}_parser_avx` : "parser_avx";
     const parserCPP = [
         `#include "chelpers_steps.hpp"\n`,
         `void CHelpersSteps::${parserName}(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds) {`,
@@ -38,13 +38,19 @@ module.exports.generateParser = function generateParser(operations, stageName, o
         `            switch (parserParams.ops[kk]) {`,
     ];
        
+    let nCopyOperations = 0;
+    
     for(let i = 0; i < operations.length; i++) {
         const op = operations[i];
         if(operationsUsed && !operationsUsed.includes(i)) continue;
-        let operationDescription = `                // DEST: ${op.dest_type} - SRC0: ${op.src0_type}`;
+        let operationDescription;
         if(op.src1_type) {
-            operationDescription += ` - SRC1: ${op.src1_type}`;
+            operationDescription = `                // OPERATION WITH DEST: ${op.dest_type} - SRC0: ${op.src0_type} - SRC1: ${op.src1_type}`;
+        } else {
+            operationDescription = `                // COPY ${op.src0_type} to ${op.dest_type}`;
         }
+
+        if(!op.src1_type) nCopyOperations++;
         const operationCase = [
             `            case ${i}: {`,
             operationDescription,
@@ -91,7 +97,7 @@ module.exports.generateParser = function generateParser(operations, stageName, o
     
     const parserCPPCode = parserCPP.join("\n");
 
-    
+    console.log("Number of copy operations: ", nCopyOperations)
     return parserCPPCode;
 
     function writeOperation(operation, includesEnds = false) {
@@ -113,7 +119,7 @@ module.exports.generateParser = function generateParser(operations, stageName, o
             ].join("\n");
             return qOperation;
         } else if(operation.dest_type === "f") {
-            const fOperation = "Goldilocks3::copy_avx(&params.f_2ns[i*3], uint64_t(0), tmp3[parserParams.args[i_args]]);"
+            const fOperation = "                Goldilocks3::copy_avx(&params.f_2ns[i*3], uint64_t(0), tmp3[parserParams.args[i_args]]);"
             return fOperation;
         }
         let name = ["tmp1", "commit1"].includes(operation.dest_type) ? "Goldilocks::" : "Goldilocks3::";
@@ -143,7 +149,7 @@ module.exports.generateParser = function generateParser(operations, stageName, o
             name += `parserParams.args[i_args + ${c_args++}], `;
         }      
 
-        name += writeType(operation.dest_type, includesEnds);
+        name += writeType(operation.dest_type, includesEnds, "dest");
 
         let {offset: offsetDest, offsetCall: offsetDestCall} = getOffset(operation.dest_type,"dest", addOffset, includesEnds);
         if(offsetDestCall) name += offsetDestCall;
@@ -151,7 +157,7 @@ module.exports.generateParser = function generateParser(operations, stageName, o
         c_args += nArgs(operation.dest_type);
         name += "\n                        ";
 
-        name += writeType(operation.src0_type, includesEnds);
+        name += writeType(operation.src0_type, includesEnds, "src0");
 
         let {offset: offsetSrc0, offsetCall: offsetSrc0Call} = getOffset(operation.src0_type, "src0", addOffset, includesEnds);
         if(offsetSrc0Call) name += offsetSrc0Call;
@@ -162,7 +168,7 @@ module.exports.generateParser = function generateParser(operations, stageName, o
         let offsetSrc1;
 
         if(operation.src1_type) {
-            name += writeType(operation.src1_type, includesEnds);
+            name += writeType(operation.src1_type, includesEnds, "src1");
 
             let offsets = getOffset(operation.src1_type, "src1", addOffset, includesEnds);
             if(offsets.offset) offsetSrc1 = offsets.offset;
@@ -178,13 +184,15 @@ module.exports.generateParser = function generateParser(operations, stageName, o
 
         if(includesEnds) {
             if(offsetDest || offsetSrc0 || offsetSrc1) {
-                const offsetLoop = [ "                for (uint64_t j = 0; j < AVX_SIZE_; ++j) {"];
+                const offsetLoop = ["                for (uint64_t j = 0; j < AVX_SIZE_; ++j) {"];
                 if(offsetDest) offsetLoop.push(offsetDest);
                 if(offsetSrc0) offsetLoop.push(offsetSrc0);
                 if(offsetSrc1) offsetLoop.push(offsetSrc1);
                 offsetLoop.push("                    }");
                 operationCall.push(...offsetLoop);
             }
+            if(operation.src0_type === "number") operationCall.push(`                    Goldilocks::Element tmp0__[1] = {Goldilocks::fromU64(parserParams.args[i_args + ${c_args}])};`)
+            if(operation.src1_type === "number") operationCall.push(`               Goldilocks::Element tmp1__[1] = {Goldilocks::fromU64(parserParams.args[i_args + ${c_args}])};`)
             operationCall.push(`                    ${name}`);
         } else {
             operationCall.push(`                ${name}`);
@@ -193,7 +201,7 @@ module.exports.generateParser = function generateParser(operations, stageName, o
         return operationCall.join("\n").replace(/i_args \+ 0/, "i_args");
     }
 
-    function writeType(type, includesEnds = false) {
+    function writeType(type, includesEnds = false, operand) {
         switch (type) {
             case "public":
                 return `${includesEnds ? "&" : ""}params.publicInputs[parserParams.args[i_args + ${c_args}]], `;
@@ -219,7 +227,11 @@ module.exports.generateParser = function generateParser(operations, stageName, o
             case "x":
                 return `x[i], `;
             case "number":
-                return `${includesEnds ? "&" : ""}Goldilocks::fromU64(parserParams.args[i_args + ${c_args}]), `;
+                if(includesEnds) {
+                    return `${operand === "src0" ? "tmp0__" : "tmp1__"}, `;
+                } else {
+                    return `Goldilocks::fromU64(parserParams.args[i_args + ${c_args}]), `;
+                }
             case "eval":
                 return `params.evals[parserParams.args[i_args + ${c_args}] * 3], `;
             case "xDivXSubXi": 
@@ -314,7 +326,7 @@ module.exports.getAllOperations = function getAllOperations() {
         let dest_type = possibleDestinationsDim1[j];
         for(let k = 0; k < possibleSrcDim1.length; ++k) {
             let src0_type = possibleSrcDim1[k];
-            if(["commit1", "const", "tmp1"].includes(src0_type)) operations.push({dest_type, src0_type}); // Copy operation
+            operations.push({dest_type, src0_type}); // Copy operation
             if(src0_type === "x") continue;
             for (let l = 0; l < possibleSrcDim1.length; ++l) {
                 let src1_type = possibleSrcDim1[l];

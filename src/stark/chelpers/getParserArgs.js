@@ -45,12 +45,10 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         }
 
         let operation = getOperation(r);
-        let opsIndex = operations.findIndex(op => 
-            op.dest_type === operation.dest_type
-            && op.src0_type === operation.src0_type
-            && ((!op.hasOwnProperty("src1_type")) || (op.src1_type === operation.src1_type)));
+        let opsIndex = r.op === "copy" 
+            ? operations.findIndex(op => op.dest_type === operation.dest_type && op.src0_type === operation.src0_type && !op.src1_type)
+            : operations.findIndex(op => op.dest_type === operation.dest_type && op.src0_type === operation.src0_type && op.src1_type === operation.src1_type);
         
-            
         if (opsIndex === -1) throw new Error("Operation not considered: " + JSON.stringify(operation));
 
         ops.push(opsIndex);
@@ -89,6 +87,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
     console.log("Number of operations: ", cont_ops);
     console.log("Number of arguments: ", cont_args);
     console.log("Different operations types: ", operationsUsed.length, " of ", operations.length);
+    console.log("Operations used: ", operationsUsed.join(", "));
     console.log("--------------------------------");
 
     return {operationsUsed, stageInfo};
