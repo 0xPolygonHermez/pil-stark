@@ -21,15 +21,16 @@ module.exports.generateParser = function generateParser(operations, operationsUs
 
     const parserCPP = [
         `void CHelpers::parser_avx(StepsParams &params, ParserParams &parserParams, uint64_t rowStart, uint64_t rowEnd, uint64_t nrowsBatch, bool const includesEnds) {`,
-        "#pragma omp parallel for",
-        `    for (uint64_t i = rowStart; i < rowEnd; i+= nrowsBatch) {`,
-        "        int i_args = 0;",
+        "    uint64_t numConstPols = params.pConstPols->numPols();",
+        "    Polinomial &x = parserParams.domainExtended == 1 ? params.x_2ns : params.x_n;", 
+        "    ConstantPolsStarks *constPols = parserParams.domainExtended == 1 ? params.pConstPols2ns : params.pConstPols;",
+        
         "        __m256i tmp1[parserParams.nTemp1];",
         "        Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
-        "        uint64_t offsetDest, offsetSrc0, offsetSrc1;",
-        "        uint64_t numConstPols = params.pConstPols->numPols();",
-        "        Polinomial x = parserParams.domainExtended == 1 ? params.x_2ns : params.x_n;", 
-        "        ConstantPolsStarks *constPols = parserParams.domainExtended == 1 ? params.pConstPols2ns : params.pConstPols;",
+        "        uint64_t offsetsDest[4], offsetsSrc0[4], offsetsSrc1[4];",
+        "#pragma omp parallel for private(tmp1, tmp3, offsetsDest, offsetsSrc0, offsetsSrc1)",
+        `    for (uint64_t i = rowStart; i < rowEnd; i+= nrowsBatch) {`,
+        "        uint64_t i_args = 0;",
         "        \n",
         "        for (int kk = 0; kk < parserParams.nOps; ++kk) {",
         `            switch (parserParams.ops[kk]) {`,
@@ -47,13 +48,17 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             operationDescription,
         ];
         
-        operationCase.push(...[
-            "                if(!includesEnds) {",
-            `    ${writeOperation(op, false)}`,
-            "                } else {",
-            `    ${writeOperation(op, true)}`,
-            "                }",
-        ]);
+        if(["q", "f"].includes(op.dest_type)) {
+            operationCase.push(writeOperation(op, false));
+        } else {
+            operationCase.push(...[
+                "                if(!includesEnds) {",
+                `    ${writeOperation(op, false)}`,
+                "                } else {",
+                `    ${writeOperation(op, true)}`,
+                "                }",
+            ]);
+        }
 
         let numberArgs = 1 + nArgs(op.dest_type) + nArgs(op.src0_type);
         if(op.src1_type) numberArgs += nArgs(op.src1_type);
@@ -88,28 +93,57 @@ module.exports.generateParser = function generateParser(operations, operationsUs
     return parserCPPCode;
 
     function writeOperation(operation, includesEnds = false) {
-        let name = ["tmp1", "commit1"].includes(operation.dest_type) ? `Goldilocks::op` : `Goldilocks3::op`;
-        if(["tmp3", "commit3"].includes(operation.dest_type) && operation.src1_type)  {
-            if((!["tmp3", "commit3"].includes(operation.src0_type) || !["tmp3", "commit3"].includes(operation.src1_type))) {
-                if(["public", "x", "commit1", "tmp1", "const"].includes(operation.src0_type)) name += "1";
-                if(operation.src0_type === "number") name += "1c";
-                if (["commit3", "tmp3"].includes(operation.src0_type)) name += "3";
-                if(operation.src0_type === "challenge") name += "3c";
-                if(["public", "x", "commit1", "tmp1", "const"].includes(operation.src1_type)) name += "1";
-                if(operation.src1_type === "number") name += "1c";
-                if (["commit3", "tmp3"].includes(operation.src1_type)) name += "3";
-                if(operation.src1_type === "challenge") name += "3c";
-            }
+        if(operation.dest_type === "q") {
+            const qOperation = [
+                "               Goldilocks::Element tmp_inv[3];",
+                "               Goldilocks::Element ti0[4];",
+                "               Goldilocks::Element ti1[4];",
+                "               Goldilocks::Element ti2[4];",
+                `               Goldilocks::store_avx(ti0, tmp3[parserParams.args[i_args]][0]);`,
+                `               Goldilocks::store_avx(ti1, tmp3[parserParams.args[i_args]][1]);`,
+                `               Goldilocks::store_avx(ti2, tmp3[parserParams.args[i_args]][2]);`,
+                "               for (uint64_t j = 0; j < AVX_SIZE_; ++j) {",
+                "                   tmp_inv[0] = ti0[j];",
+                "                   tmp_inv[1] = ti1[j];",
+                "                   tmp_inv[2] = ti2[j];",
+                "                   Goldilocks3::mul((Goldilocks3::Element &)(params.q_2ns[(i + j) * 3]), params.zi.zhInv((i + j)),(Goldilocks3::Element &)tmp_inv);",
+                "               }",
+            ].join("\n");
+            return qOperation;
+        } else if(operation.dest_type === "f") {
+            const fOperation = "Goldilocks3::copy_avx(&params.f_2ns[i*3], uint64_t(0), tmp3[parserParams.args[i_args]]);"
+            return fOperation;
         }
-        
-        name += "_avx(";        
-        name += `i_args, `;
+        let name = ["tmp1", "commit1"].includes(operation.dest_type) ? "Goldilocks::" : "Goldilocks3::";
+        name += operation.src1_type ? "op" : "copy";
 
-        c_args = 1;
+        let addOffset = false;
+        if(["tmp3", "commit3"].includes(operation.dest_type)) {
+            addOffset = true;
+            if(operation.src1_type)  {
+                let dimType = "";
+                let dims1 = ["public", "x", "commit1", "tmp1", "const", "number"];
+                let dims3 = ["commit3", "tmp3", "challenge", "eval", "xDivXSubXi", "xDivXSubWXi"];
+                if(dims1.includes(operation.src0_type)) dimType += "1";
+                if (dims3.includes(operation.src0_type)) dimType += "3";
+                if(dims1.includes(operation.src1_type)) dimType += "1";
+                if (dims3.includes(operation.src1_type)) dimType += "3";
+    
+                if(dimType !== "33") name += "_" + dimType;
+            }
+        } 
+        
+        name += "_avx(";
+
+        c_args = 0;
+
+        if(operation.src1_type) {
+            name += `parserParams.args[i_args + ${c_args++}], `;
+        }      
 
         name += writeType(operation.dest_type, includesEnds);
 
-        let {offset: offsetDest, offsetCall: offsetDestCall} = getOffset(operation.dest_type, includesEnds, "dest");
+        let {offset: offsetDest, offsetCall: offsetDestCall} = getOffset(operation.dest_type,"dest", addOffset, includesEnds);
         if(offsetDestCall) name += offsetDestCall;
 
         c_args += nArgs(operation.dest_type);
@@ -117,7 +151,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
 
         name += writeType(operation.src0_type, includesEnds);
 
-        let {offset: offsetSrc0, offsetCall: offsetSrc0Call} = getOffset(operation.src0_type, includesEnds, "src0");
+        let {offset: offsetSrc0, offsetCall: offsetSrc0Call} = getOffset(operation.src0_type, "src0", addOffset, includesEnds);
         if(offsetSrc0Call) name += offsetSrc0Call;
 
         c_args += nArgs(operation.src0_type);
@@ -128,7 +162,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         if(operation.src1_type) {
             name += writeType(operation.src1_type, includesEnds);
 
-            let offsets = getOffset(operation.src1_type, includesEnds, "src1");
+            let offsets = getOffset(operation.src1_type, "src1", addOffset, includesEnds);
             if(offsets.offset) offsetSrc1 = offsets.offset;
             if(offsets.offsetCall) name += offsets.offsetCall;
 
@@ -174,22 +208,16 @@ module.exports.generateParser = function generateParser(operations, operationsUs
                 }
             case "const":
                 if(includesEnds) {
-                    return `constPols->getElement(0, 0), `;
+                    return `&constPols->getElement(0, 0), `;
                 } else {
-                    return `constPols->getElement(parserParams.args[i_args + ${c_args}], i), `;
+                    return `&constPols->getElement(parserParams.args[i_args + ${c_args}], i), `;
                 }
             case "challenge":
-                return `${includesEnds ? "&" : ""}params.challenges[parserParams.args[i_args + ${c_args}]], `;
+                return `params.challenges[parserParams.args[i_args + ${c_args}]], `;
             case "x":
                 return `x[i], `;
             case "number":
                 return `${includesEnds ? "&" : ""}Goldilocks::fromU64(parserParams.args[i_args + ${c_args}]), `;
-            case "Zi": 
-                return `${includesEnds ? "&" : ""}params.zi.zhInv(i), `;
-            case "q":
-                return "params.q_2ns[i * 3], ";
-            case "f": 
-                return "params.f_2ns[i * 3], ";
             case "eval":
                 return `params.evals[parserParams.args[i_args + ${c_args}] * 3], `;
             case "xDivXSubXi": 
@@ -201,7 +229,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         }
     }
 
-    function getOffset(type, includesEnds = false, operand) {
+    function getOffset(type, operand, addOffset = false, includesEnds = false) {
         if(!["src0", "src1", "dest"].includes(operand)) throw new Error("Invalid type: " + operand);
         const strideTypes = ["commit1", "commit3"];
         if(operand !== "dest") strideTypes.push("const");
@@ -215,21 +243,26 @@ module.exports.generateParser = function generateParser(operations, operationsUs
                 let numPols = type === "const" ? "numConstPols" : `parserParams.args[i_args + ${c_args+2}]`;
                 offset = `                        ${offsetName}[j] = parserParams.args[i_args + ${c_args}] + (((i + j) + parserParams.args[i_args + ${c_args+1}]) % parserParams.domainSize) * ${numPols};`;
                 offsetCall = `${offsetName}, `;
-            } else if (["x", "xDivXSubXi", "xDivXSubWXi", "eval"].includes(type)) {
+            } else if (type === "x") {
                 offsetCall = `${type}.offset(), `;
-            } else if (["challenges", "Zi", "public", "number"].includes(type)) {
+            } else if(["xDivXSubXi", "xDivXSubWXi"].includes(type)) {
+                offsetCall = `params.${type}.offset(), `;
+            } else if (["challenge", "public", "number", "eval"].includes(type)) {
                 offset = `                        ${offsetName}[j] = 0;`;
-            } else if (type === "tmp3") {
-                offset = `                        ${offsetName}[j] = 3;`;
-            } else if (type === "tmp1") {
-                offset = `                        ${offsetName}[j] = 1;`;
+                offsetCall = `${offsetName}, `;
             }
         } else {
             if(["commit1", "commit3", "const"].includes(type)) {
                 let numPols = type === "const" ? "numConstPols" : `parserParams.args[i_args + ${c_args+2}]`;
                 offsetCall = `${numPols}, `;
-            } else if (["x", "xDivXSubXi", "xDivXSubWXi"].includes(type)) {
+            } else if (type === "x") {
                 offsetCall = `${type}.offset(), `;
+            } else if(["xDivXSubXi", "xDivXSubWXi"].includes(type)) {
+                offsetCall = `params.${type}.offset(), `;
+            } else if (addOffset) {
+                if (["challenge", "eval"].includes(type)) {
+                    offsetCall = "uint64_t(0), ";
+                }
             }
         }
     
