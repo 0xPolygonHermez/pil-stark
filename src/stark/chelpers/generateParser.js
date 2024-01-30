@@ -15,15 +15,17 @@ const operationsMap = {
     "f": 14,
 }
 
-module.exports.generateParser = function generateParser(operations, operationsUsed) {
+module.exports.generateParser = function generateParser(operations, stageName, operationsUsed) {
 
-    var c_args = 0;
+    let c_args = 0;
 
+    let parserName = stageName && operationsUsed ? `${stageName}_parser_avx` : "parser_avx";
     const parserCPP = [
-        `void CHelpers::parser_avx(StepsParams &params, ParserParams &parserParams, uint64_t rowStart, uint64_t rowEnd, uint64_t nrowsBatch, bool const includesEnds) {`,
+        `#include "chelpers_steps.hpp"\n`,
+        `void CHelpersSteps::${parserName}(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds) {`,
         "    uint64_t numConstPols = params.pConstPols->numPols();",
-        "    Polinomial &x = parserParams.domainExtended == 1 ? params.x_2ns : params.x_n;", 
-        "    ConstantPolsStarks *constPols = parserParams.domainExtended == 1 ? params.pConstPols2ns : params.pConstPols;",
+        "    Polinomial &x = domainExtended ? params.x_2ns : params.x_n;", 
+        "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
         
         "        __m256i tmp1[parserParams.nTemp1];",
         "        Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
@@ -241,7 +243,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             let offsetName = `offsets${operand[0].toUpperCase() + operand.substring(1)}`;
             if(["commit1", "commit3", "const"].includes(type)) {
                 let numPols = type === "const" ? "numConstPols" : `parserParams.args[i_args + ${c_args+2}]`;
-                offset = `                        ${offsetName}[j] = parserParams.args[i_args + ${c_args}] + (((i + j) + parserParams.args[i_args + ${c_args+1}]) % parserParams.domainSize) * ${numPols};`;
+                offset = `                        ${offsetName}[j] = parserParams.args[i_args + ${c_args}] + (((i + j) + parserParams.args[i_args + ${c_args+1}]) % domainSize) * ${numPols};`;
                 offsetCall = `${offsetName}, `;
             } else if (type === "x") {
                 offsetCall = `${type}.offset(), `;

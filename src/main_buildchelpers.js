@@ -4,6 +4,7 @@ const version = require("../package").version;
 
 const buildCHelpers = require("./stark/chelpers/stark_chelpers.js");
 const { writeCHelpersFile } = require("./stark/chelpers/binFile.js");
+const { file } = require("tmp-promise");
 
 const argv = require("yargs")
     .version(version)
@@ -23,32 +24,22 @@ async function run() {
     const binFile = typeof (argv.binfile) === "string" ? argv.binfile.trim() : "mycircuit.chelpers.bin";
     const multipleCodeFiles = argv.multiple;
     const optcodes = argv.optcodes;
-    const isGeneric = argv.generic;
 
     const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
-    const {code: cCode, cHelpersInfo } = await buildCHelpers(starkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes, isGeneric } : config);
+    const {code: cCode, cHelpersInfo } = await buildCHelpers(starkInfo, multipleCodeFiles ? { multipleCodeFiles: true, className: cls, optcodes } : config);
 
     if (multipleCodeFiles) {
         const baseDir = path.dirname(chelpersFile);
         if (!fs.existsSync(baseDir)) {
             fs.mkdirSync(baseDir, { recursive: true });
         }
-        const dotPos = chelpersFile.lastIndexOf('.');
-        const leftFilename = dotPos < 0 ? chelpersFile : chelpersFile.substr(0, dotPos);
-        const ext = dotPos < 0 ? '.cpp' : chelpersFile.substr(dotPos);
-        const classInclude = cls.charAt(0).toLowerCase() + cls.slice(1) + ".hpp";
+        const leftFilename = chelpersFile.lastIndexOf('/') < 0 ? chelpersFile : chelpersFile.substr(0, chelpersFile.lastIndexOf('/'));
         for (cpart in cCode) {
-            let code, ext2;
-            if (!cpart.includes("parser")) {
-                code = `#include "goldilocks_cubic_extension.hpp"\n#include "zhInv.hpp"\n#include "starks.hpp"\n#include "constant_pols_starks.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
-                ext2 = ext;
-            } else if(cpart.includes("parser_cpp")) {
-                code = `#include "chelpers.hpp"\n\n` + cCode[cpart];
-                cpart = cpart.replace("parser_cpp", "parser").replace(/_/g, ".");
-                ext2 = ".cpp";
-            }
-            await fs.promises.writeFile(leftFilename + '.' + cpart + ext2, code, "utf8");
+            let fileName = leftFilename + "/" + cpart;
+            fileName = fileName.substring(0, fileName.lastIndexOf('_')) + '.' + fileName.substring(fileName.lastIndexOf('_') + 1);
+            console.log(fileName);
+            await fs.promises.writeFile(fileName, cCode[cpart], "utf8");
         }
     } else {
         await fs.promises.writeFile(chelpersFile, cCode, "utf8");

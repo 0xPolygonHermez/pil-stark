@@ -27,8 +27,6 @@ exports.writeCHelpersFile = async function (cHelpersFilename, cHelpersInfo) {
 
         await cHelpersBin.writeULE32(stageInfo.stage);
         await cHelpersBin.writeULE32(stageInfo.executeBefore);
-        await cHelpersBin.writeULE32(stageInfo.domainExtended);
-        await cHelpersBin.writeULE32(stageInfo.domainSize);
         await cHelpersBin.writeULE32(stageInfo.nTemp1);
         await cHelpersBin.writeULE32(stageInfo.nTemp3);
         await cHelpersBin.writeULE32(stageInfo.nOps);
@@ -64,8 +62,6 @@ exports.readCHelpersFile = async function (cHelpersFilename) {
         const stageInfo = {};
         stageInfo.stage = await cHelpersBin.readULE32();
         stageInfo.executeBefore = await cHelpersBin.readULE32();
-        stageInfo.domainExtended = await cHelpersBin.readULE32();
-        stageInfo.domainSize = await cHelpersBin.readULE32();
         stageInfo.nTemp1 = await cHelpersBin.readULE32();
         stageInfo.nTemp3 = await cHelpersBin.readULE32();
         stageInfo.nOps = await cHelpersBin.readULE32();
