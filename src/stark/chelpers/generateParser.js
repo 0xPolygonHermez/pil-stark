@@ -246,9 +246,11 @@ module.exports.generateParser = function generateParser(operations, stageName, o
                 offset = `                        ${offsetName}[j] = parserParams.args[i_args + ${c_args}] + (((i + j) + parserParams.args[i_args + ${c_args+1}]) % domainSize) * ${numPols};`;
                 offsetCall = `${offsetName}, `;
             } else if (type === "x") {
-                offsetCall = `${type}.offset(), `;
+                offset = `                        ${offsetName}[j] = j*${type}.offset();`;
+                offsetCall = `${offsetName}, `;
             } else if(["xDivXSubXi", "xDivXSubWXi"].includes(type)) {
-                offsetCall = `params.${type}.offset(), `;
+                offset = `                        ${offsetName}[j] = j*params.${type}.offset();`;
+                offsetCall = `${offsetName}, `;
             } else if (["challenge", "public", "number", "eval"].includes(type)) {
                 offset = `                        ${offsetName}[j] = 0;`;
                 offsetCall = `${offsetName}, `;
