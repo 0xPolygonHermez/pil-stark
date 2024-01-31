@@ -43,11 +43,12 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         pushResArg(r, r.dest.type);
         ++cont_ops;
         
+        let operation = getOperation(r);
+
         for(let i = 0; i < r.src.length; i++) {
             pushSrcArg(r.src[i], r.src[i].type);
         }
 
-        let operation = getOperation(r);
         let opsIndex = r.op === "copy" 
             ? operations.findIndex(op => op.dest_type === operation.dest_type && op.src0_type === operation.src0_type && !op.src1_type)
             : operations.findIndex(op => op.dest_type === operation.dest_type && op.src0_type === operation.src0_type && op.src1_type === operation.src1_type);
