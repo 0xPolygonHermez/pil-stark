@@ -67,8 +67,8 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             ]);
         }
 
-        let numberArgs = 1 + nArgs(op.dest_type) + nArgs(op.src0_type);
-        if(op.src1_type) numberArgs += nArgs(op.src1_type);
+        let numberArgs = nArgs(op.dest_type) + nArgs(op.src0_type);
+        if(op.src1_type) numberArgs += nArgs(op.src1_type) + 1;
         
         operationCase.push(...[
             `                i_args += ${numberArgs};`,
