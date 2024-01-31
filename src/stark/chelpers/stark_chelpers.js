@@ -67,6 +67,8 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
     let operations = getAllOperations();
 
+    result.chelpers_generic_parser_cpp = generateParser(operations);
+
     let totalSubsetOperationsUsed = [];
 
     for(let i = 1; i < nStages - 1; ++i) {
