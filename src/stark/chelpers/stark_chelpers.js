@@ -89,7 +89,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
         ])
     }
 
-    generateCode(nStages, `step${nStages}`, starkInfo[`step${nStages}prev`].first, "n", false);
+    generateCode(nStages, `step${nStages}`, starkInfo[`step${nStages}prev`].first, "n");
     generateCode(nStages, `step${nStages}_after`, starkInfo[`step${nStages}`].first, "n", false);
     cHelpersStepsCppParserAVX.push(...[
         `            case ${nStages}:`,
@@ -174,6 +174,7 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
     result.generic_parser_cpp = generateParser(operations, totalSubsetOperationsUsed);
 
+    console.log(cHelpersInfo);
     if (multipleCodeFiles) {
         return {code: result, cHelpersInfo }
     } else {
