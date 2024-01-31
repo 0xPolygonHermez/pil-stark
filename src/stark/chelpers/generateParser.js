@@ -33,7 +33,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         `    for (uint64_t i = rowStart; i < rowEnd; i+= nrowsBatch) {`,
         "        uint64_t i_args = 0;",
         "        \n",
-        "        for (int kk = 0; kk < parserParams.nOps; ++kk) {",
+        "        for (uint64_t kk = 0; kk < parserParams.nOps; ++kk) {",
         `            switch (parserParams.ops[kk]) {`,
     ];
        
@@ -158,13 +158,14 @@ module.exports.generateParser = function generateParser(operations, operationsUs
 
         name += writeType(operation.src0_type, includesEnds, "src0");
 
-        let {offset: offsetSrc0, offsetCall: offsetSrc0Call} = getOffset(operation.src0_type, "src0", addOffset, includesEnds);
+        let {offset: offsetSrc0, offsetCall: offsetSrc0Call, offsetSpecial: offsetSrc0Special} = getOffset(operation.src0_type, "src0", addOffset, includesEnds);
         if(offsetSrc0Call) name += offsetSrc0Call;
 
         c_args += nArgs(operation.src0_type);
         name += "\n                        ";
 
         let offsetSrc1;
+        let offsetSrc1Special;
 
         if(operation.src1_type) {
             name += writeType(operation.src1_type, includesEnds, "src1");
@@ -172,6 +173,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             let offsets = getOffset(operation.src1_type, "src1", addOffset, includesEnds);
             if(offsets.offset) offsetSrc1 = offsets.offset;
             if(offsets.offsetCall) name += offsets.offsetCall;
+            if(offsets.offsetSpecial) offsetSrc1Special = offsets.offsetSpecial;
 
             c_args += nArgs(operation.src1_type);
             name += "\n                        ";
@@ -190,8 +192,9 @@ module.exports.generateParser = function generateParser(operations, operationsUs
                 offsetLoop.push("                    }");
                 operationCall.push(...offsetLoop);
             }
-            if(operation.src0_type === "number") operationCall.push(`                    Goldilocks::Element tmp0__[1] = {Goldilocks::fromU64(parserParams.args[i_args + ${c_args}])};`)
-            if(operation.src1_type === "number") operationCall.push(`               Goldilocks::Element tmp1__[1] = {Goldilocks::fromU64(parserParams.args[i_args + ${c_args}])};`)
+            if(offsetSrc0Special) operationCall.push(offsetSrc0Special);
+            if(offsetSrc1Special) operationCall.push(offsetSrc1Special);
+
             operationCall.push(`                    ${name}`);
         } else {
             operationCall.push(`                ${name}`);
@@ -227,7 +230,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
                 return `x[i], `;
             case "number":
                 if(includesEnds) {
-                    return `${operand === "src0" ? "tmp0__" : "tmp1__"}, `;
+                    return `tmp${operand[0].toUpperCase() + operand.substring(1)}, `;
                 } else {
                     return `Goldilocks::fromU64(parserParams.args[i_args + ${c_args}]), `;
                 }
@@ -249,6 +252,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
 
         let offset;
         let offsetCall;
+        let offsetSpecial;
 
         if(includesEnds) {
             let offsetName = `offsets${operand[0].toUpperCase() + operand.substring(1)}`;
@@ -262,9 +266,13 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             } else if(["xDivXSubXi", "xDivXSubWXi"].includes(type)) {
                 offset = `                        ${offsetName}[j] = j*params.${type}.offset();`;
                 offsetCall = `${offsetName}, `;
-            } else if (["challenge", "public", "number", "eval"].includes(type)) {
+            } else if (["challenge", "public", "eval"].includes(type)) {
                 offset = `                        ${offsetName}[j] = 0;`;
                 offsetCall = `${offsetName}, `;
+            } else if (type === "number") {
+                offset = `                        ${offsetName}[j] = 0;`;
+                offsetCall = `${offsetName}, `;
+                offsetSpecial = `                    Goldilocks::Element tmp${operand[0].toUpperCase() + operand.substring(1)}[1] = {Goldilocks::fromU64(parserParams.args[i_args + ${c_args}])};`
             }
         } else {
             if(["commit1", "commit3", "const"].includes(type)) {
@@ -281,7 +289,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             }
         }
     
-        return {offset, offsetCall};
+        return {offset, offsetCall, offsetSpecial};
     }
 
     function nArgs(type) {
@@ -327,6 +335,7 @@ module.exports.getAllOperations = function getAllOperations() {
             let src0_type = possibleSrcDim1[k];
             operations.push({dest_type, src0_type}); // Copy operation
             if(src0_type === "x") continue;
+            // for (let l = k; l < possibleSrcDim1.length; ++l) {
             for (let l = 0; l < possibleSrcDim1.length; ++l) {
                 let src1_type = possibleSrcDim1[l];
                 if(src1_type === "x") continue;
@@ -362,6 +371,7 @@ module.exports.getAllOperations = function getAllOperations() {
         for(let k = 0; k < possibleSrcDim3.length; ++k) {
             let src0_type = possibleSrcDim3[k];
             if(["commit3", "tmp3"].includes(src0_type)) operations.push({dest_type, src0_type}); // Copy operation
+            // for (let l = k; l < possibleSrcDim3.length; ++l) {
             for (let l = 0; l < possibleSrcDim3.length; ++l) {
                 let src1_type = possibleSrcDim3[l];
                 operations.push({dest_type, src0_type, src1_type})
@@ -403,10 +413,11 @@ module.exports.getOperation = function getOperation(r) {
         _op.dest_type = r.dest.type;
     }
     
-    if(r.op !== "sub") {
+    if(r.op !== "copy" && r.op !== "sub") {
         r.src.sort((a, b) => {
             let opA =  ["cm", "tmpExp"].includes(a.type) ? operationsMap[`commit${a.dim}`] : a.type === "tmp" ? operationsMap[`tmp${a.dim}`] : operationsMap[a.type];
             let opB = ["cm", "tmpExp"].includes(b.type) ? operationsMap[`commit${b.dim}`] : b.type === "tmp" ? operationsMap[`tmp${b.dim}`] : operationsMap[b.type];
+            // if(opA < opB) _op.op = "sub_swap";
             return opA - opB;
         });
     }
