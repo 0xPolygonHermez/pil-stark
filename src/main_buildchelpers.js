@@ -4,7 +4,6 @@ const version = require("../package").version;
 
 const buildCHelpers = require("./stark/chelpers/stark_chelpers.js");
 const { writeCHelpersFile } = require("./stark/chelpers/binFile.js");
-const { file } = require("tmp-promise");
 
 const argv = require("yargs")
     .version(version)

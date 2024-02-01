@@ -222,7 +222,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
                 if(includesEnds) {
                     return `&constPols->getElement(0, 0), `;
                 } else {
-                    return `&constPols->getElement(parserParams.args[i_args + ${c_args}], i), `;
+                    return `&constPols->getElement(parserParams.args[i_args + ${c_args}], i + parserParams.args[i_args + ${c_args + 1}]), `;
                 }
             case "challenge":
                 return `params.challenges[parserParams.args[i_args + ${c_args}]], `;

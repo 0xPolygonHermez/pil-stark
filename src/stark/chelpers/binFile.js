@@ -34,9 +34,16 @@ exports.writeCHelpersFile = async function (cHelpersFilename, cHelpersInfo) {
             await cHelpersBin.writeULE32(stageInfo.ops[j]);
         }
         await cHelpersBin.writeULE32(stageInfo.nArgs);
+
+        const buffArgs = new Uint8Array(8*stageInfo.nArgs);
+        const buffArgsV = new DataView(buffArgs.buffer);
+
         for(let j = 0; j < stageInfo.nArgs; j++) {
-            await cHelpersBin.writeULE64(stageInfo.args[j]);
+            let arg = stageInfo.args[j];
+            buffArgsV.setBigUint64(8*j, BigInt(arg), true);
         }
+        
+        await cHelpersBin.write(buffArgs);
     }
 
     await endWriteSection(cHelpersBin);
@@ -71,8 +78,11 @@ exports.readCHelpersFile = async function (cHelpersFilename) {
         }
         stageInfo.nArgs = await cHelpersBin.readULE32();
         stageInfo.args = [];
+
+        let buffArgs = await cHelpersBin.read(8*stageInfo.nArgs);
+        let buffArgsV = new DataView(buffArgs.buffer);
         for(let j = 0; j < stageInfo.nArgs; j++) {
-            stageInfo.args[j] = await cHelpersBin.readULE64();
+            stageInfo.args[j] = buffArgsV.getBigUint64(8*j, true);
         }
         chelpers.push(stageInfo);
     }
