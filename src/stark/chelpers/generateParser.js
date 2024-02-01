@@ -39,6 +39,8 @@ module.exports.generateParser = function generateParser(operations, operationsUs
        
     let nCopyOperations = 0;
     
+    const edgeCases = ["const", "commit1", "commit3"];
+
     for(let i = 0; i < operations.length; i++) {
         const op = operations[i];
         if(operationsUsed && !operationsUsed.includes(i)) continue;
@@ -55,7 +57,8 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             operationDescription,
         ];
         
-        if(["q", "f"].includes(op.dest_type)) {
+        if(["q", "f"].includes(op.dest_type) || (!edgeCases.includes(op.dest_type) && !edgeCases.includes(op.src0_type) && (!op.src1_type || !edgeCases.includes(op.src1_type)))) {
+        // if(["q", "f"].includes(op.dest_type)) {
             operationCase.push(writeOperation(op, false));
         } else {
             operationCase.push(...[
@@ -68,7 +71,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         }
 
         let numberArgs = nArgs(op.dest_type) + nArgs(op.src0_type);
-        if(op.src1_type) numberArgs += nArgs(op.src1_type) + 1;
+        if(op.src1_type && !["q", "f"].includes(op.dest_type)) numberArgs += nArgs(op.src1_type) + 1;
         
         operationCase.push(...[
             `                i_args += ${numberArgs};`,
@@ -118,7 +121,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             ].join("\n");
             return qOperation;
         } else if(operation.dest_type === "f") {
-            const fOperation = "                Goldilocks3::copy_avx(&params.f_2ns[i*3], uint64_t(0), tmp3[parserParams.args[i_args]]);"
+            const fOperation = "                Goldilocks3::copy_avx(&params.f_2ns[i*3], uint64_t(3), tmp3[parserParams.args[i_args]]);"
             return fOperation;
         }
         let name = ["tmp1", "commit1"].includes(operation.dest_type) ? "Goldilocks::" : "Goldilocks3::";
@@ -235,7 +238,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
                     return `Goldilocks::fromU64(parserParams.args[i_args + ${c_args}]), `;
                 }
             case "eval":
-                return `params.evals[parserParams.args[i_args + ${c_args}] * 3], `;
+                return `params.evals[parserParams.args[i_args + ${c_args}]], `;
             case "xDivXSubXi": 
                 return "params.xDivXSubXi[i], ";
             case "xDivXSubWXi":
