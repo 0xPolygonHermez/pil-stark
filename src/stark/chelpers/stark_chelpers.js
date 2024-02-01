@@ -174,7 +174,6 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
 
     result.generic_parser_cpp = generateParser(operations, totalSubsetOperationsUsed);
 
-    console.log(cHelpersInfo);
     if (multipleCodeFiles) {
         return {code: result, cHelpersInfo }
     } else {

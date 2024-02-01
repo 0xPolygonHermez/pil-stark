@@ -24,8 +24,8 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
     const nBits = starkInfo.starkStruct.nBits;
     const nBitsExt = starkInfo.starkStruct.nBitsExt;
 
-    const next = (dom == "n" ? 1 : 1 << (nBitsExt - nBits)).toString();
-    const N = (dom == "n" ? (1 << nBits) : (1 << nBitsExt)).toString();
+    const next = (dom == "n" ? 1 : 1 << (nBitsExt - nBits));
+    const N = (dom == "n" ? (1 << nBits) : (1 << nBitsExt));
 
     // Evaluate max and min temporal variable for tmp_ and tmp3_
     let maxid = 100000;
@@ -78,7 +78,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         nOps: cont_ops,
         ops,
         nArgs: cont_args,
-        args: args.map(v => typeof v === 'string' && v.endsWith('ULL') ? parseInt(v.replace('ULL', '')) : v),
+        args,
     }
     
     const operationsUsed = counters_ops.reduce((acc, currentValue, currentIndex) => {
@@ -201,8 +201,8 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                 break;
             }
             case "number": {
-                args.push(`${BigInt(r.value).toString()}ULL`);
-                argsString += `${BigInt(r.value).toString()}ULL, `;
+                args.push(`${BigInt(r.value).toString()}`);
+                argsString += `${BigInt(r.value).toString()}, `;
                 cont_args += 1;
                 break;
             }
