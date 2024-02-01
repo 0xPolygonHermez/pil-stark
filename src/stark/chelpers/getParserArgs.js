@@ -35,7 +35,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         
     for (let j = 0; j < code.length; j++) {
         const r = code[j];
-        if(r.op !== "copy") {
+        if(r.op !== "copy" && !["q", "f"].includes(r.dest.type)) {
             args.push(operationsTypeMap[r.op]);
             argsString += `${operationsTypeMap[r.op]}, `;
             ++cont_args;
