@@ -116,25 +116,25 @@ module.exports = async function buildCHelpers(starkInfo, className = "") {
     }
     
     // Set case to consecutive numbers
-    for(let i = 0; i < cHelpersInfo.length; ++i) {
-        let stageName = `step${cHelpersInfo[i].stage}`;
-        if(!cHelpersInfo[i].executeBefore) stageName += "_after";
-        cHelpersInfo[i].ops = cHelpersInfo[i].ops.map(op => totalSubsetOperationsUsed.findIndex(o => o === op));
+    // for(let i = 0; i < cHelpersInfo.length; ++i) {
+    //     let stageName = `step${cHelpersInfo[i].stage}`;
+    //     if(!cHelpersInfo[i].executeBefore) stageName += "_after";
+    //     cHelpersInfo[i].ops = cHelpersInfo[i].ops.map(op => totalSubsetOperationsUsed.findIndex(o => o === op));
 
-        result[`${className}_${stageName}_parser_cpp`] = result[`${className}_${stageName}_parser_cpp`].replace(/case (\d+):/g, (match, caseNumber) => {
-            caseNumber = parseInt(caseNumber, 10);
-            const newIndex = totalSubsetOperationsUsed.findIndex(o => o === caseNumber);
-            if(newIndex === -1) throw new Error("Invalid operation!");
-            return `case ${newIndex}:`;
-        });
+    //     result[`${className}_${stageName}_parser_cpp`] = result[`${className}_${stageName}_parser_cpp`].replace(/case (\d+):/g, (match, caseNumber) => {
+    //         caseNumber = parseInt(caseNumber, 10);
+    //         const newIndex = totalSubsetOperationsUsed.findIndex(o => o === caseNumber);
+    //         if(newIndex === -1) throw new Error("Invalid operation!");
+    //         return `case ${newIndex}:`;
+    //     });
         
-    }
-    result[`${className}_generic_parser_cpp`] = result[`${className}_generic_parser_cpp`].replace(/case (\d+):/g, (match, caseNumber) => {
-        caseNumber = parseInt(caseNumber, 10);
-        const newIndex = totalSubsetOperationsUsed.findIndex(o => o === caseNumber);
-        if(newIndex === -1) throw new Error("Invalid operation!");
-        return `case ${newIndex}:`;
-    });
+    // }
+    // result[`${className}_generic_parser_cpp`] = result[`${className}_generic_parser_cpp`].replace(/case (\d+):/g, (match, caseNumber) => {
+    //     caseNumber = parseInt(caseNumber, 10);
+    //     const newIndex = totalSubsetOperationsUsed.findIndex(o => o === caseNumber);
+    //     if(newIndex === -1) throw new Error("Invalid operation!");
+    //     return `case ${newIndex}:`;
+    // });
 
     return {code: result, cHelpersInfo };
 
