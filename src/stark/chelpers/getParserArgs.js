@@ -6,18 +6,15 @@ const operationsTypeMap = {
     "add": 0,
     "sub": 1,
     "mul": 2,
-    // "sub_swap": 2,
-    // "mul": 3,
+    //"sub_swap": 3,
 }
 
 module.exports.getParserArgs = function getParserArgs(starkInfo, operations, code, dom, stage, executeBefore = true) {
 
     var ops = [];
     var cont_ops = 0;
-    var opsString = "{"
     var args = [];
     var cont_args = 0;
-    var argsString = "{"
 
     var counters_ops = new Array(operations.length).fill(0);
 
@@ -37,7 +34,6 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         const r = code[j];
         if(r.op !== "copy" && !["q", "f"].includes(r.dest.type)) {
             args.push(operationsTypeMap[r.op]);
-            argsString += `${operationsTypeMap[r.op]}, `;
             ++cont_args;
         }
         pushResArg(r, r.dest.type);
@@ -56,19 +52,12 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         if (opsIndex === -1) throw new Error("Operation not considered: " + JSON.stringify(operation));
 
         ops.push(opsIndex);
-        opsString += `${opsIndex}, `;
 
         counters_ops[opsIndex] += 1;
     }
 
     assert(cont_ops == ops.length);
     assert(cont_args == args.length);
-
-
-    if(opsString !== "{") opsString = opsString.substring(0, opsString.lastIndexOf(","));
-    opsString += "};"
-    if(argsString !== "{") argsString = argsString.substring(0, argsString.lastIndexOf(","));
-    argsString += "};"
 
     const stageInfo = {
         stage,
@@ -102,11 +91,9 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
             case "tmp": {
                 if (r.dest.dim == 1) {
                     args.push(ID1D[r.dest.id]);
-                    argsString += `${ID1D[r.dest.id]}, `;
                 } else {
                     assert(r.dest.dim == 3);
                     args.push(ID3D[r.dest.id]);
-                    argsString += `${ID3D[r.dest.id]}, `;
                 }
                 cont_args += 1;
                 break;
@@ -148,12 +135,9 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
             case "tmp": {
                 if (r.dim == 1) {
                     args.push(ID1D[r.id]);
-                    argsString += `${ID1D[r.id]}, `;
                 } else {
                     assert(r.dim == 3);
                     args.push(ID3D[r.id]);
-                    argsString += `${ID3D[r.id]}, `;
-
                 }
                 cont_args += 1;
                 break;
@@ -163,9 +147,6 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
 
                 args.push(r.id);
                 args.push(offset_prime);
-
-                argsString += `${r.id}, `;
-                argsString += `${offset_prime}, `;
                 
                 cont_args += 2;
                 break;
@@ -202,8 +183,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
             }
             case "number": {
                 args.push(`${BigInt(r.value).toString()}`);
-                argsString += `${BigInt(r.value).toString()}, `;
-                cont_args += 1;
+                cont_args++;
                 break;
             }
             case "public":
@@ -211,8 +191,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
             case "eval": 
             {
                 args.push(r.id);
-                argsString += `${r.id}, `;
-                cont_args += 1;
+                cont_args++;
                 break;
             }
         }
@@ -228,10 +207,6 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         args.push(Number(offset));
         args.push(Number(offset_prime));
         args.push(Number(size));
-
-        argsString += `${offset}, `;
-        argsString += `${offset_prime}, `;
-        argsString += `${N}, `;
         
         cont_args += 3;
     }
