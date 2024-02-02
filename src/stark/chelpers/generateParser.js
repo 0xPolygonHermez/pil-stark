@@ -60,48 +60,53 @@ module.exports.generateParser = function generateParser(className, stageName = "
         if(["q", "f"].includes(op.dest_type) || (!edgeCases.includes(op.dest_type) && !edgeCases.includes(op.src0_type) && (!op.src1_type || !edgeCases.includes(op.src1_type)))) {
             if(op.isGroupOps) {
                 for(let j = 0; j < op.ops.length; j++) {
-                    operationCase.push(writeOperation(operations[op.ops[j]], false));
+                    let opr = operations[op.ops[j]];
+                    operationCase.push(writeOperation(opr, false));
+                    let numberArgs = nArgs(opr.dest_type) + nArgs(opr.src0_type);
+                    if(opr.src1_type && !["q", "f"].includes(opr.dest_type)) numberArgs += nArgs(opr.src1_type) + 1;
+                    operationCase.push(`                    i_args += ${numberArgs};`);
                 }
             } else {
                 operationCase.push(writeOperation(op, false));
+                let numberArgs = nArgs(op.dest_type) + nArgs(op.src0_type);
+                if(op.src1_type && !["q", "f"].includes(op.dest_type)) numberArgs += nArgs(op.src1_type) + 1;
+                operationCase.push(`                i_args += ${numberArgs};`);
             }
         } else {
             operationCase.push("                if(!includesEnds) {");
             if(op.isGroupOps) {
                 for(let j = 0; j < op.ops.length; j++) {
-                    operationCase.push(writeOperation(operations[op.ops[j]], false));
+                    let opr = operations[op.ops[j]];
+                    operationCase.push(writeOperation(opr, false));
+                    let numberArgs = nArgs(opr.dest_type) + nArgs(opr.src0_type);
+                    if(opr.src1_type && !["q", "f"].includes(opr.dest_type)) numberArgs += nArgs(opr.src1_type) + 1;
+                    operationCase.push(`                    i_args += ${numberArgs};`);
                 }
             } else {
                 operationCase.push(writeOperation(op, false));
+                let numberArgs = nArgs(op.dest_type) + nArgs(op.src0_type);
+                if(op.src1_type && !["q", "f"].includes(op.dest_type)) numberArgs += nArgs(op.src1_type) + 1;
+                operationCase.push(`                i_args += ${numberArgs};`);
             }
-            operationCase.push(`    ${writeOperation(op, false)}`);
             operationCase.push("                } else {");
             if(op.isGroupOps) {
                 for(let j = 0; j < op.ops.length; j++) {
-                    operationCase.push(writeOperation(operations[op.ops[j]], true));
+                    let opr = operations[op.ops[j]];
+                    operationCase.push(writeOperation(opr, true));
+                    let numberArgs = nArgs(opr.dest_type) + nArgs(opr.src0_type);
+                    if(opr.src1_type && !["q", "f"].includes(opr.dest_type)) numberArgs += nArgs(opr.src1_type) + 1;
+                    operationCase.push(`                i_args += ${numberArgs};`);
                 }
             } else {
                 operationCase.push(writeOperation(op, true));
+                let numberArgs = nArgs(op.dest_type) + nArgs(op.src0_type);
+                if(op.src1_type && !["q", "f"].includes(op.dest_type)) numberArgs += nArgs(op.src1_type) + 1;
+                operationCase.push(`                i_args += ${numberArgs};`);
             }
             operationCase.push("                }");
         }
 
-        let numberArgs = 0;
-
-        if(op.isGroupOps) {
-            for(let j = 0; j < op.ops.length; j++) {
-                const opr = operations[op.ops[j]];
-                numberArgs += nArgs(opr.dest_type) + nArgs(opr.src0_type);
-                if(opr.src1_type && !["q", "f"].includes(opr.dest_type)) numberArgs += nArgs(opr.src1_type) + 1;
-            }
-        } else {
-            numberArgs += nArgs(op.dest_type) + nArgs(op.src0_type);
-            if(op.src1_type && !["q", "f"].includes(op.dest_type)) numberArgs += nArgs(op.src1_type) + 1;
-        }
-        
-        
         operationCase.push(...[
-            `                i_args += ${numberArgs};`,
             "                break;",
             "            }",
         ])
