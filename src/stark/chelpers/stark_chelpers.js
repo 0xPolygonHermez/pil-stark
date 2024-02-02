@@ -111,8 +111,8 @@ module.exports = async function buildCHelpers(starkInfo, className = "") {
     result[`${className}_hpp`] = cHelpersStepsHpp.join("\n"); 
 
     console.log("Number of patterns added: " + patternsAdded.length);
-    for(let i = 0; i < patternsAdded.length; ++j) {
-        console.log("[", patternsAdded[i].join(", ") + "]");
+    for(let j = 0; j < patternsAdded.length; ++j) {
+        console.log("[", patternsAdded[j].join(", ") + "]");
     }
     
     // Set case to consecutive numbers
@@ -144,11 +144,11 @@ module.exports = async function buildCHelpers(starkInfo, className = "") {
         const {stageInfo, operationsUsed: opsUsed} = getParserArgs(starkInfo, operations, stageCode, dom, stage, executeBefore);
 
         const patterns = findPatterns(stageInfo.ops);
-
+        
         console.log("Number of operations before join: " + stageInfo.nOps);
 
         for(let i = 0; i < patterns.length; ++i) {
-            const sequence = patterns[i].ops;
+            const sequence = patterns[i];
             let opIndex;
             if(!patternsAdded.some(subArray => _.isEqual(subArray, sequence))) {
                 patternsAdded.push(sequence);
@@ -159,7 +159,6 @@ module.exports = async function buildCHelpers(starkInfo, className = "") {
                 if(opIndex === -1) throw new Error("Something went wrong");
             }
 
-            stageInfo.nOps -= sequence.length - 1 * patterns[i].count;
             let opsString = stageInfo.ops.join(", ");
             let patternString = sequence.join(", ");
             opsString = opsString.replace(new RegExp(patternString, "g"), `${opIndex}`);
@@ -168,8 +167,9 @@ module.exports = async function buildCHelpers(starkInfo, className = "") {
             opsUsed.push(opIndex);
         }
 
-        console.log("Number of operations after join: " + stageInfo.nOps);
+        stageInfo.nOps = stageInfo.ops.length;
 
+        console.log("Number of operations after join: " + stageInfo.nOps);
 
         cHelpersInfo.push(stageInfo);
         for(let j = 0; j < opsUsed.length; ++j) {
