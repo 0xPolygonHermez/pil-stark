@@ -57,7 +57,19 @@ module.exports.generateParser = function generateParser(className, stageName = "
             operationCase.push(operationDescription);
         }
         
-        if(["q", "f"].includes(op.dest_type) || (!edgeCases.includes(op.dest_type) && !edgeCases.includes(op.src0_type) && (!op.src1_type || !edgeCases.includes(op.src1_type)))) {
+        let includeEnds = false;
+        if(!op.isGroupOps) {
+            if(!["q", "f"].includes(op.dest_type) && (edgeCases.includes(op.dest_type) || edgeCases.includes(op.src0_type) || (op.src1_type && edgeCases.includes(op.src1_type)))) includeEnds = true;
+        } else {
+            for(let j = 0; j < op.ops.length; j++) {
+                let opr = operations[op.ops[j]];
+                if(!["q", "f"].includes(opr.dest_type) && (edgeCases.includes(opr.dest_type) || edgeCases.includes(opr.src0_type) || (opr.src1_type && edgeCases.includes(opr.src1_type)))) {
+                    includeEnds = true;
+                    break;
+                }
+            }
+        }
+        if(!includeEnds) {
             if(op.isGroupOps) {
                 for(let j = 0; j < op.ops.length; j++) {
                     let opr = operations[op.ops[j]];
