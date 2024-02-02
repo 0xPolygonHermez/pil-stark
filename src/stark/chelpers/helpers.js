@@ -145,8 +145,8 @@ module.exports.findPatterns = function findPatterns(array, minRepetitions = 50, 
     const sortedPatterns = Object.entries(patterns).sort((a, b) => b[1]*(JSON.parse(b[0]).length - 1) - a[1]*(JSON.parse(a[0]).length - 1));
     const patternsSelected = [];
     for (const [pattern, count] of sortedPatterns) {
-        if(!isPatternSelected(patternsSelected, JSON.parse(pattern))) patternsSelected.push(JSON.parse(pattern));
-        // console.log(`Sequence ${pattern} has occurred ${count} times.`);
+        console.log(`Sequence ${pattern} has occurred ${count} times.`);
+        if(!isPatternSelected(patternsSelected, JSON.parse(pattern))) patternsSelected.push({ops: JSON.parse(pattern), count});
     }
     return patternsSelected;
 }
@@ -174,14 +174,17 @@ function countRepetitions(arr, pattern) {
 }
 
 function isPatternSelected(patternsSelected, newPattern) {
-    for (let i = 0; i < patternsSelected.length; i++) {
-        let bigArray = newPattern.length <= patternsSelected[i].length ? patternsSelected[i] : newPattern;
-        let subArray = newPattern.length <= patternsSelected[i].length ? newPattern : patternsSelected[i];
+    const patterns = patternsSelected.map(p => p.ops);
+    for (let i = 0; i < patterns.length; i++) {
+        let bigArray = newPattern.length <= patterns[i].length ? patterns[i] : newPattern;
+        let subArray = newPattern.length <= patterns[i].length ? newPattern : patterns[i];
         
         for (let j = 0; j <= bigArray.length - subArray.length; j++) {
 
             if(areCircularPermutations(bigArray, subArray)) return true;
             
+            if (isSubset(bigArray, subArray)) return true;
+
             let match = true;
             for (let k = 0; k < subArray.length; k++) {
                 if (subArray[k] !== bigArray[j + k]) {
@@ -199,26 +202,12 @@ function isPatternSelected(patternsSelected, newPattern) {
 }
 
 function areCircularPermutations(arr1, arr2) {
-    if (arr1.length !== arr2.length) return false;
+    const array1Circular = arr1.join(",") + "," + arr1.join(",");
+    return array1Circular.includes(arr2.join(","));
+}
 
-    const n = arr1.length;
-
-    for (let startIndex = 0; startIndex < n; startIndex++) {
-        let isCircularPermutation = true;
-
-        for (let i = 0; i < n; i++) {
-            if (arr1[i] !== arr2[(startIndex + i) % n]) {
-                isCircularPermutation = false;
-                break;
-            }
-        }
-
-        if (isCircularPermutation) {
-            return true;
-        }
-    }
-
-    return false;
+function isSubset(arr1, arr2) {
+    return arr1.join(",").includes(arr2.join(","));
 }
 
 module.exports.compileCode = function compileCode(functionName, starkInfo, code, dom, ret) {

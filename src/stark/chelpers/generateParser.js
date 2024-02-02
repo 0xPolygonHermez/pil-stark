@@ -15,14 +15,15 @@ const operationsMap = {
     "f": 14,
 }
 
-module.exports.generateParser = function generateParser(operations, operationsUsed, stageName) {
+module.exports.generateParser = function generateParser(className, stageName = "", operations, operationsUsed) {
 
     let c_args = 0;
 
-    let parserName = operationsUsed && stageName ? `${stageName}_parser_avx` : "parser_avx";
+    let parserName = stageName ? `${stageName}_parser_avx` : "parser_avx";
     const parserCPP = [
-        `#include "chelpers_steps.hpp"\n`,
-        `void CHelpersSteps::${parserName}(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds) {`,
+        `#include "${className}.hpp"\n`,
+
+        `void ${className}::${parserName}(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds) {`,
         "    uint64_t numConstPols = params.pConstPols->numPols();",
         "    Polinomial &x = domainExtended ? params.x_2ns : params.x_n;", 
         "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
@@ -36,42 +37,68 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         "        for (uint64_t kk = 0; kk < parserParams.nOps; ++kk) {",
         `            switch (parserParams.ops[kk]) {`,
     ];
-       
-    let nCopyOperations = 0;
-    
+           
     const edgeCases = ["const", "commit1", "commit3"];
 
     for(let i = 0; i < operations.length; i++) {
-        const op = operations[i];
         if(operationsUsed && !operationsUsed.includes(i)) continue;
-        let operationDescription;
-        if(op.src1_type) {
-            operationDescription = `                // OPERATION WITH DEST: ${op.dest_type} - SRC0: ${op.src0_type} - SRC1: ${op.src1_type}`;
-        } else {
-            operationDescription = `                // COPY ${op.src0_type} to ${op.dest_type}`;
+        const op = operations[i];
+        
+        
+        const operationCase = [`            case ${i}: {`];
+        
+        if(!op.isGroupOps) {
+            let operationDescription;
+            if(op.src1_type) {
+                operationDescription = `                // OPERATION WITH DEST: ${op.dest_type} - SRC0: ${op.src0_type} - SRC1: ${op.src1_type}`;
+            } else {
+                operationDescription = `                // COPY ${op.src0_type} to ${op.dest_type}`;
+            }
+            operationCase.push(operationDescription);
         }
-
-        if(!op.src1_type) nCopyOperations++;
-        const operationCase = [
-            `            case ${i}: {`,
-            operationDescription,
-        ];
         
         if(["q", "f"].includes(op.dest_type) || (!edgeCases.includes(op.dest_type) && !edgeCases.includes(op.src0_type) && (!op.src1_type || !edgeCases.includes(op.src1_type)))) {
-        // if(["q", "f"].includes(op.dest_type)) {
-            operationCase.push(writeOperation(op, false));
+            if(op.isGroupOps) {
+                for(let j = 0; j < op.ops.length; j++) {
+                    operationCase.push(writeOperation(operations[op.ops[j]], false));
+                }
+            } else {
+                operationCase.push(writeOperation(op, false));
+            }
         } else {
-            operationCase.push(...[
-                "                if(!includesEnds) {",
-                `    ${writeOperation(op, false)}`,
-                "                } else {",
-                `    ${writeOperation(op, true)}`,
-                "                }",
-            ]);
+            operationCase.push("                if(!includesEnds) {");
+            if(op.isGroupOps) {
+                for(let j = 0; j < op.ops.length; j++) {
+                    operationCase.push(writeOperation(operations[op.ops[j]], false));
+                }
+            } else {
+                operationCase.push(writeOperation(op, false));
+            }
+            operationCase.push(`    ${writeOperation(op, false)}`);
+            operationCase.push("                } else {");
+            if(op.isGroupOps) {
+                for(let j = 0; j < op.ops.length; j++) {
+                    operationCase.push(writeOperation(operations[op.ops[j]], true));
+                }
+            } else {
+                operationCase.push(writeOperation(op, true));
+            }
+            operationCase.push("                }");
         }
 
-        let numberArgs = nArgs(op.dest_type) + nArgs(op.src0_type);
-        if(op.src1_type && !["q", "f"].includes(op.dest_type)) numberArgs += nArgs(op.src1_type) + 1;
+        let numberArgs = 0;
+
+        if(op.isGroupOps) {
+            for(let j = 0; j < op.ops.length; j++) {
+                const opr = operations[op.ops[j]];
+                numberArgs += nArgs(opr.dest_type) + nArgs(opr.src0_type);
+                if(opr.src1_type && !["q", "f"].includes(opr.dest_type)) numberArgs += nArgs(opr.src1_type) + 1;
+            }
+        } else {
+            numberArgs += nArgs(op.dest_type) + nArgs(op.src0_type);
+            if(op.src1_type && !["q", "f"].includes(op.dest_type)) numberArgs += nArgs(op.src1_type) + 1;
+        }
+        
         
         operationCase.push(...[
             `                i_args += ${numberArgs};`,
@@ -99,7 +126,6 @@ module.exports.generateParser = function generateParser(operations, operationsUs
     
     const parserCPPCode = parserCPP.join("\n");
 
-    console.log("Number of copy operations: ", nCopyOperations)
     return parserCPPCode;
 
     function writeOperation(operation, includesEnds = false) {
@@ -323,7 +349,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
 }
 
 module.exports.getAllOperations = function getAllOperations() {
-    const operations = [];
+    const possibleOps = [];
 
     const possibleDestinationsDim1 = [ "commit1", "tmp1" ];
     const possibleDestinationsDim3 = [ "commit3", "tmp3" ];
@@ -336,13 +362,13 @@ module.exports.getAllOperations = function getAllOperations() {
         let dest_type = possibleDestinationsDim1[j];
         for(let k = 0; k < possibleSrcDim1.length; ++k) {
             let src0_type = possibleSrcDim1[k];
-            operations.push({dest_type, src0_type}); // Copy operation
+            possibleOps.push({dest_type, src0_type}); // Copy operation
             if(src0_type === "x") continue;
             // for (let l = k; l < possibleSrcDim1.length; ++l) {
             for (let l = 0; l < possibleSrcDim1.length; ++l) {
                 let src1_type = possibleSrcDim1[l];
                 if(src1_type === "x") continue;
-                operations.push({dest_type, src0_type, src1_type})
+                possibleOps.push({dest_type, src0_type, src1_type})
             } 
         }
     }
@@ -356,7 +382,7 @@ module.exports.getAllOperations = function getAllOperations() {
             let src0_type = possibleSrcDim1[k];
             for (let l = 0; l < possibleSrcDim3.length; ++l) {
                 let src1_type = possibleSrcDim3[l];
-                operations.push({dest_type, src0_type, src1_type})
+                possibleOps.push({dest_type, src0_type, src1_type})
             }
         }
 
@@ -367,42 +393,42 @@ module.exports.getAllOperations = function getAllOperations() {
             for (let l = 0; l < possibleSrcDim1.length; ++l) {
                 let src1_type = possibleSrcDim1[l];
                 if(src1_type === "x") continue;
-                operations.push({dest_type, src0_type, src1_type});
+                possibleOps.push({dest_type, src0_type, src1_type});
             }
         }
 
         for(let k = 0; k < possibleSrcDim3.length; ++k) {
             let src0_type = possibleSrcDim3[k];
-            if(["commit3", "tmp3"].includes(src0_type)) operations.push({dest_type, src0_type}); // Copy operation
+            if(["commit3", "tmp3"].includes(src0_type)) possibleOps.push({dest_type, src0_type}); // Copy operation
             // for (let l = k; l < possibleSrcDim3.length; ++l) {
             for (let l = 0; l < possibleSrcDim3.length; ++l) {
                 let src1_type = possibleSrcDim3[l];
-                operations.push({dest_type, src0_type, src1_type})
+                possibleOps.push({dest_type, src0_type, src1_type})
             }
         }
     }
 
     // Step FRI
-    operations.push({ dest_type: "tmp3", src0_type: "eval"});
-    operations.push({ dest_type: "tmp3", src0_type: "challenge", src1_type: "eval"});
-    operations.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "eval"});
+    possibleOps.push({ dest_type: "tmp3", src0_type: "eval"});
+    possibleOps.push({ dest_type: "tmp3", src0_type: "challenge", src1_type: "eval"});
+    possibleOps.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "eval"});
 
-    operations.push({ dest_type: "tmp3", src0_type: "commit1", src1_type: "eval"});
-    operations.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "commit1"});
+    possibleOps.push({ dest_type: "tmp3", src0_type: "commit1", src1_type: "eval"});
+    possibleOps.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "commit1"});
 
-    operations.push({ dest_type: "tmp3", src0_type: "commit3", src1_type: "eval"});
-    operations.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "commit3"});
+    possibleOps.push({ dest_type: "tmp3", src0_type: "commit3", src1_type: "eval"});
+    possibleOps.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "commit3"});
 
-    operations.push({ dest_type: "tmp3", src0_type: "const", src1_type: "eval"});
-    operations.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "const"});
+    possibleOps.push({ dest_type: "tmp3", src0_type: "const", src1_type: "eval"});
+    possibleOps.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "const"});
     
-    operations.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubXi"});
-    operations.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubWXi"});
+    possibleOps.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubXi"});
+    possibleOps.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubWXi"});
 
-    operations.push({ dest_type: "q", src0_type: "tmp3", src1_type: "Zi"});
-    operations.push({ dest_type: "f", src0_type: "tmp3"});
+    possibleOps.push({ dest_type: "q", src0_type: "tmp3", src1_type: "Zi"});
+    possibleOps.push({ dest_type: "f", src0_type: "tmp3"});
 
-    return operations;
+    return possibleOps;
 }
 
 module.exports.getOperation = function getOperation(r) {
@@ -420,7 +446,8 @@ module.exports.getOperation = function getOperation(r) {
         r.src.sort((a, b) => {
             let opA =  ["cm", "tmpExp"].includes(a.type) ? operationsMap[`commit${a.dim}`] : a.type === "tmp" ? operationsMap[`tmp${a.dim}`] : operationsMap[a.type];
             let opB = ["cm", "tmpExp"].includes(b.type) ? operationsMap[`commit${b.dim}`] : b.type === "tmp" ? operationsMap[`tmp${b.dim}`] : operationsMap[b.type];
-            // if(opA < opB) _op.op = "sub_swap";
+            //if(opA < opB && r.op === "sub") _op.op = "sub_swap";
+            //return a.dim !== b.dim ? b.dim - a.dim : opA - opB;
             return opA - opB;
         });
     }
