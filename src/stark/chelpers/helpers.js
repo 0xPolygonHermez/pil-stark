@@ -144,9 +144,21 @@ module.exports.findPatterns = function findPatterns(array, minRepetitions = 50, 
 
     const sortedPatterns = Object.entries(patterns).sort((a, b) => b[1]*(JSON.parse(b[0]).length - 1) - a[1]*(JSON.parse(a[0]).length - 1));
     const patternsSelected = [];
+
+    let arrayStr = array.join(", ");
+    let counter = Math.max(...array);
     for (const [pattern, count] of sortedPatterns) {
-        console.log(`Sequence ${pattern} has occurred ${count} times.`);
-        if(!isPatternSelected(patternsSelected, JSON.parse(pattern))) patternsSelected.push({ops: JSON.parse(pattern), count});
+        const sequence = JSON.parse(pattern);
+        let currentRepetitions = countRepetitions(arrayStr.split(", ").map(v => parseInt(v)), sequence);
+        let currentReduction = currentRepetitions*(sequence.length - 1);
+
+        if(currentRepetitions > minRepetitions && currentReduction > minReducedOperations) {
+            patternsSelected.push(sequence);
+            let patternString = sequence.join(", ");
+            arrayStr = arrayStr.replace(new RegExp(patternString, "g"), `${counter++}`);
+            console.log(`Sequence ${pattern} reduces ${currentReduction} operations`);
+        }
+
     }
     return patternsSelected;
 }
@@ -171,43 +183,6 @@ function countRepetitions(arr, pattern) {
     }
 
     return count;
-}
-
-function isPatternSelected(patternsSelected, newPattern) {
-    const patterns = patternsSelected.map(p => p.ops);
-    for (let i = 0; i < patterns.length; i++) {
-        let bigArray = newPattern.length <= patterns[i].length ? patterns[i] : newPattern;
-        let subArray = newPattern.length <= patterns[i].length ? newPattern : patterns[i];
-        
-        for (let j = 0; j <= bigArray.length - subArray.length; j++) {
-
-            if(areCircularPermutations(bigArray, subArray)) return true;
-            
-            if (isSubset(bigArray, subArray)) return true;
-
-            let match = true;
-            for (let k = 0; k < subArray.length; k++) {
-                if (subArray[k] !== bigArray[j + k]) {
-                    match = false;
-                    break;
-                }
-            }
-
-            if (match) {
-                return true; // newPattern is a subarray respecting the order of patternsSelected[i]
-            }
-        }
-    }
-    return false;
-}
-
-function areCircularPermutations(arr1, arr2) {
-    const array1Circular = arr1.join(",") + "," + arr1.join(",");
-    return array1Circular.includes(arr2.join(","));
-}
-
-function isSubset(arr1, arr2) {
-    return arr1.join(",").includes(arr2.join(","));
 }
 
 module.exports.compileCode = function compileCode(functionName, starkInfo, code, dom, ret) {
