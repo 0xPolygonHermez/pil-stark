@@ -122,7 +122,7 @@ function isIntersecting(segment1, segment2) {
     return start2 <= end1 && start1 <= end2;
 }
 
-module.exports.findPatterns = function findPatterns(array, minRepetitions = 50, minReducedOperations = 500) {
+module.exports.findPatterns = function findPatterns(array, minRepetitions = 50, minReducedOperations = 400) {
     const slidingWindow = [];
     const patterns = {};
     let i = 0;
