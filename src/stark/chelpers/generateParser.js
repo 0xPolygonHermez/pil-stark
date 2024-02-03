@@ -20,6 +20,11 @@ module.exports.generateParser = function generateParser(className, stageName = "
     let c_args = 0;
 
     let parserName = stageName ? `${stageName}_parser_avx` : "parser_avx";
+
+    if(operationsUsed && operationsUsed.length === 0) {
+        return `#include "${className}.hpp"\nvoid ${className}::${parserName}(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds) {};`;
+    }
+
     const parserCPP = [
         `#include "${className}.hpp"\n`,
 
