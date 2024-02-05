@@ -22,7 +22,6 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
     const nBitsExt = starkInfo.starkStruct.nBitsExt;
 
     const next = (dom == "n" ? 1 : 1 << (nBitsExt - nBits));
-    const N = (dom == "n" ? (1 << nBits) : (1 << nBitsExt));
 
     // Evaluate max and min temporal variable for tmp_ and tmp3_
     let maxid = 100000;
@@ -32,14 +31,15 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         
     for (let j = 0; j < code.length; j++) {
         const r = code[j];
-        if(r.op !== "copy" && !["q", "f"].includes(r.dest.type)) {
-            args.push(operationsTypeMap[r.op]);
-            ++cont_args;
-        }
         pushResArg(r, r.dest.type);
         ++cont_ops;
         
         let operation = getOperation(r);
+
+        if(operation.op !== "copy" && !["q", "f"].includes(operation.dest_type)) {
+            args.push(operationsTypeMap[operation.op]);
+            ++cont_args;
+        }
 
         for(let i = 0; i < r.src.length; i++) {
             pushSrcArg(r.src[i], r.src[i].type);
