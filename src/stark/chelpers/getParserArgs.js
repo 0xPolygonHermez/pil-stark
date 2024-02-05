@@ -31,16 +31,16 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         
     for (let j = 0; j < code.length; j++) {
         const r = code[j];
-        pushResArg(r, r.dest.type);
-        ++cont_ops;
         
         let operation = getOperation(r);
+        ++cont_ops;
 
         if(operation.op !== "copy" && !["q", "f"].includes(operation.dest_type)) {
             args.push(operationsTypeMap[operation.op]);
             ++cont_args;
         }
 
+        pushResArg(r, r.dest.type);
         for(let i = 0; i < r.src.length; i++) {
             pushSrcArg(r.src[i], r.src[i].type);
         }

@@ -72,7 +72,7 @@ module.exports = async function buildCHelpers(starkInfo, className = "") {
 
         const opsUsed = operationsUsed[stageName];
         result[`${className}_${stageName}_parser_cpp`] = generateParser(className, stageName, operations, opsUsed);
-        cHelpersStepsHppParserAVX.push(`        void ${stageName}_parser_avx(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds);`);
+        cHelpersStepsHppParserAVX.push(`        void ${stageName}_parser_avx(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds) {};`);
         if(stage == nStages && !executeBefore) {
             cHelpersStepsCppParserAVX.push(...[
                 `            case ${nStages}:`,
