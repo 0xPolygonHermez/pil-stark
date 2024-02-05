@@ -60,7 +60,7 @@ module.exports = async function buildCHelpers(starkInfo, className = "") {
     console.log("Total subset of operations used: " + totalSubsetOperationsUsed.join(", "));
     console.log("--------------------------------");
     
-    result[`${className}_generic_parser_cpp`] = generateParser(className, "", operations, totalSubsetOperationsUsed);
+    result[`${className}_generic_parser_cpp`] = generateParser(className, "", operations, totalSubsetOperationsUsed, true);
 
     for(let i = 0; i < cHelpersInfo.length; ++i) {
         const stage = cHelpersInfo[i].stage;
@@ -71,7 +71,8 @@ module.exports = async function buildCHelpers(starkInfo, className = "") {
         console.log("Generating code for " + stageName);
 
         const opsUsed = operationsUsed[stageName];
-        result[`${className}_${stageName}_parser_cpp`] = generateParser(className, stageName, operations, opsUsed);
+        const vectorizeEvals = stage === nStages + 2 ? true : false;
+        result[`${className}_${stageName}_parser_cpp`] = generateParser(className, stageName, operations, opsUsed, vectorizeEvals);
         cHelpersStepsHppParserAVX.push(`        void ${stageName}_parser_avx(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds) {};`);
         if(stage == nStages && !executeBefore) {
             cHelpersStepsCppParserAVX.push(...[
