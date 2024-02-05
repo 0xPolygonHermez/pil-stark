@@ -15,7 +15,7 @@ const operationsMap = {
     "f": 14,
 }
 
-module.exports.generateParser = function generateParser(className, stageName = "", operations, operationsUsed) {
+module.exports.generateParser = function generateParser(className, stageName = "", operations, operationsUsed, vectorizeEvals = false) {
 
     let c_args = 0;
 
@@ -35,13 +35,33 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "    __m256i tmp1[parserParams.nTemp1];",
         "    Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
         "    uint64_t offsetsDest[4], offsetsSrc0[4], offsetsSrc1[4];",
+        "    Goldilocks3::Element_avx challenges[params.challenges.degree()];",
+        "#pragma omp parallel for",
+        "    for(uint64_t i = 0; i < params.challenges.degree(); ++i) {",
+        "        challenges[i][0] = _mm256_set1_epi64x(params.challenges[i][0].fe);",
+        "        challenges[i][1] = _mm256_set1_epi64x(params.challenges[i][1].fe);",
+        "        challenges[i][2] = _mm256_set1_epi64x(params.challenges[i][2].fe);",
+        "    }",
+    ];
+    if(vectorizeEvals) {
+        parserCPP.push(...[
+            "    Goldilocks3::Element_avx evals[params.evals.degree()];",
+            "#pragma omp parallel for",
+            "    for(uint64_t i = 0; i < params.evals.degree(); ++i) {",
+            "        evals[i][0] = _mm256_set1_epi64x(params.evals[i][0].fe);",
+            "        evals[i][1] = _mm256_set1_epi64x(params.evals[i][1].fe);",
+            "        evals[i][2] = _mm256_set1_epi64x(params.evals[i][2].fe);",
+            "    }",
+        ]);
+    }
+    parserCPP.push(...[
         "#pragma omp parallel for private(tmp1, tmp3, offsetsDest, offsetsSrc0, offsetsSrc1)",
         `    for (uint64_t i = rowStart; i < rowEnd; i+= nrowsBatch) {`,
         "        uint64_t i_args = 0;",
         "        \n",
         "        for (uint64_t kk = 0; kk < parserParams.nOps; ++kk) {",
         `            switch (parserParams.ops[kk]) {`,
-    ];
+    ]);
            
     const edgeCases = ["const", "commit1", "commit3"];
 
@@ -276,7 +296,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
                     return `&constPols->getElement(parserParams.args[i_args + ${c_args}], i + parserParams.args[i_args + ${c_args + 1}]), `;
                 }
             case "challenge":
-                return `params.challenges[parserParams.args[i_args + ${c_args}]], `;
+                return `challenges[parserParams.args[i_args + ${c_args}]], `;
             case "x":
                 return `x[i], `;
             case "number":
@@ -286,7 +306,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
                     return `Goldilocks::fromU64(parserParams.args[i_args + ${c_args}]), `;
                 }
             case "eval":
-                return `params.evals[parserParams.args[i_args + ${c_args}]], `;
+                return `evals[parserParams.args[i_args + ${c_args}]], `;
             case "xDivXSubXi": 
                 return "params.xDivXSubXi[i], ";
             case "xDivXSubWXi":
@@ -317,7 +337,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
             } else if(["xDivXSubXi", "xDivXSubWXi"].includes(type)) {
                 offset = `                        ${offsetName}[j] = j*params.${type}.offset();`;
                 offsetCall = `${offsetName}, `;
-            } else if (["challenge", "public", "eval"].includes(type)) {
+            } else if (["public"].includes(type)) {
                 offset = `                        ${offsetName}[j] = 0;`;
                 offsetCall = `${offsetName}, `;
             } else if (type === "number") {
@@ -333,10 +353,6 @@ module.exports.generateParser = function generateParser(className, stageName = "
                 offsetCall = `${type}.offset(), `;
             } else if(["xDivXSubXi", "xDivXSubWXi"].includes(type)) {
                 offsetCall = `params.${type}.offset(), `;
-            } else if (addOffset) {
-                if (["challenge", "eval"].includes(type)) {
-                    offsetCall = "uint64_t(0), ";
-                }
             }
         }
     
