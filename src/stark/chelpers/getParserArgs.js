@@ -6,7 +6,7 @@ const operationsTypeMap = {
     "add": 0,
     "sub": 1,
     "mul": 2,
-    //"sub_swap": 3,
+    "sub_swap": 3,
 }
 
 module.exports.getParserArgs = function getParserArgs(starkInfo, operations, code, dom, stage, executeBefore = true) {

@@ -386,8 +386,7 @@ module.exports.getAllOperations = function getAllOperations() {
             let src0_type = possibleSrcDim1[k];
             possibleOps.push({dest_type, src0_type}); // Copy operation
             if(src0_type === "x") continue;
-            // for (let l = k; l < possibleSrcDim1.length; ++l) {
-            for (let l = 0; l < possibleSrcDim1.length; ++l) {
+            for (let l = k; l < possibleSrcDim1.length; ++l) {
                 let src1_type = possibleSrcDim1[l];
                 if(src1_type === "x") continue;
                 possibleOps.push({dest_type, src0_type, src1_type})
@@ -399,14 +398,6 @@ module.exports.getAllOperations = function getAllOperations() {
     for(let j = 0; j < possibleDestinationsDim3.length; j++) {
         let dest_type = possibleDestinationsDim3[j];
 
-        // Dest dim 3, sources dimension 1 and 3
-        for(let k = 0; k < possibleSrcDim1.length; ++k) {
-            let src0_type = possibleSrcDim1[k];
-            for (let l = 0; l < possibleSrcDim3.length; ++l) {
-                let src1_type = possibleSrcDim3[l];
-                possibleOps.push({dest_type, src0_type, src1_type})
-            }
-        }
 
         // Dest dim 3, sources dimension 3 and 1
         for(let k = 0; k < possibleSrcDim3.length; ++k) {
@@ -414,7 +405,6 @@ module.exports.getAllOperations = function getAllOperations() {
             
             for (let l = 0; l < possibleSrcDim1.length; ++l) {
                 let src1_type = possibleSrcDim1[l];
-                if(src1_type === "x") continue;
                 possibleOps.push({dest_type, src0_type, src1_type});
             }
         }
@@ -422,8 +412,7 @@ module.exports.getAllOperations = function getAllOperations() {
         for(let k = 0; k < possibleSrcDim3.length; ++k) {
             let src0_type = possibleSrcDim3[k];
             if(["commit3", "tmp3"].includes(src0_type)) possibleOps.push({dest_type, src0_type}); // Copy operation
-            // for (let l = k; l < possibleSrcDim3.length; ++l) {
-            for (let l = 0; l < possibleSrcDim3.length; ++l) {
+            for (let l = k; l < possibleSrcDim3.length; ++l) {
                 let src1_type = possibleSrcDim3[l];
                 possibleOps.push({dest_type, src0_type, src1_type})
             }
@@ -464,13 +453,13 @@ module.exports.getOperation = function getOperation(r) {
         _op.dest_type = r.dest.type;
     }
     
-    if(r.op !== "copy" && r.op !== "sub") {
+    if(r.op !== "copy") {
         r.src.sort((a, b) => {
             let opA =  ["cm", "tmpExp"].includes(a.type) ? operationsMap[`commit${a.dim}`] : a.type === "tmp" ? operationsMap[`tmp${a.dim}`] : operationsMap[a.type];
             let opB = ["cm", "tmpExp"].includes(b.type) ? operationsMap[`commit${b.dim}`] : b.type === "tmp" ? operationsMap[`tmp${b.dim}`] : operationsMap[b.type];
-            //if(opA < opB && r.op === "sub") _op.op = "sub_swap";
-            //return a.dim !== b.dim ? b.dim - a.dim : opA - opB;
-            return opA - opB;
+            let swap = a.dim !== b.dim ? b.dim - a.dim : opA - opB;
+            if(r.op === "sub" && swap < 0) _op.op = "sub_swap";
+            return swap;
         });
     }
 
