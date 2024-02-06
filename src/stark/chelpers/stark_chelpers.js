@@ -78,13 +78,13 @@ module.exports = async function buildCHelpers(starkInfo, className = "") {
             cHelpersStepsCppParserAVX.push(...[
                 `            case ${nStages}:`,
                 "                if(parserParams.executeBefore) {",
-                `                    ${className}::step${nStages}_parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, false, true);`,
+                `                    ${className}::parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, false, true);`,
                 `                    ${className}::step${nStages}_parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, false, false);`,
-                `                    ${className}::step${nStages}_parser_avx(params, parserParams, rowEnd, domainSize, nrowsBatch, domainSize, false, true);`,
+                `                    ${className}::parser_avx(params, parserParams, rowEnd, domainSize, nrowsBatch, domainSize, false, true);`,
                 "                } else {",
-                `                    ${className}::step${nStages}_after_parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, false, true);`,
+                `                    ${className}::parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, false, true);`,
                 `                    ${className}::step${nStages}_after_parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, false, false);`,
-                `                    ${className}::step${nStages}_after_parser_avx(params, parserParams, rowEnd, domainSize, nrowsBatch, domainSize, false, true);`,
+                `                    ${className}::parser_avx(params, parserParams, rowEnd, domainSize, nrowsBatch, domainSize, false, true);`,
                 "                }",
                 `                break;`
             ])
@@ -92,9 +92,9 @@ module.exports = async function buildCHelpers(starkInfo, className = "") {
             const domainExtended = stage > nStages ? true : false;
             cHelpersStepsCppParserAVX.push(...[
                 `            case ${stage}:`,
-                `                ${className}::step${stage}_parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, ${domainExtended}, true);`,
+                `                ${className}::parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, ${domainExtended}, true);`,
                 `                ${className}::step${stage}_parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, ${domainExtended}, false);`,
-                `                ${className}::step${stage}_parser_avx(params, parserParams, rowEnd, domainSize, nrowsBatch, domainSize, ${domainExtended}, true);`,
+                `                ${className}::parser_avx(params, parserParams, rowEnd, domainSize, nrowsBatch, domainSize, ${domainExtended}, true);`,
                 `                break;`
             ])
         }

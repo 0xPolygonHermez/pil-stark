@@ -19,8 +19,9 @@ module.exports.generateParser = function generateParser(className, stageName = "
 
     let c_args = 0;
 
-    let parserName = stageName ? `${stageName}_parser_avx` : "parser_avx";
-
+    let isStage = stageName !== "";
+    let parserName = isStage ? `${stageName}_parser_avx` : "parser_avx";
+    
     if(operationsUsed && operationsUsed.length === 0) {
         return `#include "${className}.hpp"\nvoid ${className}::${parserName}(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds);`;
     }
@@ -51,10 +52,10 @@ module.exports.generateParser = function generateParser(className, stageName = "
     ];
 
     parserCPP.push(...[
-        "    __m256i publics[params.publics.degree()];",
+        "    __m256i publics[50];",
         "#pragma omp parallel for",
-        "    for(uint64_t i = 0; i < params.publics.degree(); ++i) {",
-        "        publics[i] = _mm256_set1_epi64x(params.publics[i][0].fe);",
+        "    for(uint64_t i = 0; i < 50; ++i) {",
+        "        publics[i] = _mm256_set1_epi64x(params.publicInputs[i].fe);",
         "    }",
     ]);
     if(vectorizeEvals) {
@@ -97,14 +98,16 @@ module.exports.generateParser = function generateParser(className, stageName = "
         }
         
         let includeEnds = false;
-        if(!op.isGroupOps) {
-            if(!["q", "f"].includes(op.dest_type) && (edgeCases.includes(op.dest_type) || edgeCases.includes(op.src0_type) || (op.src1_type && edgeCases.includes(op.src1_type)))) includeEnds = true;
-        } else {
-            for(let j = 0; j < op.ops.length; j++) {
-                let opr = operations[op.ops[j]];
-                if(!["q", "f"].includes(opr.dest_type) && (edgeCases.includes(opr.dest_type) || edgeCases.includes(opr.src0_type) || (opr.src1_type && edgeCases.includes(opr.src1_type)))) {
-                    includeEnds = true;
-                    break;
+        if(!isStage) {
+            if(!op.isGroupOps) {
+                if(!["q", "f"].includes(op.dest_type) && (edgeCases.includes(op.dest_type) || edgeCases.includes(op.src0_type) || (op.src1_type && edgeCases.includes(op.src1_type)))) includeEnds = true;
+            } else {
+                for(let j = 0; j < op.ops.length; j++) {
+                    let opr = operations[op.ops[j]];
+                    if(!["q", "f"].includes(opr.dest_type) && (edgeCases.includes(opr.dest_type) || edgeCases.includes(opr.src0_type) || (opr.src1_type && edgeCases.includes(opr.src1_type)))) {
+                        includeEnds = true;
+                        break;
+                    }
                 }
             }
         }
@@ -233,8 +236,6 @@ module.exports.generateParser = function generateParser(className, stageName = "
 
         let typeDest = writeType(operation.dest_type, includesEnds);
         let {offset: offsetDest, offsetCall: offsetDestCall} = getOffset(operation.dest_type,"dest", includesEnds);
-        // name += typeDest + ", ";
-        // if(offsetDestCall) name += offsetDestCall + ", ";
         c_args += nArgs(operation.dest_type);
 
         let typeSrc0 = writeType(operation.src0_type, includesEnds);
