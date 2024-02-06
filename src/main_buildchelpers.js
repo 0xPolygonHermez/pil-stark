@@ -11,10 +11,12 @@ const argv = require("yargs")
     .alias("s", "starkinfo")
     .alias("c", "chelpers")
     .alias("C", "cls")
+    .alias("m", "multiple")
     .argv;
 
 async function run() {
     let cls = typeof (argv.cls) === "string" ? argv.cls.trim() : "Stark";
+    let multiple = argv.multiple;
     const starkInfoFile = typeof (argv.starkinfo) === "string" ? argv.starkinfo.trim() : "mycircuit.starkinfo.json";
     const chelpersFile = typeof (argv.chelpers) === "string" ? argv.chelpers.trim() : "mycircuit.chelpers.cpp";
 
@@ -30,7 +32,7 @@ async function run() {
 
     const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
-    const {code: cCode, cHelpersInfo } = await buildCHelpers(starkInfo, cls);
+    const {code: cCode, cHelpersInfo } = await buildCHelpers(starkInfo, cls, multiple);
 
     for (cpart in cCode) {
         let fileName = leftFilename + "/" + cpart;
