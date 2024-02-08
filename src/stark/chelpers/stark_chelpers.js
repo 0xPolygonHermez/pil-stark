@@ -20,14 +20,14 @@ module.exports = async function buildCHelpers(starkInfo, className = "", multipl
         `#include "chelpers_steps.hpp"\n\n`,
         `class ${className} : public CHelpersSteps {`,
         "    public:",
-        "        void calculateExpressions(StarkInfo starkInfo, StepsParams &params, ParserParams &parserParams, bool useGeneric);",
+        "        void calculateExpressions(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, bool useGeneric);",
         "    private:",
-        "        void parser_avx(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds);"
+        "        void parser_avx(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, bool domainExtended, bool const includesEnds);"
     ];
     
     const cHelpersStepsCpp = [
         `#include "${className}.hpp"\n`,
-        `void ${className}::calculateExpressions(StarkInfo starkInfo, StepsParams &params, ParserParams &parserParams, bool useGeneric) {`,
+        `void ${className}::calculateExpressions(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, bool useGeneric) {`,
         `    bool domainExtended = parserParams.stage > 3 ? true : false;`,
         `    uint32_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;`,
         `    uint32_t nrowsBatch = 4;`,
@@ -36,15 +36,28 @@ module.exports = async function buildCHelpers(starkInfo, className = "", multipl
     ];
     if(multiple) cHelpersStepsCpp.push(`    if(useGeneric) {`);
     cHelpersStepsCpp.push(...[
-        `        ${className}::parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, domainExtended, true);`,
-        `        ${className}::parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, domainExtended, false);`,
-        `        ${className}::parser_avx(params, parserParams, rowEnd, domainSize, nrowsBatch, domainSize, domainExtended, true);`,
+        `        ${className}::parser_avx(starkInfo, params, parserParams, 0, rowStart, nrowsBatch, domainExtended, true);`,
+        `        ${className}::parser_avx(starkInfo, params, parserParams, rowStart, rowEnd, nrowsBatch, domainExtended, false);`,
+        `        ${className}::parser_avx(starkInfo, params, parserParams, rowEnd, domainSize, nrowsBatch, domainExtended, true);`,
     ]);;
    
     let operations = getAllOperations();
     let operationsUsed = {};
 
     let totalSubsetOperationsUsed = [];
+
+    //Define mapOffsetCol
+    let nrowsbatch = 4 + (1 << (starkInfo.starkStruct.nBitsExt - starkInfo.starkStruct.nBits));
+    starkInfo.mapOffsetsCol = {};
+    starkInfo.mapOffsetsCol.cm1_n = nrowsbatch * starkInfo.nConstants;
+    starkInfo.mapOffsetsCol.cm2_n = starkInfo.mapOffsetsCol.cm1_n + nrowsbatch * starkInfo.mapSectionsN.cm1_n;
+    starkInfo.mapOffsetsCol.cm3_n = starkInfo.mapOffsetsCol.cm2_n + nrowsbatch * starkInfo.mapSectionsN.cm2_n;
+    starkInfo.mapOffsetsCol.tmpExp_n = starkInfo.mapOffsetsCol.cm3_n + nrowsbatch * starkInfo.mapSectionsN.cm3_n;
+
+    starkInfo.mapOffsetsCol.cm1_2ns = nrowsbatch * starkInfo.nConstants;
+    starkInfo.mapOffsetsCol.cm2_2ns = starkInfo.mapOffsetsCol.cm1_2ns + nrowsbatch * starkInfo.mapSectionsN.cm1_2ns;
+    starkInfo.mapOffsetsCol.cm3_2ns = starkInfo.mapOffsetsCol.cm2_2ns + nrowsbatch * starkInfo.mapSectionsN.cm2_2ns;
+    starkInfo.mapOffsetsCol.cm4_2ns = starkInfo.mapOffsetsCol.cm3_2ns + nrowsbatch * starkInfo.mapSectionsN.cm3_2ns;
 
     for(let i = 1; i < nStages - 1; ++i) {
         let stage = i + 1;
@@ -75,28 +88,22 @@ module.exports = async function buildCHelpers(starkInfo, className = "", multipl
         const opsUsed = operationsUsed[stageName];
         const vectorizeEvals = stage === nStages + 2 ? true : false;
         if(multiple) result[`${className}_${stageName}_parser_cpp`] = generateParser(className, stageName, operations, opsUsed, vectorizeEvals);
-        cHelpersStepsHppParserAVX.push(`        void ${stageName}_parser_avx(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds);`);
+        cHelpersStepsHppParserAVX.push(`        void ${stageName}_parser_avx(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, uint32_t nrowsBatch, bool domainExtended);`);
+        const domainExtended = stage > nStages ? true : false;
         if(stage == nStages && !executeBefore) {
             cHelpersStepsCppParserAVX.push(...[
                 `            case ${nStages}:`,
                 "                if(parserParams.executeBefore) {",
-                `                    ${className}::parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, false, true);`,
-                `                    ${className}::step${nStages}_parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, false, false);`,
-                `                    ${className}::parser_avx(params, parserParams, rowEnd, domainSize, nrowsBatch, domainSize, false, true);`,
+                `                    ${className}::step${nStages}_parser_avx(starkInfo, params, parserParams, nrowsBatch, ${domainExtended});`,
                 "                } else {",
-                `                    ${className}::parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, false, true);`,
-                `                    ${className}::step${nStages}_after_parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, false, false);`,
-                `                    ${className}::parser_avx(params, parserParams, rowEnd, domainSize, nrowsBatch, domainSize, false, true);`,
+                `                    ${className}::step${nStages}_after_parser_avx(starkInfo, params, parserParams, nrowsBatch, ${domainExtended});`,
                 "                }",
                 `                break;`
             ])
         }  else if(stage !== nStages) {
-            const domainExtended = stage > nStages ? true : false;
             cHelpersStepsCppParserAVX.push(...[
                 `            case ${stage}:`,
-                `                ${className}::parser_avx(params, parserParams, 0, rowStart, nrowsBatch, domainSize, ${domainExtended}, true);`,
-                `                ${className}::step${stage}_parser_avx(params, parserParams, rowStart, rowEnd, nrowsBatch, domainSize, ${domainExtended}, false);`,
-                `                ${className}::parser_avx(params, parserParams, rowEnd, domainSize, nrowsBatch, domainSize, ${domainExtended}, true);`,
+                `                ${className}::step${stage}_parser_avx(starkInfo, params, parserParams, nrowsBatch, ${domainExtended});`,
                 `                break;`
             ])
         }

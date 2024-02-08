@@ -207,7 +207,9 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         args.push(Number(offset));
         args.push(Number(offset_prime));
         args.push(Number(size));
+        args.push(Number(starkInfo.mapOffsetsCol[p.section]));
+        args.push(Number(p.sectionPos));
         
-        cont_args += 3;
+        cont_args += 5;
     }
 }

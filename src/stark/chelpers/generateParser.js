@@ -22,21 +22,62 @@ module.exports.generateParser = function generateParser(className, stageName = "
     let isStage = stageName !== "";
     let parserName = isStage ? `${stageName}_parser_avx` : "parser_avx";
     
+    let memory = isStage ? true : false;
+
+    let functionName = isStage 
+        ? `void ${className}::${parserName}(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, uint32_t nrowsBatch, bool domainExtended) {`
+        : `void ${className}::${parserName}(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, bool domainExtended, bool const includesEnds) {`
+
     if(operationsUsed && operationsUsed.length === 0) {
-        return `#include "${className}.hpp"\nvoid ${className}::${parserName}(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds) {};`;
+        return `#include "${className}.hpp"\n${functionName}`;
     }
 
     const parserCPP = [
         `#include "${className}.hpp"\n`,
-
-        `void ${className}::${parserName}(StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, uint32_t domainSize, bool domainExtended, bool const includesEnds) {`,
+        `${functionName}`,
         "    uint64_t numConstPols = params.pConstPols->numPols();",
+        "    uint64_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;",
         "    Polinomial &x = domainExtended ? params.x_2ns : params.x_n;", 
         "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
         "    __m256i tmp1[parserParams.nTemp1];",
         "    Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
         "    uint64_t offsetsDest[4], offsetsSrc0[4], offsetsSrc1[4];",
-        "    Goldilocks3::Element_avx challenges[params.challenges.degree()];",
+        "    Goldilocks3::Element_avx challenges[params.challenges.degree()];\n",
+    ];
+
+    if(memory) {
+        parserCPP.push(...[
+            `    uint64_t nrowsBuff = nrowsBatch + (1<<(starkInfo.starkStruct.nBitsExt - starkInfo.starkStruct.nBits));\n`,
+            `    uint64_t nColsConstants = starkInfo.nConstants;`,
+            `    uint64_t bOffsetConstants = 0;`,
+            `    uint64_t nColsCm1 = starkInfo.mapSectionsN.section[eSection::cm1_2ns];`,
+            `    uint64_t offsetCm1 = domainExtended ? starkInfo.mapOffsets.section[eSection::cm1_2ns] : starkInfo.mapOffsets.section[eSection::cm1_n];`,
+            `    uint64_t bOffsetCm1 = nrowsBuff*nColsConstants;`,
+            `    uint64_t nColsCm2 = starkInfo.mapSectionsN.section[eSection::cm2_2ns];`,
+            `    uint64_t offsetCm2 = domainExtended ? starkInfo.mapOffsets.section[eSection::cm2_2ns] : starkInfo.mapOffsets.section[eSection::cm2_n];`,
+            `    uint64_t bOffsetCm2 = nrowsBuff*(nColsConstants + nColsCm1);`,
+            `    uint64_t nColsCm3 = starkInfo.mapSectionsN.section[eSection::cm3_2ns];`,
+            `    uint64_t offsetCm3 = domainExtended ? starkInfo.mapOffsets.section[eSection::cm3_2ns] : starkInfo.mapOffsets.section[eSection::cm3_n];`,
+            `    uint64_t bOffsetCm3 = nrowsBuff*(nColsConstants + nColsCm1 + nColsCm2);\n`,
+            `    uint64_t nCols = nColsConstants + nColsCm1 + nColsCm2 + nColsCm3;\n`,
+        ]);
+
+        parserCPP.push(...[
+            "    uint64_t nColsTmpExp = starkInfo.mapSectionsN.section[eSection::tmpExp_n];",
+            "    uint64_t offsetTmpExp = starkInfo.mapOffsets.section[eSection::tmpExp_n];",
+            "    uint64_t bOffsetTmpExp = nrowsBuff*(nColsConstants + nColsCm1 + nColsCm2 + nColsCm3);\n",
+            "    uint64_t nColsCm4 = starkInfo.mapSectionsN.section[eSection::cm4_2ns];",
+            "    uint64_t offsetCm4 = starkInfo.mapOffsets.section[eSection::cm4_2ns];",
+            "    uint64_t bOffsetCm4 = nrowsBuff*(nColsConstants + nColsCm1 + nColsCm2 + nColsCm3);\n",
+            "    nCols += domainExtended ? nColsCm4 : nColsTmpExp;\n",
+        ]);
+
+        parserCPP.push(...[
+            "    Goldilocks::Element bufferT[nrowsBuff*nCols];\n",
+        ]);
+    }
+        
+    parserCPP.push(...[
         "    Goldilocks3::Element_avx tmp3_;",
         "    Goldilocks3::Element_avx tmp3_0;",
         "    Goldilocks3::Element_avx tmp3_1;",
@@ -49,7 +90,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "        challenges[i][1] = _mm256_set1_epi64x(params.challenges[i][1].fe);",
         "        challenges[i][2] = _mm256_set1_epi64x(params.challenges[i][2].fe);",
         "    }",
-    ];
+    ]);
 
     parserCPP.push(...[
         "    __m256i publics[50];",
@@ -69,11 +110,60 @@ module.exports.generateParser = function generateParser(className, stageName = "
             "    }",
         ]);
     }
+    
+    let pragmaParallelArgs = "tmp1, tmp3, offsetsDest, offsetsSrc0, offsetsSrc1, tmp1_, tmp3_, tmp1_0, tmp1_1, tmp3_0, tmp3_1";
+    if(memory) pragmaParallelArgs += ", bufferT";
+    let startLoop = isStage ? "0" : "rowStart";
+    let endLoop = isStage ? "domainSize" : "rowEnd";
     parserCPP.push(...[
-        "#pragma omp parallel for private(tmp1, tmp3, offsetsDest, offsetsSrc0, offsetsSrc1, tmp1_, tmp3_, tmp1_0, tmp1_1, tmp3_0, tmp3_1)",
-        `    for (uint64_t i = rowStart; i < rowEnd; i+= nrowsBatch) {`,
-        "        uint64_t i_args = 0;",
-        "        \n",
+        `#pragma omp parallel for private(${pragmaParallelArgs})`,
+        `    for (uint64_t i = ${startLoop}; i < ${endLoop}; i+= nrowsBatch) {`,
+        "        uint64_t i_args = 0;\n",
+    ]); 
+
+    if(memory) {
+        parserCPP.push(...[
+            "        for(uint64_t j = 0; j < nrowsBuff; ++j) {",
+            "            uint64_t l = i + j;",
+            "            if(l >= domainSize) l -= domainSize;",
+            "            for(uint64_t k = 0; k < nColsConstants; ++k) {",
+            "                bufferT[bOffsetConstants + k*nrowsBuff + j] = ((Goldilocks::Element *)constPols->address())[l * nColsConstants + k];",
+            "            }",
+            "            for(uint64_t k = 0; k < nColsCm1; ++k) {",
+            "                bufferT[bOffsetCm1 + k*nrowsBuff + j] = params.pols[offsetCm1 + l * nColsCm1 + k];",
+            "            }",
+            "            for(uint64_t k = 0; k < nColsCm2; ++k) {",
+            "                bufferT[bOffsetCm2 + k*nrowsBuff + j] = params.pols[offsetCm2 + l * nColsCm2 + k];",
+            "            }",
+            "            for(uint64_t k = 0; k < nColsCm3; ++k) {",
+            "                bufferT[bOffsetCm3 + k*nrowsBuff + j] = params.pols[offsetCm3 + l * nColsCm3 + k];",
+            "            }",
+        ]);
+
+        if(!["step5", "step4"].includes(stageName)) {
+            parserCPP.push(...[
+                "            for(uint64_t k = 0; k < nColsTmpExp; ++k) {",
+                "                bufferT[bOffsetTmpExp + k*nrowsBuff + j] = params.pols[offsetTmpExp + l * nColsTmpExp + k];",
+                "            }",
+            ]);
+        }
+
+        if(stageName === "step5") {
+            parserCPP.push(...[
+                "            for(uint64_t k = 0; k < nColsCm4; ++k) {",
+                "                bufferT[bOffsetCm4 + k*nrowsBuff + j] = params.pols[offsetCm4 + l * nColsCm4 + k];",
+                "            }",
+            ]);
+        }
+
+
+        parserCPP.push(...[
+            "        }",
+        ]);
+    }
+
+    parserCPP.push(...[
+        "\n",
         "        for (uint64_t kk = 0; kk < parserParams.nOps; ++kk) {",
         `            switch (parserParams.ops[kk]) {`,
     ]);
@@ -115,13 +205,13 @@ module.exports.generateParser = function generateParser(className, stageName = "
             if(op.isGroupOps) {
                 for(let j = 0; j < op.ops.length; j++) {
                     let opr = operations[op.ops[j]];
-                    operationCase.push(writeOperation(opr, false));
+                    operationCase.push(writeOperation(opr, false, memory));
                     let numberArgs = nArgs(opr.dest_type) + nArgs(opr.src0_type);
                     if(opr.src1_type && !["q", "f"].includes(opr.dest_type)) numberArgs += nArgs(opr.src1_type) + 1;
                     operationCase.push(`                    i_args += ${numberArgs};`);
                 }
             } else {
-                operationCase.push(writeOperation(op, false));
+                operationCase.push(writeOperation(op, false, memory));
                 let numberArgs = nArgs(op.dest_type) + nArgs(op.src0_type);
                 if(op.src1_type && !["q", "f"].includes(op.dest_type)) numberArgs += nArgs(op.src1_type) + 1;
                 operationCase.push(`                    i_args += ${numberArgs};`);
@@ -131,13 +221,13 @@ module.exports.generateParser = function generateParser(className, stageName = "
             if(op.isGroupOps) {
                 for(let j = 0; j < op.ops.length; j++) {
                     let opr = operations[op.ops[j]];
-                    operationCase.push(writeOperation(opr, false));
+                    operationCase.push(writeOperation(opr, false, memory));
                     let numberArgs = nArgs(opr.dest_type) + nArgs(opr.src0_type);
                     if(opr.src1_type && !["q", "f"].includes(opr.dest_type)) numberArgs += nArgs(opr.src1_type) + 1;
                     operationCase.push(`                    i_args += ${numberArgs};`);
                 }
             } else {
-                operationCase.push(writeOperation(op, false));
+                operationCase.push(writeOperation(op, false, memory));
                 let numberArgs = nArgs(op.dest_type) + nArgs(op.src0_type);
                 if(op.src1_type && !["q", "f"].includes(op.dest_type)) numberArgs += nArgs(op.src1_type) + 1;
                 operationCase.push(`                    i_args += ${numberArgs};`);
@@ -146,13 +236,13 @@ module.exports.generateParser = function generateParser(className, stageName = "
             if(op.isGroupOps) {
                 for(let j = 0; j < op.ops.length; j++) {
                     let opr = operations[op.ops[j]];
-                    operationCase.push(writeOperation(opr, true));
+                    operationCase.push(writeOperation(opr, true, memory));
                     let numberArgs = nArgs(opr.dest_type) + nArgs(opr.src0_type);
                     if(opr.src1_type && !["q", "f"].includes(opr.dest_type)) numberArgs += nArgs(opr.src1_type) + 1;
                     operationCase.push(`                i_args += ${numberArgs};`);
                 }
             } else {
-                operationCase.push(writeOperation(op, true));
+                operationCase.push(writeOperation(op, true, memory));
                 let numberArgs = nArgs(op.dest_type) + nArgs(op.src0_type);
                 if(op.src1_type && !["q", "f"].includes(op.dest_type)) numberArgs += nArgs(op.src1_type) + 1;
                 operationCase.push(`                    i_args += ${numberArgs};`);
@@ -175,6 +265,27 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "              }",
         "          }",
         "       }",
+    ]);
+
+    if(memory && !["step5", "step4"].includes(stageName)) {
+        parserCPP.push(...[
+            "        for(uint64_t j = 0; j < nrowsBatch; ++j) {",
+            "            uint64_t l = i + j;",
+            "            if(l >= domainSize) l -= domainSize;",
+            "            for(uint64_t k = 0; k < nColsCm2; ++k) {",
+            "                params.pols[offsetCm2 + l * nColsCm2 + k] = bufferT[bOffsetCm2 + k*nrowsBuff + j];",
+            "            }",
+            "            for(uint64_t k = 0; k < nColsCm3; ++k) {",
+            "                params.pols[offsetCm3 + l * nColsCm3 + k] = bufferT[bOffsetCm3 + k*nrowsBuff + j];",
+            "            }",
+            "            for(uint64_t k = 0; k < nColsTmpExp; ++k) {",
+            "               params.pols[offsetTmpExp + l * nColsTmpExp + k] = bufferT[bOffsetTmpExp + k*nrowsBuff + j];",
+            "            }",
+            "        }"
+        ]);
+    }
+
+    parserCPP.push(...[
         `       if (i_args != parserParams.nArgs) std::cout << " " << i_args << " - " << parserParams.nArgs << std::endl;`,
         "       assert(i_args == parserParams.nArgs);",
         "   }"
@@ -187,7 +298,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
 
     return parserCPPCode;
 
-    function writeOperation(operation, includesEnds = false) {
+    function writeOperation(operation, includesEnds = false, memory = false) {
         if(operation.dest_type === "q") {
             const qOperation = [
                 "                    Goldilocks::Element tmp_inv[3];",
@@ -234,11 +345,11 @@ module.exports.generateParser = function generateParser(className, stageName = "
             name += `parserParams.args[i_args + ${c_args++}], `;
         }      
 
-        let typeDest = writeType(operation.dest_type, includesEnds);
+        let typeDest = writeType(operation.dest_type, includesEnds, memory);
         let {offset: offsetDest, offsetCall: offsetDestCall} = getOffset(operation.dest_type,"dest", includesEnds);
         c_args += nArgs(operation.dest_type);
 
-        let typeSrc0 = writeType(operation.src0_type, includesEnds);
+        let typeSrc0 = writeType(operation.src0_type, includesEnds, memory);
         let {offset: offsetSrc0, offsetCall: offsetSrc0Call} = getOffset(operation.src0_type, "src0", includesEnds);
         c_args += nArgs(operation.src0_type);
 
@@ -247,7 +358,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
         let typeSrc1;
 
         if(operation.src1_type) {
-            typeSrc1 = writeType(operation.src1_type, includesEnds);
+            typeSrc1 = writeType(operation.src1_type, includesEnds, memory);
 
             let offsets = getOffset(operation.src1_type, "src1", includesEnds);
             if(offsets.offset) offsetSrc1 = offsets.offset;
@@ -268,20 +379,40 @@ module.exports.generateParser = function generateParser(className, stageName = "
             
         if(offsetSrc0Call) {
             if(["x", "commit1", "const"].includes(operation.src0_type)) {
-                operationCall.push(`                    Goldilocks::load_avx(tmp1_0, ${typeSrc0}, ${offsetSrc0Call});`);
+                if(memory && ["commit1", "const"].includes(operation.src0_type)) {
+                    operationCall.push(`                    Goldilocks::load_avx(tmp1_0, ${typeSrc0});`);
+                } else {
+                    operationCall.push(`                    Goldilocks::load_avx(tmp1_0, ${typeSrc0}, ${offsetSrc0Call});`);
+                }
                 typeSrc0 = "tmp1_0";
             } else if(["commit3", "xDivXSubXi", "xDivXSubWXi"].includes(operation.src0_type)) {
-                operationCall.push(`                    Goldilocks3::load_avx(tmp3_0, ${typeSrc0}, ${offsetSrc0Call});`);
+                if(memory && operation.src0_type === "commit3") {
+                    operationCall.push(`                    Goldilocks::load_avx(tmp3_0[0], ${typeSrc0});`);
+                    operationCall.push(`                    Goldilocks::load_avx(tmp3_0[1], ${typeSrc0.substring(0, typeSrc0.length - 1)} + nrowsBuff]);`);
+                    operationCall.push(`                    Goldilocks::load_avx(tmp3_0[2], ${typeSrc0.substring(0, typeSrc0.length - 1)} + 2*nrowsBuff]);`);
+                } else {
+                    operationCall.push(`                    Goldilocks3::load_avx(tmp3_0, ${typeSrc0}, ${offsetSrc0Call});`);
+                }
                 typeSrc0 = "tmp3_0";
             } else throw new Error("Something went wrong!");
         }
 
         if(offsetSrc1Call) {
             if(["x", "commit1", "const"].includes(operation.src1_type)) {
-                operationCall.push(`                    Goldilocks::load_avx(tmp1_1, ${typeSrc1}, ${offsetSrc1Call});`);
+                if(memory && ["commit1", "const"].includes(operation.src1_type)) {
+                    operationCall.push(`                    Goldilocks::load_avx(tmp1_1, ${typeSrc1});`);
+                } else {
+                    operationCall.push(`                    Goldilocks::load_avx(tmp1_1, ${typeSrc1}, ${offsetSrc1Call});`);
+                }
                 typeSrc1 = "tmp1_1";
             } else if(["commit3", "xDivXSubXi", "xDivXSubWXi"].includes(operation.src1_type)) {
-                operationCall.push(`                    Goldilocks3::load_avx(tmp3_1, ${typeSrc1}, ${offsetSrc1Call});`);
+                if(memory && operation.src1_type === "commit3") {
+                    operationCall.push(`                    Goldilocks::load_avx(tmp3_1[0], ${typeSrc1});`);
+                    operationCall.push(`                    Goldilocks::load_avx(tmp3_1[1], ${typeSrc1.substring(0, typeSrc1.length - 1)} + nrowsBuff]);`);
+                    operationCall.push(`                    Goldilocks::load_avx(tmp3_1[2], ${typeSrc1.substring(0, typeSrc1.length - 1)} + 2*nrowsBuff]);`);
+                } else {
+                    operationCall.push(`                    Goldilocks3::load_avx(tmp3_1, ${typeSrc1}, ${offsetSrc1Call});`);
+                }
                 typeSrc1 = "tmp3_1";
             } else throw new Error("Something went wrong!");
         }
@@ -304,9 +435,19 @@ module.exports.generateParser = function generateParser(className, stageName = "
 
         if(offsetDestCall) {
             if(operation.dest_type === "commit1") {
-                operationCall.push(`                    Goldilocks::store_avx(${typeDest}, ${offsetDestCall}, tmp1_);`);
+                if(memory) {
+                    operationCall.push(`                    Goldilocks::store_avx(${typeDest}, tmp1_);`);
+                } else {
+                    operationCall.push(`                    Goldilocks::store_avx(${typeDest}, ${offsetDestCall}, tmp1_);`);
+                }
             } else if(operation.dest_type === "commit3") {
-                operationCall.push(`                    Goldilocks3::store_avx(${typeDest}, ${offsetDestCall}, tmp3_);`);
+                if(memory) {
+                    operationCall.push(`                    Goldilocks::store_avx(${typeDest}, tmp3_[0]);`);
+                    operationCall.push(`                    Goldilocks::store_avx(${typeDest.substring(0, typeDest.length - 1)} + nrowsBuff], tmp3_[1]);`);
+                    operationCall.push(`                    Goldilocks::store_avx(${typeDest.substring(0, typeDest.length - 1)} + 2*nrowsBuff], tmp3_[2]);`);
+                } else {
+                    operationCall.push(`                    Goldilocks3::store_avx(${typeDest}, ${offsetDestCall}, tmp3_);`);
+                }
             } else throw new Error("Something went wrong!");
         }
 
@@ -314,7 +455,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
         return operationCall.join("\n").replace(/i_args \+ 0/, "i_args");
     }
 
-    function writeType(type, includesEnds = false) {
+    function writeType(type, includesEnds = false, memory = false) {
         switch (type) {
             case "public":
                 return `publics[parserParams.args[i_args + ${c_args}]]`;
@@ -327,13 +468,21 @@ module.exports.generateParser = function generateParser(className, stageName = "
                 if(includesEnds) {
                     return `&params.pols[0]`;
                 } else {
-                    return `&params.pols[parserParams.args[i_args + ${c_args}] + (i + parserParams.args[i_args + ${c_args+1}]) * parserParams.args[i_args + ${c_args+2}]]`;
+                    if(memory) {
+                        return `&bufferT[parserParams.args[i_args + ${c_args + 3}] + nrowsBuff * parserParams.args[i_args + ${c_args + 4}] + parserParams.args[i_args + ${c_args + 1}]]`;
+                    } else {
+                        return `&params.pols[parserParams.args[i_args + ${c_args}] + (i + parserParams.args[i_args + ${c_args+1}]) * parserParams.args[i_args + ${c_args+2}]]`;
+                    }
                 }
             case "const":
                 if(includesEnds) {
                     return `&constPols->getElement(0, 0)`;
                 } else {
-                    return `&constPols->getElement(parserParams.args[i_args + ${c_args}], i + parserParams.args[i_args + ${c_args + 1}])`;
+                    if(memory) {
+                        return `&bufferT[nrowsBuff * parserParams.args[i_args + ${c_args}] + parserParams.args[i_args + ${c_args + 1}]]`;
+                    } else {
+                        return `&constPols->getElement(parserParams.args[i_args + ${c_args}], i + parserParams.args[i_args + ${c_args + 1}])`;
+                    }
                 }
             case "challenge":
                 return `challenges[parserParams.args[i_args + ${c_args}]]`;
@@ -404,7 +553,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
                 return 2;
             case "commit1":
             case "commit3":
-                return 3;  
+                return 5;  
             default:
                 throw new Error("Invalid type: " + type);
         }
