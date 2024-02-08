@@ -29,21 +29,25 @@ exports.writeCHelpersFile = async function (cHelpersFilename, cHelpersInfo) {
         await cHelpersBin.writeULE32(stageInfo.executeBefore);
         await cHelpersBin.writeULE32(stageInfo.nTemp1);
         await cHelpersBin.writeULE32(stageInfo.nTemp3);
+
         await cHelpersBin.writeULE32(stageInfo.nOps);
         for(let j = 0; j < stageInfo.nOps; j++) {
             await cHelpersBin.writeULE32(stageInfo.ops[j]);
         }
+
         await cHelpersBin.writeULE32(stageInfo.nArgs);
-
-        const buffArgs = new Uint8Array(8*stageInfo.nArgs);
-        const buffArgsV = new DataView(buffArgs.buffer);
-
         for(let j = 0; j < stageInfo.nArgs; j++) {
-            let arg = stageInfo.args[j];
-            buffArgsV.setBigUint64(8*j, BigInt(arg), true);
+            await cHelpersBin.writeULE32(stageInfo.args[j]);
         }
-        
-        await cHelpersBin.write(buffArgs);
+
+        await cHelpersBin.writeULE32(stageInfo.numbers.length);
+        const buffNumbers = new Uint8Array(8*stageInfo.numbers.length);
+        const buffNumbersV = new DataView(buffNumbers.buffer);
+        for(let j = 0; j < stageInfo.numbers.length; j++) {
+            let number = stageInfo.numbers[j];
+            buffNumbersV.setBigUint64(8*j, BigInt(number), true);
+        }
+        await cHelpersBin.write(buffNumbers);
     }
 
     await endWriteSection(cHelpersBin);
@@ -76,14 +80,21 @@ exports.readCHelpersFile = async function (cHelpersFilename) {
         for(let j = 0; j < stageInfo.nOps; j++) {
             stageInfo.ops[j] = await cHelpersBin.readULE32();
         }
+
         stageInfo.nArgs = await cHelpersBin.readULE32();
         stageInfo.args = [];
-
-        let buffArgs = await cHelpersBin.read(8*stageInfo.nArgs);
-        let buffArgsV = new DataView(buffArgs.buffer);
         for(let j = 0; j < stageInfo.nArgs; j++) {
-            stageInfo.args[j] = buffArgsV.getBigUint64(8*j, true);
+            stageInfo.args[j] = await cHelpersBin.readULE32();
         }
+
+        stageInfo.nNumbers = await cHelpersBin.readULE32();
+        let buffNumbers = await cHelpersBin.read(8*stageInfo.nNumbers);
+        let buffNumbersV = new DataView(buffNumbers.buffer);
+        stageInfo.numbers = [];
+        for(let j = 0; j < stageInfo.nNumbers; j++) {
+            stageInfo.numbers[j] = buffNumbersV.getBigUint64(8*j, true);
+        }
+
         chelpers.push(stageInfo);
     }
 

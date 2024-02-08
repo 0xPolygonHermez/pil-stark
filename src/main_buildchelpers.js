@@ -42,7 +42,7 @@ async function run() {
     }
 
     await writeCHelpersFile(binFileName, cHelpersInfo);
-
+    
     console.log("files Generated Correctly");
 }
 

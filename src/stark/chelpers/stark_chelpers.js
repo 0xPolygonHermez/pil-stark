@@ -22,7 +22,7 @@ module.exports = async function buildCHelpers(starkInfo, className = "", multipl
         "    public:",
         "        void calculateExpressions(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, bool useGeneric);",
         "    private:",
-        "        void parser_avx(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, uint32_t rowStart, uint32_t rowEnd, uint32_t nrowsBatch, bool domainExtended, bool const includesEnds);"
+        "        void parser_avx(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, uint32_t nrowsBatch, bool domainExtended);"
     ];
     
     const cHelpersStepsCpp = [
@@ -36,10 +36,8 @@ module.exports = async function buildCHelpers(starkInfo, className = "", multipl
     ];
     if(multiple) cHelpersStepsCpp.push(`    if(useGeneric) {`);
     cHelpersStepsCpp.push(...[
-        `        ${className}::parser_avx(starkInfo, params, parserParams, 0, rowStart, nrowsBatch, domainExtended, true);`,
-        `        ${className}::parser_avx(starkInfo, params, parserParams, rowStart, rowEnd, nrowsBatch, domainExtended, false);`,
-        `        ${className}::parser_avx(starkInfo, params, parserParams, rowEnd, domainSize, nrowsBatch, domainExtended, true);`,
-    ]);;
+        `        ${className}::parser_avx(starkInfo, params, parserParams, nrowsBatch, domainExtended);`,
+    ]);
    
     let operations = getAllOperations();
     let operationsUsed = {};
