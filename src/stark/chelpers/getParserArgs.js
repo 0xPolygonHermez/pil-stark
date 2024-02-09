@@ -132,7 +132,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                 break;
             }
             case "const": {
-                let offset_prime = r.prime ? next : 0;
+                let offset_prime = r.prime ? 1 : 0;
 
                 args.push(0);
                 args.push(r.id);
@@ -189,7 +189,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
     function evalMap_(polId, prime) {
         let p = starkInfo.varPolMap[polId];
 
-        let offset_prime = prime ? next : 0;
+        let offset_prime = prime ? 1 : 0;
 
         let step;
         if(["cm1_n", "cm1_2ns"].includes(p.section)) {
