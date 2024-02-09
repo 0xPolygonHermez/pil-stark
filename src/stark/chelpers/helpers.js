@@ -76,7 +76,7 @@ module.exports.getIdMaps = function getIdMaps(maxid, ID1D, ID3D, code) {
     // Create subsets of non-intersecting segments for basefield and extended field temporal variables
     subsets1D = temporalsSubsets(segments1D);
     subsets3D = temporalsSubsets(segments3D);
-
+    
     // Assign unique numerical IDs to subsets of segments representing 1D and 3D temporal variables
     let count1d = 0;
     for (s of subsets1D) {
@@ -99,30 +99,37 @@ module.exports.getIdMaps = function getIdMaps(maxid, ID1D, ID3D, code) {
 
 function temporalsSubsets(segments) {
     segments.sort((a, b) => a[1] - b[1]);
-    const result = [];
-    for (const s of segments) {
-        let inserted = false;
-        for (a of result) {
-            if (!isIntersecting(s, a[a.length - 1])) {
-                a.push(s);
-                inserted = true;
-                break;
+    const tmpSubsets = [];
+    for (const segment of segments) {
+        let closestSubset = null;
+        let minDistance = Infinity;
+        for (const subset of tmpSubsets) {
+            const lastSegmentSubset = subset[subset.length - 1];
+            if(isIntersecting(segment, lastSegmentSubset)) continue;
+
+            const distance = Math.abs(lastSegmentSubset[1] - segment[0]);
+            if(distance < minDistance){
+                minDistance = distance;
+                closestSubset = subset;
             }
         }
-        if (!inserted) {
-            result.push([s]);
+
+        if(closestSubset) {
+            closestSubset.push(segment);
+        } else {
+            tmpSubsets.push([segment]);
         }
     }
-    return result;
+    return tmpSubsets;
 }
 
 function isIntersecting(segment1, segment2) {
     const [start1, end1] = segment1;
     const [start2, end2] = segment2;
-    return start2 <= end1 && start1 <= end2;
+    return start2 < end1 && start1 < end2;
 }
 
-module.exports.findPatterns = function findPatterns(array, minRepetitions = 50, minReducedOperations = 400) {
+module.exports.findPatterns = function findPatterns(array, minRepetitions = 50, minReducedOperations = 500) {
     const slidingWindow = [];
     const patterns = {};
     let i = 0;

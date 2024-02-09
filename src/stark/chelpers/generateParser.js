@@ -210,7 +210,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
     ]);
 
     parserCPP.push(...[
-        "        if(parserParams.stage <= 3) {",
+        "        if(parserParams.stage == 2) {",
         "            for(uint64_t j = 0; j < nrowsBatch; ++j) {",
         "                uint64_t l = i + j;",
         "                if(l >= domainSize) l -= domainSize;",
@@ -224,7 +224,18 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "                   params.pols[offsetTmpExp + l * nColsTmpExp + k] = bufferT[bOffsetTmpExp + k*nrowsBuff + j];",
         "                }",
         "            }",
-        "        }"
+        "        } else if(parserParams.stage == 3) {",
+        "            for(uint64_t j = 0; j < nrowsBatch; ++j) {",
+        "                uint64_t l = i + j;",
+        "                if(l >= domainSize) l -= domainSize;",
+        "                for(uint64_t k = 0; k < nColsCm3; ++k) {",
+        "                    params.pols[offsetCm3 + l * nColsCm3 + k] = bufferT[bOffsetCm3 + k*nrowsBuff + j];",
+        "                }",
+        "                for(uint64_t k = 0; k < nColsTmpExp; ++k) {",
+        "                   params.pols[offsetTmpExp + l * nColsTmpExp + k] = bufferT[bOffsetTmpExp + k*nrowsBuff + j];",
+        "                }",
+        "            }",
+        "        }",
     ]);
     
 
