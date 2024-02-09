@@ -38,33 +38,44 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "    Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
         "    Goldilocks3::Element_avx challenges[params.challenges.degree()];\n",
         "    __m256i numbers[parserParams.nNumbers];\n",
+        "    uint64_t nStages = 3;",
     ];
 
     
     parserCPP.push(...[
         `    uint64_t nrowsBuff = nrowsBatch + (1<<(starkInfo.starkStruct.nBitsExt - starkInfo.starkStruct.nBits));\n`,
-        `    uint64_t nColsConstants = starkInfo.nConstants;`,
-        `    uint64_t bOffsetConstants = 0;`,
-        `    uint64_t nColsCm1 = starkInfo.mapSectionsN.section[eSection::cm1_2ns];`,
-        `    uint64_t offsetCm1 = domainExtended ? starkInfo.mapOffsets.section[eSection::cm1_2ns] : starkInfo.mapOffsets.section[eSection::cm1_n];`,
-        `    uint64_t bOffsetCm1 = nrowsBuff*nColsConstants;`,
-        `    uint64_t nColsCm2 = starkInfo.mapSectionsN.section[eSection::cm2_2ns];`,
-        `    uint64_t offsetCm2 = domainExtended ? starkInfo.mapOffsets.section[eSection::cm2_2ns] : starkInfo.mapOffsets.section[eSection::cm2_n];`,
-        `    uint64_t bOffsetCm2 = nrowsBuff*(nColsConstants + nColsCm1);`,
-        `    uint64_t nColsCm3 = starkInfo.mapSectionsN.section[eSection::cm3_2ns];`,
-        `    uint64_t offsetCm3 = domainExtended ? starkInfo.mapOffsets.section[eSection::cm3_2ns] : starkInfo.mapOffsets.section[eSection::cm3_n];`,
-        `    uint64_t bOffsetCm3 = nrowsBuff*(nColsConstants + nColsCm1 + nColsCm2);\n`,
-        `    uint64_t nCols = nColsConstants + nColsCm1 + nColsCm2 + nColsCm3;\n`,
+        `    uint64_t nCols = starkInfo.nConstants;`,
+        `    uint64_t buffTOffsetsSteps[nStages + 2];`,
+        `    uint64_t nColsSteps[nStages + 2];`,
+        `    uint64_t offsetsSteps[nStages + 2];`,
+        `    nColsSteps[0] = starkInfo.nConstants;`,
+        `    buffTOffsetsSteps[0] = 0;\n`,
+        `    offsetsSteps[1] = domainExtended ? starkInfo.mapOffsets.section[eSection::cm1_2ns] : starkInfo.mapOffsets.section[eSection::cm1_n];`,
+        `    nColsSteps[1] = starkInfo.mapSectionsN.section[eSection::cm1_2ns];`,
+        `    buffTOffsetsSteps[1] = nrowsBuff*nColsSteps[0];`,
+        `    nCols += nColsSteps[1];\n`,
+        `    offsetsSteps[2] = domainExtended ? starkInfo.mapOffsets.section[eSection::cm2_2ns] : starkInfo.mapOffsets.section[eSection::cm2_n];`,
+        `    nColsSteps[2] = starkInfo.mapSectionsN.section[eSection::cm2_2ns];`,
+        `    buffTOffsetsSteps[2] = buffTOffsetsSteps[1] + nrowsBuff*nColsSteps[1];`,
+        `    nCols += nColsSteps[2];\n`,
+        `    offsetsSteps[3] = domainExtended ? starkInfo.mapOffsets.section[eSection::cm3_2ns] : starkInfo.mapOffsets.section[eSection::cm3_n];`,
+        `    nColsSteps[3] = starkInfo.mapSectionsN.section[eSection::cm3_2ns];`,
+        `    buffTOffsetsSteps[3] = buffTOffsetsSteps[2] + nrowsBuff*nColsSteps[2];`,
+        `    nCols += nColsSteps[3];\n`,
     ]);
 
     parserCPP.push(...[
-        "    uint64_t nColsTmpExp = starkInfo.mapSectionsN.section[eSection::tmpExp_n];",
-        "    uint64_t offsetTmpExp = starkInfo.mapOffsets.section[eSection::tmpExp_n];",
-        "    uint64_t bOffsetTmpExp = nrowsBuff*(nColsConstants + nColsCm1 + nColsCm2 + nColsCm3);\n",
-        "    uint64_t nColsCm4 = starkInfo.mapSectionsN.section[eSection::cm4_2ns];",
-        "    uint64_t offsetCm4 = starkInfo.mapOffsets.section[eSection::cm4_2ns];",
-        "    uint64_t bOffsetCm4 = nrowsBuff*(nColsConstants + nColsCm1 + nColsCm2 + nColsCm3);\n",
-        "    nCols += domainExtended ? nColsCm4 : nColsTmpExp;\n",
+        "    if(parserParams.stage <= nStages) {",
+        `        offsetsSteps[4] = starkInfo.mapOffsets.section[eSection::tmpExp_n];`,
+        `        nColsSteps[4] = starkInfo.mapSectionsN.section[eSection::tmpExp_n];`,
+        `        buffTOffsetsSteps[4] = buffTOffsetsSteps[3] + nrowsBuff*nColsSteps[3];`,
+        `        nCols += nColsSteps[4];\n`,
+        "    } else {",
+        `        offsetsSteps[4] = starkInfo.mapOffsets.section[eSection::cm4_2ns];`,
+        `        nColsSteps[4] = starkInfo.mapSectionsN.section[eSection::cm4_2ns];`,
+        `        buffTOffsetsSteps[4] = buffTOffsetsSteps[3] + nrowsBuff*nColsSteps[3];`,
+        `        nCols += nColsSteps[4];\n`,
+        "    }",
     ]);
 
     parserCPP.push(...[
@@ -119,40 +130,28 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "        uint64_t i_args = 0;\n",
     ]); 
 
-    
     parserCPP.push(...[
         "        for(uint64_t j = 0; j < nrowsBuff; ++j) {",
         "            uint64_t l = i + j;",
         "            if(l >= domainSize) l -= domainSize;",
-        "            for(uint64_t k = 0; k < nColsConstants; ++k) {",
-        "                bufferT[bOffsetConstants + k*nrowsBuff + j] = ((Goldilocks::Element *)constPols->address())[l * nColsConstants + k];",
+        "            for(uint64_t k = 0; k < nColsSteps[0]; ++k) {",
+        "                bufferT[buffTOffsetsSteps[0] + k*nrowsBuff + j] = ((Goldilocks::Element *)constPols->address())[l * nColsSteps[0] + k];",
         "            }",
-        "            for(uint64_t k = 0; k < nColsCm1; ++k) {",
-        "                bufferT[bOffsetCm1 + k*nrowsBuff + j] = params.pols[offsetCm1 + l * nColsCm1 + k];",
+        "            for(uint64_t k = 0; k < nColsSteps[1]; ++k) {",
+        "                bufferT[buffTOffsetsSteps[1] + k*nrowsBuff + j] = params.pols[offsetsSteps[1] + l * nColsSteps[1] + k];",
         "            }",
-        "            for(uint64_t k = 0; k < nColsCm2; ++k) {",
-        "                bufferT[bOffsetCm2 + k*nrowsBuff + j] = params.pols[offsetCm2 + l * nColsCm2 + k];",
-        "            }",
-        "            for(uint64_t k = 0; k < nColsCm3; ++k) {",
-        "                bufferT[bOffsetCm3 + k*nrowsBuff + j] = params.pols[offsetCm3 + l * nColsCm3 + k];",
-        "            }",
-    ]);
-
-    parserCPP.push(...[
-        "            if(parserParams.stage <= 3) {",
-        "                for(uint64_t k = 0; k < nColsTmpExp; ++k) {",
-        "                    bufferT[bOffsetTmpExp + k*nrowsBuff + j] = params.pols[offsetTmpExp + l * nColsTmpExp + k];",
-        "                }",
-        "            } else {",
-        "                for(uint64_t k = 0; k < nColsCm4; ++k) {",
-        "                    bufferT[bOffsetCm4 + k*nrowsBuff + j] = params.pols[offsetCm4 + l * nColsCm4 + k];",
+        "            for(uint64_t s = 2; s <= nStages; ++s) {",
+        "                if(parserParams.stage < s) break;",
+        "                for(uint64_t k = 0; k < nColsSteps[s]; ++k) {",
+        "                    bufferT[buffTOffsetsSteps[s] + k*nrowsBuff + j] = params.pols[offsetsSteps[s] + l * nColsSteps[s] + k];",
         "                }",
         "            }",
+        "            for(uint64_t k = 0; k < nColsSteps[nStages + 1]; ++k) {",
+        "                bufferT[buffTOffsetsSteps[nStages + 1] + k*nrowsBuff + j] = params.pols[offsetsSteps[nStages + 1] + l * nColsSteps[nStages + 1] + k];",
+        "            }",
+        "        }"
     ]);
-
-    parserCPP.push("        }");
     
-
     parserCPP.push(...[
         "\n",
         "        for (uint64_t kk = 0; kk < parserParams.nOps; ++kk) {",
@@ -208,36 +207,6 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "            }",
         "        }",
     ]);
-
-    parserCPP.push(...[
-        "        if(parserParams.stage == 2) {",
-        "            for(uint64_t j = 0; j < nrowsBatch; ++j) {",
-        "                uint64_t l = i + j;",
-        "                if(l >= domainSize) l -= domainSize;",
-        "                for(uint64_t k = 0; k < nColsCm2; ++k) {",
-        "                    params.pols[offsetCm2 + l * nColsCm2 + k] = bufferT[bOffsetCm2 + k*nrowsBuff + j];",
-        "                }",
-        "                for(uint64_t k = 0; k < nColsCm3; ++k) {",
-        "                    params.pols[offsetCm3 + l * nColsCm3 + k] = bufferT[bOffsetCm3 + k*nrowsBuff + j];",
-        "                }",
-        "                for(uint64_t k = 0; k < nColsTmpExp; ++k) {",
-        "                   params.pols[offsetTmpExp + l * nColsTmpExp + k] = bufferT[bOffsetTmpExp + k*nrowsBuff + j];",
-        "                }",
-        "            }",
-        "        } else if(parserParams.stage == 3) {",
-        "            for(uint64_t j = 0; j < nrowsBatch; ++j) {",
-        "                uint64_t l = i + j;",
-        "                if(l >= domainSize) l -= domainSize;",
-        "                for(uint64_t k = 0; k < nColsCm3; ++k) {",
-        "                    params.pols[offsetCm3 + l * nColsCm3 + k] = bufferT[bOffsetCm3 + k*nrowsBuff + j];",
-        "                }",
-        "                for(uint64_t k = 0; k < nColsTmpExp; ++k) {",
-        "                   params.pols[offsetTmpExp + l * nColsTmpExp + k] = bufferT[bOffsetTmpExp + k*nrowsBuff + j];",
-        "                }",
-        "            }",
-        "        }",
-    ]);
-    
 
     parserCPP.push(...[
         `        if (i_args != parserParams.nArgs) std::cout << " " << i_args << " - " << parserParams.nArgs << std::endl;`,
@@ -300,6 +269,36 @@ module.exports.generateParser = function generateParser(className, stageName = "
         }      
 
         let typeDest = writeType(operation.dest_type);
+
+        let operationStoreAvx = [];
+
+        if(operation.dest_type === "commit1") {
+            operationStoreAvx.push(`                    Goldilocks::store_avx(${typeDest}, tmp1_);`);
+            operationStoreAvx.push(...[
+                `                    for(uint64_t j = 0; j < nrowsBatch; ++j) {`,
+                `                        uint64_t l = i + j + parserParams.args[i_args + ${c_args + 2}];`,
+                `                        if(l >= domainSize) l -= domainSize;`,
+                `                        params.pols[offsetsSteps[parserParams.args[i_args + ${c_args}]] + parserParams.args[i_args + ${c_args + 1}] + l * nColsSteps[parserParams.args[i_args + ${c_args}]]] = bufferT[buffTOffsetsSteps[parserParams.args[i_args + ${c_args}]] + nrowsBuff * parserParams.args[i_args + ${c_args + 1}] + parserParams.args[i_args + ${c_args + 2}] + j];`,
+                `                    }`
+            ])
+        } else if(operation.dest_type === "commit3") {
+            operationStoreAvx.push(`                    Goldilocks::store_avx(${typeDest}, tmp3_[0]);`);
+            operationStoreAvx.push(`                    Goldilocks::store_avx(${typeDest.substring(0, typeDest.length - 1)} + nrowsBuff], tmp3_[1]);`);
+            operationStoreAvx.push(`                    Goldilocks::store_avx(${typeDest.substring(0, typeDest.length - 1)} + 2*nrowsBuff], tmp3_[2]);`);
+            operationStoreAvx.push(...[
+                `                    for(uint64_t j = 0; j < nrowsBatch; ++j) {`,
+                `                        uint64_t l = i + j + parserParams.args[i_args + ${c_args + 2}];`,
+                `                        if(l >= domainSize) l -= domainSize;`,
+                `                        params.pols[offsetsSteps[parserParams.args[i_args + ${c_args}]] + parserParams.args[i_args + ${c_args + 1}] + l * nColsSteps[parserParams.args[i_args + ${c_args}]]] = bufferT[buffTOffsetsSteps[parserParams.args[i_args + ${c_args}]] + nrowsBuff * parserParams.args[i_args + ${c_args + 1}] + parserParams.args[i_args + ${c_args + 2}] + j];`,
+                `                        params.pols[offsetsSteps[parserParams.args[i_args + ${c_args}]] + parserParams.args[i_args + ${c_args + 1}] + l * nColsSteps[parserParams.args[i_args + ${c_args}]] + 1] = bufferT[buffTOffsetsSteps[parserParams.args[i_args + ${c_args}]] + nrowsBuff * parserParams.args[i_args + ${c_args + 1}] + parserParams.args[i_args + ${c_args + 2}] + nrowsBuff + j];`,
+                `                        params.pols[offsetsSteps[parserParams.args[i_args + ${c_args}]] + parserParams.args[i_args + ${c_args + 1}] + l * nColsSteps[parserParams.args[i_args + ${c_args}]] + 2] = bufferT[buffTOffsetsSteps[parserParams.args[i_args + ${c_args}]] + nrowsBuff * parserParams.args[i_args + ${c_args + 1}] + parserParams.args[i_args + ${c_args + 2}] + 2*nrowsBuff + j];`,
+                `                    }`
+            ])
+        }
+
+        
+        
+
         c_args += nArgs(operation.dest_type);
 
         let typeSrc0 = writeType(operation.src0_type);
@@ -361,14 +360,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
         name = name.substring(0, name.lastIndexOf(", ")) + ");";
 
         operationCall.push(`                    ${name}`);
-
-        if(operation.dest_type === "commit1") {
-            operationCall.push(`                    Goldilocks::store_avx(${typeDest}, tmp1_);`);
-        } else if(operation.dest_type === "commit3") {
-            operationCall.push(`                    Goldilocks::store_avx(${typeDest}, tmp3_[0]);`);
-            operationCall.push(`                    Goldilocks::store_avx(${typeDest.substring(0, typeDest.length - 1)} + nrowsBuff], tmp3_[1]);`);
-            operationCall.push(`                    Goldilocks::store_avx(${typeDest.substring(0, typeDest.length - 1)} + 2*nrowsBuff], tmp3_[2]);`);
-        }
+        operationCall.push(...operationStoreAvx);
 
         return operationCall.join("\n").replace(/i_args \+ 0/, "i_args");
     }
@@ -384,7 +376,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
             case "commit1":
             case "commit3":
             case "const":
-                    return `&bufferT[parserParams.args[i_args + ${c_args}] + nrowsBuff * parserParams.args[i_args + ${c_args + 1}] + parserParams.args[i_args + ${c_args + 2}]]`;
+                    return `&bufferT[buffTOffsetsSteps[parserParams.args[i_args + ${c_args}]] + nrowsBuff * parserParams.args[i_args + ${c_args + 1}] + parserParams.args[i_args + ${c_args + 2}]]`;
             case "challenge":
                 return `challenges[parserParams.args[i_args + ${c_args}]]`;
             case "eval":
