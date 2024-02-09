@@ -180,14 +180,14 @@ module.exports.generateParser = function generateParser(className, stageName = "
             for(let j = 0; j < op.ops.length; j++) {
                 let opr = operations[op.ops[j]];
                 operationCase.push(writeOperation(opr));
-                let numberArgs = nArgs(opr.dest_type) + nArgs(opr.src0_type);
-                if(opr.src1_type && !["q", "f"].includes(opr.dest_type)) numberArgs += nArgs(opr.src1_type) + 1;
+                let numberArgs = numberOfArgs(opr.dest_type) + numberOfArgs(opr.src0_type);
+                if(opr.src1_type && !["q", "f"].includes(opr.dest_type)) numberArgs += numberOfArgs(opr.src1_type) + 1;
                 operationCase.push(`                    i_args += ${numberArgs};`);
             }
         } else {
             operationCase.push(writeOperation(op));
-            let numberArgs = nArgs(op.dest_type) + nArgs(op.src0_type);
-            if(op.src1_type && !["q", "f"].includes(op.dest_type)) numberArgs += nArgs(op.src1_type) + 1;
+            let numberArgs = numberOfArgs(op.dest_type) + numberOfArgs(op.src0_type);
+            if(op.src1_type && !["q", "f"].includes(op.dest_type)) numberArgs += numberOfArgs(op.src1_type) + 1;
             operationCase.push(`                    i_args += ${numberArgs};`);
         }
 
@@ -299,10 +299,10 @@ module.exports.generateParser = function generateParser(className, stageName = "
         
         
 
-        c_args += nArgs(operation.dest_type);
+        c_args += numberOfArgs(operation.dest_type);
 
         let typeSrc0 = writeType(operation.src0_type);
-        c_args += nArgs(operation.src0_type);
+        c_args += numberOfArgs(operation.src0_type);
 
         let typeSrc1;
 
@@ -343,7 +343,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
                 typeSrc1 = "tmp3_1";
             }
 
-            c_args += nArgs(operation.src1_type);
+            c_args += numberOfArgs(operation.src1_type);
         }
 
         if(operation.dest_type === "commit1") {
@@ -394,7 +394,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
         }
     }
 
-    function nArgs(type) {
+    function numberOfArgs(type) {
         switch (type) {
             case "x":
             case "Zi":

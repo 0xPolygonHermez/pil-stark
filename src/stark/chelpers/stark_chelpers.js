@@ -1,14 +1,11 @@
 const { getParserArgs } = require("./getParserArgs.js");
 const { generateParser, getAllOperations } = require("./generateParser.js");
 const { findPatterns } = require("./helpers.js");
-const _ = require('lodash');
 
 module.exports = async function buildCHelpers(starkInfo, className = "", multiple = false) {
 
     let result = {};
     
-    const patternsAdded = [];
-
     const cHelpersInfo = [];
 
     const cHelpersStepsHppParserAVX = [];
@@ -117,10 +114,11 @@ module.exports = async function buildCHelpers(starkInfo, className = "", multipl
 
     result[`${className}_cpp`] = cHelpersStepsCpp.join("\n");
     result[`${className}_hpp`] = cHelpersStepsHpp.join("\n"); 
-
-    console.log("Number of patterns added: " + patternsAdded.length);
-    for(let j = 0; j < patternsAdded.length; ++j) {
-        console.log("[", patternsAdded[j].join(", ") + "]");
+    
+    const operationsPatterns = operations.filter(op => op.isGroupOps);
+    console.log("Number of patterns used: " + operationsPatterns.length);
+    for(let i = 0; i < operationsPatterns.length; ++i) {
+        console.log("case " + operationsPatterns[i].opIndex + " ->    " + operationsPatterns[i].ops.join(", "));
     }
     
     // Set case to consecutive numbers
@@ -153,34 +151,12 @@ module.exports = async function buildCHelpers(starkInfo, className = "", multipl
 
         const {stageInfo, operationsUsed: opsUsed} = getParserArgs(starkInfo, operations, stageCode, dom, stage, executeBefore);
 
-        const patterns = findPatterns(stageInfo.ops);
-        
-        console.log("Number of operations before join: " + stageInfo.nOps);
+        console.log("Number of operations before join: " + stageInfo.ops.length);
 
-        for(let i = 0; i < patterns.length; ++i) {
-            const sequence = patterns[i];
-            let opIndex;
-            if(!patternsAdded.some(subArray => _.isEqual(subArray, sequence))) {
-                patternsAdded.push(sequence);
-                opIndex = operations.length;
-                operations.push({isGroupOps: true, ops: sequence});
-            } else {
-                opIndex = operations.findIndex(subArray => _.isEqual(subArray.ops, sequence));
-                if(opIndex === -1) throw new Error("Something went wrong");
-            }
+        const patternOps = findPatterns(stageInfo.ops, operations);
+        opsUsed.push(...patternOps);
 
-            let opsString = stageInfo.ops.join(", ");
-            let patternString = ", " + sequence.join(", ") + ",";
-            opsString = opsString.replace(new RegExp(patternString, "g"), `, ${opIndex},`);
-            stageInfo.ops = opsString.split(", ").map(op => parseInt(op));
-
-            opsUsed.push(opIndex);
-        }
-
-        stageInfo.nOps = stageInfo.ops.length;
-
-        console.log("Number of operations after join: " + stageInfo.nOps);
-
+        console.log("Number of operations after join: " + stageInfo.ops.length);
 
         cHelpersInfo.push(stageInfo);
         for(let j = 0; j < opsUsed.length; ++j) {
