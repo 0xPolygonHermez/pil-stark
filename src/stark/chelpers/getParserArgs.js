@@ -81,7 +81,6 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
     return {operationsUsed, stageInfo};
 
     function pushResArg(r, type) {
-        let eDst;
         switch (type) {
             case "tmp": {
                 if (r.dest.dim == 1) {
@@ -120,7 +119,6 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
             }
             default: throw new Error("Invalid reference type set: " + r.dest.type);
         }
-        return eDst;
     }
 
 
@@ -195,7 +193,17 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
 
         let offset_prime = prime ? next : 0;
 
-        args.push(Number(starkInfo.mapOffsetsCol[p.section]));
+        let step;
+        if(["cm1_n", "cm1_2ns"].includes(p.section)) {
+            step = 1;
+        } else if(["cm2_n", "cm2_2ns"].includes(p.section)) {
+            step = 2;
+        } else if(["cm3_n", "cm3_2ns"].includes(p.section)) {
+            step = 3;
+        } else if(["tmpExp_n", "cm4_2ns"].includes(p.section)) {
+            step = 4;
+        }
+        args.push(Number(step));
         args.push(Number(p.sectionPos));
         args.push(Number(offset_prime));
     }

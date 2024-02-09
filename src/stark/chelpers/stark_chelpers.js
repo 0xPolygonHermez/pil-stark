@@ -153,33 +153,33 @@ module.exports = async function buildCHelpers(starkInfo, className = "", multipl
 
         const {stageInfo, operationsUsed: opsUsed} = getParserArgs(starkInfo, operations, stageCode, dom, stage, executeBefore);
 
-        // const patterns = findPatterns(stageInfo.ops);
+        const patterns = findPatterns(stageInfo.ops);
         
-        // console.log("Number of operations before join: " + stageInfo.nOps);
+        console.log("Number of operations before join: " + stageInfo.nOps);
 
-        // for(let i = 0; i < patterns.length; ++i) {
-        //     const sequence = patterns[i];
-        //     let opIndex;
-        //     if(!patternsAdded.some(subArray => _.isEqual(subArray, sequence))) {
-        //         patternsAdded.push(sequence);
-        //         opIndex = operations.length;
-        //         operations.push({isGroupOps: true, ops: sequence});
-        //     } else {
-        //         opIndex = operations.findIndex(subArray => _.isEqual(subArray.ops, sequence));
-        //         if(opIndex === -1) throw new Error("Something went wrong");
-        //     }
+        for(let i = 0; i < patterns.length; ++i) {
+            const sequence = patterns[i];
+            let opIndex;
+            if(!patternsAdded.some(subArray => _.isEqual(subArray, sequence))) {
+                patternsAdded.push(sequence);
+                opIndex = operations.length;
+                operations.push({isGroupOps: true, ops: sequence});
+            } else {
+                opIndex = operations.findIndex(subArray => _.isEqual(subArray.ops, sequence));
+                if(opIndex === -1) throw new Error("Something went wrong");
+            }
 
-        //     let opsString = stageInfo.ops.join(", ");
-        //     let patternString = ", " + sequence.join(", ") + ",";
-        //     opsString = opsString.replace(new RegExp(patternString, "g"), `, ${opIndex},`);
-        //     stageInfo.ops = opsString.split(", ").map(op => parseInt(op));
+            let opsString = stageInfo.ops.join(", ");
+            let patternString = ", " + sequence.join(", ") + ",";
+            opsString = opsString.replace(new RegExp(patternString, "g"), `, ${opIndex},`);
+            stageInfo.ops = opsString.split(", ").map(op => parseInt(op));
 
-        //     opsUsed.push(opIndex);
-        // }
+            opsUsed.push(opIndex);
+        }
 
-        // stageInfo.nOps = stageInfo.ops.length;
+        stageInfo.nOps = stageInfo.ops.length;
 
-        // console.log("Number of operations after join: " + stageInfo.nOps);
+        console.log("Number of operations after join: " + stageInfo.nOps);
 
 
         cHelpersInfo.push(stageInfo);
