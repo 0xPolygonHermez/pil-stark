@@ -43,6 +43,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "    Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
         "    uint64_t offsetsDest[4], offsetsSrc0[4], offsetsSrc1[4];",
         "    Goldilocks3::Element_avx challenges[params.challenges.degree()];\n",
+        "    __m256i numbers[parserParams.nNumbers];\n",
     ];
 
     if(memory) {
@@ -93,9 +94,16 @@ module.exports.generateParser = function generateParser(className, stageName = "
     ]);
 
     parserCPP.push(...[
-        "    __m256i publics[50];",
         "#pragma omp parallel for",
-        "    for(uint64_t i = 0; i < 50; ++i) {",
+        "    for(uint64_t i = 0; i < parserParams.nNumbers; ++i) {",
+        "        numbers[i] = _mm256_set1_epi64x(parserParams.numbers[i]);",
+        "    }",
+    ])
+
+    parserCPP.push(...[
+        "    __m256i publics[starkInfo.nPublics];",
+        "#pragma omp parallel for",
+        "    for(uint64_t i = 0; i < starkInfo.nPublics; ++i) {",
         "        publics[i] = _mm256_set1_epi64x(params.publicInputs[i].fe);",
         "    }",
     ]);
@@ -489,7 +497,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
             case "eval":
                 return `evals[parserParams.args[i_args + ${c_args}]]`;
             case "number":
-                return `_mm256_set1_epi64x(parserParams.args[i_args + ${c_args}])`;
+                return `numbers[parserParams.args[i_args + ${c_args}]]`;
             case "x":
                 return `x[i]`;
             case "xDivXSubXi": 
