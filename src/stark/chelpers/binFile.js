@@ -30,13 +30,13 @@ exports.writeCHelpersFile = async function (cHelpersFilename, cHelpersInfo) {
         await cHelpersBin.writeULE32(stageInfo.nTemp1);
         await cHelpersBin.writeULE32(stageInfo.nTemp3);
 
-        await cHelpersBin.writeULE32(stageInfo.nOps);
-        for(let j = 0; j < stageInfo.nOps; j++) {
+        await cHelpersBin.writeULE32(stageInfo.ops.length);
+        for(let j = 0; j < stageInfo.ops.length; j++) {
             await cHelpersBin.writeULE32(stageInfo.ops[j]);
         }
 
-        await cHelpersBin.writeULE32(stageInfo.nArgs);
-        for(let j = 0; j < stageInfo.nArgs; j++) {
+        await cHelpersBin.writeULE32(stageInfo.args.length);
+        for(let j = 0; j < stageInfo.args.length; j++) {
             await cHelpersBin.writeULE32(stageInfo.args[j]);
         }
 
@@ -75,15 +75,15 @@ exports.readCHelpersFile = async function (cHelpersFilename) {
         stageInfo.executeBefore = await cHelpersBin.readULE32();
         stageInfo.nTemp1 = await cHelpersBin.readULE32();
         stageInfo.nTemp3 = await cHelpersBin.readULE32();
-        stageInfo.nOps = await cHelpersBin.readULE32();
+        let nOps = await cHelpersBin.readULE32();
         stageInfo.ops = [];
-        for(let j = 0; j < stageInfo.nOps; j++) {
+        for(let j = 0; j < nOps; j++) {
             stageInfo.ops[j] = await cHelpersBin.readULE32();
         }
 
-        stageInfo.nArgs = await cHelpersBin.readULE32();
+        let nArgs = await cHelpersBin.readULE32();
         stageInfo.args = [];
-        for(let j = 0; j < stageInfo.nArgs; j++) {
+        for(let j = 0; j < nArgs; j++) {
             stageInfo.args[j] = await cHelpersBin.readULE32();
         }
 

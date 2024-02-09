@@ -58,9 +58,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         executeBefore: executeBefore ? 1 : 0,
         nTemp1: count1d,
         nTemp3: count3d,
-        nOps: ops.length,
         ops,
-        nArgs: args.length,
         numbers,
         args,
     }

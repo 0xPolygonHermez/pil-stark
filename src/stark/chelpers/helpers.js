@@ -129,7 +129,7 @@ function isIntersecting(segment1, segment2) {
     return start2 < end1 && start1 < end2;
 }
 
-module.exports.findPatterns = function findPatterns(array, minRepetitions = 50, minReducedOperations = 500) {
+module.exports.findPatterns = function findPatterns(array, operations, maxLength = 16, minReducedOperations = 400) {
     const slidingWindow = [];
     const patterns = {};
     let i = 0;
@@ -139,55 +139,77 @@ module.exports.findPatterns = function findPatterns(array, minRepetitions = 50, 
             slidingWindow.push(array[i++]);
         }
 
-        let repetitions = countRepetitions(array, slidingWindow);
-        if(repetitions >= minRepetitions && repetitions*(slidingWindow.length - 1) >= minReducedOperations && slidingWindow.length <= 10) {
-            patterns[JSON.stringify(slidingWindow)] = repetitions;
-            if(i%1000 === 0) console.log("Checking repetitions..." + i + " out of " + array.length);
-            slidingWindow.push(array[i++]);
-        } else {
+        if(slidingWindow.length > maxLength) {
             slidingWindow.shift();
-        }
-    }
-
-    const sortedPatterns = Object.entries(patterns).sort((a, b) => b[1]*(JSON.parse(b[0]).length - 1) - a[1]*(JSON.parse(a[0]).length - 1));
-    const patternsSelected = [];
-
-    let arrayStr = array.join(", ");
-    let counter = Math.max(...array);
-    for (const [pattern, count] of sortedPatterns) {
-        const sequence = JSON.parse(pattern);
-        let currentRepetitions = countRepetitions(arrayStr.split(", ").map(v => parseInt(v)), sequence);
-        let currentReduction = currentRepetitions*(sequence.length - 1);
-
-        if(currentRepetitions > minRepetitions && currentReduction > minReducedOperations) {
-            patternsSelected.push(sequence);
-            let patternString = sequence.join(", ");
-            arrayStr = arrayStr.replace(new RegExp(patternString, "g"), `${counter++}`);
-            console.log(`Sequence ${pattern} reduces ${currentReduction} operations`);
-        }
-
-    }
-    return patternsSelected;
-}
-
-function countRepetitions(arr, pattern) {
-    let slidingWindow = [];
-    let count = 0;
-
-    let stringifiedPattern = JSON.stringify(pattern);
-
-    for (const element of arr) {
-        slidingWindow.push(element);
-
-        if (slidingWindow.length === pattern.length) {
-            if (JSON.stringify(slidingWindow) === stringifiedPattern) {
-                count++;
-                slidingWindow = [];
+        } else {
+            let reducedOps = countReducedOps(array, slidingWindow);
+            if(reducedOps >= minReducedOperations) {
+                patterns[slidingWindow.join(", ")] = reducedOps;
+                if(i%1000 === 0) console.log("Checking repetitions..." + i + " out of " + array.length);
+                slidingWindow.push(array[i++]);
             } else {
                 slidingWindow.shift();
             }
         }
     }
 
-    return count;
+    const sortedPatterns = Object.entries(patterns).sort((a, b) => b[1] - a[1]);
+
+    let patternOps = [];
+    
+    let counter;
+    for (const [pattern, count] of sortedPatterns) {
+        const sequence = pattern.split(", ").map(v => parseInt(v));
+        let reductionApplied = countReducedOps(array, sequence);
+        if(reductionApplied > minReducedOperations) {
+            let patternAdded = operations.find(op => op.isGroupOps && areArraysEqual(op.ops, sequence));
+            if(patternAdded) {
+                counter = patternAdded.opIndex;
+            } else {
+                counter = operations.length;
+                operations.push({isGroupOps: true, ops: sequence, opIndex: counter});
+            }
+            patternOps.push(counter);
+            let i = 0;
+            while(i < array.length - sequence.length) {
+                if(areArraysEqual(array.slice(i, i + sequence.length), sequence)) {
+                    array.splice(i, sequence.length, counter);
+                }
+                i++;
+            }
+            console.log(`Sequence ${pattern} reduces ${reductionApplied} operations`);
+        }
+    }
+
+    return patternOps;
+}
+
+function countReducedOps(arr, pattern) {
+    let count = 0;
+
+    for (let i = 0; i <= arr.length - pattern.length; i++) {
+        if (arr[i] === pattern[0]) {
+            let match = true;
+            for (let j = 1; j < pattern.length; j++) {
+                if (arr[i + j] !== pattern[j]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                count++;
+                i += pattern.length - 1; // Move to the next position after the pattern
+            }
+        }
+    }
+
+    return count * (pattern.length - 1);
+}
+
+function areArraysEqual(arr1, arr2) {
+    if(arr1.length !== arr2.length) return false;
+    for (let i = 0; i < arr1.length; i++) {
+        if (arr1[i] !== arr2[i]) return false;
+    }
+    return true;
 }
