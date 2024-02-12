@@ -554,35 +554,24 @@ function compileCode(ctx, code, dom, ret) {
 function calculateExps(ctx, code, dom) {
     ctx.tmp = new Array(code.tmpUsed);
 
-    cFirst = new Function("ctx", "i", compileCode(ctx, code.first, dom));
-    cI = new Function("ctx", "i", compileCode(ctx, code.i, dom));
-    cLast = new Function("ctx", "i", compileCode(ctx, code.last, dom));
+    cCode = new Function("ctx", "i", compileCode(ctx, code.code, dom));
 
-    const next = dom=="n" ? 1 : 1<< (ctx.nBitsExt - ctx.nBits);
     const N = dom=="n" ? ctx.N : ctx.Next;
 
     const pCtx = ctxProxy(ctx);
 
-    for (let i=0; i<next; i++) {
-        cFirst(pCtx, i);
-    }
-    for (let i=next; i<N-next; i++) {
+    for (let i=0; i<N; i++) {
         if ((i%1000) == 0) console.log(`Calculating expression.. ${i}/${N}`);
-        // cI(ctx, i);
-        cFirst(pCtx, i);
-    }
-    for (let i=N-next; i<N; i++) {
-        // cLast(ctx, i);
-        cFirst(pCtx, i);
+        cCode(pCtx, i);
     }
 }
 
 function calculateExpAtPoint(ctx, code, i) {
     ctx.tmp = new Array(code.tmpUsed);
-    cFirst = new Function("ctx", "i", compileCode(ctx, code.first, "n", true));
+    cCode = new Function("ctx", "i", compileCode(ctx, code, "n", true));
 
     const pCtx = ctxProxy(ctx);
-    return cFirst(pCtx, i);
+    return cCode(pCtx, i);
 }
 
 
@@ -734,9 +723,7 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
     for (let i=0; i<execInfo.outputSections.length; i++) setWidth(execInfo.outputSections[i]);
 
 
-    const cFirst = compileCode(ctx, code.first, dom);
-    const cI = compileCode(ctx, code.i, dom);
-    const cLast = compileCode(ctx, code.last, dom);
+    const cCode = compileCode(ctx, code.code, dom);
 
     const n = dom=="n" ? ctx.N : ctx.Next;
     const next = dom=="n" ? 1 : 1<< (ctx.nBitsExt - ctx.nBits);
@@ -765,9 +752,9 @@ async function calculateExpsParallel(pool, ctx, execPart, starkInfo) {
             ctxIn[si.name].set(sNext, curN*si.width);
         }
         if (useThreads) {
-            promises.push(pool.exec("starkgen_execute", [ctxIn, cFirst, cI, cLast, curN, execInfo, execPart, i ,n]));
+            promises.push(pool.exec("starkgen_execute", [ctxIn, cCode, curN, execInfo, execPart, i ,n]));
         } else {
-            res.push(await starkgen_execute(ctxIn, cFirst, cI, cLast, curN, execInfo, execPart, i, n));
+            res.push(await starkgen_execute(ctxIn, cCode, curN, execInfo, execPart, i, n));
         }
     }
     if (useThreads) {

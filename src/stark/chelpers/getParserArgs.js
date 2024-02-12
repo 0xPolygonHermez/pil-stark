@@ -33,7 +33,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         
         let operation = getOperation(r);
 
-        if(operation.op !== "copy" && !["q", "f"].includes(operation.dest_type)) {
+        if(operation.op !== "copy" && "q" !== operation.dest_type) {
             args.push(operationsTypeMap[operation.op]);
         }
 

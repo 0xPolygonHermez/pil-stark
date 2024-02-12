@@ -53,7 +53,7 @@ describe("Verify Evals Goldilocks Circuit Test", function () {
 
     it("Should check that verify eval calculates proper output if all inputs are set to max value", async () => {
     
-        const res = executeCode(F, ctx, starkInfo.verifierCode.first);
+        const res = executeCode(F, ctx, starkInfo.verifierCode.code);
 
         const w1 = await circuitVerifyEvals.calculateWitness({}, true);
 
@@ -63,7 +63,7 @@ describe("Verify Evals Goldilocks Circuit Test", function () {
 
     it("Should check that verify eval calculates proper output if all inputs are set to max value and all subs are zero", async () => {
         
-        const res = executeCode(F, ctx, starkInfo.verifierCode.first, true);
+        const res = executeCode(F, ctx, starkInfo.verifierCode.code, true);
 
         const w2 = await circuitVerifyEvalsMin.calculateWitness({}, true);
 

@@ -53,14 +53,14 @@ module.exports = async function buildCHelpers(starkInfo, className = "", multipl
 
     for(let i = 1; i < nStages - 1; ++i) {
         let stage = i + 1;
-        getParserArgsStage(stage, `step${stage}`, starkInfo[`step${stage}prev`].first, "n");
+        getParserArgsStage(stage, `step${stage}`, starkInfo[`step${stage}prev`].code, "n");
     }
 
-    getParserArgsStage(nStages, `step${nStages}`, starkInfo[`step${nStages}prev`].first, "n");
-    getParserArgsStage(nStages, `step${nStages}_after`, starkInfo[`step${nStages}`].first, "n", false);
+    getParserArgsStage(nStages, `step${nStages}`, starkInfo[`step${nStages}prev`].code, "n");
+    getParserArgsStage(nStages, `step${nStages}_after`, starkInfo[`step${nStages}`].code, "n", false);
     
-    getParserArgsStage(nStages + 1, `step${nStages + 1}`, starkInfo[`step${nStages + 1}2ns`].first, "2ns");
-    getParserArgsStage(nStages + 2, `step${nStages + 2}`, starkInfo[`step${nStages + 2}2ns`].first, "2ns");
+    getParserArgsStage(nStages + 1, `step${nStages + 1}`, starkInfo[`step${nStages + 1}2ns`].code, "2ns");
+    getParserArgsStage(nStages + 2, `step${nStages + 2}`, starkInfo[`step${nStages + 2}2ns`].code, "2ns");
 
     totalSubsetOperationsUsed = totalSubsetOperationsUsed.sort((a, b) => a - b);
     console.log("Generating generic parser with all " + totalSubsetOperationsUsed.length + " operations used");

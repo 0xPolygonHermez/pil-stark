@@ -117,6 +117,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "        uint64_t offsetsDest[4];",
         "        __m256i tmp1[parserParams.nTemp1];",
         "        Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
+        "        Goldilocks3::Element_avx tmp3_;",
         "        Goldilocks3::Element_avx tmp3_0;",
         "        Goldilocks3::Element_avx tmp3_1;",
         "        __m256i tmp1_0;",
@@ -205,13 +206,13 @@ module.exports.generateParser = function generateParser(className, stageName = "
                 let opr = operations[op.ops[j]];
                 operationCase.push(writeOperation(opr));
                 let numberArgs = numberOfArgs(opr.dest_type) + numberOfArgs(opr.src0_type);
-                if(opr.src1_type && !["q", "f"].includes(opr.dest_type)) numberArgs += numberOfArgs(opr.src1_type) + 1;
+                if(opr.src1_type && opr.dest_type !== "q") numberArgs += numberOfArgs(opr.src1_type) + 1;
                 operationCase.push(`                    i_args += ${numberArgs};`);
             }
         } else {
             operationCase.push(writeOperation(op));
             let numberArgs = numberOfArgs(op.dest_type) + numberOfArgs(op.src0_type);
-            if(op.src1_type && !["q", "f"].includes(op.dest_type)) numberArgs += numberOfArgs(op.src1_type) + 1;
+            if(op.src1_type && op.dest_type !== "q") numberArgs += numberOfArgs(op.src1_type) + 1;
             operationCase.push(`                    i_args += ${numberArgs};`);
         }
 
@@ -263,9 +264,6 @@ module.exports.generateParser = function generateParser(className, stageName = "
                 "                    }",
             ].join("\n");
             return qOperation;
-        } else if(operation.dest_type === "f") {
-            const fOperation = "                    Goldilocks3::copy_avx(&params.f_2ns[i*3], uint64_t(3), tmp3[parserParams.args[i_args]]);"
-            return fOperation;
         }
         let name = ["tmp1", "commit1"].includes(operation.dest_type) ? "Goldilocks::" : "Goldilocks3::";
         name += operation.src1_type ? "op" : "copy";
@@ -314,6 +312,8 @@ module.exports.generateParser = function generateParser(className, stageName = "
                 `                    }`,
                 `                    Goldilocks3::store_avx(&params.pols[0], offsetsDest, &${typeDest}, 2);`
             ])
+        } else if(operation.dest_type === "f") {
+            operationStoreAvx.push(`                    Goldilocks3::store_avx(&params.f_2ns[i*3], uint64_t(3), tmp3_);`,)
         }
 
 
@@ -348,7 +348,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
             c_args += numberOfArgs(operation.src1_type);
         }
 
-        if(operation.dest_type === "commit3" || (operation.src0_type === "commit3") || (operation.src1_type && operation.src1_type === "commit3")) {
+        if(operation.dest_type == "commit3" || (operation.src0_type === "commit3") || (operation.src1_type && operation.src1_type === "commit3")) {
             if(operation.dest_type === "commit3") {
                 name += `&${typeDest}, 2, \n                        `;
             } else {
@@ -372,7 +372,11 @@ module.exports.generateParser = function generateParser(className, stageName = "
                 }
             }
         } else {
-            name += typeDest + ", ";
+            if(operation.dest_type === "f") {
+                name += "tmp3_, ";
+	        } else {
+                name += typeDest + ", ";
+            }
             name += typeSrc0 + ", ";
             if(operation.src1_type) name += typeSrc1 + ", ";
         }
@@ -411,6 +415,8 @@ module.exports.generateParser = function generateParser(className, stageName = "
                 return "params.xDivXSubXi[i]";
             case "xDivXSubWXi":
                 return "params.xDivXSubWXi[i]";
+            case "f":
+                return "&params.f_2ns[i*3]";
             default:
                 throw new Error("Invalid type: " + type);
         }
@@ -451,12 +457,14 @@ module.exports.getAllOperations = function getAllOperations() {
     const possibleSrcDim1 = [ "commit1", "tmp1", "public", "x", "number" ];
     const possibleSrcDim3 = [ "commit3", "tmp3", "challenge" ];
 
+    possibleOps.push({ dest_type: "commit1", src0_type: "tmp1"});
+    possibleOps.push({ dest_type: "commit1", src0_type: "commit1"});
+
     // Dim1 destinations
     for(let j = 0; j < possibleDestinationsDim1.length; j++) {
         let dest_type = possibleDestinationsDim1[j];
         for(let k = 0; k < possibleSrcDim1.length; ++k) {
             let src0_type = possibleSrcDim1[k];
-            possibleOps.push({dest_type, src0_type}); // Copy operation
             if(src0_type === "x") continue;
             for (let l = k; l < possibleSrcDim1.length; ++l) {
                 let src1_type = possibleSrcDim1[l];
@@ -483,7 +491,6 @@ module.exports.getAllOperations = function getAllOperations() {
 
         for(let k = 0; k < possibleSrcDim3.length; ++k) {
             let src0_type = possibleSrcDim3[k];
-            if(["commit3", "tmp3"].includes(src0_type)) possibleOps.push({dest_type, src0_type}); // Copy operation
             for (let l = k; l < possibleSrcDim3.length; ++l) {
                 let src1_type = possibleSrcDim3[l];
                 possibleOps.push({dest_type, src0_type, src1_type})
@@ -492,7 +499,6 @@ module.exports.getAllOperations = function getAllOperations() {
     }
 
     // Step FRI
-    possibleOps.push({ dest_type: "tmp3", src0_type: "eval"});
     possibleOps.push({ dest_type: "tmp3", src0_type: "challenge", src1_type: "eval"});
     possibleOps.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "eval"});
 
@@ -503,7 +509,7 @@ module.exports.getAllOperations = function getAllOperations() {
     possibleOps.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubWXi"});
 
     possibleOps.push({ dest_type: "q", src0_type: "tmp3", src1_type: "Zi"});
-    possibleOps.push({ dest_type: "f", src0_type: "tmp3"});
+    possibleOps.push({ dest_type: "f", src0_type: "tmp3", src1_type: "tmp3"});
 
     return possibleOps;
 }

@@ -1,25 +1,11 @@
 
 
-function pilCodeGen(ctx, expId, prime, resType, resId, addMul) {
+function pilCodeGen(ctx, expId, prime, addMul) {
     prime = prime || false;
 
     const primeIdx = prime ? "expsPrime" : "exps";
 
-    if (ctx.calculated[primeIdx][expId]) {
-        if (resType) {
-            const c = ctx.code.find(r => (r.expId == expId) && (r.prime == prime));
-            c.code.push({
-                op: "copy",
-                dest: {
-                    type: resType,
-                    prime: prime,
-                    id: resId
-                },
-                src: [c.code[c.code.length-1].dest]
-            });
-        }
-        return;
-    }
+    if (ctx.calculated[primeIdx][expId]) return;
 
     calculateDeps(ctx, ctx.pil.expressions[expId], prime, expId);
 
@@ -55,23 +41,6 @@ function pilCodeGen(ctx, expId, prime, resType, resId, addMul) {
             },
             src: [ retRef ]
         })
-    }
-
-    if (resType) {
-        if (prime) throw new Error("Prime in restype");
-        codeCtx.code.push({
-            op: "copy",
-            dest: {
-                type: resType,
-                prime: prime,
-                id: resId
-            },
-            src: [{
-                type: "exp",
-                prime: prime,
-                id: expId
-            }]
-        });
     }
 
     ctx.code.push({
@@ -261,7 +230,7 @@ function evalExp(codeCtx, exp, prime) {
 function calculateDeps(ctx, exp, prime, expIdErr, addMul) {
     if (exp.op == "exp") {
         if (prime && exp.next) expressionError(ctx.pil, `Double prime`, expIdErr, exp.id);
-        pilCodeGen(ctx, exp.id, prime || exp.next, null, null , addMul);
+        pilCodeGen(ctx, exp.id, prime || exp.next, addMul);
     }
     if (exp.values) {
         for (let i=0; i<exp.values.length; i++) {
@@ -379,57 +348,45 @@ function getExpressionInfo(pil, expId) {
     return "Orphaned Expression: "+ expId;
 }
 
-function buildLinearCode(ctx, loopPos) {
-    let expAndExpPrims;
-    if (loopPos == "i" || loopPos == "last") {
-        expAndExpPrims = getExpAndExpPrimes();
-    } else {
-        expAndExpPrims = {}
-    }
-
+function buildLinearCode(ctx) {
+    let tmps = {};
+    
     const res = [];
     for (let i=0; i<ctx.code.length; i++) {
-        if (expAndExpPrims[i]) {
-            if (((loopPos == "i")&&(!ctx.code[i].prime)) ||
-                (loopPos == "last")) continue;
-        }
         for (let j=0; j< ctx.code[i].code.length; j++) {
-            res.push(ctx.code[i].code[j]);
+            const code = ctx.code[i].code[j];
+            
+            for(let k = 0; k < code.src.length; k++) {
+                const strSrc = code.src[k].type + "_" + code.src[k].id + "_" + code.src[k].prime;
+                if(tmps[strSrc]) {
+                    code.src[k] = tmps[strSrc];
+                }
+            }
+            
+            let addCode = code.op === "copy" ? false : true;
+            if(code.dest.type === "f") addCode = true;
+            if(code.dest.type === "exp" 
+                && ctx.pil.expressions[code.dest.id].keep
+                && !ctx.pil.expressions[code.dest.id].set) {
+                    ctx.pil.expressions[code.dest.id].set = true;
+                    addCode = true;
+                }
+            if(addCode) {
+                res.push(code);
+            } else {
+                const strDest = code.dest.type + "_" + code.dest.id + "_" + code.dest.prime;
+                tmps[strDest] = code.src[0];
+            }
         }
     }
 
     return res;
-
-    function getExpAndExpPrimes() {
-        const calcExps = {};
-
-        for (let i=0; i<ctx.code.length; i++) {
-            if ((typeof ctx.pil.expressions[ctx.code[i].expId].idQ !== "undefined") ||
-                ctx.pil.expressions[ctx.code[i].expId].keep ||
-                ctx.pil.expressions[ctx.code[i].expId].keep2ns)
-            {
-                const mask =  ctx.code[i].prime ? 2 : 1;
-                calcExps[ctx.code[i].expId] = (calcExps[ctx.code[i].expId] || 0) | mask;
-            }
-        }
-
-        const res = {};
-        Object.entries(calcExps).forEach(
-            ([key, value]) => {
-                res[key] = value == 3;
-            }
-        );
-
-        return res;
-    }
 }
 
 
 function buildCode(ctx) {
     res = {};
-    res.first = buildLinearCode(ctx, "first");
-    res.i = buildLinearCode(ctx, "i");
-    res.last = buildLinearCode(ctx, "last");
+    res.code = buildLinearCode(ctx);
     res.tmpUsed = ctx.tmpUsed;
 
     // Expressions that are not saved, cannot be reused later on
@@ -445,9 +402,7 @@ function buildCode(ctx) {
 }
 
 function iterateCode(code, f, ctx) {
-    _iterate(code.first, f);
-    _iterate(code.i, f);
-    _iterate(code.last, f);
+    _iterate(code.code, f);
 
     function _iterate(subCode, f) {
         for (let i=0; i<subCode.length; i++) {

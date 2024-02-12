@@ -72,7 +72,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
     ctx.Z = F.sub(xN, 1n);
     ctx.Zp = F.sub(F.exp(F.mul(ctx.challenges[7], F.w[nBits]), N), 1n);
 
-    const res=executeCode(F, ctx, starkInfo.verifierCode.first);
+    const res=executeCode(F, ctx, starkInfo.verifierCode.code);
 
     let xAcc = 1n;
     let q = 0n;
@@ -115,7 +115,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         ctxQry.xDivXSubXi = F.div(x, F.sub(x, ctxQry.challenges[7]));
         ctxQry.xDivXSubWXi = F.div(x, F.sub(x, F.mul(F.w[nBits], ctxQry.challenges[7])));
 
-        const vals = [executeCode(F, ctxQry, starkInfo.verifierQueryCode.first)];
+        const vals = [executeCode(F, ctxQry, starkInfo.verifierQueryCode.code)];
 
         return vals;
     }
