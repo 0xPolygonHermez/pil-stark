@@ -34,9 +34,6 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "    uint64_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;",
         "    Polinomial &x = domainExtended ? params.x_2ns : params.x_n;", 
         "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
-        "    uint64_t offsetsDest[4];",
-        "    __m256i tmp1[parserParams.nTemp1];",
-        "    Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
         "    Goldilocks3::Element_avx challenges[params.challenges.degree()];\n",
         "    __m256i numbers[parserParams.nNumbers];\n",
         "    uint64_t nStages = 3;",
@@ -47,7 +44,6 @@ module.exports.generateParser = function generateParser(className, stageName = "
     parserCPP.push(...[
         `    uint64_t nrowsBuff = nrowsBatch + nextStride;\n`,
         `    uint64_t nCols = starkInfo.nConstants;`,
-        `    uint64_t buffTOffsetsSteps[nStages + 2];`,
         `    uint64_t buffTOffsetsSteps_[nStages + 2];`,
         `    uint64_t nColsSteps[nStages + 2];`,
         `    uint64_t offsetsSteps[nStages + 2];\n`,
@@ -78,19 +74,8 @@ module.exports.generateParser = function generateParser(className, stageName = "
         `    buffTOffsetsSteps_[4] = buffTOffsetsSteps_[3] + 2*nColsSteps[3];`,
         `    nCols += nColsSteps[4];\n`,
     ]);
-
+       
     parserCPP.push(...[
-        "    __m256i bufferT_[2*nCols];\n",
-    ]);
-    
-        
-    parserCPP.push(...[
-        "    Goldilocks3::Element_avx tmp3_;",
-        "    Goldilocks3::Element_avx tmp3_0;",
-        "    Goldilocks3::Element_avx tmp3_1;",
-        "    __m256i tmp1_;",
-        "    __m256i tmp1_0;",
-        "    __m256i tmp1_1;",
         "#pragma omp parallel for",
         "    for(uint64_t i = 0; i < params.challenges.degree(); ++i) {",
         "        challenges[i][0] = _mm256_set1_epi64x(params.challenges[i][0].fe);",
@@ -126,9 +111,17 @@ module.exports.generateParser = function generateParser(className, stageName = "
     }
     
     parserCPP.push(...[
-        `#pragma omp parallel for private(offsetsDest, tmp1, tmp3, tmp1_, tmp3_, tmp1_0, tmp1_1, tmp3_0, tmp3_1, bufferT_)`,
+        `#pragma omp parallel for`,
         `    for (uint64_t i = 0; i < domainSize; i+= nrowsBatch) {`,
         "        uint64_t i_args = 0;\n",
+        "        uint64_t offsetsDest[4];",
+        "        __m256i tmp1[parserParams.nTemp1];",
+        "        Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
+        "        Goldilocks3::Element_avx tmp3_0;",
+        "        Goldilocks3::Element_avx tmp3_1;",
+        "        __m256i tmp1_0;",
+        "        __m256i tmp1_1;",
+        "        __m256i bufferT_[2*nCols];\n",
     ]); 
 
     parserCPP.push(...[
@@ -304,32 +297,25 @@ module.exports.generateParser = function generateParser(className, stageName = "
         let operationStoreAvx = [];
 
         if(operation.dest_type === "commit1") {
-            operationStoreAvx.push(`                    ${typeDest} = tmp1_;`);
             operationStoreAvx.push(...[
                 `                    for(uint64_t j = 0; j < nrowsBatch; ++j) {`,
                 `                        uint64_t l = i + j + nextStride * parserParams.args[i_args + ${c_args + 2}];`,
                 `                        if(l >= domainSize) l -= domainSize;`,
                 `                        offsetsDest[j] = offsetsSteps[parserParams.args[i_args + ${c_args}]] + parserParams.args[i_args + ${c_args + 1}] + l * nColsSteps[parserParams.args[i_args + ${c_args}]];`,
                 `                    }`,
-                `                    Goldilocks::store_avx(&params.pols[0], offsetsDest, tmp1_);`,
+                `                    Goldilocks::store_avx(&params.pols[0], offsetsDest, ${typeDest});`,
             ]);
         } else if(operation.dest_type === "commit3") {
-            operationStoreAvx.push(`                    ${typeDest} = tmp3_[0];`);
-            operationStoreAvx.push(`                    ${typeDest.substring(0, typeDest.length - 1)} + 2] =  tmp3_[1];`);
-            operationStoreAvx.push(`                    ${typeDest.substring(0, typeDest.length - 1)} + 4] = tmp3_[2];`);
             operationStoreAvx.push(...[
                 `                    for(uint64_t j = 0; j < nrowsBatch; ++j) {`,
                 `                        uint64_t l = i + j + nextStride * parserParams.args[i_args + ${c_args + 2}];`,
                 `                        if(l >= domainSize) l -= domainSize;`,
                 `                        offsetsDest[j] = offsetsSteps[parserParams.args[i_args + ${c_args}]] + parserParams.args[i_args + ${c_args + 1}] + l * nColsSteps[parserParams.args[i_args + ${c_args}]];`,
                 `                    }`,
-                `                    Goldilocks3::store_avx(&params.pols[0], offsetsDest, tmp3_);`
+                `                    Goldilocks3::store_avx(&params.pols[0], offsetsDest, &${typeDest}, 2);`
             ])
         }
 
-
-        
-        
 
         c_args += numberOfArgs(operation.dest_type);
 
@@ -343,15 +329,10 @@ module.exports.generateParser = function generateParser(className, stageName = "
         if ("x" === operation.src0_type){
             operationCall.push(`                    Goldilocks::load_avx(tmp1_0, ${typeSrc0}, x.offset());`);
             typeSrc0 = "tmp1_0";
-        } else if(operation.src0_type === "commit3") {
-            operationCall.push(`                    tmp3_0[0] = ${typeSrc0};`);
-            operationCall.push(`                    tmp3_0[1] = ${typeSrc0.substring(0, typeSrc0.length - 1)} + 2];`);
-            operationCall.push(`                    tmp3_0[2] = ${typeSrc0.substring(0, typeSrc0.length - 1)} + 4];`);
-            typeSrc0 = "tmp3_0";
         } else if(["xDivXSubXi", "xDivXSubWXi"].includes(operation.src0_type)) {
             operationCall.push(`                    Goldilocks3::load_avx(tmp3_0, ${typeSrc0}, params.${operation.src0_type}.offset());`);
             typeSrc0 = "tmp3_0";
-        }
+        } 
 
         if(operation.src1_type) {
             typeSrc1 = writeType(operation.src1_type);
@@ -359,11 +340,6 @@ module.exports.generateParser = function generateParser(className, stageName = "
             if ("x" === operation.src1_type){
                 operationCall.push(`                    Goldilocks::load_avx(tmp1_1, ${typeSrc1}, x.offset());`);
                 typeSrc1 = "tmp1_1";
-            } else if(operation.src1_type === "commit3") {
-                operationCall.push(`                    tmp3_1[0] = ${typeSrc1};`);
-                operationCall.push(`                    tmp3_1[1] = ${typeSrc1.substring(0, typeSrc1.length - 1)} + 2];`);
-                operationCall.push(`                    tmp3_1[2] = ${typeSrc1.substring(0, typeSrc1.length - 1)} + 4];`);
-                typeSrc1 = "tmp3_1";
             } else if(["xDivXSubXi", "xDivXSubWXi"].includes(operation.src1_type)) {
                 operationCall.push(`                    Goldilocks3::load_avx(tmp3_1, ${typeSrc1}, params.${operation.src1_type}.offset());`);
                 typeSrc1 = "tmp3_1";
@@ -372,16 +348,36 @@ module.exports.generateParser = function generateParser(className, stageName = "
             c_args += numberOfArgs(operation.src1_type);
         }
 
-        if(operation.dest_type === "commit1") {
-            name += "tmp1_, ";
-        } else if(operation.dest_type === "commit3") {
-            name += "tmp3_, ";
+        if(operation.dest_type === "commit3" || (operation.src0_type === "commit3") || (operation.src1_type && operation.src1_type === "commit3")) {
+            if(operation.dest_type === "commit3") {
+                name += `&${typeDest}, 2, \n                        `;
+            } else {
+                name += `&(${typeDest}[0]), 1, \n                        `;
+            }
+
+            if(operation.src0_type === "commit3") {
+                name += `&${typeSrc0}, 2, \n                        `;
+            } else if(["tmp3", "challenge", "eval"].includes(operation.src0_type)) {
+                name += `&(${typeSrc0}[0]), 1, \n                        `;
+            } else {
+                name += typeSrc0 + ", ";
+            }
+            if(operation.src1_type) {
+                if(operation.src1_type === "commit3") {
+                    name += `&${typeSrc1}, 2, \n                        `;
+                } else if(["tmp3", "challenge", "eval"].includes(operation.src1_type)) {
+                    name += `&(${typeSrc1}[0]), 1, \n                        `;
+                } else {
+                    name += typeSrc1 + ", ";
+                }
+            }
         } else {
             name += typeDest + ", ";
+            name += typeSrc0 + ", ";
+            if(operation.src1_type) name += typeSrc1 + ", ";
         }
 
-        name += typeSrc0 + ", ";
-        if(operation.src1_type) name += typeSrc1 + ", ";
+        
 
         name = name.substring(0, name.lastIndexOf(", ")) + ");";
 
