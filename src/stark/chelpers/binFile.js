@@ -1,18 +1,50 @@
 const { createBinFile,
     endWriteSection,
-    readBinFile,
-    startWriteSection,
-    startReadUniqueSection,
-    endReadSection } = require("@iden3/binfileutils");
+    startWriteSection
+     } = require("@iden3/binfileutils");
 
-const CHELPERS_NSECTIONS = 2;
+const CHELPERS_NSECTIONS = 4;
 
-const CHELPERS_STAGES_SECTION = 2;
+const CHELPERS_HEADER_SECTION = 2;
+const CHELPERS_STAGES_SECTION = 3;
+const CHELPERS_BUFFERS_SECTION = 4;
 
 exports.writeCHelpersFile = async function (cHelpersFilename, cHelpersInfo) {
     console.log("> Writing the chelpers file");
 
     const cHelpersBin = await createBinFile(cHelpersFilename, "chps", 1, CHELPERS_NSECTIONS, 1 << 22, 1 << 24);
+    
+    console.log(`··· Writing Section ${CHELPERS_HEADER_SECTION}. CHelpers header section`);
+    await startWriteSection(cHelpersBin, CHELPERS_HEADER_SECTION);
+
+    const ops = [];
+    const args = [];
+    const numbers = [];
+
+    const opsOffset = [];
+    const argsOffset = [];
+    const numbersOffset = [];
+
+    for(let i = 0; i < cHelpersInfo.length; i++) {
+        if(i == 0) {
+            opsOffset.push(0);
+            argsOffset.push(0);
+            numbersOffset.push(0);
+        } else {
+            opsOffset.push(opsOffset[i-1] + cHelpersInfo[i-1].ops.length);
+            argsOffset.push(argsOffset[i-1] + cHelpersInfo[i-1].args.length);
+            numbersOffset.push(numbersOffset[i-1] + cHelpersInfo[i-1].numbers.length);
+        }
+        ops.push(...cHelpersInfo[i].ops);
+        args.push(...cHelpersInfo[i].args);
+        numbers.push(...cHelpersInfo[i].numbers);
+    }
+
+    await cHelpersBin.writeULE32(ops.length);
+    await cHelpersBin.writeULE32(args.length);
+    await cHelpersBin.writeULE32(numbers.length);
+
+    await endWriteSection(cHelpersBin);
     
     console.log(`··· Writing Section ${CHELPERS_STAGES_SECTION}. CHelpers stages section`);
     await startWriteSection(cHelpersBin, CHELPERS_STAGES_SECTION);
@@ -31,78 +63,38 @@ exports.writeCHelpersFile = async function (cHelpersFilename, cHelpersInfo) {
         await cHelpersBin.writeULE32(stageInfo.nTemp3);
 
         await cHelpersBin.writeULE32(stageInfo.ops.length);
-        for(let j = 0; j < stageInfo.ops.length; j++) {
-            await cHelpersBin.writeULE32(stageInfo.ops[j]);
-        }
+        await cHelpersBin.writeULE32(opsOffset[i]);
 
         await cHelpersBin.writeULE32(stageInfo.args.length);
-        for(let j = 0; j < stageInfo.args.length; j++) {
-            await cHelpersBin.writeULE32(stageInfo.args[j]);
-        }
+        await cHelpersBin.writeULE32(argsOffset[i]);
 
         await cHelpersBin.writeULE32(stageInfo.numbers.length);
-        const buffNumbers = new Uint8Array(8*stageInfo.numbers.length);
-        const buffNumbersV = new DataView(buffNumbers.buffer);
-        for(let j = 0; j < stageInfo.numbers.length; j++) {
-            let number = stageInfo.numbers[j];
-            buffNumbersV.setBigUint64(8*j, BigInt(number), true);
-        }
-        await cHelpersBin.write(buffNumbers);
+        await cHelpersBin.writeULE32(numbersOffset[i]);        
     }
+
+    await endWriteSection(cHelpersBin);
+
+    console.log(`··· Writing Section ${CHELPERS_BUFFERS_SECTION}. CHelpers buffers section`);
+    await startWriteSection(cHelpersBin, CHELPERS_BUFFERS_SECTION);
+
+    for(let j = 0; j < ops.length; j++) {
+        await cHelpersBin.writeULE32(ops[j]);
+    }
+
+    for(let j = 0; j < args.length; j++) {
+        await cHelpersBin.writeULE32(args[j]);
+    }
+
+    const buffNumbers = new Uint8Array(8*numbers.length);
+    const buffNumbersV = new DataView(buffNumbers.buffer);
+    for(let j = 0; j < numbers.length; j++) {
+        buffNumbersV.setBigUint64(8*j, BigInt(numbers[j]), true);
+    }
+    await cHelpersBin.write(buffNumbers);
 
     await endWriteSection(cHelpersBin);
 
     console.log("> Writing the chelpers file finished");
 
     await cHelpersBin.close();
-}
-
-exports.readCHelpersFile = async function (cHelpersFilename) {
-    console.log("> Reading the chelpers file");
-
-    const { fd: cHelpersBin, sections } = await readBinFile(cHelpersFilename, "chps", 1, 1 << 25, 1 << 23);
-
-    const chelpers = [];
-
-    console.log(`··· Reading Section ${CHELPERS_STAGES_SECTION}. CHelpers stages section`);
-    await startReadUniqueSection(cHelpersBin, sections, CHELPERS_STAGES_SECTION);
-
-    const nStages = await cHelpersBin.readULE32();
-
-    for(let i = 0; i < nStages; i++) {
-        const stageInfo = {};
-        stageInfo.stage = await cHelpersBin.readULE32();
-        stageInfo.executeBefore = await cHelpersBin.readULE32();
-        stageInfo.nTemp1 = await cHelpersBin.readULE32();
-        stageInfo.nTemp3 = await cHelpersBin.readULE32();
-        let nOps = await cHelpersBin.readULE32();
-        stageInfo.ops = [];
-        for(let j = 0; j < nOps; j++) {
-            stageInfo.ops[j] = await cHelpersBin.readULE32();
-        }
-
-        let nArgs = await cHelpersBin.readULE32();
-        stageInfo.args = [];
-        for(let j = 0; j < nArgs; j++) {
-            stageInfo.args[j] = await cHelpersBin.readULE32();
-        }
-
-        stageInfo.nNumbers = await cHelpersBin.readULE32();
-        let buffNumbers = await cHelpersBin.read(8*stageInfo.nNumbers);
-        let buffNumbersV = new DataView(buffNumbers.buffer);
-        stageInfo.numbers = [];
-        for(let j = 0; j < stageInfo.nNumbers; j++) {
-            stageInfo.numbers[j] = buffNumbersV.getBigUint64(8*j, true);
-        }
-
-        chelpers.push(stageInfo);
-    }
-
-    await endReadSection(cHelpersBin);
-
-    console.log("> Reading the chelpers file finished");
-
-    await cHelpersBin.close();
-
-    return chelpers;
 }

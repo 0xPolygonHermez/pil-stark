@@ -22,7 +22,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
     let isStage = stageName !== "";
     let parserName = isStage ? `${stageName}_parser_avx` : "parser_avx";
     
-    let functionName = `void ${className}::${parserName}(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, uint32_t nrowsBatch, bool domainExtended) {`;
+    let functionName = `void ${className}::${parserName}(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams, uint32_t nrowsBatch, bool domainExtended) {`;
 
     if(operationsUsed && operationsUsed.length === 0) {
         return `#include "${className}.hpp"\n${functionName}`;
@@ -36,7 +36,10 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
         "    Goldilocks3::Element_avx challenges[params.challenges.degree()];",
         "    Goldilocks3::Element_avx challenges_ops[params.challenges.degree()];\n",
-        "    __m256i numbers[parserParams.nNumbers];\n",
+        "    uint32_t *ops = &parserArgs.ops[parserParams.opsOffset];\n",
+        "    uint32_t *args = &parserArgs.args[parserParams.argsOffset]; \n",
+        "    uint64_t* numbers = &parserArgs.numbers[parserParams.numbersOffset];\n",
+        "    __m256i numbers_[parserParams.nNumbers];\n",
         "    uint64_t nStages = 3;",
         "    uint64_t nextStride = domainExtended ? 1 << (starkInfo.starkStruct.nBitsExt - starkInfo.starkStruct.nBits) : 1;",
     ];
@@ -95,7 +98,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
     parserCPP.push(...[
         "#pragma omp parallel for",
         "    for(uint64_t i = 0; i < parserParams.nNumbers; ++i) {",
-        "        numbers[i] = _mm256_set1_epi64x(parserParams.numbers[i]);",
+        "        numbers_[i] = _mm256_set1_epi64x(numbers[i]);",
         "    }",
     ])
 
@@ -188,7 +191,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
     parserCPP.push(...[
         "\n",
         "        for (uint64_t kk = 0; kk < parserParams.nOps; ++kk) {",
-        `            switch (parserParams.ops[kk]) {`,
+        `            switch (ops[kk]) {`,
     ]);
            
     for(let i = 0; i < operations.length; i++) {
@@ -263,9 +266,9 @@ module.exports.generateParser = function generateParser(className, stageName = "
                 "                    Goldilocks::Element ti0[4];",
                 "                    Goldilocks::Element ti1[4];",
                 "                    Goldilocks::Element ti2[4];",
-                `                    Goldilocks::store_avx(ti0, tmp3[parserParams.args[i_args]][0]);`,
-                `                    Goldilocks::store_avx(ti1, tmp3[parserParams.args[i_args]][1]);`,
-                `                    Goldilocks::store_avx(ti2, tmp3[parserParams.args[i_args]][2]);`,
+                `                    Goldilocks::store_avx(ti0, tmp3[args[i_args]][0]);`,
+                `                    Goldilocks::store_avx(ti1, tmp3[args[i_args]][1]);`,
+                `                    Goldilocks::store_avx(ti2, tmp3[args[i_args]][2]);`,
                 "                    for (uint64_t j = 0; j < AVX_SIZE_; ++j) {",
                 "                        tmp_inv[0] = ti0[j];",
                 "                        tmp_inv[1] = ti1[j];",
@@ -305,7 +308,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
 
         if(operation.src1_type) {
             if(!operation.op) {
-                name += `parserParams.args[i_args + ${c_args}], `;
+                name += `args[i_args + ${c_args}], `;
             }
             c_args++;
         }      
@@ -317,18 +320,18 @@ module.exports.generateParser = function generateParser(className, stageName = "
         if(operation.dest_type === "commit1") {
             operationStoreAvx.push(...[
                 `                    for(uint64_t j = 0; j < nrowsBatch; ++j) {`,
-                `                        uint64_t l = i + j + nextStride * parserParams.args[i_args + ${c_args + 2}];`,
+                `                        uint64_t l = i + j + nextStride * args[i_args + ${c_args + 2}];`,
                 `                        if(l >= domainSize) l -= domainSize;`,
-                `                        offsetsDest[j] = offsetsSteps[parserParams.args[i_args + ${c_args}]] + parserParams.args[i_args + ${c_args + 1}] + l * nColsSteps[parserParams.args[i_args + ${c_args}]];`,
+                `                        offsetsDest[j] = offsetsSteps[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}] + l * nColsSteps[args[i_args + ${c_args}]];`,
                 `                    }`,
                 `                    Goldilocks::store_avx(&params.pols[0], offsetsDest, ${typeDest});`,
             ]);
         } else if(operation.dest_type === "commit3") {
             operationStoreAvx.push(...[
                 `                    for(uint64_t j = 0; j < nrowsBatch; ++j) {`,
-                `                        uint64_t l = i + j + nextStride * parserParams.args[i_args + ${c_args + 2}];`,
+                `                        uint64_t l = i + j + nextStride * args[i_args + ${c_args + 2}];`,
                 `                        if(l >= domainSize) l -= domainSize;`,
-                `                        offsetsDest[j] = offsetsSteps[parserParams.args[i_args + ${c_args}]] + parserParams.args[i_args + ${c_args + 1}] + l * nColsSteps[parserParams.args[i_args + ${c_args}]];`,
+                `                        offsetsDest[j] = offsetsSteps[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}] + l * nColsSteps[args[i_args + ${c_args}]];`,
                 `                    }`,
                 `                    Goldilocks3::store_avx(&params.pols[0], offsetsDest, &${typeDest}, 2);`
             ])
@@ -422,21 +425,21 @@ module.exports.generateParser = function generateParser(className, stageName = "
     function writeType(type) {
         switch (type) {
             case "public":
-                return `publics[parserParams.args[i_args + ${c_args}]]`;
+                return `publics[args[i_args + ${c_args}]]`;
             case "tmp1":
-                return `tmp1[parserParams.args[i_args + ${c_args}]]`; 
+                return `tmp1[args[i_args + ${c_args}]]`; 
             case "tmp3":
-                return `tmp3[parserParams.args[i_args + ${c_args}]]`;
+                return `tmp3[args[i_args + ${c_args}]]`;
             case "commit1":
             case "commit3":
             case "const":
-                    return `bufferT_[buffTOffsetsSteps_[parserParams.args[i_args + ${c_args}]] + 2 * parserParams.args[i_args + ${c_args + 1}] + parserParams.args[i_args + ${c_args + 2}]]`;
+                    return `bufferT_[buffTOffsetsSteps_[args[i_args + ${c_args}]] + 2 * args[i_args + ${c_args + 1}] + args[i_args + ${c_args + 2}]]`;
             case "challenge":
-                return `challenges[parserParams.args[i_args + ${c_args}]]`;
+                return `challenges[args[i_args + ${c_args}]]`;
             case "eval":
-                return `evals[parserParams.args[i_args + ${c_args}]]`;
+                return `evals[args[i_args + ${c_args}]]`;
             case "number":
-                return `numbers[parserParams.args[i_args + ${c_args}]]`;
+                return `numbers_[args[i_args + ${c_args}]]`;
             case "x":
                 return `x[i]`;
             case "xDivXSubXi": 

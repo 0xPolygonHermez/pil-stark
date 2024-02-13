@@ -17,20 +17,20 @@ module.exports = async function buildCHelpers(starkInfo, className = "", multipl
         `#include "chelpers_steps.hpp"\n\n`,
         `class ${className} : public CHelpersSteps {`,
         "    public:",
-        "        void calculateExpressions(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, bool useGeneric);",
+        "        void calculateExpressions(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams, bool useGeneric);",
         "    private:",
-        "        void parser_avx(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, uint32_t nrowsBatch, bool domainExtended);"
+        "        void parser_avx(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams, uint32_t nrowsBatch, bool domainExtended);"
     ];
     
     const cHelpersStepsCpp = [
         `#include "${className}.hpp"\n`,
-        `void ${className}::calculateExpressions(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, bool useGeneric) {`,
+        `void ${className}::calculateExpressions(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams, bool useGeneric) {`,
         `    uint32_t nrowsBatch = 4;`,
     ];
     if(multiple) cHelpersStepsCpp.push(`    if(useGeneric) {`);
     cHelpersStepsCpp.push(...[
         `        bool domainExtended = parserParams.stage > 3 ? true : false;`,
-        `        ${className}::parser_avx(starkInfo, params, parserParams, nrowsBatch, domainExtended);`,
+        `        ${className}::parser_avx(starkInfo, params, parserArgs, parserParams, nrowsBatch, domainExtended);`,
     ]);
    
     let operations = getAllOperations();
@@ -80,7 +80,7 @@ module.exports = async function buildCHelpers(starkInfo, className = "", multipl
         const opsUsed = operationsUsed[stageName];
         const vectorizeEvals = stage === nStages + 2 ? true : false;
         if(multiple) result[`${className}_${stageName}_parser_cpp`] = generateParser(className, stageName, operations, opsUsed, vectorizeEvals);
-        cHelpersStepsHppParserAVX.push(`        void ${stageName}_parser_avx(StarkInfo &starkInfo, StepsParams &params, ParserParams &parserParams, uint32_t nrowsBatch, bool domainExtended);`);
+        cHelpersStepsHppParserAVX.push(`        void ${stageName}_parser_avx(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams, uint32_t nrowsBatch, bool domainExtended);`);
         const domainExtended = stage > nStages ? true : false;
         if(stage == nStages && !executeBefore) {
             cHelpersStepsCppParserAVX.push(...[
