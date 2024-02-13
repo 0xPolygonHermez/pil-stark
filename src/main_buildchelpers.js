@@ -12,22 +12,21 @@ const argv = require("yargs")
     .alias("c", "chelpers")
     .alias("C", "cls")
     .alias("m", "multiple")
+    .alias("b", "binfile")
     .argv;
 
 async function run() {
     let cls = typeof (argv.cls) === "string" ? argv.cls.trim() : "Stark";
     let multiple = argv.multiple;
     const starkInfoFile = typeof (argv.starkinfo) === "string" ? argv.starkinfo.trim() : "mycircuit.starkinfo.json";
-    const chelpersFile = typeof (argv.chelpers) === "string" ? argv.chelpers.trim() : "mycircuit.chelpers.cpp";
+    const chelpersFile = typeof (argv.chelpers) === "string" ? argv.chelpers.trim() : "mycircuit.chelpers";
+    const binFile = typeof (argv.chelpers) === "string" ? argv.binfile.trim() : "mycircuit.chelpers.bin";
 
     const baseDir = path.dirname(chelpersFile);
     if (!fs.existsSync(baseDir)) {
         fs.mkdirSync(baseDir, { recursive: true });
     }
-    const leftFilename = chelpersFile.lastIndexOf('/') < 0 ? chelpersFile : chelpersFile.substr(0, chelpersFile.lastIndexOf('/'));
     
-    let binFileName = leftFilename + "/" + cls.toLowerCase() + ".chelpers.bin";
-
     cls = cls[0].toUpperCase() + cls.slice(1) + "Steps";
 
     const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
@@ -35,13 +34,13 @@ async function run() {
     const {code: cCode, cHelpersInfo } = await buildCHelpers(starkInfo, cls, multiple);
 
     for (cpart in cCode) {
-        let fileName = leftFilename + "/" + cpart;
+        let fileName = chelpersFile + "/" + cpart;
         fileName = fileName.substring(0, fileName.lastIndexOf('_')) + '.' + fileName.substring(fileName.lastIndexOf('_') + 1);
         console.log(fileName);
         await fs.promises.writeFile(fileName, cCode[cpart], "utf8");
     }
 
-    await writeCHelpersFile(binFileName, cHelpersInfo);
+    await writeCHelpersFile(binFile, cHelpersInfo);
     
     console.log("files Generated Correctly");
 }
