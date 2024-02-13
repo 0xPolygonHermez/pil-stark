@@ -42,9 +42,15 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
             pushSrcArg(r.src[i], r.src[i].type);
         }
 
-        let opsIndex = r.op === "copy" 
-            ? operations.findIndex(op => op.dest_type === operation.dest_type && op.src0_type === operation.src0_type && !op.src1_type)
-            : operations.findIndex(op => op.dest_type === operation.dest_type && op.src0_type === operation.src0_type && op.src1_type === operation.src1_type);
+        
+        let opsIndex;
+        if(r.op === "copy") {
+            opsIndex = operations.findIndex(op => op.dest_type === operation.dest_type && op.src0_type === operation.src0_type && !op.src1_type);
+        } else if(operation.op === "mul" && ["tmp3", "commit3"].includes(operation.dest_type) && operation.src1_type === "challenge") {
+            opsIndex = operations.findIndex(op => op.op === operation.op && op.dest_type === operation.dest_type && op.src0_type === operation.src0_type && op.src1_type === operation.src1_type);
+        } else {
+            opsIndex = operations.findIndex(op => !op.op && op.dest_type === operation.dest_type && op.src0_type === operation.src0_type && op.src1_type === operation.src1_type);
+        }
         
         if (opsIndex === -1) throw new Error("Operation not considered: " + JSON.stringify(operation));
 

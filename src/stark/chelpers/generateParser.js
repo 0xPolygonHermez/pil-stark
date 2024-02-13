@@ -34,7 +34,8 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "    uint64_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;",
         "    Polinomial &x = domainExtended ? params.x_2ns : params.x_n;", 
         "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
-        "    Goldilocks3::Element_avx challenges[params.challenges.degree()];\n",
+        "    Goldilocks3::Element_avx challenges[params.challenges.degree()];",
+        "    Goldilocks3::Element_avx challenges_ops[params.challenges.degree()];\n",
         "    __m256i numbers[parserParams.nNumbers];\n",
         "    uint64_t nStages = 3;",
         "    uint64_t nextStride = domainExtended ? 1 << (starkInfo.starkStruct.nBitsExt - starkInfo.starkStruct.nBits) : 1;",
@@ -80,7 +81,14 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "    for(uint64_t i = 0; i < params.challenges.degree(); ++i) {",
         "        challenges[i][0] = _mm256_set1_epi64x(params.challenges[i][0].fe);",
         "        challenges[i][1] = _mm256_set1_epi64x(params.challenges[i][1].fe);",
-        "        challenges[i][2] = _mm256_set1_epi64x(params.challenges[i][2].fe);",
+        "        challenges[i][2] = _mm256_set1_epi64x(params.challenges[i][2].fe);\n",
+        "        Goldilocks::Element challenges_aux[3];",
+        "        challenges_aux[0] = params.challenges[i][0] + params.challenges[i][1];",
+        "        challenges_aux[1] = params.challenges[i][0] + params.challenges[i][2];",
+        "        challenges_aux[2] = params.challenges[i][1] + params.challenges[i][2];",
+        "        challenges_ops[i][0] = _mm256_set1_epi64x(challenges_aux[0].fe);",
+        "        challenges_ops[i][1] =  _mm256_set1_epi64x(challenges_aux[1].fe);",
+        "        challenges_ops[i][2] =  _mm256_set1_epi64x(challenges_aux[2].fe);",
         "    }",
     ]);
 
@@ -192,7 +200,9 @@ module.exports.generateParser = function generateParser(className, stageName = "
         
         if(!op.isGroupOps) {
             let operationDescription;
-            if(op.src1_type) {
+            if(op.op === "mul") {
+                operationDescription = `                    // MULTIPLICATION WITH DEST: ${op.dest_type} - SRC0: ${op.src0_type} - SRC1: ${op.src1_type}`;
+            } else if(op.src1_type) {
                 operationDescription = `                    // OPERATION WITH DEST: ${op.dest_type} - SRC0: ${op.src0_type} - SRC1: ${op.src1_type}`;
             } else {
                 operationDescription = `                    // COPY ${op.src0_type} to ${op.dest_type}`;
@@ -266,7 +276,14 @@ module.exports.generateParser = function generateParser(className, stageName = "
             return qOperation;
         }
         let name = ["tmp1", "commit1"].includes(operation.dest_type) ? "Goldilocks::" : "Goldilocks3::";
-        name += operation.src1_type ? "op" : "copy";
+        
+        if(operation.op === "mul") {
+            name += "mul";
+        } else if (operation.src1_type) {
+            name += "op";
+        } else {
+            name += "copy";
+        }
 
         if(["tmp3", "commit3"].includes(operation.dest_type)) {
             if(operation.src1_type)  {
@@ -287,7 +304,10 @@ module.exports.generateParser = function generateParser(className, stageName = "
         c_args = 0;
 
         if(operation.src1_type) {
-            name += `parserParams.args[i_args + ${c_args++}], `;
+            if(!operation.op) {
+                name += `parserParams.args[i_args + ${c_args}], `;
+            }
+            c_args++;
         }      
 
         let typeDest = writeType(operation.dest_type);
@@ -365,8 +385,10 @@ module.exports.generateParser = function generateParser(className, stageName = "
             if(operation.src1_type) {
                 if(operation.src1_type === "commit3") {
                     name += `&${typeSrc1}, 2, \n                        `;
-                } else if(["tmp3", "challenge", "eval"].includes(operation.src1_type)) {
+                } else if(["tmp3", "eval"].includes(operation.src1_type) || (!operation.op && operation.src1_type === "challenge")) {
                     name += `&(${typeSrc1}[0]), 1, \n                        `;
+                } else if(operation.op === "mul" && operation.src1_type === "challenge") {
+                    name += `${typeSrc1}, ${typeSrc1.replace("challenges", "challenges_ops")}, \n                        `;
                 } else {
                     name += typeSrc1 + ", ";
                 }
@@ -378,7 +400,13 @@ module.exports.generateParser = function generateParser(className, stageName = "
                 name += typeDest + ", ";
             }
             name += typeSrc0 + ", ";
-            if(operation.src1_type) name += typeSrc1 + ", ";
+            if(operation.src1_type) {
+                if(operation.op === "mul" && operation.src1_type === "challenge") {
+                    name += `${typeSrc1}, ${typeSrc1.replace("challenges", "challenges_ops")}, \n                        `;
+                } else {
+                    name += typeSrc1 + ", ";
+                }
+            }
         }
 
         
@@ -492,6 +520,11 @@ module.exports.getAllOperations = function getAllOperations() {
             if(["commit3", "tmp3"].includes(src0_type)) possibleOps.push({dest_type, src0_type}); // Copy operation
             for (let l = k; l < possibleSrcDim3.length; ++l) {
                 let src1_type = possibleSrcDim3[l];
+                if(src0_type === "challenge") {
+                    possibleOps.push({op: "mul", dest_type, src0_type: src1_type, src1_type: src0_type});
+                } else if(src1_type === "challenge") {
+                    possibleOps.push({op: "mul", dest_type, src0_type, src1_type});
+                }
                 possibleOps.push({dest_type, src0_type, src1_type})
             }
         }
@@ -499,6 +532,7 @@ module.exports.getAllOperations = function getAllOperations() {
 
     // Step FRI
     possibleOps.push({ dest_type: "tmp3", src0_type: "eval"});
+    possibleOps.push({ op: "mul", dest_type: "tmp3", src0_type: "eval", src1_type: "challenge"});
     possibleOps.push({ dest_type: "tmp3", src0_type: "challenge", src1_type: "eval"});
     possibleOps.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "eval"});
 
