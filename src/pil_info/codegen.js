@@ -348,29 +348,12 @@ function getExpressionInfo(pil, expId) {
     return "Orphaned Expression: "+ expId;
 }
 
-function buildLinearCode(ctx) {
-    // let tmps = {};
-    
+function buildLinearCode(ctx) {    
     const res = [];
     for (let i=0; i<ctx.code.length; i++) {
         for (let j=0; j< ctx.code[i].code.length; j++) {
             const code = ctx.code[i].code[j];
             res.push(code);
-
-            /*for(let k = 0; k < code.src.length; k++) {
-                const strSrc = code.src[k].type + "_" + code.src[k].id + "_" + code.src[k].prime;
-                if(tmps[strSrc]) {
-                    code.src[k] = tmps[strSrc];
-                }
-            }
-            
-            let addCode = code.op !== "copy" || (code.op === "copy" && (ctx.pil.expressions[code.dest.id].keep || ctx.pil.expressions[code.dest.id].type == "cm")) ? true : false;
-            if(addCode) {
-                res.push(code);
-            } else {
-                const strDest = code.dest.type + "_" + code.dest.id + "_" + code.dest.prime;
-                tmps[strDest] = code.src[0];
-            } */
         }
     }
 
