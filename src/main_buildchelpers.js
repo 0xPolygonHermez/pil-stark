@@ -4,6 +4,7 @@ const version = require("../package").version;
 
 const buildCHelpers = require("./stark/chelpers/stark_chelpers.js");
 const { writeCHelpersFile } = require("./stark/chelpers/binFile.js");
+const { mkdir } = require("fs/promises");
 
 const argv = require("yargs")
     .version(version)
@@ -32,6 +33,8 @@ async function run() {
     const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
     const {code: cCode, cHelpersInfo } = await buildCHelpers(starkInfo, cls, multiple);
+
+    await mkdir(chelpersFile, { recursive: true });
 
     for (cpart in cCode) {
         let fileName = chelpersFile + "/" + cpart;
