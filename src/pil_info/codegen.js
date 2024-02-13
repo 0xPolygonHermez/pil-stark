@@ -355,8 +355,8 @@ function buildLinearCode(ctx) {
     for (let i=0; i<ctx.code.length; i++) {
         for (let j=0; j< ctx.code[i].code.length; j++) {
             const code = ctx.code[i].code[j];
-            
-            for(let k = 0; k < code.src.length; k++) {
+            res.push(code);
+            /* for(let k = 0; k < code.src.length; k++) {
                 const strSrc = code.src[k].type + "_" + code.src[k].id + "_" + code.src[k].prime;
                 if(tmps[strSrc]) {
                     code.src[k] = tmps[strSrc];
@@ -376,7 +376,7 @@ function buildLinearCode(ctx) {
             } else {
                 const strDest = code.dest.type + "_" + code.dest.id + "_" + code.dest.prime;
                 tmps[strDest] = code.src[0];
-            }
+            } */
         }
     }
 

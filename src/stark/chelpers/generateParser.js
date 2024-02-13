@@ -457,14 +457,12 @@ module.exports.getAllOperations = function getAllOperations() {
     const possibleSrcDim1 = [ "commit1", "tmp1", "public", "x", "number" ];
     const possibleSrcDim3 = [ "commit3", "tmp3", "challenge" ];
 
-    possibleOps.push({ dest_type: "commit1", src0_type: "tmp1"});
-    possibleOps.push({ dest_type: "commit1", src0_type: "commit1"});
-
     // Dim1 destinations
     for(let j = 0; j < possibleDestinationsDim1.length; j++) {
         let dest_type = possibleDestinationsDim1[j];
         for(let k = 0; k < possibleSrcDim1.length; ++k) {
             let src0_type = possibleSrcDim1[k];
+            possibleOps.push({dest_type, src0_type}); // Copy operation
             if(src0_type === "x") continue;
             for (let l = k; l < possibleSrcDim1.length; ++l) {
                 let src1_type = possibleSrcDim1[l];
@@ -491,6 +489,7 @@ module.exports.getAllOperations = function getAllOperations() {
 
         for(let k = 0; k < possibleSrcDim3.length; ++k) {
             let src0_type = possibleSrcDim3[k];
+            if(["commit3", "tmp3"].includes(src0_type)) possibleOps.push({dest_type, src0_type}); // Copy operation
             for (let l = k; l < possibleSrcDim3.length; ++l) {
                 let src1_type = possibleSrcDim3[l];
                 possibleOps.push({dest_type, src0_type, src1_type})
@@ -499,6 +498,7 @@ module.exports.getAllOperations = function getAllOperations() {
     }
 
     // Step FRI
+    possibleOps.push({ dest_type: "tmp3", src0_type: "eval"});
     possibleOps.push({ dest_type: "tmp3", src0_type: "challenge", src1_type: "eval"});
     possibleOps.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "eval"});
 
