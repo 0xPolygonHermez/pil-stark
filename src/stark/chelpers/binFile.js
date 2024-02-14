@@ -35,9 +35,15 @@ exports.writeCHelpersFile = async function (cHelpersFilename, cHelpersInfo) {
             argsOffset.push(argsOffset[i-1] + cHelpersInfo[i-1].args.length);
             numbersOffset.push(numbersOffset[i-1] + cHelpersInfo[i-1].numbers.length);
         }
-        ops.push(...cHelpersInfo[i].ops);
-        args.push(...cHelpersInfo[i].args);
-        numbers.push(...cHelpersInfo[i].numbers);
+        for(let j = 0; j < cHelpersInfo[i].ops.length; j++) {
+            ops.push(cHelpersInfo[i].ops[j]);
+        }
+        for(let j = 0; j < cHelpersInfo[i].args.length; j++) {
+            args.push(cHelpersInfo[i].args[j]);
+        }
+        for(let j = 0; j < cHelpersInfo[i].numbers.length; j++) {
+            numbers.push(cHelpersInfo[i].numbers[j]);
+        }
     }
 
     await cHelpersBin.writeULE32(ops.length);
@@ -77,9 +83,15 @@ exports.writeCHelpersFile = async function (cHelpersFilename, cHelpersInfo) {
     console.log(`··· Writing Section ${CHELPERS_BUFFERS_SECTION}. CHelpers buffers section`);
     await startWriteSection(cHelpersBin, CHELPERS_BUFFERS_SECTION);
 
+    const buffOps = new Uint8Array(ops.length);
+    const buffOpsV = new DataView(buffOps.buffer);
     for(let j = 0; j < ops.length; j++) {
-        await cHelpersBin.writeULE32(ops[j]);
+        buffOpsV.setUint8(j, ops[j], true);
     }
+    await cHelpersBin.write(buffOps);
+    // for(let j = 0; j < ops.length; j++) {
+    //     await cHelpersBin.writeULE32(ops[j]);
+    // }
 
     for(let j = 0; j < args.length; j++) {
         await cHelpersBin.writeULE32(args[j]);

@@ -36,7 +36,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
         "    Goldilocks3::Element_avx challenges[params.challenges.degree()];",
         "    Goldilocks3::Element_avx challenges_ops[params.challenges.degree()];\n",
-        "    uint32_t *ops = &parserArgs.ops[parserParams.opsOffset];\n",
+        "    uint8_t *ops = &parserArgs.ops[parserParams.opsOffset];\n",
         "    uint32_t *args = &parserArgs.args[parserParams.argsOffset]; \n",
         "    uint64_t* numbers = &parserArgs.numbers[parserParams.numbersOffset];\n",
         "    __m256i numbers_[parserParams.nNumbers];\n",
