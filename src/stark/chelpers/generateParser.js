@@ -37,7 +37,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "    Goldilocks3::Element_avx challenges[params.challenges.degree()];",
         "    Goldilocks3::Element_avx challenges_ops[params.challenges.degree()];\n",
         "    uint8_t *ops = &parserArgs.ops[parserParams.opsOffset];\n",
-        "    uint32_t *args = &parserArgs.args[parserParams.argsOffset]; \n",
+        "    uint16_t *args = &parserArgs.args[parserParams.argsOffset]; \n",
         "    uint64_t* numbers = &parserArgs.numbers[parserParams.numbersOffset];\n",
         "    __m256i numbers_[parserParams.nNumbers];\n",
         "    uint64_t nStages = 3;",
@@ -124,14 +124,15 @@ module.exports.generateParser = function generateParser(className, stageName = "
     parserCPP.push(...[
         `#pragma omp parallel for`,
         `    for (uint64_t i = 0; i < domainSize; i+= nrowsBatch) {`,
+        "        bool const needModule = i + nrowsBatch + nextStride >= domainSize;",
         "        uint64_t i_args = 0;\n",
         "        uint64_t offsetsDest[4];",
         "        __m256i tmp1[parserParams.nTemp1];",
         "        Goldilocks3::Element_avx tmp3[parserParams.nTemp3];",
         "        Goldilocks3::Element_avx tmp3_;",
-        "        Goldilocks3::Element_avx tmp3_0;",
+        "        // Goldilocks3::Element_avx tmp3_0;",
         "        Goldilocks3::Element_avx tmp3_1;",
-        "        __m256i tmp1_0;",
+        "        // __m256i tmp1_0;",
         "        __m256i tmp1_1;",
         "        __m256i bufferT_[2*nCols];\n",
     ]); 
@@ -317,24 +318,28 @@ module.exports.generateParser = function generateParser(className, stageName = "
 
         let operationStoreAvx = [];
 
-        if(operation.dest_type === "commit1") {
+        if(operation.dest_type === "commit1" || operation.dest_type === "commit3") {
             operationStoreAvx.push(...[
-                `                    for(uint64_t j = 0; j < nrowsBatch; ++j) {`,
-                `                        uint64_t l = i + j + nextStride * args[i_args + ${c_args + 2}];`,
-                `                        if(l >= domainSize) l -= domainSize;`,
-                `                        offsetsDest[j] = offsetsSteps[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}] + l * nColsSteps[args[i_args + ${c_args}]];`,
-                `                    }`,
-                `                    Goldilocks::store_avx(&params.pols[0], offsetsDest, ${typeDest});`,
+                `                    if(needModule) {`,
+                `                        uint64_t stepOffset = offsetsSteps[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}];`,
+                `                        uint64_t nextStrideOffset = i + nextStride * args[i_args + ${c_args + 2}];`,
+                `                        offsetsDest[0] = stepOffset + (nextStrideOffset % domainSize) * nColsSteps[args[i_args + ${c_args}]];`,
+                `                        offsetsDest[1] = stepOffset + ((nextStrideOffset + 1) % domainSize) * nColsSteps[args[i_args + ${c_args}]];`,
+                `                        offsetsDest[2] = stepOffset + ((nextStrideOffset + 2) % domainSize) * nColsSteps[args[i_args + ${c_args}]];`,
+                `                        offsetsDest[3] = stepOffset + ((nextStrideOffset + 3) % domainSize) * nColsSteps[args[i_args + ${c_args}]];`,
             ]);
-        } else if(operation.dest_type === "commit3") {
-            operationStoreAvx.push(...[
-                `                    for(uint64_t j = 0; j < nrowsBatch; ++j) {`,
-                `                        uint64_t l = i + j + nextStride * args[i_args + ${c_args + 2}];`,
-                `                        if(l >= domainSize) l -= domainSize;`,
-                `                        offsetsDest[j] = offsetsSteps[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}] + l * nColsSteps[args[i_args + ${c_args}]];`,
-                `                    }`,
-                `                    Goldilocks3::store_avx(&params.pols[0], offsetsDest, &${typeDest}, 2);`
-            ])
+            if(operation.dest_type === "commit1") {
+                operationStoreAvx.push(`                        Goldilocks::store_avx(&params.pols[0], offsetsDest, ${typeDest});`);
+            } else {
+                operationStoreAvx.push(`                        Goldilocks3::store_avx(&params.pols[0], offsetsDest, &${typeDest}, 2);`);
+            }
+            operationStoreAvx.push(`                    } else {`);
+            if(operation.dest_type === "commit1") {
+                operationStoreAvx.push(`                        Goldilocks::store_avx(&params.pols[offsetsSteps[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}] + (i + nextStride * args[i_args + ${c_args + 2}]) * nColsSteps[args[i_args + ${c_args}]]], nColsSteps[args[i_args + ${c_args}]], ${typeDest});`);
+            } else {
+                operationStoreAvx.push(`                        Goldilocks3::store_avx(&params.pols[offsetsSteps[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}] + (i + nextStride * args[i_args + ${c_args + 2}]) * nColsSteps[args[i_args + ${c_args}]]], nColsSteps[args[i_args + ${c_args}]], &${typeDest}, 2);`);
+            }
+            operationStoreAvx.push(`                    }`);
         } else if(operation.dest_type === "f") {
             operationStoreAvx.push(`                    Goldilocks3::store_avx(&params.f_2ns[i*3], uint64_t(3), tmp3_);`,)
         }
@@ -419,7 +424,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
         operationCall.push(`                    ${name}`);
         operationCall.push(...operationStoreAvx);
 
-        return operationCall.join("\n").replace(/i_args \+ 0/, "i_args");
+        return operationCall.join("\n").replace(/i_args \+ 0/g, "i_args");
     }
 
     function writeType(type) {

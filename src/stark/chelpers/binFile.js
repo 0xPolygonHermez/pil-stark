@@ -89,13 +89,13 @@ exports.writeCHelpersFile = async function (cHelpersFilename, cHelpersInfo) {
         buffOpsV.setUint8(j, ops[j], true);
     }
     await cHelpersBin.write(buffOps);
-    // for(let j = 0; j < ops.length; j++) {
-    //     await cHelpersBin.writeULE32(ops[j]);
-    // }
 
+    const buffArgs = new Uint8Array(2*args.length);
+    const buffArgsV = new DataView(buffArgs.buffer);
     for(let j = 0; j < args.length; j++) {
-        await cHelpersBin.writeULE32(args[j]);
+        buffArgsV.setUint16(2*j, args[j], true);
     }
+    await cHelpersBin.write(buffArgs);
 
     const buffNumbers = new Uint8Array(8*numbers.length);
     const buffNumbersV = new DataView(buffNumbers.buffer);
