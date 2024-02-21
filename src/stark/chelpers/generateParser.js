@@ -10,9 +10,9 @@ const operationsMap = {
     "challenge": 9, 
     "eval": 10,
     "xDivXSubXi": 11,
-    "xDivXSubWXi": 12, 
-    "q": 13, 
-    "f": 14,
+    "xDivXSubWXi": 11,
+    "q": 12, 
+    "f": 13,
 }
 
 module.exports.generateParser = function generateParser(className, stageName = "", operations, operationsUsed, vectorizeEvals = false) {
@@ -274,7 +274,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
                 "                        tmp_inv[0] = ti0[j];",
                 "                        tmp_inv[1] = ti1[j];",
                 "                        tmp_inv[2] = ti2[j];",
-                "                        Goldilocks3::mul((Goldilocks3::Element &)(params.q_2ns[(i + j) * 3]), params.zi.zhInv((i + j)),(Goldilocks3::Element &)tmp_inv);",
+                "                        Goldilocks3::mul((Goldilocks3::Element &)(params.q_2ns[(i + j) * 3]), params.zi[i + j][0],(Goldilocks3::Element &)tmp_inv);",
                 "                    }",
             ].join("\n");
             return qOperation;
@@ -293,7 +293,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
             if(operation.src1_type)  {
                 let dimType = "";
                 let dims1 = ["public", "x", "commit1", "tmp1", "const", "number"];
-                let dims3 = ["commit3", "tmp3", "challenge", "eval", "xDivXSubXi", "xDivXSubWXi"];
+                let dims3 = ["commit3", "tmp3", "challenge", "eval", "xDivXSubXi"];
                 if(dims1.includes(operation.src0_type)) dimType += "1";
                 if (dims3.includes(operation.src0_type)) dimType += "3";
                 if(dims1.includes(operation.src1_type)) dimType += "1";
@@ -357,7 +357,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
         if ("x" === operation.src0_type){
             operationCall.push(`                    Goldilocks::load_avx(tmp1_0, ${typeSrc0}, x.offset());`);
             typeSrc0 = "tmp1_0";
-        } else if(["xDivXSubXi", "xDivXSubWXi"].includes(operation.src0_type)) {
+        } else if(["xDivXSubXi"].includes(operation.src0_type)) {
             operationCall.push(`                    Goldilocks3::load_avx(tmp3_0, ${typeSrc0}, params.${operation.src0_type}.offset());`);
             typeSrc0 = "tmp3_0";
         } 
@@ -368,7 +368,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
             if ("x" === operation.src1_type){
                 operationCall.push(`                    Goldilocks::load_avx(tmp1_1, ${typeSrc1}, x.offset());`);
                 typeSrc1 = "tmp1_1";
-            } else if(["xDivXSubXi", "xDivXSubWXi"].includes(operation.src1_type)) {
+            } else if(["xDivXSubXi"].includes(operation.src1_type)) {
                 operationCall.push(`                    Goldilocks3::load_avx(tmp3_1, ${typeSrc1}, params.${operation.src1_type}.offset());`);
                 typeSrc1 = "tmp3_1";
             }
@@ -448,9 +448,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
             case "x":
                 return `x[i]`;
             case "xDivXSubXi": 
-                return "params.xDivXSubXi[i]";
-            case "xDivXSubWXi":
-                return "params.xDivXSubWXi[i]";
+                return `params.xDivXSubXi[i + args[i_args + ${c_args}]*domainSize]`;
             case "f":
                 return "&params.f_2ns[i*3]";
             default:
@@ -463,8 +461,6 @@ module.exports.generateParser = function generateParser(className, stageName = "
             case "x":
             case "Zi":
             case "q":
-            case "xDivXSubXi":
-            case "xDivXSubWXi":
             case "f":
                 return 0; 
             case "public":            
@@ -473,6 +469,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
             case "challenge":
             case "eval":
             case "number":
+            case "xDivXSubXi":
                 return 1;
             case "const":
             case "commit1":
@@ -548,7 +545,6 @@ module.exports.getAllOperations = function getAllOperations() {
     possibleOps.push({ dest_type: "tmp3", src0_type: "commit3", src1_type: "eval"});
     
     possibleOps.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubXi"});
-    possibleOps.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubWXi"});
 
     possibleOps.push({ dest_type: "q", src0_type: "tmp3", src1_type: "Zi"});
     possibleOps.push({ dest_type: "f", src0_type: "tmp3", src1_type: "tmp3"});
@@ -584,6 +580,8 @@ module.exports.getOperation = function getOperation(r) {
             _op[[`src${i}_type`]] = "commit1";
         } else if(r.src[i].type === "tmp") {
             _op[`src${i}_type`] =  `tmp${r.src[i].dim}`;
+        } else if(["xDivXSubXi", "xDivXSubWXi"].includes(r.src[i].type)) {
+            _op[`src${i}_type`] = "xDivXSubXi";
         } else {
             _op[`src${i}_type`] = r.src[i].type;
         }
