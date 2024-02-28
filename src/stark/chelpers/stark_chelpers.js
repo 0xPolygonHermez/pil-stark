@@ -1,8 +1,15 @@
 const { getParserArgs } = require("./getParserArgs.js");
 const { generateParser, getAllOperations } = require("./generateParser.js");
 const { findPatterns } = require("./helpers.js");
+const { writeCHelpersFile } = require("./binFile.js");
+const path = require("path");
+const fs = require("fs");
+const { mkdir } = require("fs/promises");
 
-module.exports = async function buildCHelpers(starkInfo, className = "", multiple = false) {
+module.exports = async function buildCHelpers(starkInfo, cHelpersFile, binFile, className = "", multiple = false) {
+
+    if(className === "") className = "Stark";
+    className = className[0].toUpperCase() + className.slice(1) + "Steps";
 
     let result = {};
     
@@ -144,7 +151,23 @@ module.exports = async function buildCHelpers(starkInfo, className = "", multipl
         return `case ${newIndex}:`;
     });
 
-    return {code: result, cHelpersInfo };
+    const baseDir = path.dirname(cHelpersFile);
+    if (!fs.existsSync(baseDir)) {
+        fs.mkdirSync(baseDir, { recursive: true });
+    }
+
+    await mkdir(cHelpersFile, { recursive: true });
+
+    for (r in result) {
+        let fileName = cHelpersFile + "/" + r;
+        fileName = fileName.substring(0, fileName.lastIndexOf('_')) + '.' + fileName.substring(fileName.lastIndexOf('_') + 1);
+        console.log(fileName);
+        await fs.promises.writeFile(fileName, result[r], "utf8");
+    }
+
+    await writeCHelpersFile(binFile, cHelpersInfo);
+
+    return;
 
     function getParserArgsStage(stage, stageName, stageCode, dom, executeBefore = true) {
         console.log(`Getting parser args for ${stageName}`);
