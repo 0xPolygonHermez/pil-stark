@@ -4,6 +4,12 @@ const {pilCodeGen, buildCode, iterateCode} = require("./codegen.js");
 module.exports = function generatePublicCalculators(res, pil) {
     res.publicsCode = [];
     for (let i=0; i<pil.publics.length; i++) {
+        const type = pil.expressions[pil.publics[i].polId];
+        if(pil.publics[i].polType == "imP" && type.op === "cm") {
+            pil.publics[i].polType = "cmP";
+            pil.publics[i].polId = type.id;
+            if(type.next) pil.publics[i].idx += 1;
+        };
         if (pil.publics[i].polType == "imP") {
             const ctx = {
                 pil: pil,

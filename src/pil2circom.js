@@ -11,8 +11,10 @@ module.exports = async function pil2circom(constRoot, starkInfo, options) {
 
     const F = new F3g();
 
-    setDimensions(starkInfo.verifierCode.first);
-    setDimensions(starkInfo.verifierQueryCode.first);
+    const verifierCode = starkInfo.verifierCode.code;
+    const verifierQueryCode = starkInfo.verifierQueryCode.code;
+    setDimensions(verifierCode);
+    setDimensions(verifierQueryCode);
 
     let template;
     if (starkStruct.verificationHashType == "GL") {
