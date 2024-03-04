@@ -6,7 +6,7 @@ const path = require("path");
 const fs = require("fs");
 const { mkdir } = require("fs/promises");
 
-module.exports = async function buildCHelpers(starkInfo, cHelpersFile, binFile, className = "", multiple = false) {
+module.exports = async function buildCHelpers(starkInfo, cHelpersFile, binFile, className = "") {
 
     if(className === "") className = "Stark";
     className = className[0].toUpperCase() + className.slice(1) + "Steps";
@@ -15,31 +15,17 @@ module.exports = async function buildCHelpers(starkInfo, cHelpersFile, binFile, 
     
     const cHelpersInfo = [];
 
-    const cHelpersStepsHppParserAVX = [];
-    const cHelpersStepsCppParserAVX = [`    } else {`, `        switch (parserParams.stage) {`];
-
     const nStages = 3;
 
     const cHelpersStepsHpp = [
         `#include "chelpers_steps.hpp"\n\n`,
         `class ${className} : public CHelpersSteps {`,
-        "    public:",
-        "        void calculateExpressions(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams, bool useGeneric);",
-        "    private:",
-        "        void parser_avx(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams, uint32_t nrowsBatch, bool domainExtended);"
-    ];
-    
-    const cHelpersStepsCpp = [
-        `#include "${className}.hpp"\n`,
-        `void ${className}::calculateExpressions(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams, bool useGeneric) {`,
-        `    uint32_t nrowsBatch = 4;`,
-    ];
-    if(multiple) cHelpersStepsCpp.push(`    if(useGeneric) {`);
-    cHelpersStepsCpp.push(...[
+        "public:",
+        "    void calculateExpressions(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams) {",
+        `        uint32_t nrowsBatch = 4;`,
         `        bool domainExtended = parserParams.stage > 3 ? true : false;`,
-        `        ${className}::parser_avx(starkInfo, params, parserArgs, parserParams, nrowsBatch, domainExtended);`,
-    ]);
-   
+    ];
+      
     let operations = getAllOperations();
     let operationsUsed = {};
 
@@ -74,52 +60,12 @@ module.exports = async function buildCHelpers(starkInfo, cHelpersFile, binFile, 
     console.log("Total subset of operations used: " + totalSubsetOperationsUsed.join(", "));
     console.log("--------------------------------");
     
-    result[`${className}_generic_parser_cpp`] = generateParser(className, "", operations, totalSubsetOperationsUsed, true);
+    const genericParser = generateParser(operations, totalSubsetOperationsUsed, true);
 
-    for(let i = 0; i < cHelpersInfo.length; ++i) {
-        const stage = cHelpersInfo[i].stage;
-        const executeBefore = cHelpersInfo[i].executeBefore;
-
-        let stageName = `step${stage}`;
-        if(!executeBefore) stageName += "_after";
-        console.log("Generating code for " + stageName);
-
-        const opsUsed = operationsUsed[stageName];
-        const vectorizeEvals = stage === nStages + 2 ? true : false;
-        if(multiple) result[`${className}_${stageName}_parser_cpp`] = generateParser(className, stageName, operations, opsUsed, vectorizeEvals);
-        cHelpersStepsHppParserAVX.push(`        void ${stageName}_parser_avx(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams, uint32_t nrowsBatch, bool domainExtended);`);
-        const domainExtended = stage > nStages ? true : false;
-        if(stage == nStages && !executeBefore) {
-            cHelpersStepsCppParserAVX.push(...[
-                `            case ${nStages}:`,
-                "                if(parserParams.executeBefore) {",
-                `                    ${className}::step${nStages}_parser_avx(starkInfo, params, parserParams, nrowsBatch, ${domainExtended});`,
-                "                } else {",
-                `                    ${className}::step${nStages}_after_parser_avx(starkInfo, params, parserParams, nrowsBatch, ${domainExtended});`,
-                "                }",
-                `                break;`
-            ])
-        }  else if(stage !== nStages) {
-            cHelpersStepsCppParserAVX.push(...[
-                `            case ${stage}:`,
-                `                ${className}::step${stage}_parser_avx(starkInfo, params, parserParams, nrowsBatch, ${domainExtended});`,
-                `                break;`
-            ])
-        }
-    }
-
-    cHelpersStepsCppParserAVX.push("        }");
-    if(multiple) {
-        cHelpersStepsCpp.push(...cHelpersStepsCppParserAVX);
-    }
-    if(multiple) cHelpersStepsCpp.push("    }");
-    cHelpersStepsCpp.push("}");
-
-    if(multiple) cHelpersStepsHpp.push(...cHelpersStepsHppParserAVX);
+    cHelpersStepsHpp.push(genericParser);
     cHelpersStepsHpp.push("};");
 
 
-    result[`${className}_cpp`] = cHelpersStepsCpp.join("\n");
     result[`${className}_hpp`] = cHelpersStepsHpp.join("\n"); 
     
     const operationsPatterns = operations.filter(op => op.isGroupOps);
@@ -132,19 +78,10 @@ module.exports = async function buildCHelpers(starkInfo, cHelpersFile, binFile, 
     for(let i = 0; i < cHelpersInfo.length; ++i) {
         let stageName = `step${cHelpersInfo[i].stage}`;
         if(!cHelpersInfo[i].executeBefore) stageName += "_after";
-        cHelpersInfo[i].ops = cHelpersInfo[i].ops.map(op => totalSubsetOperationsUsed.findIndex(o => o === op));
-
-        if(multiple) {
-            result[`${className}_${stageName}_parser_cpp`] = result[`${className}_${stageName}_parser_cpp`].replace(/case (\d+):/g, (match, caseNumber) => {
-                caseNumber = parseInt(caseNumber, 10);
-                const newIndex = totalSubsetOperationsUsed.findIndex(o => o === caseNumber);
-                if(newIndex === -1) throw new Error("Invalid operation!");
-                return `case ${newIndex}:`;
-            });
-        }
-        
+        cHelpersInfo[i].ops = cHelpersInfo[i].ops.map(op => totalSubsetOperationsUsed.findIndex(o => o === op));        
     }
-    result[`${className}_generic_parser_cpp`] = result[`${className}_generic_parser_cpp`].replace(/case (\d+):/g, (match, caseNumber) => {
+
+    result[`${className}_hpp`] = result[`${className}_hpp`].replace(/case (\d+):/g, (match, caseNumber) => {
         caseNumber = parseInt(caseNumber, 10);
         const newIndex = totalSubsetOperationsUsed.findIndex(o => o === caseNumber);
         if(newIndex === -1) throw new Error("Invalid operation!");

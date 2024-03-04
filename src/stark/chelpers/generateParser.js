@@ -15,22 +15,11 @@ const operationsMap = {
     "f": 13,
 }
 
-module.exports.generateParser = function generateParser(className, stageName = "", operations, operationsUsed, vectorizeEvals = false) {
+module.exports.generateParser = function generateParser(operations, operationsUsed, vectorizeEvals = false) {
 
     let c_args = 0;
-
-    let isStage = stageName !== "";
-    let parserName = isStage ? `${stageName}_parser_avx` : "parser_avx";
     
-    let functionName = `void ${className}::${parserName}(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams, uint32_t nrowsBatch, bool domainExtended) {`;
-
-    if(operationsUsed && operationsUsed.length === 0) {
-        return `#include "${className}.hpp"\n${functionName}`;
-    }
-
     const parserCPP = [
-        `#include "${className}.hpp"\n`,
-        `${functionName}`,
         "    uint64_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;",
         "    Polinomial &x = domainExtended ? params.x_2ns : params.x_n;", 
         "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
@@ -42,11 +31,11 @@ module.exports.generateParser = function generateParser(className, stageName = "
         "    __m256i numbers_[parserParams.nNumbers];\n",
         "    uint64_t nStages = 3;",
         "    uint64_t nextStride = domainExtended ? 1 << (starkInfo.starkStruct.nBitsExt - starkInfo.starkStruct.nBits) : 1;",
+        "    uint64_t nextStrides[2] = { 0, nextStride };",
     ];
 
     
     parserCPP.push(...[
-        `    uint64_t nrowsBuff = nrowsBatch + nextStride;\n`,
         `    uint64_t nCols = starkInfo.nConstants;`,
         `    uint64_t buffTOffsetsSteps_[nStages + 2];`,
         `    uint64_t nColsSteps[nStages + 2];`,
@@ -139,53 +128,36 @@ module.exports.generateParser = function generateParser(className, stageName = "
 
     parserCPP.push(...[
         "        uint64_t kk = 0;",
-        "        Goldilocks::Element bufferT[nrowsBuff];\n",
+        "        Goldilocks::Element bufferT[2*nrowsBatch];\n",
         "        for(uint64_t k = 0; k < nColsSteps[0]; ++k) {",
-        "            for(uint64_t j = 0; j < nrowsBuff; ++j) {",
-        "                uint64_t l = i + j;",
-        "                if(l >= domainSize) l -= domainSize;",
-        "                bufferT[j] = ((Goldilocks::Element *)constPols->address())[l * nColsSteps[0] + k];",
+        "            for(uint64_t o = 0; o < 2; ++o) {",
+        "                for(uint64_t j = 0; j < nrowsBatch; ++j) {",
+        "                    uint64_t l = (i + j + nextStrides[o]) % domainSize;",
+        "                    bufferT[nrowsBatch*o + j] = ((Goldilocks::Element *)constPols->address())[l * nColsSteps[0] + k];",
+        "                }",
+        "                Goldilocks::load_avx(bufferT_[kk++], &bufferT[nrowsBatch*o]);",
         "            }",
-        "            Goldilocks::load_avx(bufferT_[kk], &bufferT[0]);",
-        "            kk += 1;",
-        "            Goldilocks::load_avx(bufferT_[kk], &bufferT[nextStride]);",
-        "            kk += 1;",
         "        }",
-        "        for(uint64_t k = 0; k < nColsSteps[1]; ++k) {",
-        "            for(uint64_t j = 0; j < nrowsBuff; ++j) {",
-        "                uint64_t l = i + j;",
-        "                if(l >= domainSize) l -= domainSize;",
-        "                bufferT[j] = params.pols[offsetsSteps[1] + l * nColsSteps[1] + k];",
-        "            }",
-        "            Goldilocks::load_avx(bufferT_[kk], &bufferT[0]);",
-        "            kk += 1;",
-        "            Goldilocks::load_avx(bufferT_[kk], &bufferT[nextStride]);",
-        "            kk += 1;",
-        "        }",
-        "        for(uint64_t s = 2; s <= nStages; ++s) {",
+        "        for(uint64_t s = 1; s <= nStages; ++s) {",
         "            if(parserParams.stage < s) break;",
         "            for(uint64_t k = 0; k < nColsSteps[s]; ++k) {",
-        "                for(uint64_t j = 0; j < nrowsBuff; ++j) {",
-        "                    uint64_t l = i + j;",
-        "                    if(l >= domainSize) l -= domainSize;",
-        "                    bufferT[j] = params.pols[offsetsSteps[s] + l * nColsSteps[s] + k];",
+        "                for(uint64_t o = 0; o < 2; ++o) {",
+        "                    for(uint64_t j = 0; j < nrowsBatch; ++j) {",
+        "                        uint64_t l = (i + j + nextStrides[o]) % domainSize;",
+        "                        bufferT[nrowsBatch*o + j] = params.pols[offsetsSteps[s] + l * nColsSteps[s] + k];",
+        "                    }",
+        "                    Goldilocks::load_avx(bufferT_[kk++], &bufferT[nrowsBatch*o]);",
         "                }",
-        "                Goldilocks::load_avx(bufferT_[kk], &bufferT[0]);",
-        "                kk += 1;",
-        "                Goldilocks::load_avx(bufferT_[kk], &bufferT[nextStride]);",
-        "                kk += 1;",
         "            }",
         "        }",
         "        for(uint64_t k = 0; k < nColsSteps[nStages + 1]; ++k) {",
-        "            for(uint64_t j = 0; j < nrowsBuff; ++j) {",
-        "                uint64_t l = i + j;",
-        "                if(l >= domainSize) l -= domainSize;",
-        "                bufferT[j] = params.pols[offsetsSteps[nStages + 1] + l * nColsSteps[nStages + 1] + k];",
+        "            for(uint64_t o = 0; o < 2; ++o) {",
+        "                for(uint64_t j = 0; j < nrowsBatch; ++j) {",
+        "                    uint64_t l = (i + j + nextStrides[o]) % domainSize;",
+        "                    bufferT[nrowsBatch*o + j] = params.pols[offsetsSteps[nStages + 1] + l * nColsSteps[nStages + 1] + k];",
+        "                }",
+        "                Goldilocks::load_avx(bufferT_[kk++], &bufferT[nrowsBatch*o]);",
         "            }",
-        "            Goldilocks::load_avx(bufferT_[kk], &bufferT[0]);",
-        "            kk += 1;",
-        "            Goldilocks::load_avx(bufferT_[kk], &bufferT[nextStride]);",
-        "            kk += 1;",
         "        }"
     ]);
     
@@ -256,7 +228,7 @@ module.exports.generateParser = function generateParser(className, stageName = "
     parserCPP.push("}");
        
     
-    const parserCPPCode = parserCPP.join("\n");
+    const parserCPPCode = parserCPP.map(l => `    ${l}`).join("\n");
 
     return parserCPPCode;
 

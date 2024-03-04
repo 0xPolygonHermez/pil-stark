@@ -9,20 +9,18 @@ const argv = require("yargs")
     .alias("s", "starkinfo")
     .alias("c", "chelpers")
     .alias("C", "cls")
-    .alias("m", "multiple")
     .alias("b", "binfile")
     .argv;
 
 async function run() {
     let cls = typeof (argv.cls) === "string" ? argv.cls.trim() : "Stark";
-    let multiple = argv.multiple;
     const starkInfoFile = typeof (argv.starkinfo) === "string" ? argv.starkinfo.trim() : "mycircuit.starkinfo.json";
     const cHelpersFile = typeof (argv.chelpers) === "string" ? argv.chelpers.trim() : "mycircuit.chelpers";
     const binFile = typeof (argv.chelpers) === "string" ? argv.binfile.trim() : "mycircuit.chelpers.bin";
 
     const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
-    await buildCHelpers(starkInfo, cHelpersFile, binFile, cls, multiple);
+    await buildCHelpers(starkInfo, cHelpersFile, binFile, cls);
     
     console.log("files Generated Correctly");
 }
