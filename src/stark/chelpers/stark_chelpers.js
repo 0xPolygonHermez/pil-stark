@@ -1,8 +1,10 @@
+const fs = require("fs");
+const path = require("path");
 const compileCode_52ns = require("./compileCode_52ns.js")
 const compileCode_parser = require("./compileCode_parser.js")
 const compileCode_42ns = require("./compileCode_42ns.js")
 
-module.exports = async function buildCHelpers(starkInfo, config = {}) {
+module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersFile, config = {}) {
 
     const code = [];
     const multipleCodeFiles = config && config.multipleCodeFiles;
@@ -106,12 +108,41 @@ module.exports = async function buildCHelpers(starkInfo, config = {}) {
     code.push(compileCode("step52ns_i", starkInfo.step52ns.first, "2ns"));
     code.push(compileCode("step52ns_last", starkInfo.step52ns.first, "2ns"));
 
+    let cCode; 
     if (multipleCodeFiles) {
         result.step52ns = code.join("\n\n") + "\n";
-        return result;
+        cCode = result;
+    } else {
+        cCode = code.join("\n\n");
     }
 
-    return code.join("\n\n");
+    const baseDir = path.dirname(cHelpersFile);
+    if (!fs.existsSync(baseDir)) {
+        fs.mkdirSync(baseDir, { recursive: true });
+    }
+
+    if (multipleCodeFiles) {
+        const dotPos = cHelpersFile.lastIndexOf('.');
+        const leftFilename = dotPos < 0 ? cHelpersFile : cHelpersFile.substr(0, dotPos);
+        const ext = dotPos < 0 ? '.cpp' : cHelpersFile.substr(dotPos);
+        const classInclude = config.className.charAt(0).toLowerCase() + config.className.slice(1) + ".hpp";
+        for (cpart in cCode) {
+            let code, ext2;
+            if (!cpart.includes("parser")) {
+                code = `#include "goldilocks_cubic_extension.hpp"\n#include "zhInv.hpp"\n#include "starks.hpp"\n#include "constant_pols_starks.hpp"\n#include "${classInclude}"\n\n` + cCode[cpart];
+                ext2 = ext;
+            } else {
+                code = cCode[cpart];
+                cpart = cpart.replace(/_/g, ".");
+                ext2 = ".hpp";
+            }
+            await fs.promises.writeFile(leftFilename + '.' + cpart + ext2, code, "utf8");
+        }
+    } else {
+        await fs.promises.writeFile(cHelpersFile, cCode, "utf8");
+    }
+
+    return;
 
     function compileCode(functionName, code, dom, ret) {
         const body = [];
