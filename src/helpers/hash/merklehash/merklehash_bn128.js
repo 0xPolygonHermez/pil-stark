@@ -1,12 +1,14 @@
 const LinearHash = require("../linearhash/linearhash.bn128");
 const assert = require("assert");
+const { log2 } = require("pilcom/src/utils.js");
 
 module.exports = class MerkleHash {
 
-    constructor(poseidon) {
+    constructor(poseidon, arity) {
         this.poseidon = poseidon;
         this.F = poseidon.F;
-        this.lh = new LinearHash(poseidon);
+        this.lh = new LinearHash(poseidon, arity);
+        this.arity = arity;
     }
 
     async merkelize(vals, elementSize, elementsInLinear, nLinears, interleaved) {
@@ -17,7 +19,7 @@ module.exports = class MerkleHash {
         let nTree = nLinears;
         while (nTree>1) {
             sizeTree += nTree;
-            nTree = Math.floor((nTree-1)/16)+1;
+            nTree = Math.floor((nTree-1)/this.arity)+1;
         }
 
         const buff = new BigUint64Array(3 + elementsInLinear*nLinears*elementSize + 4*sizeTree);
@@ -83,16 +85,16 @@ module.exports = class MerkleHash {
         o=nextO;
 
         let n = nLinears;
-        let nextN = Math.floor((n-1)/16)+1;
-        const auxBuff = new Uint8Array(16*32);
+        let nextN = Math.floor((n-1)/this.arity)+1;
+        const auxBuff = new Uint8Array(this.arity*32);
         while (n>1) {
             nextO = pp;
             for (let i=0; i<nextN; i++) {
                 let ih;
-                if ((i+1)*16 <= n) {
-                    ih = buff8.slice(o+i*16*32, o+(i+1)*16*32);
+                if ((i+1)*this.arity <= n) {
+                    ih = buff8.slice(o+i*this.arity*32, o+(i+1)*this.arity*32);
                 } else {
-                    auxBuff.set(buff8.slice(o+i*16*32, o+n*32));
+                    auxBuff.set(buff8.slice(o+i*this.arity*32, o+n*32));
                     auxBuff.fill(0, (n-i)*32);
                     ih = auxBuff;
                 }
@@ -101,7 +103,7 @@ module.exports = class MerkleHash {
                 pp += 32;
             }
             n = nextN;
-            nextN = Math.floor((n-1)/16)+1;
+            nextN = Math.floor((n-1)/this.arity)+1;
             o = nextO;
         }
 
@@ -149,13 +151,14 @@ module.exports = class MerkleHash {
 
         function merkle_genMerkleProof(idx, offset, n) {
             if (n<=1) return [];
-            const nextIdx = idx >> 4;
+            const nBitsArity = Math.ceil(Math.log2(self.arity));
+            const nextIdx = idx >> nBitsArity;
 
-            const si =  idx ^ (idx & 0xF);
+            const si =  idx ^ (idx & (self.arity - 1));
 
             const sibs = [];
 
-            for (let i=0; i<16; i++) {
+            for (let i=0; i<self.arity; i++) {
                 if (i<n) {
                     sibs.push(self.F.toObject(buff8.slice(offset + (si+i)*32, offset + (si+i+1)*32)));
                 } else {
@@ -163,9 +166,9 @@ module.exports = class MerkleHash {
                 }
             }
 
-            const nextN = Math.floor((n-1)/16)+1;
+            const nextN = Math.floor((n-1)/self.arity)+1;
 
-            return [sibs, ...merkle_genMerkleProof(nextIdx, offset+ n*32, nextN )];
+            return [sibs, ...merkle_genMerkleProof(nextIdx, offset+ n*32, nextN)];
         }
     }
 
@@ -195,11 +198,13 @@ module.exports = class MerkleHash {
                 return value;
             }
 
-            const curIdx = idx & 0xF;
-            const nextIdx = idx >> 4;
+            const nBitsArity = Math.ceil(Math.log2(self.arity));
 
-            const buff = new Uint8Array(32*16);
-            for (let i=0; i<16; i++) {
+            const curIdx = idx & (self.arity - 1);
+            const nextIdx = idx >> nBitsArity;
+
+            const buff = new Uint8Array(32*self.arity);
+            for (let i=0; i<self.arity; i++) {
                 buff.set(self.F.e(mp[offset][i]), i*32);
             }
             buff.set(value, curIdx*32);

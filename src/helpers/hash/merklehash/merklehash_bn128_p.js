@@ -7,34 +7,35 @@ const {linearHash, merkelizeLevel} = require("./merklehash_bn128_worker");
 const { ModuleBuilder } = require("wasmbuilder")
 const { BigBuffer } = require("pilcom");
 
-module.exports = async function buildMerkleHash() {
+module.exports = async function buildMerkleHash(arity) {
     const wasmModule = await getWasmModule();
     const poseidon = await buildPoseidon();
-    const MH = new MerkleHash(poseidon, wasmModule);
+    const MH = new MerkleHash(poseidon, wasmModule, arity);
     return MH;
 }
 
 class MerkleHash {
 
-    constructor(poseidon, wasmModule) {
+    constructor(poseidon, wasmModule, arity) {
         this.poseidon = poseidon;
         this.F = poseidon.F;
-        this.lh = new LinearHash(poseidon);
+        this.lh = new LinearHash(poseidon, arity);
         this.minOpsPerThread = 1<<12;
         this.maxOpsPerThread = 1<<16;
         this.wasmModule = wasmModule;
         this.useThreads = true;
+        this.arity = arity;
     }
 
     _getNNodes(n) {
-        let nextN = (Math.floor((n-1)/16)+1);
-        let acc = nextN*16;
+        let nextN = (Math.floor((n-1)/this.arity)+1);
+        let acc = nextN*this.arity;
         while (n>1) {
             // FIll with zeros if n nodes in the leve is not even
             n = nextN;
-            nextN = (Math.floor((n-1)/16)+1);
+            nextN = Math.floor((n-1)/this.arity)+1;
             if (n>1) {
-                acc += nextN*16;
+                acc += nextN*this.arity;
             } else {
                 acc +=1;
             }
@@ -52,21 +53,22 @@ class MerkleHash {
         };
 
         const pool = workerpool.pool(__dirname + '/merklehash_bn128_worker.js');
-//const pool = {maxWorkers: 15};
 
         const promisesLH = [];
         let res = [];
         let nPerThreadF = Math.floor((height-1)/pool.maxWorkers)+1;
-        const minPT = Math.floor(this.minOpsPerThread / (Math.floor((width -1) / (3*16)) + 1));
+
+        const minPT = Math.floor(this.minOpsPerThread / (Math.floor((width -1) / (3*this.arity)) + 1));
+
         if (nPerThreadF < minPT) nPerThreadF = minPT;
         if (nPerThreadF > this.maxOpsPerThread) nPerThreadF = this.maxOpsPerThread;
         for (let i=0; i< height; i+=nPerThreadF) {
             const curN = Math.min(nPerThreadF, height-i);
             const bb = tree.elements.slice(i*width, (i+ curN)*width);
             if (self.useThreads) {
-                promisesLH.push(pool.exec("linearHash", [self.wasmModule, bb, width, i, height]));
+                promisesLH.push(pool.exec("linearHash", [self.wasmModule, bb, width, i, height, this.arity]));
             } else {
-                res.push(await linearHash(self.wasmModule, bb, width, i, height));
+                res.push(await linearHash(self.wasmModule, bb, width, i, height, this.arity));
             }
 
             let st = pool.stats();
@@ -85,16 +87,16 @@ class MerkleHash {
 
         let pIn = 0;
         let n256 = height;
-        let nextN256 = (Math.floor((n256-1)/16)+1);
-        let pOut = pIn + nextN256*16*32;
+        let nextN256 = (Math.floor((n256-1)/self.arity)+1);
+        let pOut = pIn + nextN256*self.arity*32;
         while (n256>1) {
             // FIll with zeros if n nodes in the leve is not even
             await _merkelizeLevel(pIn, nextN256, pOut);
 
             n256 = nextN256;
-            nextN256 = (Math.floor((n256-1)/16)+1);
+            nextN256 = (Math.floor((n256-1)/self.arity)+1);
             pIn = pOut;
-            pOut = pIn + nextN256*16*32;
+            pOut = pIn + nextN256*self.arity*32;
         }
 
         pool.terminate();
@@ -109,11 +111,11 @@ class MerkleHash {
 
             for (let i=0; i< nOps; i+=nOpsPerThread) {
                 const curNOps = Math.min(nOpsPerThread, nOps-i);
-                const bb = tree.nodes.slice(pIn/8 + i*64, pIn/8 + (i+curNOps)*64);
+                const bb = tree.nodes.slice(pIn/8 + i*4*self.arity, pIn/8 + (i+curNOps)*4*self.arity);
                 if (self.useThreads) {
-                    promises.push(pool.exec("merkelizeLevel", [self.wasmModule, bb, i, nOps]));
+                    promises.push(pool.exec("merkelizeLevel", [self.wasmModule, bb, i, nOps, self.arity]));
                 } else {
-                    res.push(await merkelizeLevel(self.wasmModule, bb, i, nOps));
+                    res.push(await merkelizeLevel(self.wasmModule, bb, i, nOps, self.arity));
                 }
             }
             if (self.useThreads) {
@@ -147,20 +149,26 @@ class MerkleHash {
 
         function merkle_genMerkleProof(tree, idx, offset, n) {
             if (n<=1) return [];
-            const nextIdx = idx >> 4;
+            const nBitsArity = Math.ceil(Math.log2(self.arity));
 
-            const si =  idx & 0xFFFFFFF0;
+            const nextIdx = idx >> nBitsArity;
+
+            const si =  idx ^ (idx & (self.arity - 1));
 
             const sibs = [];
 
-            for (let i=0; i<16; i++) {
-                const buff8 = new Uint8Array(tree.nodes.buffer, offset + (si+i)*32, 32 );
-                sibs.push(self.F.toObject(buff8));
+            for (let i=0; i<self.arity; i++) {
+                if(i < n) {
+                    const buff8 = new Uint8Array(tree.nodes.buffer, offset + (si+i)*32, 32 );
+                    sibs.push(self.F.toObject(buff8));
+                } else {
+                    sibs.push(0n);
+                }
             }
 
-            const nextN = Math.floor((n-1)/16)+1;
+            const nextN = Math.floor((n-1)/self.arity)+1;
 
-            return [sibs, ...merkle_genMerkleProof(tree, nextIdx, offset+ nextN*16*32, nextN )];
+            return [sibs, ...merkle_genMerkleProof(tree, nextIdx, offset+ nextN*self.arity*32, nextN )];
         }
     }
 
@@ -191,11 +199,12 @@ class MerkleHash {
                 return value;
             }
 
-            const curIdx = idx & 0xF;
-            const nextIdx = idx >> 4;
+            const nBitsArity = Math.ceil(Math.log2(self.arity));
+            const curIdx = idx & (self.arity - 1);
+            const nextIdx = idx >> nBitsArity;
 
-            const buff = new Uint8Array(32*16);
-            for (let i=0; i<16; i++) {
+            const buff = new Uint8Array(32*self.arity);
+            for (let i=0; i<self.arity; i++) {
                 buff.set(self.F.e(mp[offset][i]), i*32);
             }
             buff.set(value, curIdx*32);

@@ -1,7 +1,8 @@
 
 class Transcript {
-    constructor(poseidon) {
+    constructor(poseidon, nInputs) {
         this.poseidon = poseidon;
+        this.nInputs = nInputs;
         this.F = poseidon.F;
         this.state = this.F.zero;
         this.pending = [];
@@ -41,10 +42,10 @@ class Transcript {
     }
 
     updateState() {
-        while (this.pending.length<16) {
+        while (this.pending.length<this.nInputs) {
             this.pending.push(this.F.zero);
         }
-        this.out = this.poseidon(this.pending, this.state, 17);
+        this.out = this.poseidon(this.pending, this.state, this.nInputs + 1);
         this.out3 = [];
         this.pending = [];
         this.state = this.out[0];
@@ -63,7 +64,7 @@ class Transcript {
     _add1(a) {
         this.out = [];
         this.pending.push(this.F.e(a));
-        if (this.pending.length == 16) {
+        if (this.pending.length == this.nInputs) {
             this.updateState();
         }
     }

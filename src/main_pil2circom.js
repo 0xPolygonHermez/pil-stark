@@ -10,10 +10,11 @@ const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_pil2circom.js -o <verifier.circom> -v <verification_key.json> -s <starkinfo.json> [--skipMain] [--enableInput] [--verkeyInput]")
+    .usage("node main_pil2circom.js -o <verifier.circom> -v <verification_key.json> -s <starkinfo.json> [--skipMain] [--enableInput] [--verkeyInput] [--arity]")
     .alias("s", "starkinfo")
     .alias("v", "verkey")
     .alias("o", "output")
+    .string("arity")
     .argv;
 
 async function run() {
@@ -32,6 +33,11 @@ async function run() {
         skipMain: argv.skipMain || false,
         enableInput: argv.enableInput || false,
         verkeyInput: argv.verkeyInput || false
+    }
+
+    if(starkInfo.starkStruct.verificationHashType === "BN128") {
+        options.arity =  Number(argv.arity) || 16;
+        console.log(`Arity: ${options.arity}`);
     }
 
     const verifier = await pil2circom(constRoot, starkInfo, options);
