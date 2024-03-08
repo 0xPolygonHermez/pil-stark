@@ -31,19 +31,6 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
 
     let totalSubsetOperationsUsed = [];
 
-    //Define mapOffsetCol
-    let nrowsbatch = 4 + (1 << (starkInfo.starkStruct.nBitsExt - starkInfo.starkStruct.nBits));
-    starkInfo.mapOffsetsCol = {};
-    starkInfo.mapOffsetsCol.cm1_n = nrowsbatch * starkInfo.nConstants;
-    starkInfo.mapOffsetsCol.cm2_n = starkInfo.mapOffsetsCol.cm1_n + nrowsbatch * starkInfo.mapSectionsN.cm1_n;
-    starkInfo.mapOffsetsCol.cm3_n = starkInfo.mapOffsetsCol.cm2_n + nrowsbatch * starkInfo.mapSectionsN.cm2_n;
-    starkInfo.mapOffsetsCol.tmpExp_n = starkInfo.mapOffsetsCol.cm3_n + nrowsbatch * starkInfo.mapSectionsN.cm3_n;
-
-    starkInfo.mapOffsetsCol.cm1_2ns = nrowsbatch * starkInfo.nConstants;
-    starkInfo.mapOffsetsCol.cm2_2ns = starkInfo.mapOffsetsCol.cm1_2ns + nrowsbatch * starkInfo.mapSectionsN.cm1_2ns;
-    starkInfo.mapOffsetsCol.cm3_2ns = starkInfo.mapOffsetsCol.cm2_2ns + nrowsbatch * starkInfo.mapSectionsN.cm2_2ns;
-    starkInfo.mapOffsetsCol.cm4_2ns = starkInfo.mapOffsetsCol.cm3_2ns + nrowsbatch * starkInfo.mapSectionsN.cm3_2ns;
-
     for(let i = 1; i < nStages - 1; ++i) {
         let stage = i + 1;
         let code = starkInfo[`step${stage}prev`].code;
