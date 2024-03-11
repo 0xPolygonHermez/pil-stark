@@ -554,7 +554,8 @@ function compileCode(ctx, code, dom, ret) {
 function calculateExps(ctx, code, dom) {
     ctx.tmp = new Array(code.tmpUsed);
 
-    cCode = new Function("ctx", "i", compileCode(ctx, code.code, dom));
+    const compiledCode = compileCode(ctx, code.code, dom)
+    const cCode = new Function("ctx", "i", `"use strict"; ${compiledCode}`);
 
     const N = dom=="n" ? ctx.N : ctx.Next;
 
@@ -566,9 +567,10 @@ function calculateExps(ctx, code, dom) {
     }
 }
 
-function calculateExpAtPoint(ctx, code, i) {
+function calculateExpAtPoint(ctx = {}, code = {}, i = 0) {
     ctx.tmp = new Array(code.tmpUsed);
-    cCode = new Function("ctx", "i", compileCode(ctx, code, "n", true));
+    const compiledCode = compileCode(ctx, code, "n", true);
+    const cCode = new Function("ctx", "i", `"use strict"; ${compiledCode}`);
 
     const pCtx = ctxProxy(ctx);
     return cCode(pCtx, i);

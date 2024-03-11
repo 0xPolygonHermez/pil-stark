@@ -27,8 +27,6 @@ module.exports.compileCode = function compileCode(functionName, starkInfo, code,
                         body.push(`      Goldilocks3::add(${lexp}, ${src[0]}, ${src[1]});`)
                     } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
                         body.push(`      Goldilocks3::add(${lexp}, ${src[1]}, ${src[0]});`)
-                    } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                        body.push(`      Goldilocks3::add(${lexp}, ${src[0]}, ${src[1]});`)
                     } else {
                         throw new Error("Invalid dimension")
                     }
@@ -45,8 +43,6 @@ module.exports.compileCode = function compileCode(functionName, starkInfo, code,
                     body.push(`      Goldilocks::sub(${lexp}, ${src[0]}, ${src[1]});`)
                 } else if (r.dest.dim == 3) {
                     if (((r.src[0].dim == 1) || r.src[1].dim == 3)) {
-                        body.push(`      Goldilocks3::sub(${lexp}, ${src[0]}, ${src[1]});`)
-                    } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
                         body.push(`      Goldilocks3::sub(${lexp}, ${src[0]}, ${src[1]});`)
                     } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
                         body.push(`      Goldilocks3::sub(${lexp}, ${src[0]}, ${src[1]});`)
@@ -69,8 +65,6 @@ module.exports.compileCode = function compileCode(functionName, starkInfo, code,
                         body.push(`      Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
                     } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
                         body.push(`      Goldilocks3::mul(${lexp}, ${src[1]}, ${src[0]});`)
-                    } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                        body.push(`      Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
                     } else {
                         throw new Error("Invalid dimension")
                     }
