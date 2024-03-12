@@ -15,11 +15,10 @@ const argv = require("yargs")
     .alias("v", "verkey")
     .alias("o", "output")
     .string("arity")
+    .string("index")
     .argv;
 
 async function run() {
-    const F = new F3g();
-
     const starkInfoFIle = typeof(argv.starkinfo) === "string" ?  argv.starkinfo.trim() : "starkinfo.json";
     const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "mycircuit.verkey.json";
     const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "mycircuit.verifier.circom";
@@ -38,6 +37,10 @@ async function run() {
     if(starkInfo.starkStruct.verificationHashType === "BN128") {
         options.arity =  Number(argv.arity) || 16;
         console.log(`Arity: ${options.arity}`);
+    }
+
+    if(argv.index) {
+        options.index = Number(argv.index);
     }
 
     const verifier = await pil2circom(constRoot, starkInfo, options);
