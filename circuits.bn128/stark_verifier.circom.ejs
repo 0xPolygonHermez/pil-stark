@@ -56,17 +56,17 @@ class Transcript {
     updateState() {
         if(this.hCnt > 0) {
             const firstUnused = Math.max(this.hiCnt, 1);
-            if(firstUnused < 17) {
-                this.code.push(`for(var i = ${firstUnused}; i < 17; i++){
+            if(firstUnused < (arityTranscript + 1)) {
+                this.code.push(`for(var i = ${firstUnused}; i < ${arityTranscript + 1}; i++){
         _ <== transcriptHash_${this.hCnt -1}[i]; // Unused transcript values        
     }`)
             }
         }
-        while (this.pending.length<16) {
+        while (this.pending.length < arityTranscript) {
             this.pending.push("0");
         }
-        this.code.push(`\n    signal transcriptHash_${this.hCnt++}[17] <== PoseidonEx(16,17)([${this.pending.join(',')}], ${this.state});`);
-        for (let i=0; i<17; i++) {
+        this.code.push(`\n    signal transcriptHash_${this.hCnt++}[${Number(arityTranscript) + 1}] <== PoseidonEx(${arityTranscript}, ${arityTranscript + 1})([${this.pending.join(',')}], ${this.state});`);
+        for (let i=0; i<arityTranscript+1; i++) {
             this.out[i] = `transcriptHash_${this.hCnt-1}[${i}]`;
         }
         this.out3 = [];
@@ -90,7 +90,7 @@ class Transcript {
         this.out = [];
         this.out3 = [];
         this.pending.push(a);
-        if (this.pending.length == 16) {
+        if (this.pending.length == arityTranscript) {
             this.updateState();
         }
     }
@@ -104,8 +104,8 @@ class Transcript {
             n2b[i] = `transcriptN2b_${this.n2bCnt++}`;
             this.code.push(`signal ${n2b[i]}[254] <== Num2Bits_strict()(${f});`);
         }
-        if(this.hiCnt < 17) {
-            this.code.push(`for(var i = ${this.hiCnt}; i < 17; i++){
+        if(this.hiCnt < arityTranscript + 1) {
+            this.code.push(`for(var i = ${this.hiCnt}; i < ${arityTranscript + 1}; i++){
         _ <== transcriptHash_${this.hCnt - 1}[i]; // Unused transcript values           
     }\n`)
         }
@@ -437,7 +437,7 @@ template parallel VerifyEvaluations() {
 
     // Using the evaluations committed and the challenges,
     // calculate the sum of q_i, i.e, q_0(X) + challenge * q_1(X) + challenge^2 * q_2(X) +  ... + challenge^(l-1) * q_l-1(X) evaluated at z 
-<% const evalP = unrollCode(starkInfo.verifierCode.first) -%>
+<% const evalP = unrollCode(starkInfo.verifierCode.code) -%>
 
     signal {maxNum} xAcc[<%- starkInfo.qDeg %>][3]; //Stores, at each step, x^i evaluated at z
     signal {maxNum} qStep[<%- starkInfo.qDeg-1 %>][3]; // Stores the evaluations of Q_i
@@ -553,7 +553,7 @@ template parallel VerifyQuery(currStepBits, nextStepBits) {
     signal {maxNum} den2inv[3] <== GLCInv()(den2);
     signal {maxNum} xDivXSubWXi[3] <== GLCMul()(den2inv, X);
    
-<% const evalQ = unrollCode(starkInfo.verifierQueryCode.first) -%>
+<% const evalQ = unrollCode(starkInfo.verifierQueryCode.code) -%>
 
     var s0_keys_lowValues[nextStep];
     for(var i = 0; i < nextStep; i++) {
@@ -668,15 +668,15 @@ template StarkVerifier() {
     signal input s0_valsC[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants%>];
     
     // Merkle proofs for each of the evaluations
-    signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
+    signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
-    signal input s0_siblings2[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
+    signal input s0_siblings2[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
 <% }                                         -%>
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
-    signal input s0_siblings3[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
+    signal input s0_siblings3[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
 <% }                                         -%>
-    signal input s0_siblings4[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
-    signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
+    signal input s0_siblings4[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+    signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
 
     // Contains the root of the original polynomial and all the intermediate FRI polynomials except for the last step
 <% let si_roots = []; -%>
@@ -690,7 +690,7 @@ template StarkVerifier() {
     // and the sibling paths for each query.
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
     signal input s<%- s %>_vals[<%- starkStruct.nQueries %>][<%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits))*3 %>];
-    signal input s<%- s %>_siblings[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[s].nBits -1) /4) +1 %>][16];
+    signal input s<%- s %>_siblings[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[s].nBits -1) /nBitsArity) +1 %>][<%- arity %>];
 <% }                                                  -%>
 
     // Evaluations of the final FRI polynomial over a set of points of size bounded its degree
@@ -865,24 +865,24 @@ template StarkVerifier() {
         
     //Calculate merkle root for s0 vals
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm1_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals1_p[q], s0_siblings1[q], ys[q], root1, enable);
+        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm1_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>, <%- arity %>)(s0_vals1_p[q], s0_siblings1[q], ys[q], root1, enable);
     }
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm2_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals2_p[q], s0_siblings2[q], ys[q], root2, enable);
+        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm2_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>, <%- arity %>)(s0_vals2_p[q], s0_siblings2[q], ys[q], root2, enable);
     }
 <% }                                        -%>
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm3_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals3_p[q], s0_siblings3[q], ys[q], root3, enable);
+        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm3_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>, <%- arity %>)(s0_vals3_p[q], s0_siblings3[q], ys[q], root3, enable);
     }
 <% }     -%>
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm4_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_vals4_p[q], s0_siblings4[q], ys[q], root4, enable);
+        VerifyMerkleHash(1, <%- starkInfo.mapSectionsN.cm4_2ns %>, <%- 1 << starkStruct.steps[0].nBits %>,<%- arity %>)(s0_vals4_p[q], s0_siblings4[q], ys[q], root4, enable);
     }
 
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
-        VerifyMerkleHash(1, <%- starkInfo.nConstants %>, <%- 1 << starkStruct.steps[0].nBits %>)(s0_valsC_p[q], s0_siblingsC[q], ys[q], rootC, enable);  
+        VerifyMerkleHash(1, <%- starkInfo.nConstants %>, <%- 1<< starkStruct.steps[0].nBits %>, <%- arity %>)(s0_valsC_p[q], s0_siblingsC[q], ys[q], rootC, enable);  
     }                                  
 
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
@@ -890,7 +890,7 @@ template StarkVerifier() {
     for (var q=0; q<<%- starkStruct.nQueries %>; q++) {
         // Calculate merkle root for s<%- s %> vals
         for(var i = 0; i < <%-starkStruct.steps[s].nBits %>; i++) { s<%- s %>_keys_merkle[q][i] <== ys[q][i]; }
-        VerifyMerkleHash(3, <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>, <%- 1 << starkStruct.steps[s].nBits %>)(s<%- s %>_vals_p[q], s<%- s %>_siblings[q], s<%- s %>_keys_merkle[q], s<%- s %>_root, enable);
+        VerifyMerkleHash(3, <%- 1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits) %>, <%- 1 << starkStruct.steps[s].nBits %>,<%- arity %>)(s<%- s %>_vals_p[q], s<%- s %>_siblings[q], s<%- s %>_keys_merkle[q], s<%- s %>_root, enable);
     }
 <% } -%>
 
@@ -967,15 +967,15 @@ template Main() {
 <% }                                         -%>
     signal input s0_vals4[<%- starkStruct.nQueries %>][<%- starkInfo.mapSectionsN.cm4_2ns %>];
     signal input s0_valsC[<%- starkStruct.nQueries %>][<%- starkInfo.nConstants%>];
-    signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
+    signal input s0_siblings1[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
 <% if (starkInfo.mapSectionsN.cm2_2ns > 0) { -%>
-    signal input s0_siblings2[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
+    signal input s0_siblings2[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
 <% }                                         -%>
 <% if (starkInfo.mapSectionsN.cm3_2ns > 0) { -%>
-    signal input s0_siblings3[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
+    signal input s0_siblings3[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
 <% }                                         -%>
-    signal input s0_siblings4[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
-    signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/4)+1 %>][16];
+    signal input s0_siblings4[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
+    signal input s0_siblingsC[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[0].nBits - 1)/nBitsArity)+1 %>][<%- arity %>];
 
 <% for (let s=0; s<starkStruct.steps.length-1; s++) {   -%>
     signal input s<%- s+1 %>_root;
@@ -986,7 +986,7 @@ template Main() {
     // and the sibling paths for each query.
 <% for (let s=1; s<starkStruct.steps.length; s++) {   -%>
     signal input s<%- s %>_vals[<%- starkStruct.nQueries %>][<%- (1 << (starkStruct.steps[s-1].nBits - starkStruct.steps[s].nBits))*3 %>];
-    signal input s<%- s %>_siblings[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[s].nBits -1) /4) +1 %>][16];
+    signal input s<%- s %>_siblings[<%- starkStruct.nQueries %>][<%- Math.floor((starkStruct.steps[s].nBits -1) /nBitsArity) +1 %>][<%- arity %>];
 <% }                                                  -%>
 
     signal input finalPol[<%- 1 << starkStruct.steps[starkStruct.steps.length-1].nBits %>][3];

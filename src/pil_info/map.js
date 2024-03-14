@@ -212,9 +212,9 @@ module.exports = function map(res, pil) {
     res.mapOffsets.cm2_n = res.mapOffsets.cm1_n +  N * res.mapSectionsN.cm1_n;
     res.mapOffsets.cm3_n = res.mapOffsets.cm2_n +  N * res.mapSectionsN.cm2_n;
     res.mapOffsets.cm4_n = res.mapOffsets.cm3_n +  N * res.mapSectionsN.cm3_n;
-    res.mapOffsets.tmpExp_n = res.mapOffsets.cm4_n +  N * res.mapSectionsN.cm4_n;
-    res.mapOffsets.cm1_2ns = res.mapOffsets.tmpExp_n +  N * res.mapSectionsN.tmpExp_n;
-    res.mapOffsets.cm2_2ns = res.mapOffsets.cm1_2ns +  Next * res.mapSectionsN.cm1_2ns;
+    res.mapOffsets.cm1_2ns = res.mapOffsets.cm4_n +  N * res.mapSectionsN.cm4_n;
+    res.mapOffsets.tmpExp_n = res.mapOffsets.cm1_2ns +  Next * res.mapSectionsN.cm1_2ns;
+    res.mapOffsets.cm2_2ns = res.mapOffsets.tmpExp_n +  N * res.mapSectionsN.tmpExp_n;
     res.mapOffsets.cm3_2ns = res.mapOffsets.cm2_2ns +  Next * res.mapSectionsN.cm2_2ns;
     res.mapOffsets.cm4_2ns = res.mapOffsets.cm3_2ns +  Next * res.mapSectionsN.cm3_2ns;
     res.mapOffsets.q_2ns = res.mapOffsets.cm4_2ns +  Next * res.mapSectionsN.cm4_2ns;
@@ -395,9 +395,7 @@ function getExpDim(pil, expId) {
 function setCodeDimensions(code, starkInfo, dimX) {
     const tmpDim = [];
 
-    _setCodeDimensions(code.first);
-    _setCodeDimensions(code.i);
-    _setCodeDimensions(code.last);
+    _setCodeDimensions(code.code);
 
 
     function _setCodeDimensions(code) {

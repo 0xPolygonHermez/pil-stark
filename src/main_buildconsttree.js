@@ -15,6 +15,7 @@ const argv = require("yargs")
     .alias("s", "starkstruct")
     .alias("t", "consttree")
     .alias("v", "verkey")
+    .string("arity")
     .argv;
 
 async function run() {
@@ -33,7 +34,8 @@ async function run() {
     const constPols = newConstantPolsArray(pil, F);
     await constPols.loadFromFile(constFile);
 
-    const {MH, constTree, verKey} = await buildConstTree(starkStruct, pil, constPols);
+    let arity = Number(argv.arity) || 16;
+    const {MH, constTree, verKey} = await buildConstTree(starkStruct, pil, constPols, arity);
 
     await fs.promises.writeFile(verKeyFile, JSONbig.stringify(verKey, null, 1), "utf8");
 

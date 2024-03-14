@@ -5,7 +5,7 @@ include "poseidon.circom";
 // Given a list on inputs over GL³, compute the linear hash of the list, mapping from GL³ to BN
 // via the map (x,y,z) |-> x + y·2⁶⁴ + z·2¹²⁸, which is injective but not surjective;
 // and hashing the resulting BN elements in chunks of 16 using Poseidon.
-template LinearHash(nInputs, eSize) {
+template LinearHash(nInputs, eSize, arity) {
     signal input in[nInputs][eSize];
     signal output out;
 
@@ -25,7 +25,8 @@ template LinearHash(nInputs, eSize) {
         out <== sAc;
         nHashes = 0;
     } else {
-        nHashes = (nElements256 - 1)\16 + 1;
+
+        nHashes = (nElements256 - 1)\arity +1;
     }
 
     component hash[nHashes > 0 ? nHashes - 1 : 0];
@@ -33,11 +34,11 @@ template LinearHash(nInputs, eSize) {
     component lastHash;
 
     for (var i=0; i<nHashes-1; i++) {
-        hash[i] = PoseidonEx(16, 1);
+        hash[i] = PoseidonEx(arity, 1);
     }
 
-    if (nHashes > 0) {
-        nLastHash = nElements256 - (nHashes - 1)*16;
+    if (nHashes>0) {
+        nLastHash = nElements256 - (nHashes - 1)*arity;
         lastHash = PoseidonEx(nLastHash, 1);
     }
 
@@ -58,7 +59,7 @@ template LinearHash(nInputs, eSize) {
                     sAc = 0;
                     nAc = 0;
                     curHashIdx ++;
-                    if (curHashIdx == 16) {
+                    if (curHashIdx == arity) {
                         curHash++;
                         curHashIdx = 0;
                     }
@@ -72,7 +73,7 @@ template LinearHash(nInputs, eSize) {
                 hash[curHash].inputs[curHashIdx] <== sAc;
             }
             curHashIdx ++;
-            if (curHashIdx == 16) {
+            if (curHashIdx == arity) {
                 curHash = 0;
                 curHashIdx = 0;
             }
@@ -84,6 +85,7 @@ template LinearHash(nInputs, eSize) {
             } else {
                 hash[i].initialState <== hash[i-1].out[0];
             }
+            _ <== hash[i].out;
         }
         if (nHashes == 1) {
             lastHash.initialState <== 0;
@@ -91,6 +93,7 @@ template LinearHash(nInputs, eSize) {
             lastHash.initialState <== hash[nHashes-2].out[0];
         }
 
+        _ <== lastHash.out;
         out <== lastHash.out[0];
     }
 }

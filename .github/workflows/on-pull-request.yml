@@ -2,7 +2,7 @@ name: Check PR
 
 on:
   pull_request:
-    branches: [master, develop]
+    branches: [main, develop]
 
 jobs:
   circuits-tests:
@@ -13,6 +13,7 @@ jobs:
         with:
           node-version: '16.17.0'
           check-latest: true
+          node-options: '--max-old-space-size=230000'
           cache: "npm"
 
       - name: "Install circom" 
@@ -101,6 +102,7 @@ jobs:
         with:
           node-version: '16.17.0'
           check-latest: true
+          node-options: '--max-old-space-size=230000'
           cache: "npm"
 
       - name: "Install circom" 
@@ -120,6 +122,33 @@ jobs:
 
       - name: Check C12
         run: npm run test:C12
+  c12-custom-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.17.0'
+          check-latest: true
+          cache: "npm"
+
+      - name: "Install circom" 
+        run: |
+          curl https://sh.rustup.rs -sSf -o rust.sh
+          bash -f rust.sh -y
+          git clone https://github.com/iden3/circom.git
+          cd circom
+          cargo build --release
+          cargo install --path circom
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create tmp directory
+        run: mkdir tmp
+
+      - name: Check C12 with arity 4
+        run: npm run test:C12:custom
 
   c18-test:
     runs-on: ubuntu-20.04
@@ -129,6 +158,7 @@ jobs:
         with:
           node-version: '16.17.0'
           check-latest: true
+          node-options: '--max-old-space-size=230000'
           cache: "npm"
 
       - name: "Install circom" 
