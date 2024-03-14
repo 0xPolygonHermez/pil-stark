@@ -1,396 +1,135 @@
-const compileCode_52ns = require("./compileCode_52ns.js")
-const compileCode_parser = require("./compileCode_parser.js")
-const compileCode_42ns = require("./compileCode_42ns.js")
+const { getParserArgs } = require("./getParserArgs.js");
+const { generateParser, getAllOperations } = require("./generateParser.js");
+const { findPatterns } = require("./helpers.js");
+const { writeCHelpersFile } = require("./binFile.js");
+const path = require("path");
+const fs = require("fs");
+const { mkdir } = require("fs-extra");
 
-module.exports = async function buildCHelpers(starkInfo, config = {}) {
+module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersFile, binFile, className = "") {
 
-    const code = [];
-    const multipleCodeFiles = config && config.multipleCodeFiles;
-    const optcodes = config && config.optcodes;
-
-    for (let i = 0; i < starkInfo.nPublics; i++) {
-        if (starkInfo.publicsCode[i]) {
-            code.push(compileCode("publics_" + i + "_first", starkInfo.publicsCode[i].first, "n", true));
-            code.push(compileCode("publics_" + i + "_i", starkInfo.publicsCode[i].first, "n", true));
-            code.push(compileCode("publics_" + i + "_last", starkInfo.publicsCode[i].first, "n", true));
-        }
-    }
-
-    const pubTable = [];
-    pubTable.push("publics = (")
-    for (let i = 0; i < starkInfo.nPublics; i++) {
-        const comma = i == 0 ? "     " : "     ,";
-        if (starkInfo.publicsCode[i]) {
-            pubTable.push(`${comma}(publics_${i}_first, publics_${i}_i,  publics_${i}_last)`);
-        } else {
-            pubTable.push(`${comma}(NULL,NULL,NULL)`);
-        }
-    }
-    pubTable.push(");");
+    if(className === "") className = "Stark";
+    className = className[0].toUpperCase() + className.slice(1) + "Steps";
 
     let result = {};
+    
+    const cHelpersInfo = [];
 
-    if (multipleCodeFiles) {
-        result.public = pubTable.join("\n") + "\n";
-    }
-    else {
-        code.push(pubTable.join("\n"));
-    }
+    const nStages = 3;
 
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(starkInfo, config, "step2prev_first", starkInfo.step2prev.first, "n"));
-        result.step2prev_parser = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
+    const cHelpersStepsHpp = [
+        `#include "chelpers_steps.hpp"\n\n`,
+        `class ${className} : public CHelpersSteps {`,
+        "public:",
+        "    void calculateExpressions(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams) {",
+        `        uint32_t nrowsBatch = 4;`,
+        `        bool domainExtended = parserParams.stage > 3 ? true : false;`,
+    ];
+      
+    let operations = getAllOperations();
+    let operationsUsed = {};
 
-    code.push(compileCode("step2prev_first", starkInfo.step2prev.first, "n"));
-    code.push(compileCode("step2prev_i", starkInfo.step2prev.first, "n"));
-    code.push(compileCode("step2prev_last", starkInfo.step2prev.first, "n"));
+    let totalSubsetOperationsUsed = [];
 
-    if (multipleCodeFiles) {
-        result.step2 = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
+    //Define mapOffsetCol
+    let nrowsbatch = 4 + (1 << (starkInfo.starkStruct.nBitsExt - starkInfo.starkStruct.nBits));
+    starkInfo.mapOffsetsCol = {};
+    starkInfo.mapOffsetsCol.cm1_n = nrowsbatch * starkInfo.nConstants;
+    starkInfo.mapOffsetsCol.cm2_n = starkInfo.mapOffsetsCol.cm1_n + nrowsbatch * starkInfo.mapSectionsN.cm1_n;
+    starkInfo.mapOffsetsCol.cm3_n = starkInfo.mapOffsetsCol.cm2_n + nrowsbatch * starkInfo.mapSectionsN.cm2_n;
+    starkInfo.mapOffsetsCol.tmpExp_n = starkInfo.mapOffsetsCol.cm3_n + nrowsbatch * starkInfo.mapSectionsN.cm3_n;
 
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(starkInfo, config, "step3prev_first", starkInfo.step3prev.first, "n"));
-        result.step3prev_parser = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
+    starkInfo.mapOffsetsCol.cm1_2ns = nrowsbatch * starkInfo.nConstants;
+    starkInfo.mapOffsetsCol.cm2_2ns = starkInfo.mapOffsetsCol.cm1_2ns + nrowsbatch * starkInfo.mapSectionsN.cm1_2ns;
+    starkInfo.mapOffsetsCol.cm3_2ns = starkInfo.mapOffsetsCol.cm2_2ns + nrowsbatch * starkInfo.mapSectionsN.cm2_2ns;
+    starkInfo.mapOffsetsCol.cm4_2ns = starkInfo.mapOffsetsCol.cm3_2ns + nrowsbatch * starkInfo.mapSectionsN.cm3_2ns;
 
-    code.push(compileCode("step3prev_first", starkInfo.step3prev.first, "n"));
-    code.push(compileCode("step3prev_i", starkInfo.step3prev.first, "n"));
-    code.push(compileCode("step3prev_last", starkInfo.step3prev.first, "n"));
-
-    if (multipleCodeFiles) {
-        result.step3prev = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_parser(starkInfo, config, "step3_first", starkInfo.step3.first, "n"));
-        result.step3_parser = code.join("\n\n") + "\n";
-        code.length = 0;
+    for(let i = 1; i < nStages - 1; ++i) {
+        let stage = i + 1;
+        let code = starkInfo[`step${stage}prev`].code;
+        getParserArgsStage(stage, `step${stage}`, code, "n");
     }
 
-    code.push(compileCode("step3_first", starkInfo.step3.first, "n"));
-    code.push(compileCode("step3_i", starkInfo.step3.first, "n"));
-    code.push(compileCode("step3_last", starkInfo.step3.first, "n"));
+    let code = starkInfo[`step${nStages}prev`].code;
+    getParserArgsStage(nStages, `step${nStages}`, code, "n");
 
-    if (multipleCodeFiles) {
-        result.step3 = code.join("\n\n") + "\n";
-        code.length = 0;
+    code = starkInfo[`step${nStages}`].code;
+    getParserArgsStage(nStages, `step${nStages}_after`, code, "n", false);
+    
+    code = starkInfo[`step${nStages + 1}2ns`].code;
+    getParserArgsStage(nStages + 1, `step${nStages + 1}`, code, "2ns");
+
+    code = starkInfo[`step${nStages + 2}2ns`].code;
+    getParserArgsStage(nStages + 2, `step${nStages + 2}`, code, "2ns");
+
+    totalSubsetOperationsUsed = totalSubsetOperationsUsed.sort((a, b) => a - b);
+    console.log("Generating generic parser with all " + totalSubsetOperationsUsed.length + " operations used");
+    console.log("Total subset of operations used: " + totalSubsetOperationsUsed.join(", "));
+    console.log("--------------------------------");
+    
+    const genericParser = generateParser(operations, totalSubsetOperationsUsed, true);
+
+    cHelpersStepsHpp.push(genericParser);
+    cHelpersStepsHpp.push("};");
+
+
+    result[`${className}_hpp`] = cHelpersStepsHpp.join("\n"); 
+    
+    const operationsPatterns = operations.filter(op => op.isGroupOps);
+    console.log("Number of patterns used: " + operationsPatterns.length);
+    for(let i = 0; i < operationsPatterns.length; ++i) {
+        console.log("case " + operationsPatterns[i].opIndex + " ->    " + operationsPatterns[i].ops.join(", "));
+    }
+    
+    // Set case to consecutive numbers
+    for(let i = 0; i < cHelpersInfo.length; ++i) {
+        let stageName = `step${cHelpersInfo[i].stage}`;
+        if(!cHelpersInfo[i].executeBefore) stageName += "_after";
+        cHelpersInfo[i].ops = cHelpersInfo[i].ops.map(op => totalSubsetOperationsUsed.findIndex(o => o === op));        
     }
 
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_42ns(starkInfo, "step42ns_first", starkInfo.step42ns.first, "2ns"));
-        result.step42ns_parser = code.join("\n\n") + "\n";
-        code.length = 0;
-    }
-    code.push(compileCode("step42ns_first", starkInfo.step42ns.first, "2ns"));
-    code.push(compileCode("step42ns_i", starkInfo.step42ns.first, "2ns"));
-    code.push(compileCode("step42ns_last", starkInfo.step42ns.first, "2ns"));
+    result[`${className}_hpp`] = result[`${className}_hpp`].replace(/case (\d+):/g, (match, caseNumber) => {
+        caseNumber = parseInt(caseNumber, 10);
+        const newIndex = totalSubsetOperationsUsed.findIndex(o => o === caseNumber);
+        if(newIndex === -1) throw new Error("Invalid operation!");
+        return `case ${newIndex}:`;
+    });
 
-    if (multipleCodeFiles) {
-        result.step42ns = code.join("\n\n") + "\n";
-        code.length = 0;
+    const baseDir = path.dirname(cHelpersFile);
+    if (!fs.existsSync(baseDir)) {
+        fs.mkdirSync(baseDir, { recursive: true });
     }
 
-    if (optcodes && multipleCodeFiles) {
-        code.push(compileCode_52ns(starkInfo, "step52ns_first", starkInfo.step52ns.first, "2ns"));
-        result.step52ns_parser = code.join("\n\n") + "\n";
-        code.length = 0;
+    await mkdir(cHelpersFile, { recursive: true });
+
+    for (r in result) {
+        let fileName = cHelpersFile + "/" + r;
+        fileName = fileName.substring(0, fileName.lastIndexOf('_')) + '.' + fileName.substring(fileName.lastIndexOf('_') + 1);
+        console.log(fileName);
+        await fs.promises.writeFile(fileName, result[r], "utf8");
     }
 
-    code.push(compileCode("step52ns_first", starkInfo.step52ns.first, "2ns"));
-    code.push(compileCode("step52ns_i", starkInfo.step52ns.first, "2ns"));
-    code.push(compileCode("step52ns_last", starkInfo.step52ns.first, "2ns"));
+    await writeCHelpersFile(binFile, cHelpersInfo);
 
-    if (multipleCodeFiles) {
-        result.step52ns = code.join("\n\n") + "\n";
-        return result;
-    }
+    return;
 
-    return code.join("\n\n");
+    function getParserArgsStage(stage, stageName, stageCode, dom, executeBefore = true) {
+        console.log(`Getting parser args for ${stageName}`);
 
-    function compileCode(functionName, code, dom, ret) {
-        const body = [];
+        const {stageInfo, operationsUsed: opsUsed} = getParserArgs(starkInfo, operations, stageCode, dom, stage, executeBefore);
 
-        const nBits = starkInfo.starkStruct.nBits;
-        const nBitsExt = starkInfo.starkStruct.nBitsExt;
+        console.log("Number of operations before join: " + stageInfo.ops.length);
 
+        const patternOps = findPatterns(stageInfo.ops, operations);
+        opsUsed.push(...patternOps);
 
-        const next = (dom == "n" ? 1 : 1 << (nBitsExt - nBits)).toString();
-        const N = (dom == "n" ? (1 << nBits) : (1 << nBitsExt)).toString();
+        console.log("Number of operations after join: " + stageInfo.ops.length);
 
-        for (let j = 0; j < code.length; j++) {
-            const src = [];
-            const r = code[j];
-            for (k = 0; k < r.src.length; k++) {
-                src.push(getRef(r.src[k]));
-            }
-            let lexp = getLRef(r);
-            switch (r.op) {
-                case 'add': {
-                    if (r.dest.dim == 1) {
-                        if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
-                            throw new Error("Invalid dimension")
-                        }
-                        body.push(`     Goldilocks::add(${lexp}, ${src[0]}, ${src[1]});`)
-                    } else if (r.dest.dim == 3) {
-                        if (((r.src[0].dim == 1) || r.src[1].dim == 3)) {
-                            body.push(`     Goldilocks3::add(${lexp}, ${src[0]}, ${src[1]});`)
-                        } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                            body.push(`     Goldilocks3::add(${lexp}, ${src[1]}, ${src[0]});`)
-                        } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                            body.push(`     Goldilocks3::add(${lexp}, ${src[0]}, ${src[1]});`)
-                        } else {
-                            throw new Error("Invalid dimension")
-                        }
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                case 'sub': {
-                    if (r.dest.dim == 1) {
-                        if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
-                            throw new Error("Invalid dimension")
-                        }
-                        body.push(`     Goldilocks::sub(${lexp}, ${src[0]}, ${src[1]});`)
-                    } else if (r.dest.dim == 3) {
-                        if (((r.src[0].dim == 1) || r.src[1].dim == 3)) {
-                            body.push(`     Goldilocks3::sub(${lexp}, ${src[0]}, ${src[1]});`)
-                        } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                            body.push(`     Goldilocks3::sub(${lexp}, ${src[0]}, ${src[1]});`)
-                        } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                            body.push(`     Goldilocks3::sub(${lexp}, ${src[0]}, ${src[1]});`)
-                        } else {
-                            throw new Error("Invalid dimension")
-                        }
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                case 'mul': {
-                    if (r.dest.dim == 1) {
-                        if (((r.src[0].dim != 1) || r.src[1].dim != 1)) {
-                            throw new Error("Invalid dimension")
-                        }
-                        body.push(`     Goldilocks::mul(${lexp}, ${src[0]}, ${src[1]});`)
-                    } else if (r.dest.dim == 3) {
-                        if (((r.src[0].dim == 1) || r.src[1].dim == 3)) {
-                            body.push(`     Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
-                        } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                            body.push(`     Goldilocks3::mul(${lexp}, ${src[1]}, ${src[0]});`)
-                        } else if (((r.src[0].dim == 3) || r.src[1].dim == 1)) {
-                            body.push(`     Goldilocks3::mul(${lexp}, ${src[0]}, ${src[1]});`)
-                        } else {
-                            throw new Error("Invalid dimension")
-                        }
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                case 'copy': {
-                    if (r.dest.dim == 1) {
-                        if (r.src[0].dim != 1) {
-                            throw new Error("Invalid dimension")
-                        }
-                        body.push(`     Goldilocks::copy(${lexp}, ${src[0]});`)
-                    } else if (r.dest.dim == 3) {
-                        if (r.src[0].dim == 1) {
-                            body.push(`     Goldilocks3::copy(${lexp}, ${src[0]});`)
-                        } else if (r.src[0].dim == 3) {
-                            body.push(`     Goldilocks3::copy(${lexp}, ${src[0]});`)
-                        } else {
-                            throw new Error("Invalid dimension")
-                        }
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    break;
-                }
-                default: throw new Error("Invalid op:" + c[j].op);
-            }
-
-
+        cHelpersInfo.push(stageInfo);
+        for(let j = 0; j < opsUsed.length; ++j) {
+            if(!totalSubsetOperationsUsed.includes(opsUsed[j])) totalSubsetOperationsUsed.push(opsUsed[j]);
         }
 
-        if (ret) {
-            body.push(`     return ${getRef(code[code.length - 1].dest)};`);
-        }
-
-        let res;
-        if (ret) {
-            res = [
-                `Goldilocks::Element ${config.className}::${functionName}(StepsParams &params, uint64_t i) {`,
-                ...body,
-                `}`
-            ].join("\n");
-        } else {
-            res = [
-                `void ${config.className}::${functionName}(StepsParams &params, uint64_t i) {`,
-                ...body,
-                `}`
-            ].join("\n");
-        }
-
-        return res;
-
-        function getRef(r) {
-            switch (r.type) {
-                case "tmp": return `tmp_${r.id}`;
-                case "const": {
-                    if (dom == "n") {
-                        if (r.prime) {
-                            return ` params.pConstPols->getElement(${r.id},(i+1)%${N})`;
-                        } else {
-                            return ` params.pConstPols->getElement(${r.id},i)`;
-                        }
-                    } else if (dom == "2ns") {
-                        if (r.prime) {
-                            return `params.pConstPols2ns->getElement(${r.id},(i+${next})%${N})`;
-                        } else {
-                            return `params.pConstPols2ns->getElement(${r.id},i)`;
-                        }
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                }
-                case "tmpExp": {
-                    if (dom == "n") {
-                        return evalMap(starkInfo.tmpExp_n[r.id], r.prime)
-                    } else if (dom == "2ns") {
-                        throw new Error("Invalid dom");
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                }
-                case "cm": {
-                    if (dom == "n") {
-                        return evalMap(starkInfo.cm_n[r.id], r.prime)
-                    } else if (dom == "2ns") {
-                        return evalMap(starkInfo.cm_2ns[r.id], r.prime)
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                }
-                case "q": {
-                    if (dom == "n") {
-                        throw new Error("Accessing q in domain n");
-                    } else if (dom == "2ns") {
-                        return evalMap(starkInfo.qs[r.id], r.prime)
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                }
-                case "number": return `Goldilocks::fromU64(${BigInt(r.value).toString()}ULL)`;
-                case "public": return `params.publicInputs[${r.id}]`;
-                case "challenge": return `(Goldilocks3::Element &)*params.challenges[${r.id}]`;
-                case "eval": return `(Goldilocks3::Element &)*params.evals[${r.id}]`;
-                case "xDivXSubXi": return `(Goldilocks3::Element &)*params.xDivXSubXi[i]`;
-                case "xDivXSubWXi": return `(Goldilocks3::Element &)*params.xDivXSubWXi[i]`;
-                case "x": {
-                    if (dom == "n") {
-                        return `(Goldilocks::Element &)*params.x_n[i]`;
-                    } else if (dom == "2ns") {
-                        return `(Goldilocks::Element &)*params.x_2ns[i]`;
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                }
-                case "Zi": return `params.zi.zhInv(i)`;
-                default: throw new Error("Invalid reference type get: " + r.type);
-            }
-        }
-
-        function getLRef(r) {
-            let eDst;
-            switch (r.dest.type) {
-                case "tmp": {
-                    if (r.dest.dim == 1) {
-                        body.push(`     Goldilocks::Element tmp_${r.dest.id};`);
-                    } else if (r.dest.dim == 3) {
-                        body.push(`     Goldilocks3::Element tmp_${r.dest.id};`);
-                    } else {
-                        throw new Error("Invalid dim");
-                    }
-                    eDst = `tmp_${r.dest.id}`;
-                    break;
-                }
-                case "q": {
-                    if (dom == "n") {
-                        throw new Error("Accessing q in domain n");
-                    } else if (dom == "2ns") {
-                        eDst = `(Goldilocks3::Element &)(params.q_2ns[i * 3])`
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                    break;
-                }
-                case "cm": {
-                    if (dom == "n") {
-                        eDst = evalMap(starkInfo.cm_n[r.dest.id], r.dest.prime)
-                    } else if (dom == "2ns") {
-                        eDst = evalMap(starkInfo.cm_2ns[r.dest.id], r.dest.prime)
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                    break;
-                }
-                case "tmpExp": {
-                    if (dom == "n") {
-                        eDst = evalMap(starkInfo.tmpExp_n[r.dest.id], r.dest.prime)
-                    } else if (dom == "2ns") {
-                        throw new Error("Invalid dom");
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                    break;
-                }
-                case "f": {
-                    if (dom == "n") {
-                        throw new Error("Accessing q in domain n");
-                    } else if (dom == "2ns") {
-                        eDst = `(Goldilocks3::Element &)(params.f_2ns[i * 3])`
-                    } else {
-                        throw new Error("Invalid dom");
-                    }
-                }
-                    break;
-                default: throw new Error("Invalid reference type set: " + r.dest.type);
-            }
-            return eDst;
-        }
-
-        function evalMap(polId, prime) {
-            let p = starkInfo.varPolMap[polId];
-            if (!p) {
-                console.log("xx");
-            }
-            let offset = starkInfo.mapOffsets[p.section];
-            offset += p.sectionPos;
-            let size = starkInfo.mapSectionsN[p.section];
-            if (p.dim == 1) {
-                if (prime) {
-                    return `params.pols[${offset} + ((i + ${next})%${N})*${size}]`;
-                } else {
-                    return `params.pols[${offset} + i*${size}]`;
-                }
-            } else if (p.dim == 3) {
-                if (prime) {
-                    return `(Goldilocks3::Element &)(params.pols[${offset} + ((i + ${next})%${N})*${size}])`;
-                } else {
-                    return `(Goldilocks3::Element &)(params.pols[${offset} + i*${size}])`;
-                }
-            } else {
-                throw new Error("invalid dim");
-            }
-        }
-
+        operationsUsed[stageName] = opsUsed;   
     }
-
 }

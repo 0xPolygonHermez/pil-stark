@@ -395,9 +395,7 @@ function getExpDim(pil, expId) {
 function setCodeDimensions(code, starkInfo, dimX) {
     const tmpDim = [];
 
-    _setCodeDimensions(code.first);
-    _setCodeDimensions(code.i);
-    _setCodeDimensions(code.last);
+    _setCodeDimensions(code.code);
 
 
     function _setCodeDimensions(code) {

@@ -59,7 +59,7 @@ module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
     friExp.keep2ns = true;
     pil.expressions.push(friExp);
 
-    pilCodeGen(ctx2ns, res.friExpId, false, "f");
+    pilCodeGen(ctx2ns, res.friExpId);
 
     const code = ctx2ns.code[ctx2ns.code.length-1].code;
 

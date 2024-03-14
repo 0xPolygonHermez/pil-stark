@@ -2,7 +2,7 @@ name: Check PR
 
 on:
   pull_request:
-    branches: [master, develop]
+    branches: [main, develop]
 
 jobs:
   circuits-tests:
@@ -13,6 +13,7 @@ jobs:
         with:
           node-version: '16.17.0'
           check-latest: true
+          node-options: '--max-old-space-size=230000'
           cache: "npm"
 
       - name: "Install circom" 
@@ -101,6 +102,7 @@ jobs:
         with:
           node-version: '16.17.0'
           check-latest: true
+          node-options: '--max-old-space-size=230000'
           cache: "npm"
 
       - name: "Install circom" 
@@ -129,6 +131,7 @@ jobs:
         with:
           node-version: '16.17.0'
           check-latest: true
+          node-options: '--max-old-space-size=230000'
           cache: "npm"
 
       - name: "Install circom" 
