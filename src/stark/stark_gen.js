@@ -22,7 +22,7 @@ const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
 
 
-module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo) {
+module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo, options) {
     const starkStruct = starkInfo.starkStruct;
     const N = 1 << starkStruct.nBits;
     const extendBits = starkStruct.nBitsExt - starkStruct.nBits;
@@ -40,8 +40,10 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         transcript = new Transcript(poseidon);
     } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
-        MH = await buildMerkleHashBN128();
-        transcript = new TranscriptBN128(poseidonBN128);
+        let arity = options.arity || 16;
+        console.log(`Arity: ${arity}`);
+        MH = await buildMerkleHashBN128(arity);
+        transcript = new TranscriptBN128(poseidonBN128, 16);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
