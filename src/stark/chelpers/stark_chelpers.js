@@ -6,7 +6,7 @@ const path = require("path");
 const fs = require("fs");
 const { mkdir } = require("fs-extra");
 
-module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersFile, binFile, className = "") {
+module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersFile, className = "", binFile, genericBinFile) {
 
     if(className === "") className = "Stark";
     className = className[0].toUpperCase() + className.slice(1) + "Steps";
@@ -14,6 +14,8 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
     let result = {};
     
     const cHelpersInfo = [];
+    
+    const cHelpersInfoGeneric = [];
 
     const nStages = 3;
 
@@ -27,7 +29,6 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
     ];
       
     let operations = getAllOperations();
-    let operationsUsed = {};
 
     let totalSubsetOperationsUsed = [];
 
@@ -54,7 +55,7 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
     console.log("Total subset of operations used: " + totalSubsetOperationsUsed.join(", "));
     console.log("--------------------------------");
     
-    const genericParser = generateParser(operations, totalSubsetOperationsUsed, true);
+    const genericParser = generateParser(operations, totalSubsetOperationsUsed);
 
     cHelpersStepsHpp.push(genericParser);
     cHelpersStepsHpp.push("};");
@@ -97,6 +98,9 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
     }
 
     await writeCHelpersFile(binFile, cHelpersInfo);
+    if(genericBinFile) {
+        await writeCHelpersFile(genericBinFile, cHelpersInfoGeneric);
+    }
 
     return;
 
@@ -104,19 +108,20 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
         console.log(`Getting parser args for ${stageName}`);
 
         const {stageInfo, operationsUsed: opsUsed} = getParserArgs(starkInfo, operations, stageCode, dom, stage, executeBefore);
+        
+        cHelpersInfoGeneric.push(stageInfo);
 
         console.log("Number of operations before join: " + stageInfo.ops.length);
 
         const patternOps = findPatterns(stageInfo.ops, operations);
         opsUsed.push(...patternOps);
 
-        console.log("Number of operations after join: " + stageInfo.ops.length);
+        console.log("Number of operations after join: " + stageInfo.ops.length);               
 
         cHelpersInfo.push(stageInfo);
+
         for(let j = 0; j < opsUsed.length; ++j) {
             if(!totalSubsetOperationsUsed.includes(opsUsed[j])) totalSubsetOperationsUsed.push(opsUsed[j]);
         }
-
-        operationsUsed[stageName] = opsUsed;   
     }
 }

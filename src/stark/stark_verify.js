@@ -7,7 +7,7 @@ const { assert } = require("chai");
 const buildPoseidonGL = require("../helpers/hash/poseidon/poseidon");
 const buildPoseidonBN128 = require("circomlibjs").buildPoseidon;
 
-module.exports = async function starkVerify(proof, publics, constRoot, starkInfo, options) {
+module.exports = async function starkVerify(proof, publics, constRoot, starkInfo) {
 
     const starkStruct = starkInfo.starkStruct;
 
@@ -21,8 +21,7 @@ module.exports = async function starkVerify(proof, publics, constRoot, starkInfo
         transcript = new Transcript(poseidonGL);
     } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
-        let arity = options.arity || 16;
-        MH = await buildMerkleHashBN128(arity);
+        MH = await buildMerkleHashBN128(starkInfo.merkleTreeArity);
         transcript = new TranscriptBN128(poseidonBN128, 16);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
