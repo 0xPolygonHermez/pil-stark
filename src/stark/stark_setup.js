@@ -1,12 +1,14 @@
 
 const {BigBuffer} = require("pilcom");
 const buildMerklehashGL = require("../helpers/hash/merklehash/merklehash_p.js");
+const buildMerkleHashBN128 = require("../helpers/hash/merklehash/merklehash_bn128_p.js");
 const starkInfoGen = require("./stark_info.js")
 
 const { interpolate } = require("../helpers/fft/fft_p");
 
-module.exports = async function starkSetup(constPols, pil, starkStruct, options = {}) {
+module.exports = async function starkSetup(constPols, pil, starkInfo) {
 
+    const starkStruct = starkInfo.starkStruct;
     const nBits = starkStruct.nBits;
     const nBitsExt = starkStruct.nBitsExt;
     const nExt= 1 << nBitsExt;
@@ -15,12 +17,11 @@ module.exports = async function starkSetup(constPols, pil, starkStruct, options 
     const constBuff  = constPols.writeToBuff();
     await interpolate(constBuff, pil.nConstants, nBits, constPolsArrayE, nBitsExt );
 
-    let arity = options.arity || 16;
     let MH;
     if (starkStruct.verificationHashType == "GL") {
         MH = await buildMerklehashGL();
     } else if (starkStruct.verificationHashType == "BN128") {
-        MH = await buildMerkleHashBN128(arity);
+        MH = await buildMerkleHashBN128(starkInfo.merkleTreeArity);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }

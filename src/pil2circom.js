@@ -33,8 +33,8 @@ module.exports = async function pil2circom(constRoot, starkInfo, options) {
         starkStruct: starkStruct,
         constRoot: constRoot,
         options: options,
-        arity: Number(options.arity),
-        nBitsArity: log2(options.arity),
+        arity: starkInfo.merkleTreeArity,
+        nBitsArity: log2(starkInfo.merkleTreeArity),
         arityTranscript: 16,
     };
 

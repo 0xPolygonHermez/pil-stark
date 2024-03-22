@@ -15,7 +15,7 @@ const operationsMap = {
     "f": 13,
 }
 
-module.exports.generateParser = function generateParser(operations, operationsUsed, vectorizeEvals = false) {
+module.exports.generateParser = function generateParser(operations, operationsUsed) {
 
     let c_args = 0;
     
@@ -98,17 +98,17 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         "        publics[i] = _mm256_set1_epi64x(params.publicInputs[i].fe);",
         "    }",
     ]);
-    if(vectorizeEvals) {
-        parserCPP.push(...[
-            "    Goldilocks3::Element_avx evals[params.evals.degree()];",
-            "#pragma omp parallel for",
-            "    for(uint64_t i = 0; i < params.evals.degree(); ++i) {",
-            "        evals[i][0] = _mm256_set1_epi64x(params.evals[i][0].fe);",
-            "        evals[i][1] = _mm256_set1_epi64x(params.evals[i][1].fe);",
-            "        evals[i][2] = _mm256_set1_epi64x(params.evals[i][2].fe);",
-            "    }",
-        ]);
-    }
+    
+    parserCPP.push(...[
+        "    Goldilocks3::Element_avx evals[params.evals.degree()];",
+        "#pragma omp parallel for",
+        "    for(uint64_t i = 0; i < params.evals.degree(); ++i) {",
+        "        evals[i][0] = _mm256_set1_epi64x(params.evals[i][0].fe);",
+        "        evals[i][1] = _mm256_set1_epi64x(params.evals[i][1].fe);",
+        "        evals[i][2] = _mm256_set1_epi64x(params.evals[i][2].fe);",
+        "    }",
+    ]);
+    
     
     parserCPP.push(...[
         `#pragma omp parallel for`,
@@ -121,7 +121,15 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         "        Goldilocks3::Element_avx tmp3_;",
         "        // Goldilocks3::Element_avx tmp3_0;",
         "        Goldilocks3::Element_avx tmp3_1;",
-        "        // __m256i tmp1_0;",
+    ]);
+
+    if(operationsUsed) {
+        parserCPP.push( "        // __m256i tmp1_0;");
+    } else {
+        parserCPP.push( "        __m256i tmp1_0;");
+    }
+
+    parserCPP.push(...[
         "        __m256i tmp1_1;",
         "        __m256i bufferT_[2*nCols];\n",
     ]); 

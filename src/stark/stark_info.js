@@ -9,7 +9,7 @@ const generateConstraintPolynomialVerifier = require("../pil_info/cp_ver");
 const generateVerifierQuery = require("../pil_info/fri_verifier");
 const map = require("../pil_info/map");
 
-module.exports = function starkInfoGen(_pil, starkStruct) {
+module.exports = function starkInfoGen(_pil, starkStruct, options) {
     const pil = JSON.parse(JSON.stringify(_pil));    // Make a copy as we are going to destroy pil
     const pilDeg = Object.values(pil.references)[0].polDeg;
     const starkDeg = 2 ** starkStruct.nBits;
@@ -73,6 +73,10 @@ module.exports = function starkInfoGen(_pil, starkStruct) {
     map(res, pil);
 
     res.publics = pil.publics;
+    
+    if(starkStruct.verificationHashType === "BN128") {
+        res.merkleTreeArity = options.arity || 16;
+    }
 
     console.log("--------------------- POLINOMIALS INFO ---------------------")
     console.log(`Columns stage 1: ${res.nCm1} -> Columns in the basefield: ${res.mapSectionsN.cm1_2ns}`);

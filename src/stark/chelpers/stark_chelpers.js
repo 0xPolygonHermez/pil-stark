@@ -6,7 +6,7 @@ const path = require("path");
 const fs = require("fs");
 const { mkdir } = require("fs-extra");
 
-module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersFile, binFile, className = "") {
+module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersFile, className = "", binFile, genericBinFile) {
 
     if(className === "") className = "Stark";
     className = className[0].toUpperCase() + className.slice(1) + "Steps";
@@ -14,6 +14,8 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
     let result = {};
     
     const cHelpersInfo = [];
+    
+    const cHelpersInfoGeneric = [];
 
     const nStages = 3;
 
@@ -27,7 +29,8 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
     ];
       
     let operations = getAllOperations();
-    let operationsUsed = {};
+
+    let operationsWithPatterns = getAllOperations();
 
     let totalSubsetOperationsUsed = [];
 
@@ -54,7 +57,7 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
     console.log("Total subset of operations used: " + totalSubsetOperationsUsed.join(", "));
     console.log("--------------------------------");
     
-    const genericParser = generateParser(operations, totalSubsetOperationsUsed, true);
+    const genericParser = generateParser(operationsWithPatterns, totalSubsetOperationsUsed);
 
     cHelpersStepsHpp.push(genericParser);
     cHelpersStepsHpp.push("};");
@@ -62,7 +65,7 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
 
     result[`${className}_hpp`] = cHelpersStepsHpp.join("\n"); 
     
-    const operationsPatterns = operations.filter(op => op.isGroupOps);
+    const operationsPatterns = operationsWithPatterns.filter(op => op.isGroupOps);
     console.log("Number of patterns used: " + operationsPatterns.length);
     for(let i = 0; i < operationsPatterns.length; ++i) {
         console.log("case " + operationsPatterns[i].opIndex + " ->    " + operationsPatterns[i].ops.join(", "));
@@ -97,26 +100,31 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
     }
 
     await writeCHelpersFile(binFile, cHelpersInfo);
+    if(genericBinFile) {
+        await writeCHelpersFile(genericBinFile, cHelpersInfoGeneric);
+    }
 
     return;
 
     function getParserArgsStage(stage, stageName, stageCode, dom, executeBefore = true) {
         console.log(`Getting parser args for ${stageName}`);
 
-        const {stageInfo, operationsUsed: opsUsed} = getParserArgs(starkInfo, operations, stageCode, dom, stage, executeBefore);
+        const {stageInfo: stageInfo2} = getParserArgs(starkInfo, operations, stageCode, dom, stage, executeBefore);
+        cHelpersInfoGeneric.push(stageInfo2);
 
+        const {stageInfo, operationsUsed: opsUsed} = getParserArgs(starkInfo, operationsWithPatterns, stageCode, dom, stage, executeBefore);
+        
         console.log("Number of operations before join: " + stageInfo.ops.length);
 
-        const patternOps = findPatterns(stageInfo.ops, operations);
+        const patternOps = findPatterns(stageInfo.ops, operationsWithPatterns);
         opsUsed.push(...patternOps);
 
-        console.log("Number of operations after join: " + stageInfo.ops.length);
+        console.log("Number of operations after join: " + stageInfo.ops.length);               
 
         cHelpersInfo.push(stageInfo);
+
         for(let j = 0; j < opsUsed.length; ++j) {
             if(!totalSubsetOperationsUsed.includes(opsUsed[j])) totalSubsetOperationsUsed.push(opsUsed[j]);
         }
-
-        operationsUsed[stageName] = opsUsed;   
     }
 }
