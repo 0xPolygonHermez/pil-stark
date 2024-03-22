@@ -30,6 +30,8 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
       
     let operations = getAllOperations();
 
+    let operationsWithPatterns = getAllOperations();
+
     let totalSubsetOperationsUsed = [];
 
     for(let i = 1; i < nStages - 1; ++i) {
@@ -55,7 +57,7 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
     console.log("Total subset of operations used: " + totalSubsetOperationsUsed.join(", "));
     console.log("--------------------------------");
     
-    const genericParser = generateParser(operations, totalSubsetOperationsUsed);
+    const genericParser = generateParser(operationsWithPatterns, totalSubsetOperationsUsed);
 
     cHelpersStepsHpp.push(genericParser);
     cHelpersStepsHpp.push("};");
@@ -63,7 +65,7 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
 
     result[`${className}_hpp`] = cHelpersStepsHpp.join("\n"); 
     
-    const operationsPatterns = operations.filter(op => op.isGroupOps);
+    const operationsPatterns = operationsWithPatterns.filter(op => op.isGroupOps);
     console.log("Number of patterns used: " + operationsPatterns.length);
     for(let i = 0; i < operationsPatterns.length; ++i) {
         console.log("case " + operationsPatterns[i].opIndex + " ->    " + operationsPatterns[i].ops.join(", "));
@@ -107,13 +109,14 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
     function getParserArgsStage(stage, stageName, stageCode, dom, executeBefore = true) {
         console.log(`Getting parser args for ${stageName}`);
 
-        const {stageInfo, operationsUsed: opsUsed} = getParserArgs(starkInfo, operations, stageCode, dom, stage, executeBefore);
-        
-        cHelpersInfoGeneric.push(stageInfo);
+        const {stageInfo: stageInfo2} = getParserArgs(starkInfo, operations, stageCode, dom, stage, executeBefore);
+        cHelpersInfoGeneric.push(stageInfo2);
 
+        const {stageInfo, operationsUsed: opsUsed} = getParserArgs(starkInfo, operationsWithPatterns, stageCode, dom, stage, executeBefore);
+        
         console.log("Number of operations before join: " + stageInfo.ops.length);
 
-        const patternOps = findPatterns(stageInfo.ops, operations);
+        const patternOps = findPatterns(stageInfo.ops, operationsWithPatterns);
         opsUsed.push(...patternOps);
 
         console.log("Number of operations after join: " + stageInfo.ops.length);               

@@ -121,7 +121,15 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         "        Goldilocks3::Element_avx tmp3_;",
         "        // Goldilocks3::Element_avx tmp3_0;",
         "        Goldilocks3::Element_avx tmp3_1;",
-        "        // __m256i tmp1_0;",
+    ]);
+
+    if(operationsUsed) {
+        parserCPP.push( "        // __m256i tmp1_0;");
+    } else {
+        parserCPP.push( "        __m256i tmp1_0;");
+    }
+
+    parserCPP.push(...[
         "        __m256i tmp1_1;",
         "        __m256i bufferT_[2*nCols];\n",
     ]); 
