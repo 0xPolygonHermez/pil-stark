@@ -38,8 +38,8 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         }
 
         pushResArg(r, r.dest.type);
-        for(let i = 0; i < r.src.length; i++) {
-            pushSrcArg(r.src[i], r.src[i].type);
+        for(let i = 0; i < operation.src.length; i++) {
+            pushSrcArg(operation.src[i], operation.src[i].type);
         }
 
         

@@ -550,8 +550,9 @@ module.exports.getOperation = function getOperation(r) {
         _op.dest_type = r.dest.type;
     }
     
+    let src = [...r.src];
     if(r.op !== "copy") {
-        r.src.sort((a, b) => {
+        src.sort((a, b) => {
             let opA =  ["cm", "tmpExp"].includes(a.type) ? operationsMap[`commit${a.dim}`] : a.type === "tmp" ? operationsMap[`tmp${a.dim}`] : operationsMap[a.type];
             let opB = ["cm", "tmpExp"].includes(b.type) ? operationsMap[`commit${b.dim}`] : b.type === "tmp" ? operationsMap[`tmp${b.dim}`] : operationsMap[b.type];
             let swap = a.dim !== b.dim ? b.dim - a.dim : opA - opB;
@@ -560,19 +561,21 @@ module.exports.getOperation = function getOperation(r) {
         });
     }
 
-    for(let i = 0; i < r.src.length; i++) {
-        if(["cm", "tmpExp"].includes(r.src[i].type)) {
-            _op[`src${i}_type`] = `commit${r.src[i].dim}`;
-        } else if(r.src[i].type === "const") {
+    for(let i = 0; i < src.length; i++) {
+        if(["cm", "tmpExp"].includes(src[i].type)) {
+            _op[`src${i}_type`] = `commit${src[i].dim}`;
+        } else if(src[i].type === "const") {
             _op[[`src${i}_type`]] = "commit1";
-        } else if(r.src[i].type === "tmp") {
-            _op[`src${i}_type`] =  `tmp${r.src[i].dim}`;
-        } else if(["xDivXSubXi", "xDivXSubWXi"].includes(r.src[i].type)) {
+        } else if(src[i].type === "tmp") {
+            _op[`src${i}_type`] =  `tmp${src[i].dim}`;
+        } else if(["xDivXSubXi", "xDivXSubWXi"].includes(src[i].type)) {
             _op[`src${i}_type`] = "xDivXSubXi";
         } else {
-            _op[`src${i}_type`] = r.src[i].type;
+            _op[`src${i}_type`] = src[i].type;
         }
     }
 
+    _op.src = src;
+    
     return _op;
 }
