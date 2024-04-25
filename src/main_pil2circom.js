@@ -18,19 +18,24 @@ const argv = require("yargs")
     .argv;
 
 async function run() {
-    const starkInfoFIle = typeof(argv.starkinfo) === "string" ?  argv.starkinfo.trim() : "starkinfo.json";
-    const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "mycircuit.verkey.json";
+    const starkInfoFile = typeof(argv.starkinfo) === "string" ?  argv.starkinfo.trim() : "starkinfo.json";
     const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "mycircuit.verifier.circom";
-
-    const verKey = JSONbig.parse(await fs.promises.readFile(verKeyFile, "utf8"));
-    const constRoot = verKey.constRoot;
-
-    const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFIle, "utf8"));
+    
+    const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
     const options = {
         skipMain: argv.skipMain || false,
         enableInput: argv.enableInput || false,
         verkeyInput: argv.verkeyInput || false
+    }
+
+    let constRoot;
+    if(!options.verkeyInput ) {
+        const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "mycircuit.verkey.json";
+        const verKey = JSONbig.parse(await fs.promises.readFile(verKeyFile, "utf8"));
+
+        constRoot = verKey.constRoot;
+
     }
 
     if(argv.index) {
