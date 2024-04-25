@@ -3,8 +3,8 @@ const buildMerkleHashGL = require("../helpers/hash/merklehash/merklehash_p.js");
 const buildMerkleHashBN128 = require("../helpers/hash/merklehash/merklehash_bn128_p.js");
 const {interpolate} = require("../helpers/fft/fft_p");
 
-module.exports.buildConstTree = async function buildConstTree(starkStruct, pil, constPols) {
-    const starkInfo =
+module.exports.buildConstTree = async function buildConstTree(starkInfo, pil, constPols) {
+    const starkStruct = starkInfo.starkStruct;
     const nBits = starkStruct.nBits;
     const nBitsExt = starkStruct.nBitsExt;
     const extN = 1 << nBitsExt;
