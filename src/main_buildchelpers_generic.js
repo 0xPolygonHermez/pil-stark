@@ -7,6 +7,7 @@ const argv = require("yargs")
     .version(version)
     .usage("node main_buildchelpers_generic.js -c <chelpers.cpp>")
     .alias("c", "chelpers")
+    .string("parserType")
     .argv;
 
 async function run() {
@@ -14,14 +15,26 @@ async function run() {
     
     let operations = getAllOperations();
     
-    const parser = generateParser(operations);
+    let parserType = "avx";
+
+    if(argv.parserType) {
+        if(!["avx", "avx512","pack"].includes(argv.parserType)) throw new Error("Invalid parser type");
+        parserType = argv.parserType;
+    }
+
+    const parser = generateParser(operations, undefined, parserType);
+
+    const cHelpersStepsName = parserType === "avx" ? `CHELPERS_STEPS_HPP` : parserType === "avx512" ? "CHELPERS_STEPS_AVX512_HPP" : "CHELPERS_STEPS_PACK_HPP";
+    
+    const cHelpersStepsClassName = parserType === "avx" ? `CHelpersSteps` : parserType === "avx512" ? "CHelpersStepsAvx512 : public CHelpersSteps" : "CHelpersStepsPack : public CHelpersSteps";
 
     const cHelpersStepsHpp = [
-        `#ifndef CHELPERS_STEPS_HPP`,
-        `#define CHELPERS_STEPS_HPP`,
+        `#ifndef ${cHelpersStepsName}`,
+        `#define ${cHelpersStepsName}`,
         `#include "chelpers.hpp"`,
+        `${parserType !== "avx" ? `#include "chelpers_steps.hpp"` : ""}`,
         `#include "steps.hpp"\n`,
-        `class CHelpersSteps {`,
+        `class ${cHelpersStepsClassName} {`,
         "public:",
     ];
       
