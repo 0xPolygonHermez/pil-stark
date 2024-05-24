@@ -298,7 +298,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         parserCPP.push(...[
             `        Goldilocks::Element bufferT_[2*nCols*nrowsPack];\n`,
             `        Goldilocks::Element tmp1[parserParams.nTemp1];`,
-            `        Goldilocks::Element tmp3[parserParams.nTemp3 * FIELD_EXTENSION];`,
+            `        Goldilocks3::Element tmp3[parserParams.nTemp3];`,
             "        Goldilocks::Element tmp3_;\n",
         ]);
     }
@@ -551,11 +551,11 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             case "commit1":
             case "commit3":
             case "const":
-                return `${parserType === "pack" ? "&" : "" }bufferT_[buffTOffsetsStages[args[i_args + ${c_args}]] + 2 * args[i_args + ${c_args + 1}] + args[i_args + ${c_args + 2}]]`;
+                return `${parserType === "pack" ? "(Goldilocks3::Element::Element &)" : "" }bufferT_[buffTOffsetsStages[args[i_args + ${c_args}]] + 2 * args[i_args + ${c_args + 1}] + args[i_args + ${c_args + 2}]]`;
             case "challenge":
-                return `${parserType === "pack" ? "&params." : "" }challenges[args[i_args + ${c_args}]]`;
+                return `${parserType === "pack" ? "(Goldilocks3::Element::Element &)params." : "" }challenges[args[i_args + ${c_args}]]`;
             case "eval":
-                return `${parserType === "pack" ? "&params." : "" }evals[args[i_args + ${c_args}]]`;
+                return `${parserType === "pack" ? "(Goldilocks3::Element::Element &)params." : "" }evals[args[i_args + ${c_args}]]`;
             case "number":
                 return `numbers_[args[i_args + ${c_args}]]`;
             case "x":
@@ -563,11 +563,11 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             case "Zi":
                 return `params.zi[i]`;
             case "xDivXSubXi": 
-                return `params.xDivXSubXi[i + args[i_args + ${c_args}]*domainSize]`;
+                return `(Goldilocks3::Element::Element &)params.xDivXSubXi[i + args[i_args + ${c_args}]*domainSize]`;
             case "f":
-                return "&params.f_2ns[i*FIELD_EXTENSION]";
+                return "(Goldilocks3::Element::Element &)params.f_2ns[i*FIELD_EXTENSION]";
             case "q":
-                return "&params.f_2ns[i*FIELD_EXTENSION]";
+                return "(Goldilocks3::Element::Element &)params.f_2ns[i*FIELD_EXTENSION]";
             default:
                 throw new Error("Invalid type: " + type);
         }
