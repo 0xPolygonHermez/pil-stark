@@ -90,7 +90,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
     ]);
 
     parserCPP.push(...[
-        `inline ${functionType} storePolinomials(StarkInfo &starkInfo, StepsParams &params, __m256i *bufferT_, vector<uint64_t> storePol, uint64_t row, uint64_t nrowsPack, uint64_t domainExtended) {`,
+        `inline ${functionType} storePolinomials(StarkInfo &starkInfo, StepsParams &params, ${isAvx ? avxTypeElement : "Goldilocks::Element"} *bufferT_, vector<uint64_t> storePol, uint64_t row, uint64_t nrowsPack, uint64_t domainExtended) {`,
         "    uint64_t nStages = starkInfo.nStages;",
         "    std::vector<uint64_t> nColsStages = domainExtended ? starkInfo.nColsStagesExt : starkInfo.nColsStages;",
         "    std::vector<uint64_t> nColsStagesAcc = domainExtended ? starkInfo.nColsStagesAccExt : starkInfo.nColsStagesAcc;",
@@ -429,8 +429,8 @@ module.exports.generateParser = function generateParser(operations, operationsUs
 
         if(operation.dest_type === "commit1" || operation.dest_type === "commit3") {
             operationStoreAvx = `                    setStorePol(storePol, buffTOffsetsStages, args[i_args + ${c_args}], args[i_args + ${c_args + 1}], args[i_args + ${c_args + 2}], ${operation.dest_type === "commit1" ? 1 : "FIELD_EXTENSION"});`;
-        } else if(operation.dest_type === "f" || operation.dest_type === "q") {
-            operationStoreAvx = `                    Goldilocks3::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsPack, " : ""}&params.${operation.dest_type}_2ns[i*FIELD_EXTENSION], uint64_t(FIELD_EXTENSION), tmp3_);`;        
+        } else if(isAvx && (operation.dest_type === "f" || operation.dest_type === "q")) {
+            operationStoreAvx = `                    Goldilocks3::${avxStore}(&params.${operation.dest_type}_2ns[i*FIELD_EXTENSION], uint64_t(FIELD_EXTENSION), tmp3_);`;        
         }
 
 
@@ -551,11 +551,11 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             case "commit1":
             case "commit3":
             case "const":
-                return `${parserType === "pack" ? "(Goldilocks3::Element::Element &)" : "" }bufferT_[buffTOffsetsStages[args[i_args + ${c_args}]] + 2 * args[i_args + ${c_args + 1}] + args[i_args + ${c_args + 2}]]`;
+                return `${parserType === "pack" ? "(Goldilocks3::Element &)" : "" }bufferT_[buffTOffsetsStages[args[i_args + ${c_args}]] + 2 * args[i_args + ${c_args + 1}] + args[i_args + ${c_args + 2}]]`;
             case "challenge":
-                return `${parserType === "pack" ? "(Goldilocks3::Element::Element &)params." : "" }challenges[args[i_args + ${c_args}]]`;
+                return `${parserType === "pack" ? "(Goldilocks3::Element &)params." : "" }challenges[args[i_args + ${c_args}]]`;
             case "eval":
-                return `${parserType === "pack" ? "(Goldilocks3::Element::Element &)params." : "" }evals[args[i_args + ${c_args}]]`;
+                return `${parserType === "pack" ? "(Goldilocks3::Element &)params." : "" }evals[args[i_args + ${c_args}]]`;
             case "number":
                 return `numbers_[args[i_args + ${c_args}]]`;
             case "x":
@@ -563,11 +563,11 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             case "Zi":
                 return `params.zi[i]`;
             case "xDivXSubXi": 
-                return `(Goldilocks3::Element::Element &)params.xDivXSubXi[i + args[i_args + ${c_args}]*domainSize]`;
+                return `(Goldilocks3::Element &)params.xDivXSubXi[i + args[i_args + ${c_args}]*domainSize]`;
             case "f":
-                return "(Goldilocks3::Element::Element &)params.f_2ns[i*FIELD_EXTENSION]";
+                return "(Goldilocks3::Element &)params.f_2ns[i*FIELD_EXTENSION]";
             case "q":
-                return "(Goldilocks3::Element::Element &)params.f_2ns[i*FIELD_EXTENSION]";
+                return "(Goldilocks3::Element &)params.q_2ns[i*FIELD_EXTENSION]";
             default:
                 throw new Error("Invalid type: " + type);
         }
