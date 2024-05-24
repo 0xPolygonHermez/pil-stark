@@ -41,7 +41,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
     const parserCPP = [];
 
     parserCPP.push(...[
-        `${functionType} storePolinomial(StarkInfo& starkInfo, Goldilocks::Element *pols, ${isAvx ? avxTypeElement : "Goldilocks::Element"} *bufferT, uint64_t row, uint64_t nrowsBatch, bool domainExtended, uint64_t stage, uint64_t stagePos, uint64_t openingPointIndex, uint64_t dim) {`,
+        `inline ${functionType} storePolinomial(StarkInfo& starkInfo, Goldilocks::Element *pols, ${isAvx ? avxTypeElement : "Goldilocks::Element"} *bufferT, uint64_t row, uint64_t nrowsPack, bool domainExtended, uint64_t stage, uint64_t stagePos, uint64_t openingPointIndex, uint64_t dim) {`,
         "    uint64_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;",
         "    uint64_t nOpenings = 2;",
         "    uint64_t nextStride = domainExtended ? starkInfo.nextStrideExt : starkInfo.nextStride;",
@@ -51,38 +51,38 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         "    std::vector<uint64_t> nColsStagesAcc = domainExtended ? starkInfo.nColsStagesAccExt : starkInfo.nColsStagesAcc;",
         "    std::vector<uint64_t> offsetsStages = domainExtended ? starkInfo.offsetsStagesExt : starkInfo.offsetsStages;",
         "    bool isTmpPol = !domainExtended && stage == 4;",
-        "    bool const needModule = row + nrowsBatch + nextStride >= domainSize;",
+        "    bool const needModule = row + nrowsPack + nextStride >= domainSize;",
         "    if(needModule) {",
-        `        uint64_t offsetsDest[nrowsBatch];`,
+        `        uint64_t offsetsDest[nrowsPack];`,
         "        uint64_t nextStrideOffset = row + nextStrides[openingPointIndex];",
         "        if(isTmpPol) {",
         "            uint64_t stepOffset = offsetsStages[stage] + stagePos * domainSize;",
-        `            for(uint64_t i = 0; i < nrowsBatch; ++i) {`,
+        `            for(uint64_t i = 0; i < nrowsPack; ++i) {`,
         "                offsetsDest[i] = stepOffset + ((nextStrideOffset + i) % domainSize) * dim;",
         "            }",
         "        } else {",
         "            uint64_t stepOffset = offsetsStages[stage] + stagePos;",
-        `            for(uint64_t i = 0; i < nrowsBatch; ++i) {`,
+        `            for(uint64_t i = 0; i < nrowsPack; ++i) {`,
         "                offsetsDest[i] = stepOffset + ((nextStrideOffset + i) % domainSize) * nColsStages[stage];",
         "            }",
         "        }",
         "        if(dim == 1) {",
-        `            Goldilocks::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsBatch, " : ""}&pols[0], offsetsDest, ${!isAvx ? "&" : ""}bufferT[buffTOffsetsStages[stage] + nOpenings * stagePos + openingPointIndex]);`,
+        `            Goldilocks::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsPack, " : ""}&pols[0], offsetsDest, ${!isAvx ? "&" : ""}bufferT[buffTOffsetsStages[stage] + nOpenings * stagePos + openingPointIndex]);`,
         "        } else {",
-        `            Goldilocks3::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsBatch, " : ""}&pols[0], offsetsDest, &bufferT[buffTOffsetsStages[stage] + nOpenings * stagePos + openingPointIndex], nOpenings);`,
+        `            Goldilocks3::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsPack, " : ""}&pols[0], offsetsDest, &bufferT[buffTOffsetsStages[stage] + nOpenings * stagePos + openingPointIndex], nOpenings);`,
         "        }",
         "    } else {",
         "        if(dim == 1) {",
         "            if(isTmpPol) {",
-        `                Goldilocks::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsBatch, " : ""}&pols[offsetsStages[stage] + stagePos * domainSize + (row + nextStrides[openingPointIndex])], uint64_t(1), ${!isAvx ? "&" : ""}bufferT[buffTOffsetsStages[stage] + nOpenings * stagePos + openingPointIndex]);`,
+        `                Goldilocks::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsPack, " : ""}&pols[offsetsStages[stage] + stagePos * domainSize + (row + nextStrides[openingPointIndex])], uint64_t(1), ${!isAvx ? "&" : ""}bufferT[buffTOffsetsStages[stage] + nOpenings * stagePos + openingPointIndex]);`,
         "            } else {",
-        `                Goldilocks::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsBatch, " : ""}&pols[offsetsStages[stage] + stagePos + (row + nextStrides[openingPointIndex]) * nColsStages[stage]], nColsStages[stage], ${!isAvx ? "&" : ""}bufferT[buffTOffsetsStages[stage] + nOpenings * stagePos + openingPointIndex]);`,
+        `                Goldilocks::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsPack, " : ""}&pols[offsetsStages[stage] + stagePos + (row + nextStrides[openingPointIndex]) * nColsStages[stage]], nColsStages[stage], ${!isAvx ? "&" : ""}bufferT[buffTOffsetsStages[stage] + nOpenings * stagePos + openingPointIndex]);`,
         "            }",
         "        } else {",
         "            if(isTmpPol) {",
-        `                Goldilocks3::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsBatch, " : ""}&pols[offsetsStages[stage] + stagePos * domainSize + (row + nextStrides[openingPointIndex]) * FIELD_EXTENSION], uint64_t(FIELD_EXTENSION), &bufferT[buffTOffsetsStages[stage] + nOpenings * stagePos + openingPointIndex], nOpenings);`,
+        `                Goldilocks3::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsPack, " : ""}&pols[offsetsStages[stage] + stagePos * domainSize + (row + nextStrides[openingPointIndex]) * FIELD_EXTENSION], uint64_t(FIELD_EXTENSION), &bufferT[buffTOffsetsStages[stage] + nOpenings * stagePos + openingPointIndex], nOpenings);`,
         "            } else {",
-        `                Goldilocks3::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsBatch, " : ""}&pols[offsetsStages[stage] + stagePos + (row + nextStrides[openingPointIndex]) * nColsStages[stage]], nColsStages[stage], &bufferT[buffTOffsetsStages[stage] + nOpenings * stagePos + openingPointIndex], nOpenings);`,
+        `                Goldilocks3::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsPack, " : ""}&pols[offsetsStages[stage] + stagePos + (row + nextStrides[openingPointIndex]) * nColsStages[stage]], nColsStages[stage], &bufferT[buffTOffsetsStages[stage] + nOpenings * stagePos + openingPointIndex], nOpenings);`,
         "            }",
         "        }",
         "    }",
@@ -90,7 +90,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
     ]);
 
     parserCPP.push(...[
-        "virtual void storePolinomials(StarkInfo &starkInfo, StepsParams &params, __m256i *bufferT_, vector<uint64_t> storePol, uint64_t row, uint64_t nrowsBatch, uint64_t domainExtended) {",
+        `inline ${functionType} storePolinomials(StarkInfo &starkInfo, StepsParams &params, __m256i *bufferT_, vector<uint64_t> storePol, uint64_t row, uint64_t nrowsPack, uint64_t domainExtended) {`,
         "    uint64_t nStages = starkInfo.nStages;",
         "    std::vector<uint64_t> nColsStages = domainExtended ? starkInfo.nColsStagesExt : starkInfo.nColsStages;",
         "    std::vector<uint64_t> nColsStagesAcc = domainExtended ? starkInfo.nColsStagesAccExt : starkInfo.nColsStagesAcc;",
@@ -98,7 +98,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         "        for(uint64_t k = 0; k < nColsStages[s]; ++k) {",
         "            for(uint64_t o = 0; o < 2; ++o) {",
         "                if(storePol[2 * (nColsStagesAcc[s] + k) + o]) {",
-        `                    storePolinomial(starkInfo, params.pols, bufferT_, row, nrowsBatch, domainExtended, s, k, o, storePol[2 * (nColsStagesAcc[s] + k) + o]);`,
+        `                    storePolinomial(starkInfo, params.pols, bufferT_, row, nrowsPack, domainExtended, s, k, o, storePol[2 * (nColsStagesAcc[s] + k) + o]);`,
         "                }",
         "            }",
         "        }",
@@ -106,10 +106,16 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         "}\n",
     ]);
 
+    parserCPP.push(...[
+        `inline ${functionType} setStorePol(std::vector<uint64_t> &storePol, std::vector<uint64_t> buffTOffsetsStages, uint64_t stage, uint64_t stagePos, uint64_t openingPointIndex, uint64_t dim) {`,
+        "    storePol[buffTOffsetsStages[stage] + 2 * stagePos + openingPointIndex] = dim;",
+        "}\n",
+    ])
+
     if(isAvx) {
         parserCPP.push(...[
-            "virtual void loadPolinomials(StarkInfo &starkInfo, StepsParams &params, __m256i *bufferT_, uint64_t row, uint64_t stage, uint64_t nrowsBatch, uint64_t domainExtended) {",
-            "    Goldilocks::Element bufferT[2*nrowsBatch];",
+            `inline ${functionType} loadPolinomials(StarkInfo &starkInfo, StepsParams &params, __m256i *bufferT_, uint64_t row, uint64_t stage, uint64_t nrowsPack, uint64_t domainExtended) {`,
+            "    Goldilocks::Element bufferT[2*nrowsPack];",
             "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
             "    uint64_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;",
             "    uint64_t nStages = starkInfo.nStages;",
@@ -120,43 +126,43 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             "    std::vector<uint64_t> offsetsStages = domainExtended ? starkInfo.offsetsStagesExt : starkInfo.offsetsStages;",
             "    for(uint64_t k = 0; k < nColsStages[0]; ++k) {",
             "        for(uint64_t o = 0; o < 2; ++o) {",
-            "            for(uint64_t j = 0; j < nrowsBatch; ++j) {",
+            "            for(uint64_t j = 0; j < nrowsPack; ++j) {",
             "                uint64_t l = (row + j + nextStrides[o]) % domainSize;",
-            "                bufferT[nrowsBatch*o + j] = ((Goldilocks::Element *)constPols->address())[l * nColsStages[0] + k];",
+            "                bufferT[nrowsPack*o + j] = ((Goldilocks::Element *)constPols->address())[l * nColsStages[0] + k];",
             "            }",
-            `            Goldilocks::${avxLoad}(bufferT_[2 * k + o], &bufferT[nrowsBatch*o]);`,
+            `            Goldilocks::${avxLoad}(bufferT_[2 * k + o], &bufferT[nrowsPack*o]);`,
             "        }",
             "    }",
             "    for(uint64_t s = 1; s <= nStages; ++s) {",
             "        if(stage < s) break;",
             "        for(uint64_t k = 0; k < nColsStages[s]; ++k) {",
             "            for(uint64_t o = 0; o < 2; ++o) {",
-            "                for(uint64_t j = 0; j < nrowsBatch; ++j) {",
+            "                for(uint64_t j = 0; j < nrowsPack; ++j) {",
             "                    uint64_t l = (row + j + nextStrides[o]) % domainSize;",
-            "                    bufferT[nrowsBatch*o + j] = params.pols[offsetsStages[s] + l * nColsStages[s] + k];",
+            "                    bufferT[nrowsPack*o + j] = params.pols[offsetsStages[s] + l * nColsStages[s] + k];",
             "                }",
-            `                Goldilocks::${avxLoad}(bufferT_[2 * (nColsStagesAcc[s] + k) + o], &bufferT[nrowsBatch*o]);`,
+            `                Goldilocks::${avxLoad}(bufferT_[2 * (nColsStagesAcc[s] + k) + o], &bufferT[nrowsPack*o]);`,
             "            }",
             "        }",
             "    }",
             "    for(uint64_t k = 0; k < nColsStages[nStages + 1]; ++k) {",
             "        for(uint64_t o = 0; o < 2; ++o) {",
-            "            for(uint64_t j = 0; j < nrowsBatch; ++j) {",
+            "            for(uint64_t j = 0; j < nrowsPack; ++j) {",
             "                uint64_t l = (row + j + nextStrides[o]) % domainSize;",
             "                if(!domainExtended) {",
-            "                    bufferT[nrowsBatch*o + j] = params.pols[offsetsStages[nStages + 1] + k * domainSize + l];",
+            "                    bufferT[nrowsPack*o + j] = params.pols[offsetsStages[nStages + 1] + k * domainSize + l];",
             "                } else {",
-            "                    bufferT[nrowsBatch*o + j] = params.pols[offsetsStages[nStages + 1] + l * nColsStages[nStages + 1] + k];",
+            "                    bufferT[nrowsPack*o + j] = params.pols[offsetsStages[nStages + 1] + l * nColsStages[nStages + 1] + k];",
             "                }",
             "            }",
-            `            Goldilocks::${avxLoad}(bufferT_[2 * (nColsStagesAcc[nStages + 1] + k) + o], &bufferT[nrowsBatch*o]);`,
+            `            Goldilocks::${avxLoad}(bufferT_[2 * (nColsStagesAcc[nStages + 1] + k) + o], &bufferT[nrowsPack*o]);`,
             "        }",
             "    }",
-            "}",
+            "}\n",
         ]);    
     } else {
         parserCPP.push(...[
-            "virtual void loadPolinomials(StarkInfo &starkInfo, StepsParams &params, Goldilocks::Element *bufferT_, uint64_t row, uint64_t stage, uint64_t nrowsBatch, uint64_t domainExtended) {",
+            `inline ${functionType} loadPolinomials(StarkInfo &starkInfo, StepsParams &params, Goldilocks::Element *bufferT_, uint64_t row, uint64_t stage, uint64_t nrowsPack, uint64_t domainExtended) {`,
             "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
             "    uint64_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;",
             "    uint64_t nStages = starkInfo.nStages;",
@@ -167,9 +173,9 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             "    std::vector<uint64_t> offsetsStages = domainExtended ? starkInfo.offsetsStagesExt : starkInfo.offsetsStages;",
             "    for(uint64_t k = 0; k < nColsStages[0]; ++k) {",
             "        for(uint64_t o = 0; o < 2; ++o) {",
-            "            for(uint64_t j = 0; j < nrowsBatch; ++j) {",
+            "            for(uint64_t j = 0; j < nrowsPack; ++j) {",
             "                uint64_t l = (i + j + nextStrides[o]) % domainSize;",
-            "                bufferT_[(2 * k + o) * nrowsBatch + j] = ((Goldilocks::Element *)constPols->address())[l * nColsStages[0] + k];",
+            "                bufferT_[(2 * k + o) * nrowsPack + j] = ((Goldilocks::Element *)constPols->address())[l * nColsStages[0] + k];",
             "            }",
             "        }",
             "    }",
@@ -177,28 +183,32 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             "        if(parserParams.stage < s) break;",
             "        for(uint64_t k = 0; k < nColsStages[s]; ++k) {",
             "            for(uint64_t o = 0; o < 2; ++o) {",
-            "                for(uint64_t j = 0; j < nrowsBatch; ++j) {",
+            "                for(uint64_t j = 0; j < nrowsPack; ++j) {",
             "                    uint64_t l = (i + j + nextStrides[o]) % domainSize;",
-            "                    bufferT_[(2 * (nColsStagesAcc[s] + k) + o) * nrowsBatch + j] = params.pols[offsetsStages[s] + l * nColsStages[s] + k];",
+            "                    bufferT_[(2 * (nColsStagesAcc[s] + k) + o) * nrowsPack + j] = params.pols[offsetsStages[s] + l * nColsStages[s] + k];",
             "                }",
             "            }",
             "        }",
             "    }",
             "    for(uint64_t k = 0; k < nColsStages[nStages + 1]; ++k) {",
             "        for(uint64_t o = 0; o < 2; ++o) {",
-            "            for(uint64_t j = 0; j < nrowsBatch; ++j) {",
+            "            for(uint64_t j = 0; j < nrowsPack; ++j) {",
             "                uint64_t l = (i + j + nextStrides[o]) % domainSize;",
-            "                bufferT_[(2 * (nColsStagesAcc[nStages + 1] + k) + o) * nrowsBatch + j] = params.pols[offsetsStages[nStages + 1] + l * nColsStages[nStages + 1] + k];",
+            "                if(!domainExtended) {",
+            "                   bufferT_[(2 * (nColsStagesAcc[nStages + 1] + k) + o) * nrowsPack + j] = params.pols[offsetsStages[nStages + 1] + k * domainSize + l];",
+            "                } else {",
+            "                   bufferT_[(2 * (nColsStagesAcc[nStages + 1] + k) + o) * nrowsPack + j] = params.pols[offsetsStages[nStages + 1] + l * nColsStages[nStages + 1] + k];",
+            "                }",
             "            }",
             "        }",
             "    }",
-            "}"
+            "}\n"
         ]);
     }
     
     parserCPP.push(...[
         `${functionType} calculateExpressions(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams) {`,
-        `    uint32_t nrowsBatch =  ${parserType === "avx512" ? 8 : 4};`,
+        `    uint32_t nrowsPack =  ${parserType === "avx512" ? 8 : 4};`,
         `    bool domainExtended = parserParams.stage > 3 ? true : false;`,
         "    uint64_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;",
         "    Polinomial &x = domainExtended ? params.x_2ns : params.x_n;", 
@@ -265,7 +275,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         
     parserCPP.push(...[
         `#pragma omp parallel for`,
-        `    for (uint64_t i = 0; i < domainSize; i+= nrowsBatch) {`,
+        `    for (uint64_t i = 0; i < domainSize; i+= nrowsPack) {`,
         "        uint64_t i_args = 0;\n",
         "        std::vector<uint64_t> storePol(2*nCols, 0);\n",
     ]);
@@ -286,14 +296,14 @@ module.exports.generateParser = function generateParser(operations, operationsUs
 
     } else {
         parserCPP.push(...[
-            `        Goldilocks::Element bufferT_[2*nCols*nrowsBatch];\n`,
+            `        Goldilocks::Element bufferT_[2*nCols*nrowsPack];\n`,
             `        Goldilocks::Element tmp1[parserParams.nTemp1];`,
             `        Goldilocks::Element tmp3[parserParams.nTemp3 * FIELD_EXTENSION];`,
             "        Goldilocks::Element tmp3_;\n",
         ]);
     }
 
-    parserCPP.push("        loadPolinomials(starkInfo, params, bufferT_, i, parserParams.stage, nrowsBatch, domainExtended);\n");
+    parserCPP.push("        loadPolinomials(starkInfo, params, bufferT_, i, parserParams.stage, nrowsPack, domainExtended);\n");
     
     parserCPP.push(...[
         "        for (uint64_t kk = 0; kk < parserParams.nOps; ++kk) {",
@@ -352,7 +362,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         "        }",
     ]);
 
-    parserCPP.push("        storePolinomials(starkInfo, params, bufferT_, storePol, i, nrowsBatch, domainExtended);");
+    parserCPP.push("        storePolinomials(starkInfo, params, bufferT_, storePol, i, nrowsPack, domainExtended);");
 
     parserCPP.push(...[
         `        if (i_args != parserParams.nArgs) std::cout << " " << i_args << " - " << parserParams.nArgs << std::endl;`,
@@ -397,7 +407,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         } else if(parserType === "avx512") {
             name += "_avx512(";
         } else if(parserType === "pack") {
-            name += "_pack(nrowsBatch, ";
+            name += "_pack(nrowsPack, ";
         }
 
         c_args = 0;
@@ -418,9 +428,9 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         let operationStoreAvx;
 
         if(operation.dest_type === "commit1" || operation.dest_type === "commit3") {
-            operationStoreAvx = `                    storePol[buffTOffsetsStages[args[i_args + ${c_args}]] + 2 * args[i_args + ${c_args + 1}] + args[i_args + ${c_args + 2}]] = ${operation.dest_type === "commit1" ? 1 : "FIELD_EXTENSION"};`;
+            operationStoreAvx = `                    setStorePol(storePol, buffTOffsetsStages, args[i_args + ${c_args}], args[i_args + ${c_args + 1}], args[i_args + ${c_args + 2}], ${operation.dest_type === "commit1" ? 1 : "FIELD_EXTENSION"});`;
         } else if(operation.dest_type === "f" || operation.dest_type === "q") {
-            operationStoreAvx = `                    Goldilocks3::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsBatch, " : ""}&params.${operation.dest_type}_2ns[i*FIELD_EXTENSION], uint64_t(FIELD_EXTENSION), tmp3_);`;        
+            operationStoreAvx = `                    Goldilocks3::${isAvx ? avxStore : "copy_pack"}(${!isAvx ? "nrowsPack, " : ""}&params.${operation.dest_type}_2ns[i*FIELD_EXTENSION], uint64_t(FIELD_EXTENSION), tmp3_);`;        
         }
 
 
