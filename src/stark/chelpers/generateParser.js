@@ -147,7 +147,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
 
     if(isAvx) {
         parserCPP.push(...[
-            `inline ${functionType} loadPolinomials(StarkInfo &starkInfo, StepsParams &params, __m256i *bufferT_, uint64_t row, uint64_t stage, uint64_t nrowsPack, uint64_t domainExtended) {`,
+            `inline ${functionType} loadPolinomials(StarkInfo &starkInfo, StepsParams &params, ${avxTypeElement} *bufferT_, uint64_t row, uint64_t stage, uint64_t nrowsPack, uint64_t domainExtended) {`,
             "    Goldilocks::Element bufferT[2*nrowsPack];",
             "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
             "    uint64_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;",
