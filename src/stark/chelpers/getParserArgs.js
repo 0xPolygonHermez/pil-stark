@@ -88,10 +88,14 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         switch (type) {
             case "tmp": {
                 if (r.dest.dim == 1) {
+                    args.push(5);
                     args.push(ID1D[r.dest.id]);
+                    args.push(0);
                 } else {
                     assert(r.dest.dim == 3);
+                    args.push(6);
                     args.push(ID3D[r.dest.id]);
+                    args.push(0);
                 }
                 break;
             }
@@ -117,7 +121,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
             }
             case "f":
             case "q": {
-                args.push(5);
+                args.push(7);
                 args.push(0);
                 args.push(0);
                 break;
@@ -131,10 +135,14 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         switch (type) {
             case "tmp": {
                 if (r.dim == 1) {
+                    args.push(5);
                     args.push(ID1D[r.id]);
+                    args.push(0);
                 } else {
                     assert(r.dim == 3);
+                    args.push(6);
                     args.push(ID3D[r.id]);
+                    args.push(0);
                 }
                 break;
             }
@@ -162,16 +170,6 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                     evalMap_(starkInfo.cm_n[r.id], r.prime)
                 } else if (dom == "2ns") {
                     evalMap_(starkInfo.cm_2ns[r.id], r.prime)
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
-            case "q": {
-                if (dom == "n") {
-                    throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    evalMap_(starkInfo.qs[r.id], r.prime)
                 } else {
                     throw new Error("Invalid dom");
                 }

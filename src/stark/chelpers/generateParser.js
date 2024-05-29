@@ -255,9 +255,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         "    std::vector<uint64_t> buffTOffsetsStages = starkInfo.buffTOffsetsStages;",
         "    std::vector<uint64_t> nColsStages = starkInfo.nColsStages;",
         "    std::vector<uint64_t> nColsStagesAcc = starkInfo.nColsStagesAcc;",
-        "    std::vector<uint64_t> offsetsStages = starkInfo.offsetsStages;",
         "    uint64_t nCols = nColsStages[nColsStages.size() - 1] + nColsStagesAcc[nColsStagesAcc.size() - 1];\n",
-        
     ]);
    
     if(isAvx) {
@@ -357,13 +355,11 @@ module.exports.generateParser = function generateParser(operations, operationsUs
     if(isAvx) {
         parserCPP.push(...[
             `        ${avxTypeElement} bufferT_[2*nCols];\n`,
-            `        ${avxTypeElement} tmp1[parserParams.nTemp1];`,
             `        ${avxTypeElement} tmp1_1;`,
         ]);
         if(!operationsUsed) parserCPP.push(        `        ${avxTypeElement} tmp1_0;`);
         parserCPP.push("\n");
         parserCPP.push(...[
-            `        ${avxTypeExtElement} tmp3[parserParams.nTemp3];`,
             `        ${avxTypeExtElement} tmp3_;`,
             `        ${avxTypeExtElement} tmp3_1;\n`,
         ]);
@@ -371,8 +367,6 @@ module.exports.generateParser = function generateParser(operations, operationsUs
     } else {
         parserCPP.push(...[
             `        Goldilocks::Element bufferT_[2*nCols*nrowsPack];\n`,
-            `        Goldilocks::Element tmp1[parserParams.nTemp1*nrowsPack];`,
-            `        Goldilocks::Element tmp3[parserParams.nTemp3*nrowsPack*FIELD_EXTENSION];`,
             `        Goldilocks::Element tmp3_[nrowsPack*FIELD_EXTENSION];`,
             `        Goldilocks::Element tmp3_1[nrowsPack*FIELD_EXTENSION];`,
         ]);
@@ -601,15 +595,13 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         switch (type) {
             case "public":
                 return parserType === "pack" ? `&publics[args[i_args + ${c_args}] * nrowsPack]` : `publics[args[i_args + ${c_args}]]`;
-            case "tmp1":
-                return parserType === "pack" ? `&tmp1[args[i_args + ${c_args}] * nrowsPack]` : `tmp1[args[i_args + ${c_args}]]`;
-            case "tmp3":
-                return parserType === "pack" ? `&tmp3[args[i_args + ${c_args}] * nrowsPack * FIELD_EXTENSION]` : `tmp3[args[i_args + ${c_args}]]`;
             case "commit1":
             case "commit3":
             case "const":
             case "q":
             case "f":
+            case "tmp1":
+            case "tmp3":
                 return parserType === "pack"
                     ? `&bufferT_[(buffTOffsetsStages[args[i_args + ${c_args}]] + 2 * args[i_args + ${c_args + 1}] + args[i_args + ${c_args + 2}]) * nrowsPack]`
                     : `bufferT_[buffTOffsetsStages[args[i_args + ${c_args}]] + 2 * args[i_args + ${c_args + 1}] + args[i_args + ${c_args + 2}]]`
@@ -634,12 +626,8 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         switch (type) {
             case "x":
             case "Zi":
-            case "q":
-            case "f":
                 return 0; 
             case "public":            
-            case "tmp1":
-            case "tmp3":
             case "challenge":
             case "eval":
             case "number":
@@ -648,6 +636,10 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             case "const":
             case "commit1":
             case "commit3":
+            case "q":
+            case "f":
+            case "tmp1":
+            case "tmp3":
                 return 3;  
             default:
                 throw new Error("Invalid type: " + type);
@@ -658,11 +650,11 @@ module.exports.generateParser = function generateParser(operations, operationsUs
 module.exports.getAllOperations = function getAllOperations() {
     const possibleOps = [];
 
-    const possibleDestinationsDim1 = [ "commit1", "tmp1" ];
-    const possibleDestinationsDim3 = [ "commit3", "tmp3" ];
+    const possibleDestinationsDim1 = [ "commit1"];
+    const possibleDestinationsDim3 = [ "commit3"];
 
-    const possibleSrcDim1 = [ "commit1", "tmp1", "public", "x", "number" ];
-    const possibleSrcDim3 = [ "commit3", "tmp3", "challenge" ];
+    const possibleSrcDim1 = [ "commit1", "public", "x", "number" ];
+    const possibleSrcDim3 = [ "commit3", "challenge" ];
 
     // Dim1 destinations
     for(let j = 0; j < possibleDestinationsDim1.length; j++) {
@@ -696,7 +688,7 @@ module.exports.getAllOperations = function getAllOperations() {
 
         for(let k = 0; k < possibleSrcDim3.length; ++k) {
             let src0_type = possibleSrcDim3[k];
-            if(["commit3", "tmp3"].includes(src0_type)) possibleOps.push({dest_type, src0_type}); // Copy operation
+            if(["commit3"].includes(src0_type)) possibleOps.push({dest_type, src0_type}); // Copy operation
             for (let l = k; l < possibleSrcDim3.length; ++l) {
                 let src1_type = possibleSrcDim3[l];
                 if(src0_type === "challenge") {
@@ -710,17 +702,16 @@ module.exports.getAllOperations = function getAllOperations() {
     }
 
     // Step FRI
-    possibleOps.push({ dest_type: "tmp3", src0_type: "eval"});
-    possibleOps.push({ op: "mul", dest_type: "tmp3", src0_type: "eval", src1_type: "challenge"});
-    possibleOps.push({ dest_type: "tmp3", src0_type: "challenge", src1_type: "eval"});
-    possibleOps.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "eval"});
+    possibleOps.push({ dest_type: "commit3", src0_type: "eval"});
+    possibleOps.push({ op: "mul", dest_type: "commit3", src0_type: "eval", src1_type: "challenge"});
+    possibleOps.push({ dest_type: "commit3", src0_type: "challenge", src1_type: "eval"});
+    possibleOps.push({ dest_type: "commit3", src0_type: "commit3", src1_type: "eval"});
 
-    possibleOps.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "commit1"});
-    possibleOps.push({ dest_type: "tmp3", src0_type: "commit3", src1_type: "eval"});
+    possibleOps.push({ dest_type: "commit3", src0_type: "eval", src1_type: "commit1"});
     
-    possibleOps.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubXi"});
+    possibleOps.push({ dest_type: "commit3", src0_type: "commit3", src1_type: "xDivXSubXi"});
 
-    possibleOps.push({ dest_type: "commit3", src0_type: "tmp3", src1_type: "Zi"});
+    possibleOps.push({ dest_type: "commit3", src0_type: "commit3", src1_type: "Zi"});
 
     return possibleOps;
 }
@@ -728,14 +719,8 @@ module.exports.getAllOperations = function getAllOperations() {
 module.exports.getOperation = function getOperation(r) {
     const _op = {};
     _op.op = r.op;
-    if(["cm", "tmpExp"].includes(r.dest.type)) {
+    if(["cm", "tmpExp", "tmp", "q", "f"].includes(r.dest.type)) {
         _op.dest_type = `commit${r.dest.dim}`;
-    } else if(r.dest.type === "tmp") {
-        _op.dest_type = `tmp${r.dest.dim}`;
-    } else if(r.dest.type === "q") {
-        _op.dest_type = `commit${r.dest.dim}`;
-    } else if(r.dest.type === "f") {
-        _op.dest_type = `commit3`
     } else {
         _op.dest_type = r.dest.type;
     }
@@ -753,12 +738,10 @@ module.exports.getOperation = function getOperation(r) {
     }
 
     for(let i = 0; i < src.length; i++) {
-        if(["cm", "tmpExp"].includes(src[i].type)) {
+        if(["cm", "tmpExp", "tmp"].includes(src[i].type)) {
             _op[`src${i}_type`] = `commit${src[i].dim}`;
         } else if(src[i].type === "const") {
             _op[[`src${i}_type`]] = "commit1";
-        } else if(src[i].type === "tmp") {
-            _op[`src${i}_type`] =  `tmp${src[i].dim}`;
         } else if(["xDivXSubXi", "xDivXSubWXi"].includes(src[i].type)) {
             _op[`src${i}_type`] = "xDivXSubXi";
         } else {
