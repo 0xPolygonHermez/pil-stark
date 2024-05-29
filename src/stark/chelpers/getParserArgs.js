@@ -140,9 +140,8 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
             case "const": {
                 let offset_prime = r.prime ? 1 : 0;
 
-                args.push(0);
+                args.push(5*offset_prime);
                 args.push(r.id);
-                args.push(offset_prime);
                 
                 break;
             }
@@ -161,16 +160,6 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                     evalMap_(starkInfo.cm_n[r.id], r.prime)
                 } else if (dom == "2ns") {
                     evalMap_(starkInfo.cm_2ns[r.id], r.prime)
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
-            case "q": {
-                if (dom == "n") {
-                    throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    evalMap_(starkInfo.qs[r.id], r.prime)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -213,8 +202,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         } else if(["tmpExp_n", "cm4_2ns"].includes(p.section)) {
             step = 4;
         }
-        args.push(Number(step));
+        args.push(Number(offset_prime * 5 + step));
         args.push(Number(p.sectionPos));
-        args.push(Number(offset_prime));
     }
 }
