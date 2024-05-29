@@ -117,7 +117,8 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         "    uint64_t nStages = 3;",
         "    std::vector<uint64_t> nColsStages = starkInfo.nColsStages;",
         "    std::vector<uint64_t> nColsStagesAcc = starkInfo.nColsStagesAcc;",
-        "    for(uint64_t s = 2; s <= nStages + 1; ++s) {",
+        "    uint64_t maxStage = domainExtended ? nStages + 2 : nStages + 1;",
+        "    for(uint64_t s = 2; s <= maxStage; ++s) {",
         "        for(uint64_t k = 0; k < nColsStages[s]; ++k) {",
         "            for(uint64_t o = 0; o < 2; ++o) {",
         "                if(storePol[2 * (nColsStagesAcc[s] + k) + o]) {",
@@ -409,13 +410,13 @@ module.exports.generateParser = function generateParser(operations, operationsUs
                 let opr = operations[op.ops[j]];
                 operationCase.push(writeOperation(opr));
                 let numberArgs = numberOfArgs(opr.dest_type) + numberOfArgs(opr.src0_type);
-                if(opr.src1_type && opr.dest_type !== "q") numberArgs += numberOfArgs(opr.src1_type) + 1;
+                if(opr.src1_type) numberArgs += numberOfArgs(opr.src1_type) + 1;
                 operationCase.push(`                    i_args += ${numberArgs};`);
             }
         } else {
             operationCase.push(writeOperation(op));
             let numberArgs = numberOfArgs(op.dest_type) + numberOfArgs(op.src0_type);
-            if(op.src1_type && op.dest_type !== "q") numberArgs += numberOfArgs(op.src1_type) + 1;
+            if(op.src1_type) numberArgs += numberOfArgs(op.src1_type) + 1;
             operationCase.push(`                    i_args += ${numberArgs};`);
         }
 
@@ -487,28 +488,18 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         c_args = 0;
 
         if(operation.src1_type) {
-            if(operation.dest_type === "q") {
-                name += "2, ";
-            } else {
-                if(!operation.op) {
-                    name += `args[i_args + ${c_args}], `;
-                }
-                c_args++;
+            if(!operation.op) {
+                name += `args[i_args + ${c_args}], `;
             }
+            c_args++;
         }      
 
         let typeDest = writeType(operation.dest_type);
 
         let operationStoreAvx;
 
-        if(operation.dest_type === "commit1" || operation.dest_type === "commit3") {
+        if(["commit1", "commit3", "q", "f"].includes(operation.dest_type)) {
             operationStoreAvx = `                    setStorePol(storePol, buffTOffsetsStages, args[i_args + ${c_args}], args[i_args + ${c_args + 1}], args[i_args + ${c_args + 2}], ${operation.dest_type === "commit1" ? 1 : "FIELD_EXTENSION"});`;
-        } else if((operation.dest_type === "f" || operation.dest_type === "q")) {
-            if(isAvx) {
-                operationStoreAvx = `                    Goldilocks3::${avxStore}(&params.${operation.dest_type}_2ns[i*FIELD_EXTENSION], uint64_t(FIELD_EXTENSION), tmp3_);`;        
-            } else {
-                operationStoreAvx = `                    Goldilocks3::store_pack(nrowsPack, &params.${operation.dest_type}_2ns[i*FIELD_EXTENSION], uint64_t(FIELD_EXTENSION), tmp3_, 1);`;        
-            }
         }
 
 
@@ -585,11 +576,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
                 }
             }
         } else {
-            if((operation.dest_type === "f" || operation.dest_type === "q")) {
-                name += "tmp3_, ";
-            } else {
-                name += typeDest + ", ";
-            }
+            name += typeDest + ", ";
             name += typeSrc0 + ", ";
             if(operation.src1_type) {
                 if(operation.op === "mul" && operation.src1_type === "challenge") {
@@ -621,6 +608,8 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             case "commit1":
             case "commit3":
             case "const":
+            case "q":
+            case "f":
                 return parserType === "pack"
                     ? `&bufferT_[(buffTOffsetsStages[args[i_args + ${c_args}]] + 2 * args[i_args + ${c_args + 1}] + args[i_args + ${c_args + 2}]) * nrowsPack]`
                     : `bufferT_[buffTOffsetsStages[args[i_args + ${c_args}]] + 2 * args[i_args + ${c_args + 1}] + args[i_args + ${c_args + 2}]]`
@@ -636,10 +625,6 @@ module.exports.generateParser = function generateParser(operations, operationsUs
                 return `params.zi[i]`;
             case "xDivXSubXi": 
                 return `params.xDivXSubXi[i + args[i_args + ${c_args}]*domainSize]`;
-            case "f":
-                return "&params.f_2ns[i*FIELD_EXTENSION]";
-            case "q":
-                return "&params.q_2ns[i*FIELD_EXTENSION]";
             default:
                 throw new Error("Invalid type: " + type);
         }
@@ -735,8 +720,7 @@ module.exports.getAllOperations = function getAllOperations() {
     
     possibleOps.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubXi"});
 
-    possibleOps.push({ dest_type: "q", src0_type: "tmp3", src1_type: "Zi"});
-    possibleOps.push({ dest_type: "f", src0_type: "tmp3", src1_type: "tmp3"});
+    possibleOps.push({ dest_type: "commit3", src0_type: "tmp3", src1_type: "Zi"});
 
     return possibleOps;
 }
@@ -748,9 +732,14 @@ module.exports.getOperation = function getOperation(r) {
         _op.dest_type = `commit${r.dest.dim}`;
     } else if(r.dest.type === "tmp") {
         _op.dest_type = `tmp${r.dest.dim}`;
+    } else if(r.dest.type === "q") {
+        _op.dest_type = `commit${r.dest.dim}`;
+    } else if(r.dest.type === "f") {
+        _op.dest_type = `commit3`
     } else {
         _op.dest_type = r.dest.type;
     }
+
     
     let src = [...r.src];
     if(r.op !== "copy") {

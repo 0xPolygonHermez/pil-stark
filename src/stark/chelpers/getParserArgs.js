@@ -33,7 +33,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         
         let operation = getOperation(r);
 
-        if(operation.op !== "copy" && "q" !== operation.dest_type) {
+        if(operation.op !== "copy") {
             args.push(operationsTypeMap[operation.op]);
         }
 
@@ -95,9 +95,6 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                 }
                 break;
             }
-            case "q": {
-                break;
-            }
             case "cm": {
                 if (dom == "n") {
                     evalMap_(starkInfo.cm_n[r.dest.id], r.dest.prime)
@@ -118,7 +115,11 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                 }
                 break;
             }
-            case "f": {
+            case "f":
+            case "q": {
+                args.push(5);
+                args.push(0);
+                args.push(0);
                 break;
             }
             default: throw new Error("Invalid reference type set: " + r.dest.type);
