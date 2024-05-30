@@ -1,9 +1,9 @@
 const operationsMap = {
     "commit1": 1,
+    "x": 2,
     "const": 2,
     "tmp1": 3,
     "public": 4,
-    "x": 5,
     "number": 6,
     "commit3": 7,
     "xDivXSubXi": 7,
@@ -50,7 +50,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         "    nColsStagesAcc.resize(10 + 2);",
         "    nColsStages.resize(10 + 2);",
         "    offsetsStages.resize(10 + 2);\n",
-        "    nColsStages[0] = starkInfo.nConstants;",
+        "    nColsStages[0] = starkInfo.nConstants + 2;",
         "    offsetsStages[0] = 0;\n",
         "    for(uint64_t s = 1; s <= 3; ++s) {",
         `        nColsStages[s] = starkInfo.mapSectionsN.section[string2section("cm" + to_string(s) + "_n")];`,
@@ -129,19 +129,29 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             `inline ${functionType} loadPolinomials(StarkInfo &starkInfo, StepsParams &params, ${avxTypeElement} *bufferT_, uint64_t row, uint64_t stage, uint64_t nrowsPack, uint64_t domainExtended) {`,
             "    Goldilocks::Element bufferT[2*nrowsPack];",
             "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
+            "    Polinomial &x = domainExtended ? params.x_2ns : params.x_n;",
             "    uint64_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;",
             "    uint64_t nStages = 3;",
             "    uint64_t nextStride = domainExtended ?  1 << (starkInfo.starkStruct.nBitsExt - starkInfo.starkStruct.nBits) : 1;",
             "    std::vector<uint64_t> nextStrides = {0, nextStride};",
-            "    for(uint64_t k = 0; k < nColsStages[0]; ++k) {",
+            "    for(uint64_t k = 0; k < starkInfo.nConstants; ++k) {",
             "        for(uint64_t o = 0; o < 2; ++o) {",
             "            for(uint64_t j = 0; j < nrowsPack; ++j) {",
             "                uint64_t l = (row + j + nextStrides[o]) % domainSize;",
-            "                bufferT[nrowsPack*o + j] = ((Goldilocks::Element *)constPols->address())[l * nColsStages[0] + k];",
+            "                bufferT[nrowsPack*o + j] = ((Goldilocks::Element *)constPols->address())[l * starkInfo.nConstants + k];",
             "            }",
             `            Goldilocks::${avxLoad}(bufferT_[nColsStagesAcc[5*o] + k], &bufferT[nrowsPack*o]);`,
             "        }",
+            "    }\n",
+            "    // Load x and Zi",
+            "    for(uint64_t j = 0; j < nrowsPack; ++j) {",
+            "        bufferT[j] = x[row + j][0];",
             "    }",
+            `    Goldilocks::${avxLoad}(bufferT_[starkInfo.nConstants], &bufferT[0]);`,
+            "    for(uint64_t j = 0; j < nrowsPack; ++j) {",
+            "        bufferT[j] = params.zi[row + j][0];",
+            "    }\n",
+            `    Goldilocks::${avxLoad}(bufferT_[starkInfo.nConstants + 1], &bufferT[0]);\n`,
             "    for(uint64_t s = 1; s <= nStages; ++s) {",
             "        if(stage < s) break;",
             "        for(uint64_t k = 0; k < nColsStages[s]; ++k) {",
@@ -153,7 +163,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             `                Goldilocks::${avxLoad}(bufferT_[nColsStagesAcc[5*o + s] + k], &bufferT[nrowsPack*o]);`,
             "            }",
             "        }",
-            "    }",
+            "    }\n",
             "    if(stage == 5) {",
             "       for(uint64_t k = 0; k < nColsStages[nStages + 1]; ++k) {",
             "           for(uint64_t o = 0; o < 2; ++o) {",
@@ -163,7 +173,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             "               }",
             `               Goldilocks::${avxLoad}(bufferT_[nColsStagesAcc[5*o + nStages + 1] + k], &bufferT[nrowsPack*o]);`,
             "           }",
-            "       }",
+            "       }\n",
             "       // Load xDivXSubXi & xDivXSubWXi",
             "       for(uint64_t d = 0; d < 2; ++d) {",
             "           for(uint64_t i = 0; i < FIELD_EXTENSION; ++i) {",
@@ -181,17 +191,25 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             `inline ${functionType} loadPolinomials(StarkInfo &starkInfo, StepsParams &params, Goldilocks::Element *bufferT_, uint64_t row, uint64_t stage, uint64_t nrowsPack, uint64_t domainExtended) {`,
             "    ConstantPolsStarks *constPols = domainExtended ? params.pConstPols2ns : params.pConstPols;",
             "    uint64_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;",
+            "    Polinomial &x = domainExtended ? params.x_2ns : params.x_n;",
             "    uint64_t nStages = 3;",
             "    uint64_t nextStride = domainExtended ?  1 << (starkInfo.starkStruct.nBitsExt - starkInfo.starkStruct.nBits) : 1;",
             "    std::vector<uint64_t> nextStrides = {0, nextStride};",
-            "    for(uint64_t k = 0; k < nColsStages[0]; ++k) {",
+            "    for(uint64_t k = 0; k < starkInfo.nConstants; ++k) {",
             "        for(uint64_t o = 0; o < 2; ++o) {",
             "            for(uint64_t j = 0; j < nrowsPack; ++j) {",
             "                uint64_t l = (row + j + nextStrides[o]) % domainSize;",
-            "                bufferT_[(nColsStagesAcc[5*o] + k)*nrowsPack + j] = ((Goldilocks::Element *)constPols->address())[l * nColsStages[0] + k];",
+            "                bufferT_[(nColsStagesAcc[5*o] + k)*nrowsPack + j] = ((Goldilocks::Element *)constPols->address())[l * starkInfo.nConstants + k];",
             "            }",
             "        }",
+            "    }\n",
+            "    // Load x and Zi",
+            "    for(uint64_t j = 0; j < nrowsPack; ++j) {",
+            "        bufferT_[starkInfo.nConstants*nrowsPack + j] = x[row + j][0];",
             "    }",
+            "    for(uint64_t j = 0; j < nrowsPack; ++j) {",
+            "        bufferT_[(starkInfo.nConstants + 1)*nrowsPack + j] = params.zi[row + j][0];",
+            "    }\n",
             "    for(uint64_t s = 1; s <= nStages; ++s) {",
             "        for(uint64_t k = 0; k < nColsStages[s]; ++k) {",
             "            for(uint64_t o = 0; o < 2; ++o) {",
@@ -201,7 +219,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             "                }",
             "            }",
             "        }",
-            "    }",
+            "    }\n",
             "    if(stage == 5) {",
             "        for(uint64_t k = 0; k < nColsStages[nStages + 1]; ++k) {",
             "            for(uint64_t o = 0; o < 2; ++o) {",
@@ -210,7 +228,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             "                    bufferT_[(nColsStagesAcc[5*o + nStages + 1] + k)*nrowsPack + j] = params.pols[offsetsStages[nStages + 1] + l * nColsStages[nStages + 1] + k];",
             "                }",
             "            }",
-            "        }",
+            "        }\n",
             "       // Load xDivXSubXi & xDivXSubWXi",
             "       for(uint64_t d = 0; d < 2; ++d) {",
             "           for(uint64_t i = 0; i < FIELD_EXTENSION; ++i) {",
@@ -229,7 +247,6 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         `    uint32_t nrowsPack =  ${parserType === "avx512" ? 8 : 4};`,
         `    bool domainExtended = parserParams.stage > 3 ? true : false;`,
         "    uint64_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;",
-        "    Polinomial &x = domainExtended ? params.x_2ns : params.x_n;", 
         "    uint8_t *ops = &parserArgs.ops[parserParams.opsOffset];",
         "    uint16_t *args = &parserArgs.args[parserParams.argsOffset];",
         "    uint64_t *numbers = &parserArgs.numbers[parserParams.numbersOffset];",
@@ -332,25 +349,15 @@ module.exports.generateParser = function generateParser(operations, operationsUs
 
     if(isAvx) {
         parserCPP.push(...[
-            `        ${avxTypeElement} bufferT_[2*nCols];\n`,
+            `        ${avxTypeElement} bufferT_[2*nCols];`,
             `        ${avxTypeElement} tmp1[parserParams.nTemp1];`,
-            `        ${avxTypeElement} tmp1_1;`,
+            `        ${avxTypeExtElement} tmp3[parserParams.nTemp3];\n`,
         ]);
-        if(!operationsUsed) parserCPP.push(        `        ${avxTypeElement} tmp1_0;`);
-        parserCPP.push("\n");
-        parserCPP.push(...[
-            `        ${avxTypeExtElement} tmp3[parserParams.nTemp3];`,
-            `        ${avxTypeExtElement} tmp3_;`,
-            `        ${avxTypeExtElement} tmp3_1;\n`,
-        ]);
-
     } else {
         parserCPP.push(...[
-            `        Goldilocks::Element bufferT_[2*nCols*nrowsPack];\n`,
+            `        Goldilocks::Element bufferT_[2*nCols*nrowsPack];`,
             `        Goldilocks::Element tmp1[parserParams.nTemp1*nrowsPack];`,
-            `        Goldilocks::Element tmp3[parserParams.nTemp3*nrowsPack*FIELD_EXTENSION];`,
-            `        Goldilocks::Element tmp3_[nrowsPack*FIELD_EXTENSION];`,
-            `        Goldilocks::Element tmp3_1[nrowsPack*FIELD_EXTENSION];`,
+            `        Goldilocks::Element tmp3[parserParams.nTemp3*nrowsPack*FIELD_EXTENSION];\n`,
         ]);
     }
 
@@ -485,27 +492,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         }
         
         const operationCall = [];
-
-        
-        if (isAvx && "x" === operation.src0_type){
-            operationCall.push(`                        Goldilocks::${avxLoad}(tmp1_0, ${typeSrc0}, x.offset());`);
-            typeSrc0 = "tmp1_0";
-        } else if (isAvx && "Zi" === operation.src0_type){
-                operationCall.push(`                    Goldilocks::${avxLoad}(tmp1_0, ${typeSrc0}, params.zi.offset());`);
-                typeSrc0 = "tmp1_0";
-        }
-
-        if(operation.src1_type) {
-            if (isAvx && "x" === operation.src1_type){
-                operationCall.push(`                    Goldilocks::${avxLoad}(tmp1_1, ${typeSrc1}, x.offset());`);
-                typeSrc1 = "tmp1_1";
-            } else if (isAvx&& "Zi" === operation.src1_type){
-                operationCall.push(`                    Goldilocks::${avxLoad}(tmp1_1, ${typeSrc1}, params.zi.offset());`);
-                typeSrc1 = "tmp1_1";
-            }
-        }
-        
-        
+  
         name += typeDest + ", ";
         name += typeSrc0 + ", ";
         if(operation.src1_type) {
@@ -539,6 +526,8 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             case "commit3":
             case "const":
             case "xDivXSubXi":
+            case "x":
+            case "Zi":
                 return parserType === "pack"
                     ? `&bufferT_[(nColsStagesAcc[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}]) * nrowsPack]`
                     : `${type === "commit3" ? `(${avxTypeExtElement} &)` : ""}bufferT_[nColsStagesAcc[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}]]`
@@ -548,10 +537,6 @@ module.exports.generateParser = function generateParser(operations, operationsUs
                 return parserType === "pack" ? `&evals[args[i_args + ${c_args}]*FIELD_EXTENSION*nrowsPack]` : `evals[args[i_args + ${c_args}]]`;
             case "number":
                 return parserType === "pack" ? `&numbers_[args[i_args + ${c_args}]*nrowsPack]` : `numbers_[args[i_args + ${c_args}]]`;
-            case "x":
-                return `x[i]`;
-            case "Zi":
-                return `params.zi[i]`;
             default:
                 throw new Error("Invalid type: " + type);
         }
@@ -559,9 +544,6 @@ module.exports.generateParser = function generateParser(operations, operationsUs
 
     function numberOfArgs(type) {
         switch (type) {
-            case "x":
-            case "Zi":
-                return 0; 
             case "public":            
             case "tmp1":
             case "tmp3":
@@ -569,6 +551,8 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             case "eval":
             case "number":
                 return 1;
+            case "x":
+            case "Zi":
             case "f":
             case "q":
             case "xDivXSubXi":
@@ -588,7 +572,7 @@ module.exports.getAllOperations = function getAllOperations() {
     const possibleDestinationsDim1 = [ "commit1", "tmp1" ];
     const possibleDestinationsDim3 = [ "commit3", "tmp3" ];
 
-    const possibleSrcDim1 = [ "commit1", "tmp1", "public", "x", "number" ];
+    const possibleSrcDim1 = [ "commit1", "tmp1", "public", "number" ];
     const possibleSrcDim3 = [ "commit3", "tmp3", "challenge" ];
 
     // Dim1 destinations
@@ -597,10 +581,8 @@ module.exports.getAllOperations = function getAllOperations() {
         for(let k = 0; k < possibleSrcDim1.length; ++k) {
             let src0_type = possibleSrcDim1[k];
             possibleOps.push({dest_type, src0_type}); // Copy operation
-            if(src0_type === "x") continue;
             for (let l = k; l < possibleSrcDim1.length; ++l) {
                 let src1_type = possibleSrcDim1[l];
-                if(src1_type === "x") continue;
                 possibleOps.push({dest_type, src0_type, src1_type})
             } 
         }
@@ -645,15 +627,13 @@ module.exports.getAllOperations = function getAllOperations() {
     possibleOps.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "commit1"});
     possibleOps.push({ dest_type: "tmp3", src0_type: "commit3", src1_type: "eval"});
     
-    possibleOps.push({ dest_type: "commit3", src0_type: "tmp3", src1_type: "Zi"});
-
     return possibleOps;
 }
 
 module.exports.getOperation = function getOperation(r) {
     const _op = {};
     _op.op = r.op;
-    if(["cm", "tmpExp", "q", "f"].includes(r.dest.type)) {
+    if(["cm", "tmpExp", "q", "f", "x", "Zi"].includes(r.dest.type)) {
         _op.dest_type = `commit${r.dest.dim}`;
     } else if(r.dest.type === "tmp") {
         _op.dest_type = `tmp${r.dest.dim}`;
@@ -679,7 +659,7 @@ module.exports.getOperation = function getOperation(r) {
     for(let i = 0; i < src.length; i++) {
         if(["cm", "tmpExp"].includes(src[i].type)) {
             _op[`src${i}_type`] = `commit${src[i].dim}`;
-        } else if(src[i].type === "const") {
+        } else if(["const", "x", "Zi"].includes(src[i].type)) {
             _op[[`src${i}_type`]] = "commit1";
         } else if(src[i].type === "tmp") {
             _op[`src${i}_type`] =  `tmp${src[i].dim}`;

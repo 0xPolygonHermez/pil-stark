@@ -15,7 +15,8 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
     var args = [];
     var numbers = [];
     
-    let nCols = starkInfo.nConstants + starkInfo.mapSectionsN["cm1_n"] + starkInfo.mapSectionsN["cm2_n"] + starkInfo.mapSectionsN["cm3_n"];
+    let nConstants = (starkInfo.nConstants + 2);
+    let nCols = nConstants + starkInfo.mapSectionsN["cm1_n"] + starkInfo.mapSectionsN["cm2_n"] + starkInfo.mapSectionsN["cm3_n"];
     if(stage <= 3) {
         nCols += starkInfo.mapSectionsN["tmpExp_n"];
     } else {
@@ -23,7 +24,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
     }
 
     let nColsStagesAcc = new Array(10).fill(0);
-    nColsStagesAcc[1] = nColsStagesAcc[0] + starkInfo.nConstants;
+    nColsStagesAcc[1] = nColsStagesAcc[0] + nConstants;
     nColsStagesAcc[2] = nColsStagesAcc[1] + starkInfo.mapSectionsN["cm1_n"];
     nColsStagesAcc[3] = nColsStagesAcc[2] + starkInfo.mapSectionsN["cm2_n"];
     nColsStagesAcc[4] = nColsStagesAcc[3] + starkInfo.mapSectionsN["cm3_n"];
@@ -200,6 +201,14 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                 args.push(r.id);
                 break;
             }
+            case "x":
+                args.push(0);
+                args.push(starkInfo.nConstants);
+                break;
+            case "Zi":
+                args.push(0);
+                args.push(starkInfo.nConstants + 1);
+                break;
         }
     }
 
