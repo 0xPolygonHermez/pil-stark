@@ -106,7 +106,10 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                 }
                 break;
             }
-            case "q": {
+            case "q": 
+            case "f": {
+                args.push(10);
+                args.push(0);
                 break;
             }
             case "cm": {
@@ -183,11 +186,11 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                 break;
             }
             case "xDivXSubXi":
-                args.push(10);
+                args.push(11);
                 args.push(0);
                 break;
             case "xDivXSubWXi":
-                args.push(10);
+                args.push(11);
                 args.push(3);
                 break;
             case "public":
