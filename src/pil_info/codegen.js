@@ -369,7 +369,7 @@ function buildCode(ctx) {
     // Expressions that are not saved, cannot be reused later on
     for (let i=0; i<ctx.pil.expressions.length; i++) {
         const e = ctx.pil.expressions[i];
-        if ((!e.keep)&&(typeof e.idQ === "undefined")) {
+        if ((!e.imPol)) {
             ctx.calculated.exps[i] = false;
             ctx.calculated.expsPrime[i] = false;
         }
