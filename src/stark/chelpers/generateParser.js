@@ -6,11 +6,11 @@ const operationsMap = {
     "x": 5,
     "number": 6,
     "commit3": 7,
+    "xDivXSubXi": 7,
+    "xDivXSubWXi": 7,
     "tmp3": 8,
     "challenge": 9, 
     "eval": 10,
-    "xDivXSubXi": 11,
-    "xDivXSubWXi": 11,
     "q": 12, 
     "f": 13,
 }
@@ -41,44 +41,47 @@ module.exports.generateParser = function generateParser(operations, operationsUs
     const parserCPP = [];
 
     parserCPP.push(...[
+        "uint64_t nCols;",
         "vector<uint64_t> nColsStages;",
         "vector<uint64_t> nColsStagesAcc;",
         "vector<uint64_t> offsetsStages;\n",
         `inline ${functionType} setBufferTInfo(StarkInfo& starkInfo, uint64_t stage) {`,
-        "   bool domainExtended = stage <= 3 ? false : true;",
-        "   nColsStagesAcc.resize(10);",
-        "   nColsStages.resize(5);",
-        "   offsetsStages.resize(5);\n",
-        "   nColsStages[0] = starkInfo.nConstants;",
-        "   offsetsStages[0] = 0;\n",
-        "   for(uint64_t s = 1; s <= 3; ++s) {",
-        `       nColsStages[s] = starkInfo.mapSectionsN.section[string2section("cm" + to_string(s) + "_n")];`,
-        "       if(domainExtended) {",
-        `           offsetsStages[s] = starkInfo.mapOffsets.section[string2section("cm" + to_string(s) + "_2ns")];`,
-        "       } else {",
-        `           offsetsStages[s] = starkInfo.mapOffsets.section[string2section("cm" + to_string(s) + "_n")];`,
-        "       }",
-        "   }",
-        "   if(domainExtended) {",
-        "       nColsStages[4] = starkInfo.mapSectionsN.section[eSection::cm4_2ns];",
-        "       offsetsStages[4] = starkInfo.mapOffsets.section[eSection::cm4_2ns];",
-        "   } else {",
-        "       nColsStages[4] = starkInfo.mapSectionsN.section[eSection::tmpExp_n];",
-        "       offsetsStages[4] = starkInfo.mapOffsets.section[eSection::tmpExp_n];",
-        "   }",
-        "   for(uint64_t o = 0; o < 2; ++o) {",
-        "       for(uint64_t s = 0; s < 5; ++s) {",
-        "           if(s == 0) {",
-        "               if(o == 0) {",
-        "                   nColsStagesAcc[0] = 0;",
-        "               } else {",
-        "                   nColsStagesAcc[5*o] = nColsStagesAcc[5*o - 1] + nColsStages[4];",
-        "               }",
-        "           } else {",
-        "               nColsStagesAcc[5*o + s] = nColsStagesAcc[5*o + (s - 1)] + nColsStages[(s - 1)];",
-        "           }",
-        "       }",
-        "   }",
+        "    bool domainExtended = stage <= 3 ? false : true;",
+        "    nColsStagesAcc.resize(10 + 1);",
+        "    nColsStages.resize(5);",
+        "    offsetsStages.resize(5);\n",
+        "    nColsStages[0] = starkInfo.nConstants;",
+        "    offsetsStages[0] = 0;\n",
+        "    for(uint64_t s = 1; s <= 3; ++s) {",
+        `        nColsStages[s] = starkInfo.mapSectionsN.section[string2section("cm" + to_string(s) + "_n")];`,
+        "        if(domainExtended) {",
+        `            offsetsStages[s] = starkInfo.mapOffsets.section[string2section("cm" + to_string(s) + "_2ns")];`,
+        "        } else {",
+        `            offsetsStages[s] = starkInfo.mapOffsets.section[string2section("cm" + to_string(s) + "_n")];`,
+        "        }",
+        "    }",
+        "    if(domainExtended) {",
+        "        nColsStages[4] = starkInfo.mapSectionsN.section[eSection::cm4_2ns];",
+        "        offsetsStages[4] = starkInfo.mapOffsets.section[eSection::cm4_2ns];",
+        "    } else {",
+        "        nColsStages[4] = starkInfo.mapSectionsN.section[eSection::tmpExp_n];",
+        "        offsetsStages[4] = starkInfo.mapOffsets.section[eSection::tmpExp_n];",
+        "    }",
+        "    for(uint64_t o = 0; o < 2; ++o) {",
+        "        for(uint64_t s = 0; s < 5; ++s) {",
+        "            if(s == 0) {",
+        "                if(o == 0) {",
+        "                    nColsStagesAcc[0] = 0;",
+        "                } else {",
+        "                    nColsStagesAcc[5*o] = nColsStagesAcc[5*o - 1] + nColsStages[4];",
+        "                }",
+        "            } else {",
+        "                nColsStagesAcc[5*o + s] = nColsStagesAcc[5*o + (s - 1)] + nColsStages[(s - 1)];",
+        "            }",
+        "        }",
+        "    }",
+        "    nColsStagesAcc[10] = nColsStages[9] + nColsStagesAcc[9];",
+        "    nCols = nColsStagesAcc[10] + 6;",
         "}\n",
     ]);
 
@@ -145,6 +148,15 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             `               Goldilocks::${avxLoad}(bufferT_[nColsStagesAcc[5*o + nStages + 1] + k], &bufferT[nrowsPack*o]);`,
             "           }",
             "       }",
+            "       // Load xDivXSubXi & xDivXSubWXi",
+            "       for(uint64_t d = 0; d < 2; ++d) {",
+            "           for(uint64_t i = 0; i < FIELD_EXTENSION; ++i) {",
+            "               for(uint64_t j = 0; j < nrowsPack; ++j) {",
+            "                   bufferT[j] = params.xDivXSubXi[d*domainSize + row + j][i];",
+            "               }",
+            `               Goldilocks::${avxLoad}(bufferT_[nColsStagesAcc[10] + FIELD_EXTENSION*d + i], &bufferT[0]);`,
+            "           }",
+            "       }",
             "   }",
             "}\n",
         ]);    
@@ -183,6 +195,14 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             "                }",
             "            }",
             "        }",
+            "       // Load xDivXSubXi & xDivXSubWXi",
+            "       for(uint64_t d = 0; d < 2; ++d) {",
+            "           for(uint64_t i = 0; i < FIELD_EXTENSION; ++i) {",
+            "               for(uint64_t j = 0; j < nrowsPack; ++j) {",
+            "                  bufferT_[(nColsStagesAcc[10] + FIELD_EXTENSION*d + i)*nrowsPack + j] = params.xDivXSubXi[d*domainSize + row + j][i];",
+            "               }",
+            "           }",
+            "       }",
             "    }",
             "}\n"
         ]);
@@ -199,7 +219,6 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         "    uint64_t *numbers = &parserArgs.numbers[parserParams.numbersOffset];",
         "    uint8_t *storePol = &parserArgs.storePols[parserParams.storePolsOffset];\n",
         "    setBufferTInfo(starkInfo, parserParams.stage);",
-        "    uint64_t nCols = nColsStages[nColsStages.size() - 1] + nColsStagesAcc[nColsStagesAcc.size() - 1];\n",
     ]);
    
     if(isAvx) {
@@ -471,13 +490,6 @@ module.exports.generateParser = function generateParser(operations, operationsUs
         } else if (isAvx && "Zi" === operation.src0_type){
                 operationCall.push(`                    Goldilocks::${avxLoad}(tmp1_0, ${typeSrc0}, params.zi.offset());`);
                 typeSrc0 = "tmp1_0";
-        } else if(operation.src0_type == "xDivXSubXi") {
-            if(isAvx) {
-                operationCall.push(`                        Goldilocks3::${avxLoad}(tmp3_0, ${typeSrc0}, uint64_t(FIELD_EXTENSION));`);
-            } else {
-                operationCall.push(`                    Goldilocks3::load_pack(nrowsPack, tmp3_0, 1, ${typeSrc0}, uint64_t(FIELD_EXTENSION));`);
-            }
-            typeSrc0 = "tmp3_0";
         }
 
         if(operation.src1_type) {
@@ -487,13 +499,6 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             } else if (isAvx&& "Zi" === operation.src1_type){
                 operationCall.push(`                    Goldilocks::${avxLoad}(tmp1_1, ${typeSrc1}, params.zi.offset());`);
                 typeSrc1 = "tmp1_1";
-            } else if(operation.src1_type == "xDivXSubXi") {
-                if(isAvx) {
-                    operationCall.push(`                    Goldilocks3::${avxLoad}(tmp3_1, ${typeSrc1}, uint64_t(FIELD_EXTENSION));`);
-                } else {
-                    operationCall.push(`                    Goldilocks3::load_pack(nrowsPack, tmp3_1, 1, ${typeSrc1}, uint64_t(FIELD_EXTENSION));`);
-                }
-                typeSrc1 = "tmp3_1";
             }
         }
         
@@ -533,6 +538,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             case "commit1":
             case "commit3":
             case "const":
+            case "xDivXSubXi":
                 return parserType === "pack"
                     ? `&bufferT_[(nColsStagesAcc[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}]) * nrowsPack]`
                     : `${type === "commit3" ? `(${avxTypeExtElement} &)` : ""}bufferT_[nColsStagesAcc[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}]]`
@@ -546,8 +552,6 @@ module.exports.generateParser = function generateParser(operations, operationsUs
                 return `x[i]`;
             case "Zi":
                 return `params.zi[i]`;
-            case "xDivXSubXi": 
-                return `params.xDivXSubXi[i + args[i_args + ${c_args}]*domainSize]`;
             case "f":
                 return "&params.f_2ns[i*FIELD_EXTENSION]";
             case "q":
@@ -570,8 +574,8 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             case "challenge":
             case "eval":
             case "number":
-            case "xDivXSubXi":
                 return 1;
+            case "xDivXSubXi":
             case "const":
             case "commit1":
             case "commit3":
@@ -645,8 +649,6 @@ module.exports.getAllOperations = function getAllOperations() {
     possibleOps.push({ dest_type: "tmp3", src0_type: "eval", src1_type: "commit1"});
     possibleOps.push({ dest_type: "tmp3", src0_type: "commit3", src1_type: "eval"});
     
-    possibleOps.push({ dest_type: "tmp3", src0_type: "tmp3", src1_type: "xDivXSubXi"});
-
     possibleOps.push({ dest_type: "q", src0_type: "tmp3", src1_type: "Zi"});
     possibleOps.push({ dest_type: "f", src0_type: "tmp3", src1_type: "tmp3"});
 
@@ -664,6 +666,10 @@ module.exports.getOperation = function getOperation(r) {
         _op.dest_type = r.dest.type;
     }
     
+    for(let i = 0; i < r.src.length; ++i) {
+        if(["xDivXSubXi", "xDivXSubWXi"].includes(r.src[i].type)) r.src[i].dim = 3;
+    }
+
     let src = [...r.src];
     if(r.op !== "copy") {
         src.sort((a, b) => {
@@ -683,7 +689,7 @@ module.exports.getOperation = function getOperation(r) {
         } else if(src[i].type === "tmp") {
             _op[`src${i}_type`] =  `tmp${src[i].dim}`;
         } else if(["xDivXSubXi", "xDivXSubWXi"].includes(src[i].type)) {
-            _op[`src${i}_type`] = "xDivXSubXi";
+            _op[`src${i}_type`] = "commit3";
         } else {
             _op[`src${i}_type`] = src[i].type;
         }

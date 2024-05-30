@@ -79,8 +79,6 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         storePols,
         args,
     }
-
-    console.log(storePols);
     
     const operationsUsed = counters_ops.reduce((acc, currentValue, currentIndex) => {
         if (currentValue !== 0) {
@@ -184,11 +182,13 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                 args.push(numbers.indexOf(numString));
                 break;
             }
-            case "xDivXSubXi": 
+            case "xDivXSubXi":
+                args.push(10);
                 args.push(0);
                 break;
             case "xDivXSubWXi":
-                args.push(1);
+                args.push(10);
+                args.push(3);
                 break;
             case "public":
             case "challenge":
