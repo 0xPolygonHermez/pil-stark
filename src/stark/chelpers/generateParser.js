@@ -612,7 +612,7 @@ module.exports.generateParser = function generateParser(operations, operationsUs
             case "const":
                 return parserType === "pack"
                     ? `&bufferT_[(nColsStagesAcc[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}]) * nrowsPack]`
-                    : `${type === "commit3" ? "(Goldilocks3::Element_avx &)" : ""}bufferT_[nColsStagesAcc[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}]]`
+                    : `${type === "commit3" ? `(${avxTypeExtElement} &)` : ""}bufferT_[nColsStagesAcc[args[i_args + ${c_args}]] + args[i_args + ${c_args + 1}]]`
             case "challenge":
                 return parserType === "pack" ? `&challenges[args[i_args + ${c_args}]*FIELD_EXTENSION*nrowsPack]` : `challenges[args[i_args + ${c_args}]]`;
             case "eval":
