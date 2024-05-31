@@ -1,6 +1,5 @@
 const fs = require("fs");
 const version = require("../package").version;
-const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 
 const F3g = require("./helpers/f3g.js");
 const { compile } = require("pilcom");
@@ -35,7 +34,9 @@ async function run() {
 
     const infoPilJSON = { maxDeg, cExpId: infoPil.res.cExpId, qDim: infoPil.res.qDim, ...infoPil };
     
-    await fs.promises.writeFile(infoPilFile, JSONbig.stringify(infoPilJSON, null, 1), "utf8");
+    console.log("Writing file...");
+    
+    await fs.promises.writeFile(infoPilFile, JSON.stringify(infoPilJSON, null, 1), "utf8");
 
     console.log("files Generated Correctly");
 }

@@ -1,0 +1,107 @@
+
+namespace ClimbKey(%N);
+
+// ClimbKey
+//
+// Description:
+// ============
+// SM to correctly navigate (climb up) the given merkle tree path. Here, by correct, we mean verifying that not overflow occurs.
+// The overflowing is detected by not including ALL possible combinations of values that produce an overflow in the lookup.
+//
+// keyx       = 4 goldilocks values holding the key. It must be satisfied that keyx' = keyx·2 + bit (which should be checked to not overflow).
+//              Clearly, the key [key0 || key1 || key2 || key3] is at most [0xffffffff00000000 || 0xffffffff00000000 || 0xffffffff00000000 || 0xffffffff00000000]
+// bit        = Bit to add to climb up the path
+// level      = A value of 8 bits to indicate the level of the tree (depth)
+// keyInChunk = Value of the current chunk (maximum 18 bits) used to verify by the lookup and in the rebuild of the key.
+// keySelx    = Binary value that is distinct from zero only if in CLK3 and keyx is the key chunk to "increase" based on the level.
+//              It is validated by the lookup in CLK3.
+// keyIn      = Accumulator of the values of keyInChunk. It is used to rebuild the key and check for consistency with the expected one.
+// ============
+// Example:
+//               key0    key1   key2     key3  bit   keyInChunk   FACTOR    keyIn     keySel0 keySel1 keySel2 keySel3 result level
+//      CLK0      A0      A1     A2       A3    z    A2[0..17]      1     A2[0..17]      0       0       0       0       0     X
+//      CLK1      A0      A1     A2       A3    z    A2[18..35]   2**18   A2[0..35]      0       0       0       0       0     X
+//  ==> CLK2     {A0      A1     A2       A3}   z    A2[36..53]   2**36   A2[0..53]      0       0       0       0       1     X      <=== key = keyIn
+//      CLK3     {A0      A1   2*A2+z     A3}   z    A2[54..63]   2**54   A2[0..63]      0       0       1       0       0     22     <=== key = keyOut = keyIn'
+//
+//      CLK0      B0      B1     B2       B3    y    B1[0..17]      1     B1[0..17]      0       0       0       0       0     X
+//      CLK1      B0      B1     B2       B3    y    B1[18..35]   2**18   B1[0..35]      0       0       0       0       0     X
+//  ==> CLK2     {B0      B1     B2       B3}   y    B1[36..53]   2**36   B1[0..53]      0       0       0       0      {1}    X       <=== key = keyIn
+//      CLK3     {B0    2*B1+y    B2      B3}   y    B1[54..63]   2**54   B1[0..63]      0       1       0       0       0    {37}     <=== key = keyOut = keyIn'
+//
+// "{·}" is used to indicate the columns used in the lookup for the storage
+// "==>" is used to indicate the result clock
+
+// key = keyIn  on CLK0,CLK1,CLK2
+// key = keyOut = keyIn' on CLK3
+pol commit key0, key1, key2, key3;
+
+// Domain verification of level,keyIn,keyInChunk is ensured in the lookup
+pol commit level;
+pol commit keyIn, keyInChunk;
+
+// Result is used to relate the storage SM with this SM via permutation
+pol commit result;
+
+// Binary checks of the following pols are necessary because they are introduced in the lookup as a composition
+pol commit bit;
+pol commit keySel0, keySel1, keySel2, keySel3;
+
+pol commit carryLt;
+
+pol CLK0 = Global.CLK32[0] + Global.CLK32[4] + Global.CLK32[8]  + Global.CLK32[12] + Global.CLK32[16] + Global.CLK32[20] + Global.CLK32[24] + Global.CLK32[28];
+pol CLK1 = Global.CLK32[1] + Global.CLK32[5] + Global.CLK32[9]  + Global.CLK32[13] + Global.CLK32[17] + Global.CLK32[21] + Global.CLK32[25] + Global.CLK32[29];
+pol CLK2 = Global.CLK32[2] + Global.CLK32[6] + Global.CLK32[10] + Global.CLK32[14] + Global.CLK32[18] + Global.CLK32[22] + Global.CLK32[26] + Global.CLK32[30];
+pol CLK3 = Global.CLK32[3] + Global.CLK32[7] + Global.CLK32[11] + Global.CLK32[15] + Global.CLK32[19] + Global.CLK32[23] + Global.CLK32[27] + Global.CLK32[31];
+
+// these constraints applies on CLK0, CLK1, CLK2, but for selected key on
+// CLK2 don't apply, because CLK2 - keySelx' = 1 - keySelx
+
+// keyx must remain constant on the transitions CLK0 -> CLK1 -> CLK2 -> CLK except
+// for the selected key chunk, which varies on the transition CLK2 -> CLK3.
+// On CLK2 we have that CLK2 - keySelx' = 0 for the selected key chunk, and CLK2 - keySelx' = 1 for the rest of keys.
+// Note: We use the fact that if keySelx = 1 on CLK3 then keySelx' = 1 on CLK2.
+(CLK0 + CLK1 + CLK2 - keySel0') * (key0' - key0) = 0;
+(CLK0 + CLK1 + CLK2 - keySel1') * (key1' - key1) = 0;
+(CLK0 + CLK1 + CLK2 - keySel2') * (key2' - key2) = 0;
+(CLK0 + CLK1 + CLK2 - keySel3') * (key3' - key3) = 0;
+
+// The next two constraints only apply on CLK2 if keySelx' is selected.
+
+// 1] Key rebuild. Update keyx for the only key chunk x that changes --> keyx[CLK3] = 2 * keyx[CLK0 ∨ CLK1 ∨ CLK2] + bit
+keySel0' * (key0' - 2 * key0 - bit) + keySel1' * (key1' - 2 * key1 - bit) + keySel2' * (key2' - 2 * key2 - bit) + keySel3' * (key3' - 2 * key3 - bit) = 0;
+
+// 2] Key consistency. keyIn is equal to the selected key chunk before the update --> keyIn[CLK3] = keyx[CLK2]
+//    Further: if this constraint holds true, then it also means that keyInChunks are valid and keyx was rebuilt correctly.
+CLK2 * keyIn' - keySel0' * key0 - keySel1' * key1 - keySel2' * key2 - keySel3' * key3 = 0;
+
+pol constant FACTOR;
+
+// Ensure that keyIn is constructed correctly in the cycle.
+// Note: FACTOR = [2**18, 2**36, 2**54, 1] in cycle.
+keyIn' = (1 - CLK3) * keyIn + FACTOR * keyInChunk';
+
+// The bit should remain constant in the cycle.
+(1 - CLK3) * (bit' - bit) = 0;
+
+pol constant T_CLKEYSEL, T_LEVEL, T_CHUNK_VALUE, T_CARRYLT_IN, T_CARRYLT_OUT;
+
+// Binary checks
+bit * (1 - bit) = 0;
+keySel0 * (1 - keySel0) = 0;
+keySel1 * (1 - keySel1) = 0;
+keySel2 * (1 - keySel2) = 0;
+keySel3 * (1 - keySel3) = 0;
+result * (1 - result) = 0;
+
+// Result is equal to 1 at CLK2 and 0 in the rest
+result * (1 - CLK2) = 0;
+
+// CLK0 (2 bits) + keyChunk = keyIn[ 0..17] 18 bits + carryLt (2 bits) = 22 bits (only one value of level)
+// CLK1 (2 bits) + keyChunk = keyIn[18..35] 18 bits + carryLt (2 bits) = 22 bits (only one value of level)
+// CLK2 (2 bits) + keyChunk = keyIn[36..53] 18 bits + carryLt (2 bits) = 22 bits (only one value of level)
+// CLK3 (2 bits) + keyChunk = keyIn[54..63] 10 bits + carryLt (2 bits) + level (8 bits)  = 22 bits
+// Note: keySelx is zero on CLK0,CLK1,CLK2
+pol clkeySel = CLK1 + 2 * CLK2 + 3 * CLK3 + 2**2 * keySel0 + 2**3 * keySel1 + 2**4 * keySel2 + 2**5 * keySel3;
+
+{ clkeySel, level * CLK3, keyInChunk, CLK0 * (bit - carryLt) + carryLt, (1 - CLK3) * carryLt' } in { T_CLKEYSEL, T_LEVEL, T_CHUNK_VALUE, T_CARRYLT_IN, T_CARRYLT_OUT };

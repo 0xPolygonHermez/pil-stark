@@ -2,7 +2,7 @@ const fs = require("fs");
 const version = require("../package").version;
 
 const { generatePilCode } = require("./pil_info/generatePilCode");
-const { addIntermediatePolynomials } = require("./pil_info/polynomials/imPolynomials");
+const { addIntermediatePolynomials } = require("./pil_info/imPolsCalculation/imPolynomials");
 const map = require("./pil_info/map");
 const { compile } = require("pilcom");
 const F3g = require("./helpers/f3g");
@@ -34,12 +34,22 @@ async function run() {
     const expressions = imPols.newExpressions;
     const qDeg = imPols.qDeg;
     const imExps = imPols.imExps;
-
+    
     addIntermediatePolynomials(res, expressions, imExps, qDeg);
     
     generatePilCode(res, pil, expressions);
 
     map(res, expressions);       
+
+    console.log("--------------------- POLINOMIALS INFO ---------------------")
+    console.log(`Columns stage 1: ${res.nCm1} -> Columns in the basefield: ${res.mapSectionsN.cm1_2ns}`);
+    console.log(`Columns stage 2: ${res.nCm2} -> Columns in the basefield: ${res.mapSectionsN.cm2_2ns}`);
+    console.log(`Columns stage 3: ${res.nCm3} (${res.nImPols} intermediate polinomials) -> Columns in the basefield: ${res.mapSectionsN.cm3_2ns}`);
+    console.log(`Columns stage 4: ${res.nCm4} -> Columns in the basefield: ${res.mapSectionsN.cm4_2ns}`);
+    console.log(`Total Columns: ${res.nCm1 + res.nCm2 + res.nCm3 + res.nCm4} -> Total Columns in the basefield: ${res.mapSectionsN.cm1_2ns + res.mapSectionsN.cm2_2ns + res.mapSectionsN.cm3_2ns + res.mapSectionsN.cm4_2ns}`);
+    console.log(`Total Constraints: ${res.nConstraints}`)
+    console.log(`Number of evaluations: ${res.evMap.length}`)
+    console.log("------------------------------------------------------------")
 
     await fs.promises.writeFile(starkInfoFile, JSON.stringify(res, null, 1), "utf8");
 

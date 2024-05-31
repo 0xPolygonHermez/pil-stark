@@ -12,12 +12,29 @@ module.exports.addIntermediatePolynomials = function addIntermediatePolynomials(
 
     const vc = E.challenge("vc");
     
+    console.log("Checking that constraint polynomial numerator expression has degree less than qDeg + 1");
+    const maxDegExpr = module.exports.calculateExpDeg(expressions, expressions[res.cExpId], imExps);
+    if(maxDegExpr > qDeg + 1) {
+        throw new Error(`The maximum degree of the constraint expression has a higher degree (${maxDegExpr}) than the maximum allowed degree (${qDeg + 1})`);
+    }
+
     res.imExpsList = imExps;
     res.imExp2cm = {};
 
     res.nImPols = res.imExpsList.length;
     res.nConstraints += res.nImPols;
     
+    console.log("Checking that intermediate polynomials have degree less than qDeg + 1");
+    for (let i=0; i<imExps.length; i++) {
+        const expId = imExps[i];
+        
+        const imPolDeg = module.exports.calculateExpDeg(expressions, expressions[expId], imExps);
+        if(imPolDeg > qDeg + 1) {
+            throw new Error(`Intermediate polynomial with id: ${expId} has a higher degree (${imPolDeg}) than the maximum allowed degree (${qDeg + 1})`);
+        }
+    }
+
+    console.log("Adding intermediate polynomials to the expressions and constraints.");
     for (let i=0; i<imExps.length; i++) {
         res.imExp2cm[res.imExpsList[i]] = res.nCommitments++;
         res.nCm3++;
@@ -160,5 +177,23 @@ function calculateImPols(expressions, _exp, maxDeg) {
             }
         }
     }
+}
 
+module.exports.calculateExpDeg = function calculateExpDeg(expressions, exp, imExps = []) {
+    if (exp.op == "exp") {
+        if (imExps.includes(exp.id)) return 1;
+        return calculateExpDeg(expressions, expressions[exp.id], imExps);
+    } else if (["x", "const", "cm"].includes(exp.op) || (exp.op === "Zi" && exp.boundary !== "everyRow")) {
+        return 1;
+    } else if (["number", "public", "challenge", "eval", "subproofValue"].includes(exp.op) || (exp.op === "Zi" && exp.boundary === "everyRow")) {
+        return 0;
+    } else if(exp.op === "neg") {
+        return calculateExpDeg(expressions, exp.values[0], imExps);
+    } else if(["add", "sub", "mul"].includes(exp.op)) {
+        const lhsDeg = calculateExpDeg(expressions, exp.values[0], imExps);
+        const rhsDeg = calculateExpDeg(expressions, exp.values[1], imExps);
+        return exp.op === "mul" ? lhsDeg + rhsDeg : Math.max(lhsDeg, rhsDeg);
+    } else {
+        throw new Error("Exp op not defined: "+ exp.op);
+    }
 }

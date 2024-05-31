@@ -1,5 +1,6 @@
 const ExpressionOps = require("../../helpers/expressionops");
 const { getExpDim } = require("../helpers");
+const { calculateExpDeg } = require("../imPolsCalculation/imPolynomials");
 
 module.exports.generateConstraintPolynomial = function generateConstraintPolynomial(res, expressions, constraints) {
 
@@ -22,4 +23,8 @@ module.exports.generateConstraintPolynomial = function generateConstraintPolynom
     expressions.push(cExp);
 
     res.qDim = getExpDim(expressions, res.cmDims, res.cExpId);
+
+    const initial_q_degree = calculateExpDeg(expressions, expressions[res.cExpId], []);
+
+    console.log(`The polynomial Q has degree ${initial_q_degree} without intermediate polynomials`);
 }

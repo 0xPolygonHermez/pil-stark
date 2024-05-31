@@ -1,5 +1,5 @@
 const { generatePilCode } = require("../pil_info/generatePilCode");
-const { addIntermediatePolynomials, calculateIntermediatePolynomials } = require("../pil_info/polynomials/imPolynomials");
+const { addIntermediatePolynomials, calculateIntermediatePolynomials } = require("../pil_info/imPolsCalculation/imPolynomials");
 const { preparePil } = require("../pil_info/preparePil");
 
 const map = require("../pil_info/map");

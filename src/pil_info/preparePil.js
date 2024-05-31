@@ -37,8 +37,8 @@ module.exports.preparePil = function preparePil(F, pil, starkStruct) {
         res.cmDims[res.nCm1 + i*2 + 1] = dim;
     }
 
-    for(let i = res.nCm2; i < res.nCm3; ++i) {
-        res.cmDims[i] = 3;
+    for(let i = 0; i < res.nCm3; ++i) {
+        res.cmDims[res.nCm1 + res.nCm2 + i] = 3;
     }
 
     for(let i = 0; i < constraints.length; ++i) {

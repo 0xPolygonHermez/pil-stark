@@ -1,0 +1,13 @@
+include "sha256f.pil";
+
+namespace Bits2FieldSha256(%N);
+    pol constant FieldLatch;  // [0:6,1]
+    pol constant Factor;  // 1,2,4,8,...,2**10
+
+    pol commit bit;
+    pol commit packField;
+
+    packField' = (1-FieldLatch)*packField + bit'*Factor';
+    bit *(1-bit) = 0;
+
+    FieldLatch*(packField - Sha256F.input[0]) = 0;

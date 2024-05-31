@@ -1,8 +1,7 @@
-const { info } = require("console");
 const fs = require("fs");
 const version = require("../package").version;
 
-const { calculateIntermediatePolynomials } = require("./pil_info/polynomials/imPolynomials");
+const { calculateIntermediatePolynomials } = require("./pil_info/imPolsCalculation/imPolynomials");
 
 const argv = require("yargs")
     .version(version)

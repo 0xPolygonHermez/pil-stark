@@ -1,0 +1,783 @@
+constant %N = 2**13;
+
+// THIS FILE IS A TEST EXAMPLE! IT MAY NOT BE THE LAST VERSION! 
+
+// Global state machine
+// It is used to store various polynomials representing small lookup tables 
+namespace Global(%N);
+    pol constant L1;
+
+namespace Compressor(%N);
+    pol constant S[12];
+    pol constant C[12];
+    pol constant POSEIDONM;
+    pol constant POSEIDONCUSTFIRST;
+    pol constant POSEIDONP;
+    pol constant POSEIDONFIRST;
+    pol constant PARTIALROUND;
+    pol constant PARTIALROUND2;
+    pol constant GATE;
+    pol constant CMUL;
+    pol constant EVPOL4;
+    pol constant FFT4;
+    pol constant TREESELECTOR4;
+    pol commit a[12];
+
+    public pub0 = a[0](0);
+    public pub1 = a[1](0);
+    public pub2 = a[2](0);
+    Global.L1 * (a[0] - :pub0) = 0;
+    Global.L1 * (a[1] - :pub1) = 0;
+    Global.L1 * (a[2] - :pub2) = 0;
+
+    // Normal plonk gates
+
+    // C[0] -> Qm1
+    // C[1] -> Ql1
+    // C[2] -> Qr1
+    // C[3] -> Qo1
+    // C[4] -> Qc1
+    
+    // C[6] -> Qm2
+    // C[7] -> Ql2
+    // C[8] -> Qr2
+    // C[9] -> Qo2
+    // C[10]-> Qc2
+
+
+    pol a01 = a[0]*a[1];
+    pol g012 = C[0]*a01 + C[1]*a[0] + C[2]*a[1] + C[3]*a[2] + C[4];
+    g012*GATE = 0;
+
+    pol a34 = a[3]*a[4];
+    pol g345 = C[0]*a34 + C[1]*a[3] + C[2]*a[4] + C[3]*a[5] + C[4];
+    g345*GATE = 0;
+
+    pol a67 = a[6]*a[7];
+    pol g678 = C[6]*a67 + C[7]*a[6] + C[8]*a[7] + C[9]*a[8] + C[10];
+    g678*GATE = 0;
+
+    pol a910 = a[9]*a[10];
+    pol g91011 = C[6]*a910 + C[7]*a[9] + C[8]*a[10] + C[9]*a[11] + C[10];
+    g91011*GATE = 0;
+
+    // POSEIDON GATE - Check that a GL Poseidon round implemented with Neptune optimization is valid
+    
+    // Each Poseidon hash is verified in 11 rows. Inputs -> Round 1 -> Round 2 -> Round 3 -> Round 4 
+    // -> Round 15 -> Round 26 -> Round 27 -> Round 28 -> Round 29 -> Output. 
+    // At each row we verify one full rounds, and all the partial rows are verified in two rows (in the
+    // first one we check the first 11 rounds and in the second one the other 11)
+    
+    // There are two diferent Poseidon custom gates: Poseidon and CustPoseidon. The first one is a regular hash of
+    // three inputs, while the second one hashes two inputs (the third one is zero). However, in CustPoseidon custom 
+    // gate the two values to hash (value and sibling) are sent unordered and the key specifying which element is the
+    // first one and which is the second one is also provided. 
+    
+    // Order the each of the GL Poseidon inputs according to the key, which is stored in a[8]
+    
+    pol custPoseidonInput0 = a[8] * (a[0] - a[4]) + a[4];
+    pol custPoseidonInput1 = a[8] * (a[1] - a[5]) + a[5];
+    pol custPoseidonInput2 = a[8] * (a[2] - a[6]) + a[6];
+    pol custPoseidonInput3 = a[8] * (a[3] - a[7]) + a[7];
+    pol custPoseidonInput4 = a[8] * (a[4] - a[0]) + a[0];
+    pol custPoseidonInput5 = a[8] * (a[5] - a[1]) + a[1];
+    pol custPoseidonInput6 = a[8] * (a[6] - a[2]) + a[2];
+    pol custPoseidonInput7 = a[8] * (a[7] - a[3]) + a[3];
+
+    pol checkBinary = a[8] * (a[8] - 1);
+    POSEIDONCUSTFIRST * checkBinary = 0;
+
+    // If it is the first round of CustPoseidon, we need to set as input the previously calculated one. 
+    // If it is the first round, we will add the corresponding constant and directly verify round 1.
+    pol inp0 = POSEIDONCUSTFIRST * (custPoseidonInput0 - a[0]) + a[0] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * 0xb585f766f2144405;
+    // Calculate the 7th power of the 0th element
+    pol a0_2 = inp0 * inp0;
+    pol a0_4 = a0_2 * a0_2;
+    pol a0_6 = a0_4 * a0_2;
+    pol a0_R = a0_6 * inp0 + C[0];
+
+
+    // Partial round 0 
+    pol s0_R0 = 0x19 * a0_R + 0x3d999c961b7c63b0 * a[1] + 0x814e82efcd172529 * a[2] + 0x2421e5d236704588 * a[3] + 0x887af7d4dd482328 * a[4] + 0xa5e9c291f6119b27 * a[5] + 0xbdc52b2676a4b4aa * a[6] + 0x64832009d29bcf57 * a[7] + 0x9c4155174a552cc * a[8] + 0x463f9ee03d290810 * a[9] + 0xc810936e64982542 * a[10] + 0x43b1c289f7bc3ac * a[11];
+    pol s1_R0 = a[1] + a0_R * 0x94877900674181c3;
+    pol s2_R0 = a[2] + a0_R * 0xc6c67cc37a2a2bbd;
+    pol s3_R0 = a[3] + a0_R * 0xd667c2055387940f;
+    pol s4_R0 = a[4] + a0_R * 0xba63a63e94b5ff0;
+    pol s5_R0 = a[5] + a0_R * 0x99460cc41b8f079f;
+    pol s6_R0 = a[6] + a0_R * 0x7ff02375ed524bb3;
+    pol s7_R0 = a[7] + a0_R * 0xea0870b47a8caf0e;
+    pol s8_R0 = a[8] + a0_R * 0xabcad82633b7bc9d;
+    pol s9_R0 = a[9] + a0_R * 0x3b8d135261052241;
+    pol s10_R0 = a[10] + a0_R * 0xfb4515f5e5b0d539;
+    pol s11_R0 = a[11] + a0_R * 0x3ee8011c2b37f77c;
+
+
+
+    // Partial round 11
+    pol s0_R11 = 0x19 * a0_R + 0x16b9774801ac44a0 * a[1] + 0x3cb8411e786d3c8e * a[2] + 0xa86e9cf505072491 * a[3] + 0x178928152e109ae * a[4] + 0x5317b905a6e1ab7b * a[5] + 0xda20b3be7f53d59f * a[6] + 0xcb97dedecebee9ad * a[7] + 0x4bd545218c59f58d * a[8] + 0x77dc8d856c05a44a * a[9] + 0x87948589e4f243fd * a[10] + 0x7e5217af969952c2 * a[11];
+    pol s1_R11 = a[1] + a0_R * 0x84d1ecc4d53d2ff1;
+    pol s2_R11 = a[2] + a0_R * 0xd8af8b9ceb4e11b6;
+    pol s3_R11 = a[3] + a0_R * 0x335856bb527b52f4;
+    pol s4_R11 = a[4] + a0_R * 0xc756f17fb59be595;
+    pol s5_R11 = a[5] + a0_R * 0xc0654e4ea5553a78;
+    pol s6_R11 = a[6] + a0_R * 0x9e9a46b61f2ea942;
+    pol s7_R11 = a[7] + a0_R * 0x14fc8b5b3b809127;
+    pol s8_R11 = a[8] + a0_R * 0xd7009f0f103be413;
+    pol s9_R11 = a[9] + a0_R * 0x3e0ee7b7a9fb4601;
+    pol s10_R11 = a[10] + a0_R * 0xa74e888922085ed7;
+    pol s11_R11 = a[11] + a0_R * 0xe80a7cde3d4ac526;
+
+    // If it is the first round of CustPoseidon, we need to set as input the previously calculated one. 
+    // If it is the first round, we will add the corresponding constant and directly verify round 1.
+    pol inp1 = POSEIDONCUSTFIRST * (custPoseidonInput1 - a[1]) + a[1] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * 0x7746a55f43921ad7;
+    // Calculate the 7th power of the 1th element
+    pol inpP1 = PARTIALROUND * s0_R0 + PARTIALROUND2 * s0_R11 + (POSEIDONM + POSEIDONP) * inp1;
+    pol a1_2 = inpP1 * inpP1;
+    pol a1_4 = a1_2 * a1_2;
+    pol a1_6 = a1_4 * a1_2;
+    pol a1_R = a1_6 * inpP1 + C[1];
+
+
+    // Partial round 1 
+    pol s0_R1 = 0x19 * a1_R + 0x673655aae8be5a8b * s1_R0 + 0xd510fe714f39fa10 * s2_R0 + 0x2c68a099b51c9e73 * s3_R0 + 0xa667bfa9aa96999d * s4_R0 + 0x4d67e72f063e2108 * s5_R0 + 0xf84dde3e6acda179 * s6_R0 + 0x40f9cc8c08f80981 * s7_R0 + 0x5ead032050097142 * s8_R0 + 0x6591b02092d671bb * s9_R0 + 0xe18c71963dd1b7 * s10_R0 + 0x8a21bcd24a14218a * s11_R0;
+    pol s1_R1 = s1_R0 + a1_R * 0xadef3740e71c726;
+    pol s2_R1 = s2_R0 + a1_R * 0xa37bf67c6f986559;
+    pol s3_R1 = s3_R0 + a1_R * 0xc6b16f7ed4fa1b00;
+    pol s4_R1 = s4_R0 + a1_R * 0x6a065da88d8bfc3c;
+    pol s5_R1 = s5_R0 + a1_R * 0x4cabc0916844b46f;
+    pol s6_R1 = s6_R0 + a1_R * 0x407faac0f02e78d1;
+    pol s7_R1 = s7_R0 + a1_R * 0x7a786d9cf0852cf;
+    pol s8_R1 = s8_R0 + a1_R * 0x42433fb6949a629a;
+    pol s9_R1 = s9_R0 + a1_R * 0x891682a147ce43b0;
+    pol s10_R1 = s10_R0 + a1_R * 0x26cfd58e7b003b55;
+    pol s11_R1 = s11_R0 + a1_R * 0x2bbf0ed7b657acb3;
+
+
+
+    // Partial round 12
+    pol s0_R12 = 0x19 * a1_R + 0xbc58987d06a84e4d * s1_R11 + 0xb5d420244c9cae3 * s2_R11 + 0xa3c4711b938c02c0 * s3_R11 + 0x3aace640a3e03990 * s4_R11 + 0x865a0f3249aacd8a * s5_R11 + 0x8d00b2a7dbed06c7 * s6_R11 + 0x6eacb905beb7e2f8 * s7_R11 + 0x45322b216ec3ec7 * s8_R11 + 0xeb9de00d594828e6 * s9_R11 + 0x88c5f20df9e5c26 * s10_R11 + 0xf555f4112b19781f * s11_R11;
+    pol s1_R12 = s1_R11 + a1_R * 0x238aa6daa612186d;
+    pol s2_R12 = s2_R11 + a1_R * 0x9137a5c630bad4b4;
+    pol s3_R12 = s3_R11 + a1_R * 0xc7db3817870c5eda;
+    pol s4_R12 = s4_R11 + a1_R * 0x217e4f04e5718dc9;
+    pol s5_R12 = s5_R11 + a1_R * 0xcae814e2817bd99d;
+    pol s6_R12 = s6_R11 + a1_R * 0xe3292e7ab770a8ba;
+    pol s7_R12 = s7_R11 + a1_R * 0x7bb36ef70b6b9482;
+    pol s8_R12 = s8_R11 + a1_R * 0x3c7835fb85bca2d3;
+    pol s9_R12 = s9_R11 + a1_R * 0xfe2cdf8ee3c25e86;
+    pol s10_R12 = s10_R11 + a1_R * 0x61b3915ad7274b20;
+    pol s11_R12 = s11_R11 + a1_R * 0xeab75ca7c918e4ef;
+
+    // If it is the first round of CustPoseidon, we need to set as input the previously calculated one. 
+    // If it is the first round, we will add the corresponding constant and directly verify round 1.
+    pol inp2 = POSEIDONCUSTFIRST * (custPoseidonInput2 - a[2]) + a[2] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * 0xb2fb0d31cee799b4;
+    // Calculate the 7th power of the 2th element
+    pol inpP2 = PARTIALROUND * s0_R1 + PARTIALROUND2 * s0_R12 + (POSEIDONM + POSEIDONP) * inp2;
+    pol a2_2 = inpP2 * inpP2;
+    pol a2_4 = a2_2 * a2_2;
+    pol a2_6 = a2_4 * a2_2;
+    pol a2_R = a2_6 * inpP2 + C[2];
+
+
+    // Partial round 2 
+    pol s0_R2 = 0x19 * a2_R + 0x202800f4addbdc87 * s1_R1 + 0xe4b5bdb1cc3504ff * s2_R1 + 0xbe32b32a825596e7 * s3_R1 + 0x8e0f68c5dc223b9a * s4_R1 + 0x58022d9e1c256ce3 * s5_R1 + 0x584d29227aa073ac * s6_R1 + 0x8b9352ad04bef9e7 * s7_R1 + 0xaead42a3f445ecbf * s8_R1 + 0x3c667a1d833a3cca * s9_R1 + 0xda6f61838efa1ffe * s10_R1 + 0xe8f749470bd7c446 * s11_R1;
+    pol s1_R2 = s1_R1 + a2_R * 0x481ac7746b159c67;
+    pol s2_R2 = s2_R1 + a2_R * 0xe367de32f108e278;
+    pol s3_R2 = s3_R1 + a2_R * 0x73f260087ad28bec;
+    pol s4_R2 = s4_R1 + a2_R * 0x5cfc82216bc1bdca;
+    pol s5_R2 = s5_R1 + a2_R * 0xcaccc870a2663a0e;
+    pol s6_R2 = s6_R1 + a2_R * 0xdb69cd7b4298c45d;
+    pol s7_R2 = s7_R1 + a2_R * 0x7bc9e0c57243e62d;
+    pol s8_R2 = s8_R1 + a2_R * 0x3cc51c5d368693ae;
+    pol s9_R2 = s9_R1 + a2_R * 0x366b4e8cc068895b;
+    pol s10_R2 = s10_R1 + a2_R * 0x2bd18715cdabbca4;
+    pol s11_R2 = s11_R1 + a2_R * 0xa752061c4f33b8cf;
+
+
+
+    // Partial round 13
+    pol s0_R13 = 0x19 * a2_R + 0xa8cedbff1813d3a7 * s1_R12 + 0x50dcaee0fd27d164 * s2_R12 + 0xf1cb02417e23bd82 * s3_R12 + 0xfaf322786e2abe8b * s4_R12 + 0x937a4315beb5d9b6 * s5_R12 + 0x1b18992921a11d85 * s6_R12 + 0x7d66c4368b3c497b * s7_R12 + 0xe7946317a6b4e99 * s8_R12 + 0xbe4430134182978b * s9_R12 + 0x3771e82493ab262d * s10_R12 + 0xa671690d8095ce82 * s11_R12;
+    pol s1_R13 = s1_R12 + a2_R * 0xd6e15ffc055e154e;
+    pol s2_R13 = s2_R12 + a2_R * 0xec67881f381a32bf;
+    pol s3_R13 = s3_R12 + a2_R * 0xfbb1196092bf409c;
+    pol s4_R13 = s4_R12 + a2_R * 0xdc9d2e07830ba226;
+    pol s5_R13 = s5_R12 + a2_R * 0x698ef3245ff7988;
+    pol s6_R13 = s6_R12 + a2_R * 0x194fae2974f8b576;
+    pol s7_R13 = s7_R12 + a2_R * 0x7a5d9bea6ca4910e;
+    pol s8_R13 = s8_R12 + a2_R * 0x7aebfea95ccdd1c9;
+    pol s9_R13 = s9_R12 + a2_R * 0xf9bd38a67d5f0e86;
+    pol s10_R13 = s10_R12 + a2_R * 0xfa65539de65492d8;
+    pol s11_R13 = s11_R12 + a2_R * 0xf0dfcbe7653ff787;
+
+    // If it is the first round of CustPoseidon, we need to set as input the previously calculated one. 
+    // If it is the first round, we will add the corresponding constant and directly verify round 1.
+    pol inp3 = POSEIDONCUSTFIRST * (custPoseidonInput3 - a[3]) + a[3] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * 0xf6760a4803427d7;
+    // Calculate the 7th power of the 3th element
+    pol inpP3 = PARTIALROUND * s0_R2 + PARTIALROUND2 * s0_R13 + (POSEIDONM + POSEIDONP) * inp3;
+    pol a3_2 = inpP3 * inpP3;
+    pol a3_4 = a3_2 * a3_2;
+    pol a3_6 = a3_4 * a3_2;
+    pol a3_R = a3_6 * inpP3 + C[3];
+
+
+    // Partial round 3 
+    pol s0_R3 = 0x19 * a3_R + 0xc5b85bab9e5b3869 * s1_R2 + 0x45245258aec51cf7 * s2_R2 + 0x16e6b8e68b931830 * s3_R2 + 0xe2ae0f051418112c * s4_R2 + 0x470e26a0093a65b * s5_R2 + 0x6bef71973a8146ed * s6_R2 + 0x119265be51812daf * s7_R2 + 0xb0be7356254bea2e * s8_R2 + 0x8584defff7589bd7 * s9_R2 + 0x3c5fe4aeb1fb52ba * s10_R2 + 0x9e7cd88acf543a5e * s11_R2;
+    pol s1_R3 = s1_R2 + a3_R * 0xb22d2432b72d5098;
+    pol s2_R3 = s2_R2 + a3_R * 0x9e18a487f44d2fe4;
+    pol s3_R3 = s3_R2 + a3_R * 0x4b39e14ce22abd3c;
+    pol s4_R3 = s4_R2 + a3_R * 0x9e77fde2eb315e0d;
+    pol s5_R3 = s5_R2 + a3_R * 0xca5e0385fe67014d;
+    pol s6_R3 = s6_R2 + a3_R * 0xc2cb99bf1b6bddb;
+    pol s7_R3 = s7_R2 + a3_R * 0x99ec1cd2a4460bfe;
+    pol s8_R3 = s8_R2 + a3_R * 0x8577a815a2ff843f;
+    pol s9_R3 = s9_R2 + a3_R * 0x7d80a6b4fd6518a5;
+    pol s10_R3 = s10_R2 + a3_R * 0xeb6c67123eab62cb;
+    pol s11_R3 = s11_R2 + a3_R * 0x8f7851650eca21a5;
+
+
+
+    // Partial round 14
+    pol s0_R14 = 0x19 * a3_R + 0xb035585f6e929d9d * s1_R13 + 0xba1579c7e219b954 * s2_R13 + 0xcb201cf846db4ba3 * s3_R13 + 0x287bf9177372cf45 * s4_R13 + 0xa350e4f61147d0a6 * s5_R13 + 0xd5d0ecfb50bcff99 * s6_R13 + 0x2e166aa6c776ed21 * s7_R13 + 0xe1e66c991990e282 * s8_R13 + 0x662b329b01e7bb38 * s9_R13 + 0x8aa674b36144d9a9 * s10_R13 + 0xcbabf78f97f95e65 * s11_R13;
+    pol s1_R14 = s1_R13 + a3_R * 0xbd87ad390420258;
+    pol s2_R14 = s2_R13 + a3_R * 0xad8617bca9e33c8;
+    pol s3_R14 = s3_R13 + a3_R * 0xc00ad377a1e2666;
+    pol s4_R14 = s4_R13 + a3_R * 0xac6fc58b3f0518f;
+    pol s5_R14 = s5_R13 + a3_R * 0xc0cc8a892cc4173;
+    pol s6_R14 = s6_R13 + a3_R * 0xc210accb117bc21;
+    pol s7_R14 = s7_R13 + a3_R * 0xb73630dbb46ca18;
+    pol s8_R14 = s8_R13 + a3_R * 0xc8be4920cbd4a54;
+    pol s9_R14 = s9_R13 + a3_R * 0xbfe877a21be1690;
+    pol s10_R14 = s10_R13 + a3_R * 0xae790559b0ded81;
+    pol s11_R14 = s11_R13 + a3_R * 0xbf50db2f8d6ce31;
+
+    // If it is the first round of CustPoseidon, we need to set as input the previously calculated one. 
+    // If it is the first round, we will add the corresponding constant and directly verify round 1.
+    pol inp4 = POSEIDONCUSTFIRST * (custPoseidonInput4 - a[4]) + a[4] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * 0xe10d666650f4e012;
+    // Calculate the 7th power of the 4th element
+    pol inpP4 = PARTIALROUND * s0_R3 + PARTIALROUND2 * s0_R14 + (POSEIDONM + POSEIDONP) * inp4;
+    pol a4_2 = inpP4 * inpP4;
+    pol a4_4 = a4_2 * a4_2;
+    pol a4_6 = a4_4 * a4_2;
+    pol a4_R = a4_6 * inpP4 + C[4];
+
+
+    // Partial round 4 
+    pol s0_R4 = 0x19 * a4_R + 0x179be4bba87f0a8c * s1_R3 + 0xacf63d95d8887355 * s2_R3 + 0x6696670196b0074f * s3_R3 + 0xd99ddf1fe75085f9 * s4_R3 + 0xc2597881fef0283b * s5_R3 + 0xcf48395ee6c54f14 * s6_R3 + 0x15226a8e4cd8d3b6 * s7_R3 + 0xc053297389af5d3b * s8_R3 + 0x2c08893f0d1580e2 * s9_R3 + 0xed3cbcff6fcc5ba * s10_R3 + 0xc82f510ecf81f6d0 * s11_R3;
+    pol s1_R4 = s1_R3 + a4_R * 0x11ba9a1b81718c2a;
+    pol s2_R4 = s2_R3 + a4_R * 0x9f7d798a3323410c;
+    pol s3_R4 = s3_R3 + a4_R * 0xa821855c8c1cf5e5;
+    pol s4_R4 = s4_R3 + a4_R * 0x535e8d6fac0031b2;
+    pol s5_R4 = s5_R3 + a4_R * 0x404e7c751b634320;
+    pol s6_R4 = s6_R3 + a4_R * 0xa729353f6e55d354;
+    pol s7_R4 = s7_R3 + a4_R * 0x4db97d92e58bb831;
+    pol s8_R4 = s8_R3 + a4_R * 0xb53926c27897bf7d;
+    pol s9_R4 = s9_R3 + a4_R * 0x965040d52fe115c5;
+    pol s10_R4 = s10_R3 + a4_R * 0x9565fa41ebd31fd7;
+    pol s11_R4 = s11_R3 + a4_R * 0xaae4438c877ea8f4;
+
+
+
+    // Partial round 15
+    pol s0_R15 = 0x19 * a4_R + 0xeec24b15a06b53fe * s1_R14 + 0xc8a7aa07c5633533 * s2_R14 + 0xefe9c6fa4311ad51 * s3_R14 + 0xb9173f13977109a1 * s4_R14 + 0x69ce43c9cc94aedc * s5_R14 + 0xecf623c9cd118815 * s6_R14 + 0x28625def198c33c7 * s7_R14 + 0xccfc5f7de5c3636a * s8_R14 + 0xf5e6c40f1621c299 * s9_R14 + 0xcec0e58c34cb64b1 * s10_R14 + 0xa868ea113387939f * s11_R14;
+    pol s1_R15 = s1_R14 + a4_R * 0xcf29427ff7c58;
+    pol s2_R15 = s2_R14 + a4_R * 0xbd9b3cf49eec8;
+    pol s3_R15 = s3_R14 + a4_R * 0xd1dc8aa81fb26;
+    pol s4_R15 = s4_R14 + a4_R * 0xbc792d5c394ef;
+    pol s5_R15 = s5_R14 + a4_R * 0xd2ae0b2266453;
+    pol s6_R15 = s6_R14 + a4_R * 0xd413f12c496c1;
+    pol s7_R15 = s7_R14 + a4_R * 0xc84128cfed618;
+    pol s8_R15 = s8_R14 + a4_R * 0xdb5ebd48fc0d4;
+    pol s9_R15 = s9_R14 + a4_R * 0xd1b77326dcb90;
+    pol s10_R15 = s10_R14 + a4_R * 0xbeb0ccc145421;
+    pol s11_R15 = s11_R14 + a4_R * 0xd10e5b22b11d1;
+
+    // If it is the first round of CustPoseidon, we need to set as input the previously calculated one. 
+    // If it is the first round, we will add the corresponding constant and directly verify round 1.
+    pol inp5 = POSEIDONCUSTFIRST * (custPoseidonInput5 - a[5]) + a[5] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * 0x8cae14cb07d09bf1;
+    // Calculate the 7th power of the 5th element
+    pol inpP5 = PARTIALROUND * s0_R4 + PARTIALROUND2 * s0_R15 + (POSEIDONM + POSEIDONP) * inp5;
+    pol a5_2 = inpP5 * inpP5;
+    pol a5_4 = a5_2 * a5_2;
+    pol a5_6 = a5_4 * a5_2;
+    pol a5_R = a5_6 * inpP5 + C[5];
+
+
+    // Partial round 5 
+    pol s0_R5 = 0x19 * a5_R + 0x94b06183acb715cc * s1_R4 + 0x500392ed0d431137 * s2_R4 + 0x861cc95ad5c86323 * s3_R4 + 0x5830a443f86c4ac * s4_R4 + 0x3b68225874a20a7c * s5_R4 + 0x10b3309838e236fb * s6_R4 + 0x9b77fc8bcd559e2c * s7_R4 + 0xbdecf5e0cb9cb213 * s8_R4 + 0x30276f1221ace5fa * s9_R4 + 0x7935dd342764a144 * s10_R4 + 0xeac6db520bb03708 * s11_R4;
+    pol s1_R5 = s1_R4 + a5_R * 0x37f4e36af6073c6e;
+    pol s2_R5 = s2_R4 + a5_R * 0x4edc0918210800e9;
+    pol s3_R5 = s3_R4 + a5_R * 0xc44998e99eae4188;
+    pol s4_R5 = s4_R4 + a5_R * 0x9f4310d05d068338;
+    pol s5_R5 = s5_R4 + a5_R * 0x9ec7fe4350680f29;
+    pol s6_R5 = s6_R4 + a5_R * 0xc5b2c1fdc0b50874;
+    pol s7_R5 = s7_R4 + a5_R * 0xa01920c5ef8b2ebe;
+    pol s8_R5 = s8_R4 + a5_R * 0x59fa6f8bd91d58ba;
+    pol s9_R5 = s9_R4 + a5_R * 0x8bfc9eb89b515a82;
+    pol s10_R5 = s10_R4 + a5_R * 0xbe86a7a2555ae775;
+    pol s11_R5 = s11_R4 + a5_R * 0xcbb8bbaa3810babf;
+
+
+
+    // Partial round 16
+    pol s0_R16 = 0x19 * a5_R + 0xd8dddbdc5ce4ef45 * s1_R15 + 0xacfc51de8131458c * s2_R15 + 0x146bb3c0fe499ac0 * s3_R15 + 0x9e65309f15943903 * s4_R15 + 0x80d0ad980773aa70 * s5_R15 + 0xf97817d4ddbf0607 * s6_R15 + 0xe4626620a75ba276 * s7_R15 + 0xdfdc7fd6fc74f66 * s8_R15 + 0xf464864ad6f2bb93 * s9_R15 + 0x2d55e52a5d44414 * s10_R15 + 0xdd8de62487c40925 * s11_R15;
+    pol s1_R16 = s1_R15 + a5_R * 0xe24c99adad8;
+    pol s2_R16 = s2_R15 + a5_R * 0xcf389ed4bc8;
+    pol s3_R16 = s3_R15 + a5_R * 0xe580cbf6966;
+    pol s4_R16 = s4_R15 + a5_R * 0xcde5fd7e04f;
+    pol s5_R16 = s5_R15 + a5_R * 0xe63628041b3;
+    pol s6_R16 = s6_R15 + a5_R * 0xe7e81a87361;
+    pol s7_R16 = s7_R15 + a5_R * 0xdabe78f6d98;
+    pol s8_R16 = s8_R15 + a5_R * 0xefb14cac554;
+    pol s9_R16 = s9_R15 + a5_R * 0xe5574743b10;
+    pol s10_R16 = s10_R15 + a5_R * 0xd05709f42c1;
+    pol s11_R16 = s11_R15 + a5_R * 0xe4690c96af1;
+
+    // If it is the first round of CustPoseidon, we need to set as input the previously calculated one. 
+    // If it is the first round, we will add the corresponding constant and directly verify round 1.
+    pol inp6 = POSEIDONCUSTFIRST * (custPoseidonInput6 - a[6]) + a[6] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * 0xd438539c95f63e9f;
+    // Calculate the 7th power of the 6th element
+    pol inpP6 = PARTIALROUND * s0_R5 + PARTIALROUND2 * s0_R16 + (POSEIDONM + POSEIDONP) * inp6;
+    pol a6_2 = inpP6 * inpP6;
+    pol a6_4 = a6_2 * a6_2;
+    pol a6_6 = a6_4 * a6_2;
+    pol a6_R = a6_6 * inpP6 + C[6];
+
+
+    // Partial round 6 
+    pol s0_R6 = 0x19 * a6_R + 0x7186a80551025f8f * s1_R5 + 0x622247557e9b5371 * s2_R5 + 0xc4cbe326d1ad9742 * s3_R5 + 0x55f1523ac6a23ea2 * s4_R5 + 0xa13dfe77a3d52f53 * s5_R5 + 0xe30750b6301c0452 * s6_R5 + 0x8bd488070a3a32b * s7_R5 + 0xcd800caef5b72ae3 * s8_R5 + 0x83329c90f04233ce * s9_R5 + 0xb5b99e6664a0a3ee * s10_R5 + 0x6b0731849e200a7f * s11_R5;
+    pol s1_R6 = s1_R5 + a6_R * 0x577f9a9e7ee3f9c2;
+    pol s2_R6 = s2_R5 + a6_R * 0x88c522b949ace7b1;
+    pol s3_R6 = s3_R5 + a6_R * 0x82f07007c8b72106;
+    pol s4_R6 = s4_R5 + a6_R * 0x8283d37c6675b50e;
+    pol s5_R6 = s5_R5 + a6_R * 0x98b074d9bbac1123;
+    pol s6_R6 = s6_R5 + a6_R * 0x75c56fb7758317c1;
+    pol s7_R6 = s7_R5 + a6_R * 0xfed24e206052bc72;
+    pol s8_R6 = s8_R5 + a6_R * 0x26d7c3d1bc07dae5;
+    pol s9_R6 = s9_R5 + a6_R * 0xf88c5e441e28dbb4;
+    pol s10_R6 = s10_R5 + a6_R * 0x4fe27f9f96615270;
+    pol s11_R6 = s11_R5 + a6_R * 0x514d4ba49c2b14fe;
+
+
+
+    // Partial round 17
+    pol s0_R17 = 0x19 * a6_R + 0xc15acf44759545a3 * s1_R16 + 0xcbfdcf39869719d4 * s2_R16 + 0x33f62042e2f80225 * s3_R16 + 0x2599c5ead81d8fa3 * s4_R16 + 0xb306cb6c1d7c8d0 * s5_R16 + 0x658c80d3df3729b1 * s6_R16 + 0xe8d1b2b21b41429c * s7_R16 + 0xa1b67f09d4b3ccb8 * s8_R16 + 0xe1adf8b84437180 * s9_R16 + 0xd593a5e584af47b * s10_R16 + 0xa023d94c56e151c7 * s11_R16;
+    pol s1_R17 = s1_R16 + a6_R * 0xf7157bc98;
+    pol s2_R17 = s2_R16 + a6_R * 0xe3006d948;
+    pol s3_R17 = s3_R16 + a6_R * 0xfa65811e6;
+    pol s4_R17 = s4_R16 + a6_R * 0xe0d127e2f;
+    pol s5_R17 = s5_R16 + a6_R * 0xfc18bfe53;
+    pol s6_R17 = s6_R16 + a6_R * 0xfd002d901;
+    pol s7_R17 = s7_R16 + a6_R * 0xeed6461d8;
+    pol s8_R17 = s8_R16 + a6_R * 0x1068562754;
+    pol s9_R17 = s9_R16 + a6_R * 0xfa0236f50;
+    pol s10_R17 = s10_R16 + a6_R * 0xe3af13ee1;
+    pol s11_R17 = s11_R16 + a6_R * 0xfa460f6d1;
+
+    // If it is the first round of CustPoseidon, we need to set as input the previously calculated one. 
+    // If it is the first round, we will add the corresponding constant and directly verify round 1.
+    pol inp7 = POSEIDONCUSTFIRST * (custPoseidonInput7 - a[7]) + a[7] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * 0xef781c7ce35b4c3d;
+    // Calculate the 7th power of the 7th element
+    pol inpP7 = PARTIALROUND * s0_R6 + PARTIALROUND2 * s0_R17 + (POSEIDONM + POSEIDONP) * inp7;
+    pol a7_2 = inpP7 * inpP7;
+    pol a7_4 = a7_2 * a7_2;
+    pol a7_6 = a7_4 * a7_2;
+    pol a7_R = a7_6 * inpP7 + C[7];
+
+
+    // Partial round 7 
+    pol s0_R7 = 0x19 * a7_R + 0xec3fabc192b01799 * s1_R6 + 0x382b38cee8ee5375 * s2_R6 + 0x3bfb6c3f0e616572 * s3_R6 + 0x514abd0cf6c7bc86 * s4_R6 + 0x47521b1361dcc546 * s5_R6 + 0x178093843f863d14 * s6_R6 + 0xad1003c5d28918e7 * s7_R6 + 0x738450e42495bc81 * s8_R6 + 0xaf947c59af5e4047 * s9_R6 + 0x4653fb0685084ef2 * s10_R6 + 0x57fde2062ae35bf * s11_R6;
+    pol s1_R7 = s1_R6 + a7_R * 0xf02a3ac068ee110b;
+    pol s2_R7 = s2_R6 + a7_R * 0xa3630dafb8ae2d7;
+    pol s3_R7 = s3_R6 + a7_R * 0xce0dc874eaf9b55c;
+    pol s4_R7 = s4_R6 + a7_R * 0x9a95f6cff5b55c7e;
+    pol s5_R7 = s5_R6 + a7_R * 0x626d76abfed00c7b;
+    pol s6_R7 = s6_R6 + a7_R * 0xa0c1cf1251c204ad;
+    pol s7_R7 = s7_R6 + a7_R * 0xdaebd3006321052c;
+    pol s8_R7 = s8_R6 + a7_R * 0x3d4bd48b625a8065;
+    pol s9_R7 = s9_R6 + a7_R * 0x7f1e584e071f6ed2;
+    pol s10_R7 = s10_R6 + a7_R * 0x720574f0501caed3;
+    pol s11_R7 = s11_R6 + a7_R * 0xe3260ba93d23540a;
+
+
+
+    // Partial round 18
+    pol s0_R18 = 0x19 * a7_R + 0x49026cc3a4afc5a6 * s1_R17 + 0xe06dff00ab25b91b * s2_R17 + 0xab38c561e8850ff * s3_R17 + 0x92c3c8275e105eeb * s4_R17 + 0xb65256e546889bd0 * s5_R17 + 0x3c0468236ea142f6 * s6_R17 + 0xee61766b889e18f2 * s7_R17 + 0xa206f41b12c30415 * s8_R17 + 0x2fe9d756c9f12d1 * s9_R17 + 0xe9633210630cbf12 * s10_R17 + 0x1ffea9fe85a0b0b1 * s11_R17;
+    pol s1_R18 = s1_R17 + a7_R * 0x11131738;
+    pol s2_R18 = s2_R17 + a7_R * 0xf56d588;
+    pol s3_R18 = s3_R17 + a7_R * 0x11050f86;
+    pol s4_R18 = s4_R17 + a7_R * 0xf848f4f;
+    pol s5_R18 = s5_R17 + a7_R * 0x111527d3;
+    pol s6_R18 = s6_R17 + a7_R * 0x114369a1;
+    pol s7_R18 = s7_R17 + a7_R * 0x106f2f38;
+    pol s8_R18 = s8_R17 + a7_R * 0x11e2ca94;
+    pol s9_R18 = s9_R17 + a7_R * 0x110a29f0;
+    pol s10_R18 = s10_R17 + a7_R * 0xfa9f5c1;
+    pol s11_R18 = s11_R17 + a7_R * 0x10f625d1;
+
+    // If it is the first round of CustPoseidon, we need to set as input the previously calculated one. 
+    // If it is the first round, we will add the corresponding constant and directly verify round 1.
+    pol inp8 = POSEIDONCUSTFIRST * (-a[8]) + a[8] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * 0xcdc4a239b0c44426;
+    // Calculate the 7th power of the 8th element
+    pol inpP8 = PARTIALROUND * s0_R7 + PARTIALROUND2 * s0_R18 + (POSEIDONM + POSEIDONP) * inp8;
+    pol a8_2 = inpP8 * inpP8;
+    pol a8_4 = a8_2 * a8_2;
+    pol a8_6 = a8_4 * a8_2;
+    pol a8_R = a8_6 * inpP8 + C[8];
+
+
+    // Partial round 8 
+    pol s0_R8 = 0x19 * a8_R + 0xe376678d843ce55e * s1_R7 + 0x66f3860d7514e7fc * s2_R7 + 0x7817f3dfff8b4ffa * s3_R7 + 0x3929624a9def725b * s4_R7 + 0x126ca37f215a80a * s5_R7 + 0xfce2f5d02762a303 * s6_R7 + 0x1bc927375febbad7 * s7_R7 + 0x85b481e5243f60bf * s8_R7 + 0x2d3c5f42a39c91a0 * s9_R7 + 0x811719919351ae8 * s10_R7 + 0xf669de0add993131 * s11_R7;
+    pol s1_R8 = s1_R7 + a8_R * 0xab1cbd41d8c1e335;
+    pol s2_R8 = s2_R7 + a8_R * 0x9322ed4c0bc2df01;
+    pol s3_R8 = s3_R7 + a8_R * 0x51c3c0983d4284e5;
+    pol s4_R8 = s4_R7 + a8_R * 0x94178e291145c231;
+    pol s5_R8 = s5_R7 + a8_R * 0xfd0f1a973d6b2085;
+    pol s6_R8 = s6_R7 + a8_R * 0xd427ad96e2b39719;
+    pol s7_R8 = s7_R7 + a8_R * 0x8a52437fecaac06b;
+    pol s8_R8 = s8_R7 + a8_R * 0xdc20ee4b8c4c9a80;
+    pol s9_R8 = s9_R7 + a8_R * 0xa2c98e9549da2100;
+    pol s10_R8 = s10_R7 + a8_R * 0x1603fe12613db5b6;
+    pol s11_R8 = s11_R7 + a8_R * 0xe174929433c5505;
+
+
+
+    // Partial round 19
+    pol s0_R19 = 0x19 * a8_R + 0x81d1ae8cc50240f3 * s1_R18 + 0xf4c77a079a4607d7 * s2_R18 + 0xed446b2315e3efc1 * s3_R18 + 0xb0a6b70915178c3 * s4_R18 + 0xb11ff3e089f15d9a * s5_R18 + 0x1d4dba0b7ae9cc18 * s6_R18 + 0x65d74e2f43b48d05 * s7_R18 + 0xa2df8c6b8ae0804a * s8_R18 + 0xa4e6f0a8c33348a6 * s9_R18 + 0xc0a26efc7be5669b * s10_R18 + 0xa6b6582c547d0d60 * s11_R18;
+    pol s1_R19 = s1_R18 + a8_R * 0x11f718;
+    pol s2_R19 = s2_R18 + a8_R * 0x10b6c8;
+    pol s3_R19 = s3_R18 + a8_R * 0x134a96;
+    pol s4_R19 = s4_R18 + a8_R * 0x10cf7f;
+    pol s5_R19 = s5_R18 + a8_R * 0x124d03;
+    pol s6_R19 = s6_R18 + a8_R * 0x13f8a1;
+    pol s7_R19 = s7_R18 + a8_R * 0x117c58;
+    pol s8_R19 = s8_R18 + a8_R * 0x132c94;
+    pol s9_R19 = s9_R18 + a8_R * 0x134fc0;
+    pol s10_R19 = s10_R18 + a8_R * 0x10a091;
+    pol s11_R19 = s11_R18 + a8_R * 0x128961;
+
+    // If it is the first round of CustPoseidon, we need to set as input the previously calculated one. 
+    // If it is the first round, we will add the corresponding constant and directly verify round 1.
+    pol inp9 = POSEIDONCUSTFIRST * (-a[9]) + a[9] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * 0x277fa208bf337bff;
+    // Calculate the 7th power of the 9th element
+    pol inpP9 = PARTIALROUND * s0_R8 + PARTIALROUND2 * s0_R19 + (POSEIDONM + POSEIDONP) * inp9;
+    pol a9_2 = inpP9 * inpP9;
+    pol a9_4 = a9_2 * a9_2;
+    pol a9_6 = a9_4 * a9_2;
+    pol a9_R = a9_6 * inpP9 + C[9];
+
+
+    // Partial round 9 
+    pol s0_R9 = 0x19 * a9_R + 0x7de38bae084da92d * s1_R8 + 0x5b848442237e8a9b * s2_R8 + 0xf6c705da84d57310 * s3_R8 + 0x31e6a4bdb6a49017 * s4_R8 + 0x889489706e5c5c0f * s5_R8 + 0xe4a205459692a1b * s6_R8 + 0xbac3fa75ee26f299 * s7_R8 + 0x5f5894f4057d755e * s8_R8 + 0xb0dc3ecd724bb076 * s9_R8 + 0x5e34d8554a6452ba * s10_R8 + 0x4f78fd8c1fdcc5f * s11_R8;
+    pol s1_R9 = s1_R8 + a9_R * 0x3d4eab2b8ef5f796;
+    pol s2_R9 = s2_R8 + a9_R * 0xcfff421583896e22;
+    pol s3_R9 = s3_R8 + a9_R * 0x4143cb32d39ac3d9;
+    pol s4_R9 = s4_R8 + a9_R * 0x22365051b78a5b65;
+    pol s5_R9 = s5_R8 + a9_R * 0x6f7fd010d027c9b6;
+    pol s6_R9 = s6_R8 + a9_R * 0xd9dd36fba77522ab;
+    pol s7_R9 = s7_R8 + a9_R * 0xa44cf1cb33e37165;
+    pol s8_R9 = s8_R8 + a9_R * 0x3fc83d3038c86417;
+    pol s9_R9 = s9_R8 + a9_R * 0xc4588d418e88d270;
+    pol s10_R9 = s10_R8 + a9_R * 0xce1320f10ab80fe2;
+    pol s11_R9 = s11_R8 + a9_R * 0xdb5eadbbec18de5d;
+
+
+
+    // Partial round 20
+    pol s0_R20 = 0x19 * a9_R + 0x84afc741f1c13213 * s1_R19 + 0x2f8f43734fc906f3 * s2_R19 + 0xde682d72da0a02d9 * s3_R19 + 0xbb005236adb9ef2 * s4_R19 + 0x5bdf35c10a8b5624 * s5_R19 + 0x739a8a343950010 * s6_R19 + 0x52f515f44785cfbc * s7_R19 + 0xcbaf4e5d82856c60 * s8_R19 + 0xac9ea09074e3e150 * s9_R19 + 0x8f0fa011a2035fb0 * s10_R19 + 0x1a37905d8450904a * s11_R19;
+    pol s1_R20 = s1_R19 + a9_R * 0x1300;
+    pol s2_R20 = s2_R19 + a9_R * 0x1750;
+    pol s3_R20 = s3_R19 + a9_R * 0x114e;
+    pol s4_R20 = s4_R19 + a9_R * 0x131f;
+    pol s5_R20 = s5_R19 + a9_R * 0x167b;
+    pol s6_R20 = s6_R19 + a9_R * 0x1371;
+    pol s7_R20 = s7_R19 + a9_R * 0x1230;
+    pol s8_R20 = s8_R19 + a9_R * 0x182c;
+    pol s9_R20 = s9_R19 + a9_R * 0x1368;
+    pol s10_R20 = s10_R19 + a9_R * 0xf31;
+    pol s11_R20 = s11_R19 + a9_R * 0x15c9;
+
+    // If it is the first round of CustPoseidon, we need to set as input the previously calculated one. 
+    // If it is the first round, we will add the corresponding constant and directly verify round 1.
+    pol inp10 = POSEIDONCUSTFIRST * (-a[10]) + a[10] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * 0xe17653a29da578a1;
+    // Calculate the 7th power of the 10th element
+    pol inpP10 = PARTIALROUND * s0_R9 + PARTIALROUND2 * s0_R20 + (POSEIDONM + POSEIDONP) * inp10;
+    pol a10_2 = inpP10 * inpP10;
+    pol a10_4 = a10_2 * a10_2;
+    pol a10_6 = a10_4 * a10_2;
+    pol a10_R = a10_6 * inpP10 + C[10];
+
+
+    // Partial round 10 
+    pol s0_R10 = 0x19 * a10_R + 0x4dd19c38779512ea * s1_R9 + 0xdb79ba02704620e9 * s2_R9 + 0x92a29a3675a5d2be * s3_R9 + 0xd5177029fe495166 * s4_R9 + 0xd32b3298a13330c1 * s5_R9 + 0x251c4a3eb2c5f8fd * s6_R9 + 0xe1c48b26e0d98825 * s7_R9 + 0x3301d3362a4ffccb * s8_R9 + 0x9bb6c88de8cd178 * s9_R9 + 0xdc05b676564f538a * s10_R9 + 0x60192d883e473fee * s11_R9;
+    pol s1_R10 = s1_R9 + a10_R * 0x1183dfce7c454afd;
+    pol s2_R10 = s2_R9 + a10_R * 0x21cea4aa3d3ed949;
+    pol s3_R10 = s3_R9 + a10_R * 0xfce6f70303f2304;
+    pol s4_R10 = s4_R9 + a10_R * 0x19557d34b55551be;
+    pol s5_R10 = s5_R9 + a10_R * 0x4c56f689afc5bbc9;
+    pol s6_R10 = s6_R9 + a10_R * 0xa1e920844334f944;
+    pol s7_R10 = s7_R9 + a10_R * 0xbad66d423d2ec861;
+    pol s8_R10 = s8_R9 + a10_R * 0xf318c785dc9e0479;
+    pol s9_R10 = s9_R9 + a10_R * 0x99e2032e765ddd81;
+    pol s10_R10 = s10_R9 + a10_R * 0x400ccc9906d66f45;
+    pol s11_R10 = s11_R9 + a10_R * 0xe1197454db2e0dd9;
+
+
+
+    // Partial round 21
+    pol s0_R21 = 0x19 * a10_R + 0x3abeb80def61cc85 * s1_R20 + 0x9d19c9dd4eac4133 * s2_R20 + 0x75a652d9641a985 * s3_R20 + 0x9daf69ae1b67e667 * s4_R20 + 0x364f71da77920a18 * s5_R20 + 0x50bd769f745c95b1 * s6_R20 + 0xf223d1180dbbf3fc * s7_R20 + 0x2f885e584e04aa99 * s8_R20 + 0xb69a0fa70aea684a * s9_R20 + 0x9584acaa6e062a0 * s10_R20 + 0xbc051640145b19b * s11_R20;
+    pol s1_R21 = s1_R20 + a10_R * 0x14;
+    pol s2_R21 = s2_R20 + a10_R * 0x22;
+    pol s3_R21 = s3_R20 + a10_R * 0x12;
+    pol s4_R21 = s4_R20 + a10_R * 0x27;
+    pol s5_R21 = s5_R20 + a10_R * 0xd;
+    pol s6_R21 = s6_R20 + a10_R * 0xd;
+    pol s7_R21 = s7_R20 + a10_R * 0x1c;
+    pol s8_R21 = s8_R20 + a10_R * 0x2;
+    pol s9_R21 = s9_R20 + a10_R * 0x10;
+    pol s10_R21 = s10_R20 + a10_R * 0x29;
+    pol s11_R21 = s11_R20 + a10_R * 0xf;
+
+    // If it is the first round of CustPoseidon, we need to set as input the previously calculated one. 
+    // If it is the first round, we will add the corresponding constant and directly verify round 1.
+    pol inp11 = POSEIDONCUSTFIRST * (-a[11]) + a[11] + (POSEIDONFIRST + POSEIDONCUSTFIRST) * 0xc54302f225db2c76;
+    // Calculate the 7th power of the 11th element
+    pol a11_2 = inp11 * inp11;
+    pol a11_4 = a11_2 * a11_2;
+    pol a11_6 = a11_4 * a11_2;
+    pol a11_R = a11_6 * inp11 + C[11];
+
+        
+
+    POSEIDONP * (a[0]' - (0x19 * a0_R + 0xf * a1_R + 0x29 * a2_R + 0x10 * a3_R + 0x2 * a4_R + 0x1c * a5_R + 0xd * a6_R + 0xd * a7_R + 0x27 * a8_R + 0x12 * a9_R + 0x22 * a10_R + 0x14 * a11_R)) = 0;
+    POSEIDONP * (a[1]' - (0x78566230aa7cc5d0 * a0_R + 0x817bd8a7869ed1b5 * a1_R + 0xd267254bea1097f4 * a2_R + 0x60c33ebd1e023f0a * a3_R + 0xa89ef32ae1462322 * a4_R + 0x6250f5f176d483e7 * a5_R + 0xe16a6c1dee3ba347 * a6_R + 0xec9730136b7c2c05 * a7_R + 0x3cf7c3a39d94c236 * a8_R + 0xb4707207455f57e3 * a9_R + 0xaadb39e83e76a9e0 * a10_R + 0x32f8ae916e567d39 * a11_R)) = 0;
+    POSEIDONP * (a[2]' - (0xdbf23e50005e7f24 * a0_R + 0x819f2c14a8366b1f * a1_R + 0x2dc10fce3233f443 * a2_R + 0xdb6945a20d277091 * a3_R + 0x77c1a153e73659e8 * a4_R + 0xaad1255d46e78f07 * a5_R + 0x13d316e45539aef4 * a6_R + 0xe1ecc5c21eec0646 * a7_R + 0x9e62c7d7b000cb0b * a8_R + 0x8e1de42b665c6706 * a9_R + 0xcd9bf0bd292c5fda * a10_R + 0xaadb39e83e76a9e0 * a11_R)) = 0;
+    POSEIDONP * (a[3]' - (0xb4a02c5c826d523e * a0_R + 0x7a5cf5b7b922e946 * a1_R + 0xfa9db0de2d852e7a * a2_R + 0x383dd77e07998487 * a3_R + 0x2aec981be4b62ed5 * a4_R + 0x8a00c7c83c762584 * a5_R + 0x577e0472764f061d * a6_R + 0x956d3c8b5528e064 * a7_R + 0xe202be7ad7265af6 * a8_R + 0xee7b04568203481 * a9_R + 0x8e1de42b665c6706 * a10_R + 0xb4707207455f57e3 * a11_R)) = 0;
+    POSEIDONP * (a[4]' - (0x466d8f66a8f9fed5 * a0_R + 0x727eca45c8d7bb71 * a1_R + 0xde2a0516f8c9d943 * a2_R + 0xe04ea1957ad8305c * a3_R + 0xb70fb5f2b4f1f85f * a4_R + 0xc734f3829ed30b0c * a5_R + 0x226a4dcf5db3316d * a6_R + 0x6df1d31fa84398f4 * a7_R + 0x82178371fa5fff69 * a8_R + 0xe202be7ad7265af6 * a9_R + 0x9e62c7d7b000cb0b * a10_R + 0x3cf7c3a39d94c236 * a11_R)) = 0;
+    POSEIDONP * (a[5]' - (0x68da2264f65ec3e * a0_R + 0x605a82c52b5ad2f1 * a1_R + 0xe6fdf23648931b99 * a2_R + 0xd499fcbf63fbd266 * a3_R + 0x7c66d474cd2087cb * a4_R + 0xb1a0132288b1619b * a5_R + 0x3373035a3ca3dac6 * a6_R + 0xf4898a1a3554ee49 * a7_R + 0x6df1d31fa84398f4 * a8_R + 0x956d3c8b5528e064 * a9_R + 0xe1ecc5c21eec0646 * a10_R + 0xec9730136b7c2c05 * a11_R)) = 0;
+    POSEIDONP * (a[6]' - (0xb59f9ff0ac6d5d78 * a0_R + 0x59ccc4d5184bc93a * a1_R + 0x3743057c07a5dbfa * a2_R + 0x462269e4b04620a5 * a3_R + 0x39302966be7df654 * a4_R + 0x88685b4f0798dfd1 * a5_R + 0x441f3a3747b5adb7 * a6_R + 0x3373035a3ca3dac6 * a7_R + 0x226a4dcf5db3316d * a8_R + 0x577e0472764f061d * a9_R + 0x13d316e45539aef4 * a10_R + 0xe16a6c1dee3ba347 * a11_R)) = 0;
+    POSEIDONP * (a[7]' - (0xcfb03c902d447551 * a0_R + 0x66c8bab2096cfd38 * a1_R + 0xa6fdb8ebccc51667 * a2_R + 0x63c9679d8572a867 * a3_R + 0xb827c807875511c0 * a4_R + 0xfc02e869e21b72f8 * a5_R + 0x88685b4f0798dfd1 * a6_R + 0xb1a0132288b1619b * a7_R + 0xc734f3829ed30b0c * a8_R + 0x8a00c7c83c762584 * a9_R + 0xaad1255d46e78f07 * a10_R + 0x6250f5f176d483e7 * a11_R)) = 0;
+    POSEIDONP * (a[8]' - (0x2044ce14eaf8f5d9 * a0_R + 0xeb4c0ce280c3e935 * a1_R + 0x2c4916605e3dea58 * a2_R + 0x81c44e9699915693 * a3_R + 0xa4daffb3ffd0e78f * a4_R + 0xb827c807875511c0 * a5_R + 0x39302966be7df654 * a6_R + 0x7c66d474cd2087cb * a7_R + 0xb70fb5f2b4f1f85f * a8_R + 0x2aec981be4b62ed5 * a9_R + 0x77c1a153e73659e8 * a10_R + 0xa89ef32ae1462322 * a11_R)) = 0;
+    POSEIDONP * (a[9]' - (0xfb9373c8481e0f0d * a0_R + 0x17f9202c16676b2f * a1_R + 0xe95c10ae32e05085 * a2_R + 0x62ecbe05e02433fc * a3_R + 0x81c44e9699915693 * a4_R + 0x63c9679d8572a867 * a5_R + 0x462269e4b04620a5 * a6_R + 0xd499fcbf63fbd266 * a7_R + 0xe04ea1957ad8305c * a8_R + 0x383dd77e07998487 * a9_R + 0xdb6945a20d277091 * a10_R + 0x60c33ebd1e023f0a * a11_R)) = 0;
+    POSEIDONP * (a[10]' - (0x72af70cdcb99214f * a0_R + 0x9b6e5164ed35d878 * a1_R + 0x97f9b7d2cfc2ade5 * a2_R + 0xe95c10ae32e05085 * a3_R + 0x2c4916605e3dea58 * a4_R + 0xa6fdb8ebccc51667 * a5_R + 0x3743057c07a5dbfa * a6_R + 0xe6fdf23648931b99 * a7_R + 0xde2a0516f8c9d943 * a8_R + 0xfa9db0de2d852e7a * a9_R + 0x2dc10fce3233f443 * a10_R + 0xd267254bea1097f4 * a11_R)) = 0;
+    POSEIDONP * (a[11]' - (0xe3ef40eacc6ff78d * a0_R + 0x6fadc9347faeee81 * a1_R + 0x9b6e5164ed35d878 * a2_R + 0x17f9202c16676b2f * a3_R + 0xeb4c0ce280c3e935 * a4_R + 0x66c8bab2096cfd38 * a5_R + 0x59ccc4d5184bc93a * a6_R + 0x605a82c52b5ad2f1 * a7_R + 0x727eca45c8d7bb71 * a8_R + 0x7a5cf5b7b922e946 * a9_R + 0x819f2c14a8366b1f * a10_R + 0x817bd8a7869ed1b5 * a11_R)) = 0;
+    
+    POSEIDONM * (a[0]' - (0x19 * a0_R + 0xf * a1_R + 0x29 * a2_R + 0x10 * a3_R + 0x2 * a4_R + 0x1c * a5_R + 0xd * a6_R + 0xd * a7_R + 0x27 * a8_R + 0x12 * a9_R + 0x22 * a10_R + 0x14 * a11_R)) = 0;
+    POSEIDONM * (a[1]' - (0x14 * a0_R + 0x11 * a1_R + 0xf * a2_R + 0x29 * a3_R + 0x10 * a4_R + 0x2 * a5_R + 0x1c * a6_R + 0xd * a7_R + 0xd * a8_R + 0x27 * a9_R + 0x12 * a10_R + 0x22 * a11_R)) = 0;
+    POSEIDONM * (a[2]' - (0x22 * a0_R + 0x14 * a1_R + 0x11 * a2_R + 0xf * a3_R + 0x29 * a4_R + 0x10 * a5_R + 0x2 * a6_R + 0x1c * a7_R + 0xd * a8_R + 0xd * a9_R + 0x27 * a10_R + 0x12 * a11_R)) = 0;
+    POSEIDONM * (a[3]' - (0x12 * a0_R + 0x22 * a1_R + 0x14 * a2_R + 0x11 * a3_R + 0xf * a4_R + 0x29 * a5_R + 0x10 * a6_R + 0x2 * a7_R + 0x1c * a8_R + 0xd * a9_R + 0xd * a10_R + 0x27 * a11_R)) = 0;
+    POSEIDONM * (a[4]' - (0x27 * a0_R + 0x12 * a1_R + 0x22 * a2_R + 0x14 * a3_R + 0x11 * a4_R + 0xf * a5_R + 0x29 * a6_R + 0x10 * a7_R + 0x2 * a8_R + 0x1c * a9_R + 0xd * a10_R + 0xd * a11_R)) = 0;
+    POSEIDONM * (a[5]' - (0xd * a0_R + 0x27 * a1_R + 0x12 * a2_R + 0x22 * a3_R + 0x14 * a4_R + 0x11 * a5_R + 0xf * a6_R + 0x29 * a7_R + 0x10 * a8_R + 0x2 * a9_R + 0x1c * a10_R + 0xd * a11_R)) = 0;
+    POSEIDONM * (a[6]' - (0xd * a0_R + 0xd * a1_R + 0x27 * a2_R + 0x12 * a3_R + 0x22 * a4_R + 0x14 * a5_R + 0x11 * a6_R + 0xf * a7_R + 0x29 * a8_R + 0x10 * a9_R + 0x2 * a10_R + 0x1c * a11_R)) = 0;
+    POSEIDONM * (a[7]' - (0x1c * a0_R + 0xd * a1_R + 0xd * a2_R + 0x27 * a3_R + 0x12 * a4_R + 0x22 * a5_R + 0x14 * a6_R + 0x11 * a7_R + 0xf * a8_R + 0x29 * a9_R + 0x10 * a10_R + 0x2 * a11_R)) = 0;
+    POSEIDONM * (a[8]' - (0x2 * a0_R + 0x1c * a1_R + 0xd * a2_R + 0xd * a3_R + 0x27 * a4_R + 0x12 * a5_R + 0x22 * a6_R + 0x14 * a7_R + 0x11 * a8_R + 0xf * a9_R + 0x29 * a10_R + 0x10 * a11_R)) = 0;
+    POSEIDONM * (a[9]' - (0x10 * a0_R + 0x2 * a1_R + 0x1c * a2_R + 0xd * a3_R + 0xd * a4_R + 0x27 * a5_R + 0x12 * a6_R + 0x22 * a7_R + 0x14 * a8_R + 0x11 * a9_R + 0xf * a10_R + 0x29 * a11_R)) = 0;
+    POSEIDONM * (a[10]' - (0x29 * a0_R + 0x10 * a1_R + 0x2 * a2_R + 0x1c * a3_R + 0xd * a4_R + 0xd * a5_R + 0x27 * a6_R + 0x12 * a7_R + 0x22 * a8_R + 0x14 * a9_R + 0x11 * a10_R + 0xf * a11_R)) = 0;
+    POSEIDONM * (a[11]' - (0xf * a0_R + 0x29 * a1_R + 0x10 * a2_R + 0x2 * a3_R + 0x1c * a4_R + 0xd * a5_R + 0xd * a6_R + 0x27 * a7_R + 0x12 * a8_R + 0x22 * a9_R + 0x14 * a10_R + 0x11 * a11_R)) = 0;
+
+    PARTIALROUND * (a[0]' - s0_R10) = 0;
+    PARTIALROUND * (a[1]' - s1_R10) = 0;
+    PARTIALROUND * (a[2]' - s2_R10) = 0;
+    PARTIALROUND * (a[3]' - s3_R10) = 0;
+    PARTIALROUND * (a[4]' - s4_R10) = 0;
+    PARTIALROUND * (a[5]' - s5_R10) = 0;
+    PARTIALROUND * (a[6]' - s6_R10) = 0;
+    PARTIALROUND * (a[7]' - s7_R10) = 0;
+    PARTIALROUND * (a[8]' - s8_R10) = 0;
+    PARTIALROUND * (a[9]' - s9_R10) = 0;
+    PARTIALROUND * (a[10]' - s10_R10) = 0;
+    PARTIALROUND * (a[11]' - s11_R10) = 0;
+
+
+    PARTIALROUND2 * (a[0]' - s0_R21) = 0;
+    PARTIALROUND2 * (a[1]' - s1_R21) = 0;
+    PARTIALROUND2 * (a[2]' - s2_R21) = 0;
+    PARTIALROUND2 * (a[3]' - s3_R21) = 0;
+    PARTIALROUND2 * (a[4]' - s4_R21) = 0;
+    PARTIALROUND2 * (a[5]' - s5_R21) = 0;
+    PARTIALROUND2 * (a[6]' - s6_R21) = 0;
+    PARTIALROUND2 * (a[7]' - s7_R21) = 0;
+    PARTIALROUND2 * (a[8]' - s8_R21) = 0;
+    PARTIALROUND2 * (a[9]' - s9_R21) = 0;
+    PARTIALROUND2 * (a[10]' - s10_R21) = 0;
+    PARTIALROUND2 * (a[11]' - s11_R21) = 0;
+
+    // CMUL GATE - Check that a * b in Fp³ using (X³ - X - 1) as a generator is performed correctly
+    // In this particular case, 
+    // a = [a[3], a[4], a[5]]
+    // b = [a[6], a[7], a[8]]
+    // and this must be equal to [ a[9], a[10], a[11] ]
+    
+    // Since the modulo is known (X³ - X - 1) we can calculate the coefficients in general form by calculating 
+    // (a0 + a1*x + a2*x²)*(b0 + b1*x + b2*x²) and then using long division to get the residue when dividing by the modulo
+    // We get the following result: (a0*b0 + a1*b2 + a2*b1) + (a0*b1 + a1*b0 + a1*b2 + a2*b1 + a2*b2)x + (a0*b2 + a2*b2 + a2*b0 + a1*b1)x²
+    // This result can be expressed using this intermediate polyonials A,B,C,D,E,F that have less than degree 2
+    pol cA1 = (a[3] + a[4])  * (a[6] + a[7]);
+    pol cB1 = (a[3] + a[5])  * (a[6] + a[8]);
+    pol cC1 = (a[4] + a[5])  * (a[7] + a[8]);
+    pol cD1 = a[3]*a[6];
+    pol cE1 = a[4]*a[7];
+    pol cF1 = a[5]*a[8];
+
+    // Whenever CMUL = 1, check that the CMul result matches with the values stored in a[9], a[10] and a[11] respectively
+    CMUL * (a[9] - (cC1 + cD1 - cE1 - cF1)) = 0;
+    CMUL * (a[10] - (cA1 + cC1 - 2*cE1 - cD1)) = 0;
+    CMUL * (a[11] - (cB1 - cD1 + cE1)) = 0;
+
+    // Check that the plonk constraint stored in a[0], a[1], a[2] is correct
+    g012*CMUL = 0;
+
+    // FFT4
+
+    pol g0  = C[0]*a[0] + C[1]*a[3] + C[2]*a[6] + C[3]*a[9]  + C[6]*a[0] + C[7]*a[3];
+    pol g3  = C[0]*a[0] - C[1]*a[3] + C[4]*a[6] - C[5]*a[9]  + C[6]*a[0] - C[7]*a[3];
+    pol g6  = C[0]*a[0] + C[1]*a[3] - C[2]*a[6] - C[3]*a[9]  + C[6]*a[6] + C[8]*a[9];
+    pol g9  = C[0]*a[0] - C[1]*a[3] - C[4]*a[6] + C[5]*a[9]  + C[6]*a[6] - C[8]*a[9];
+
+    pol g1  = C[0]*a[1] + C[1]*a[4] + C[2]*a[7] + C[3]*a[10] + C[6]*a[1] + C[7]*a[4];
+    pol g4  = C[0]*a[1] - C[1]*a[4] + C[4]*a[7] - C[5]*a[10] + C[6]*a[1] - C[7]*a[4];
+    pol g7  = C[0]*a[1] + C[1]*a[4] - C[2]*a[7] - C[3]*a[10] + C[6]*a[7] + C[8]*a[10];
+    pol g10 = C[0]*a[1] - C[1]*a[4] - C[4]*a[7] + C[5]*a[10] + C[6]*a[7] - C[8]*a[10];
+
+    pol g2  = C[0]*a[2] + C[1]*a[5] + C[2]*a[8] + C[3]*a[11] + C[6]*a[2] + C[7]*a[5];
+    pol g5  = C[0]*a[2] - C[1]*a[5] + C[4]*a[8] - C[5]*a[11] + C[6]*a[2] - C[7]*a[5];
+    pol g8  = C[0]*a[2] + C[1]*a[5] - C[2]*a[8] - C[3]*a[11] + C[6]*a[8] + C[8]*a[11];
+    pol g11 = C[0]*a[2] - C[1]*a[5] - C[4]*a[8] + C[5]*a[11] + C[6]*a[8] - C[8]*a[11];
+
+    FFT4 * (a[0]' - g0) = 0;
+    FFT4 * (a[1]' - g1) = 0;
+    FFT4 * (a[2]' - g2) = 0;
+    FFT4 * (a[3]' - g3) = 0;
+    FFT4 * (a[4]' - g4) = 0;
+    FFT4 * (a[5]' - g5) = 0;
+    FFT4 * (a[6]' - g6) = 0;
+    FFT4 * (a[7]' - g7) = 0;
+    FFT4 * (a[8]' - g8) = 0;
+    FFT4 * (a[9]' - g9) = 0;
+    FFT4 * (a[10]' - g10) = 0;
+    FFT4 * (a[11]' - g11) = 0;
+
+    // EVPOL4 - Check that the polynomial evaluation is valid
+    // Evaluate p(x) = d0*x⁴ + d1*x³ + d2*x²+ d3*x + d4 at point z = a[0]' + a[1]'x + a[2]'x² where
+    // d0 = a[3]' + a[4]' * x + a[5]' * x²
+    // d1 = a[0]' + a[1]' * x + a[2]' * x²
+    // d2 = a[9] + a[10] * x + a[11] * x²
+    // d3 = a[6] + a[7] * x + a[8] * x²
+    // d4 = a[3] + a[4] * x + a[5] * x²
+    // The result must be equal to a[6]' + a[7]' * x + a[8]' * x²
+    // The evaluation is performed using the Horner's rule, which means that p(x) is rewritten as
+    // p(x) = (d0 * x + d1)*x + d2)*x + d3)*x + d4
+    // Note: All operations are performed in Fp³ and so multiplications are performed using CMulAdd
+
+
+    // Calculate acc = d0 * x + d1 
+    pol A1 = (a[3]' + a[4]')  * (a[6]' + a[7]');
+    pol B1 = (a[3]' + a[5]')  * (a[6]' + a[8]');
+    pol C1 = (a[4]' + a[5]')  * (a[7]' + a[8]');
+    pol D1 = a[3]' * a[6]';
+    pol E1 = a[4]' * a[7]';
+    pol F1 = a[5]' * a[8]';
+    pol acc1_0 = C1+ D1 - E1 - F1 + a[0]';
+    pol acc1_1 = A1+ C1- 2*E1 - D1 + a[1]';
+    pol acc1_2 = B1- D1 + E1 + a[2]';
+
+    // Calculate acc2 = acc * x + d2 
+    pol A2 = (acc1_0 + acc1_1)  * (a[6]' + a[7]');
+    pol B2 = (acc1_0 + acc1_2)  * (a[6]' + a[8]');
+    pol C2 = (acc1_1 + acc1_2)  * (a[7]' + a[8]');
+    pol D2 = acc1_0 * a[6]';
+    pol E2 = acc1_1 * a[7]';
+    pol F2 = acc1_2 * a[8]';
+    pol acc2_0 = C2+ D2 - E2 - F2 + a[9];
+    pol acc2_1 = A2+ C2- 2*E2 - D2 + a[10];
+    pol acc2_2 = B2- D2 + E2 + a[11];
+
+    // Calculate acc3 = acc2 * x + d3 
+    pol A3 = (acc2_0 + acc2_1)  * (a[6]' + a[7]');
+    pol B3 = (acc2_0 + acc2_2)  * (a[6]' + a[8]');
+    pol C3 = (acc2_1 + acc2_2)  * (a[7]' + a[8]');
+    pol D3 = acc2_0 * a[6]';
+    pol E3 = acc2_1 * a[7]';
+    pol F3 = acc2_2 * a[8]';
+    pol acc3_0 = C3+ D3 - E3 - F3 + a[6];
+    pol acc3_1 = A3+ C3- 2*E3 - D3 + a[7];
+    pol acc3_2 = B3- D3 + E3 + a[8];
+
+    // Calculate p = acc4 * x + d4 
+    pol A4 = (acc3_0 + acc3_1)  * (a[6]' + a[7]');
+    pol B4 = (acc3_0 + acc3_2)  * (a[6]' + a[8]');
+    pol C4 = (acc3_1 + acc3_2)  * (a[7]' + a[8]');
+    pol D4 = acc3_0 * a[6]';
+    pol E4 = acc3_1 * a[7]';
+    pol F4 = acc3_2 * a[8]';
+    pol acc4_0 = C4+ D4 - E4 - F4 + a[3];
+    pol acc4_1 = A4+ C4- 2*E4 - D4 + a[4];
+    pol acc4_2 = B4- D4 + E4 + a[5];
+
+
+    // Whenever EVPOL4 = 1, check that the evaluation result matches with the values stored in a[9]', a[10]' and a[11]' respectively
+    EVPOL4 * (a[9]' - acc4_0) = 0;
+    EVPOL4 * (a[10]' - acc4_1) = 0;
+    EVPOL4 * (a[11]' - acc4_2) = 0;
+
+    // Check that the plonk constraint stored in a[0], a[1], a[2] is correct
+    g012*EVPOL4 = 0;
+
+    // TREESELECTOR4 GATE - Check that given 4 values and a key, checks that the output is correct
+    // The tree is created as follows: if key = 0, even values are pushed up the tree, if the key = 1 the odd ones are pushed.
+    // Therefore, we need to check that 
+    // key == [0,0] -> [value1, value2, value3, value4] -> [value1, value3] -> [value1]
+    // key == [1,0] -> [value1, value2, value3, value4] -> [value2, value4] -> [value2]
+    // key == [0,1] -> [value1, value2, value3, value4] -> [value1, value3] -> [value3]
+    // key == [1,1] -> [value1, value2, value3, value4] -> [value2, value4] -> [value4]
+
+    // The values are stored in a[6], a[7], a[8] // a[9], a[10], a[11] // a[0]', a[1]', a[2]' // a[3]', a[4]', a[5]'
+    // The key is stored in a[6]', a[7]'
+    // The output is stored in [a[9]', a[10]', a[11]']
+
+    // keys1 will only be 1 if both a[6]', a[7]' are zero
+    pol keys1 = (1 - a[6]')*(1 - a[7]');
+    pol treeSelect1_1 = keys1 * (a[6] - a[8]');
+    pol treeSelect1_2 = keys1 * (a[7] - a[9]');
+    pol treeSelect1_3 = keys1 * (a[8] - a[10]');
+    TREESELECTOR4 * treeSelect1_1 = 0;
+    TREESELECTOR4 * treeSelect1_2 = 0;
+    TREESELECTOR4 * treeSelect1_3 = 0;
+
+    // keys2 will only be 1 if a[6]' equals 1 and a[7]' equals 0
+    pol keys2 = (a[6]')*(1 - a[7]');
+    pol treeSelect2_1 = keys2 * (a[9] - a[8]');
+    pol treeSelect2_2 = keys2 * (a[10] - a[9]');
+    pol treeSelect2_3 = keys2 * (a[11] - a[10]');
+    TREESELECTOR4 * treeSelect2_1 = 0;
+    TREESELECTOR4 * treeSelect2_2 = 0;
+    TREESELECTOR4 * treeSelect2_3 = 0;
+
+    // keys3 will only be 1 if a[6]' equals 0 and a[7]' equals 1
+    pol keys3 = (1 - a[6]')*(a[7]');
+    pol treeSelect3_1 = keys3 * (a[0]' - a[8]');
+    pol treeSelect3_2 = keys3 * (a[1]' - a[9]');
+    pol treeSelect3_3 = keys3 * (a[2]' - a[10]');
+    TREESELECTOR4 * treeSelect3_1 = 0;
+    TREESELECTOR4 * treeSelect3_2 = 0;
+    TREESELECTOR4 * treeSelect3_3 = 0;
+
+    // keys4 will only be 1 if a[6]' and a[7]' equals 1 
+    pol keys4 = (a[6]')*(a[7]');
+    pol treeSelect4_1 = keys4 * (a[3]' - a[8]');
+    pol treeSelect4_2 = keys4 * (a[4]' - a[9]');
+    pol treeSelect4_3 = keys4 * (a[5]' - a[10]');
+    TREESELECTOR4 * treeSelect4_1 = 0;
+    TREESELECTOR4 * treeSelect4_2 = 0;
+    TREESELECTOR4 * treeSelect4_3 = 0;
+
+    // Check that the plonk constraint stored in a[0], a[1], a[2] and a[3], a[4], a[5] are correct
+    g012*TREESELECTOR4 = 0;
+    g345*TREESELECTOR4 = 0;
+
+    pol checkBinaryKey1 = a[6]'*(1 - a[6]');
+    pol checkBinaryKey2 = a[7]'*(1 - a[7]');
+    TREESELECTOR4 * checkBinaryKey1 = 0;
+    TREESELECTOR4 * checkBinaryKey2 = 0;
+
+    // Check connection equations of Plonk
+    { a[0],a[1],a[2],a[3],a[4],a[5],a[6],a[7],a[8],a[9],a[10],a[11] } connect { S[0],S[1],S[2],S[3],S[4],S[5],S[6],S[7],S[8],S[9],S[10],S[11] }
