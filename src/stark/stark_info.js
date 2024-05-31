@@ -5,10 +5,10 @@ const { preparePil } = require("../pil_info/preparePil");
 const map = require("../pil_info/map");
 const F3g = require("../helpers/f3g");
 
-module.exports = function starkInfoGen(pil, starkStruct) {
+module.exports = function starkInfoGen(pil, starkStruct, options) {
     const F = new F3g();
 
-    const infoPil = preparePil(F, pil, starkStruct);
+    const infoPil = preparePil(F, pil, starkStruct, options);
 
     const expressions = infoPil.expressions;
 

@@ -64,16 +64,19 @@ module.exports.calculateIntermediatePolynomials = function calculateIntermediate
     let addedBasefieldCols = calculateAddedCols(d++, expressions, imExps, qDeg, qDim);
     while(imExps.length > 0 && d <= maxQDeg) {
         let [imExpsP, qDegP] = calculateImPols(expressions, cExp, d);
-        let newAddedBasefieldCols = calculateAddedCols(d++, expressions, imExpsP, qDegP, qDim);
+        let newAddedBasefieldCols = calculateAddedCols(d, expressions, imExpsP, qDegP, qDim);
         if ((maxQDeg && newAddedBasefieldCols < addedBasefieldCols) 
             || (!maxQDeg && imExpsP.length === 0)) {
             [imExps, qDeg] = [imExpsP, qDegP];
+            addedBasefieldCols = newAddedBasefieldCols;
         }
         if(imExpsP === 0) break;
+        d++;
     }
 
     return {newExpressions: expressions, imExps, qDeg};
 }
+
 
 
 function calculateAddedCols(maxDeg, expressions, imExps, qDeg, qDim) {
@@ -179,19 +182,21 @@ function calculateImPols(expressions, _exp, maxDeg) {
     }
 }
 
-module.exports.calculateExpDeg = function calculateExpDeg(expressions, exp, imExps = []) {
+module.exports.calculateExpDeg = function calculateExpDeg(expressions, exp, imExps = [], expsDegs = []) {
     if (exp.op == "exp") {
+        if (expsDegs[exp.id]) return expsDegs[exp.id];
         if (imExps.includes(exp.id)) return 1;
-        return calculateExpDeg(expressions, expressions[exp.id], imExps);
+        expsDegs[exp.id] = calculateExpDeg(expressions, expressions[exp.id], imExps, expsDegs);
+        return expsDegs[exp.id];
     } else if (["x", "const", "cm"].includes(exp.op) || (exp.op === "Zi" && exp.boundary !== "everyRow")) {
         return 1;
     } else if (["number", "public", "challenge", "eval", "subproofValue"].includes(exp.op) || (exp.op === "Zi" && exp.boundary === "everyRow")) {
         return 0;
     } else if(exp.op === "neg") {
-        return calculateExpDeg(expressions, exp.values[0], imExps);
+        return calculateExpDeg(expressions, exp.values[0], imExps, expsDegs);
     } else if(["add", "sub", "mul"].includes(exp.op)) {
-        const lhsDeg = calculateExpDeg(expressions, exp.values[0], imExps);
-        const rhsDeg = calculateExpDeg(expressions, exp.values[1], imExps);
+        const lhsDeg = calculateExpDeg(expressions, exp.values[0], imExps, expsDegs);
+        const rhsDeg = calculateExpDeg(expressions, exp.values[1], imExps, expsDegs);
         return exp.op === "mul" ? lhsDeg + rhsDeg : Math.max(lhsDeg, rhsDeg);
     } else {
         throw new Error("Exp op not defined: "+ exp.op);

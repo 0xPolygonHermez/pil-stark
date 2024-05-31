@@ -39,10 +39,7 @@ module.exports.buildCHelpers = async function buildCHelpers(starkInfo, cHelpersF
 
     let code = starkInfo[`step${nStages}prev`].code;
     getParserArgsStage(nStages, `step${nStages}`, code, "n");
-
-    code = starkInfo[`step${nStages}`].code;
-    getParserArgsStage(nStages, `step${nStages}_after`, code, "n", false);
-    
+ 
     code = starkInfo[`step${nStages + 1}2ns`].code;
     getParserArgsStage(nStages + 1, `step${nStages + 1}`, code, "2ns");
 

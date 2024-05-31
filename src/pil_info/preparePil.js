@@ -5,7 +5,7 @@ const { generateConstraintPolynomial } = require("../pil_info/polynomials/constr
 const { getExpDim } = require("./helpers");
 
 
-module.exports.preparePil = function preparePil(F, pil, starkStruct) {
+module.exports.preparePil = function preparePil(F, pil, starkStruct, options = {}) {
     const res = {};
 
     for(let i = 0; i < pil.expressions.length; ++i) {
@@ -25,6 +25,10 @@ module.exports.preparePil = function preparePil(F, pil, starkStruct) {
 
     res.publics = publicsInfo;
     
+    if(res.starkStruct.verificationHashType === "BN128") {
+        res.merkleTreeArity = options.arity || 16;
+    }
+
     res.cmDims = [];
 
     for(let i = 0; i < res.nCm1; ++i) {
