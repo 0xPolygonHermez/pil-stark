@@ -40,6 +40,12 @@ module.exports.generateParser = function generateParser(operations, operationsUs
     let functionType = !operationsUsed ? "virtual void" : "void";
     const parserCPP = [];
 
+    if(parserType === "avx") {
+        parserCPP.push("uint64_t nrowsPack = 4;");
+    } else if (parserType === "avx512") {
+        parserCPP.push("uint64_t nrowsPack = 8;");
+    }
+
     parserCPP.push(...[
         "uint64_t nCols;",
         "vector<uint64_t> nColsStages;",
@@ -244,7 +250,13 @@ module.exports.generateParser = function generateParser(operations, operationsUs
     
     parserCPP.push(...[
         `${functionType} calculateExpressions(StarkInfo &starkInfo, StepsParams &params, ParserArgs &parserArgs, ParserParams &parserParams) {`,
-        `    uint32_t nrowsPack =  ${parserType === "avx512" ? 8 : 4};`,
+    ]);
+
+    if(parserType === "avx512" || parserType === "avx") {
+        parserCPP.push(`    assert(nrowsPack == ${parserType === "avx512" ? 8 : 4});`);
+    }
+
+    parserCPP.push(...[
         `    bool domainExtended = parserParams.stage > 3 ? true : false;`,
         "    uint64_t domainSize = domainExtended ? 1 << starkInfo.starkStruct.nBitsExt : 1 << starkInfo.starkStruct.nBits;",
         "    uint8_t *ops = &parserArgs.ops[parserParams.opsOffset];",
