@@ -6,9 +6,8 @@ const starkInfoGen = require("./stark_info.js")
 
 const { interpolate } = require("../helpers/fft/fft_p");
 
-module.exports = async function starkSetup(constPols, pil, starkInfo) {
+module.exports = async function starkSetup(constPols, pil, starkStruct) {
 
-    const starkStruct = starkInfo.starkStruct;
     const nBits = starkStruct.nBits;
     const nBitsExt = starkStruct.nBitsExt;
     const nExt= 1 << nBitsExt;
@@ -21,7 +20,7 @@ module.exports = async function starkSetup(constPols, pil, starkInfo) {
     if (starkStruct.verificationHashType == "GL") {
         MH = await buildMerklehashGL();
     } else if (starkStruct.verificationHashType == "BN128") {
-        MH = await buildMerkleHashBN128(starkInfo.merkleTreeArity);
+        MH = await buildMerkleHashBN128(starkStruct.merkleTreeArity);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
     }
