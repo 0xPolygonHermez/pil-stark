@@ -1,16 +1,15 @@
 
-const {pilCodeGen, buildCode} = require("./codegen.js");
-const ExpressionOps = require("../helpers/expressionops");
+const ExpressionOps = require("../../helpers/expressionops");
 
 
-module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
+module.exports = function generateFRIPolynomial(res, expressions) {
     const E = new ExpressionOps();
 
     const vf1 = E.challenge("vf1");
     const vf2 = E.challenge("vf2");
 
     let friExp = null;
-    for (let i=0; i<pil.nCommitments; i++) {
+    for (let i=0; i<res.nCommitments; i++) {
         if (friExp) {
             friExp = E.add(E.mul(vf1, friExp), E.cm(i));
         } else {
@@ -55,16 +54,7 @@ module.exports = function generateFRIPolynomial(res, pil, ctx2ns) {
         }
     }
 
-    res.friExpId = pil.expressions.length;
-    friExp.keep2ns = true;
-    pil.expressions.push(friExp);
-
-    pilCodeGen(ctx2ns, res.friExpId);
-
-    const code = ctx2ns.code[ctx2ns.code.length-1].code;
-
-    code[code.length-1].dest = { type: "f", id: 0 };
-
-    res.step52ns = buildCode(ctx2ns);
-
+    res.friExpId = expressions.length;
+    friExp.stage = 5;
+    expressions.push(friExp);
 }

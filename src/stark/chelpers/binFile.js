@@ -20,20 +20,26 @@ exports.writeCHelpersFile = async function (cHelpersFilename, cHelpersInfo) {
     const ops = [];
     const args = [];
     const numbers = [];
+    const storePols = [];
 
     const opsOffset = [];
     const argsOffset = [];
     const numbersOffset = [];
+    const storePolsOffset = [];
+
 
     for(let i = 0; i < cHelpersInfo.length; i++) {
         if(i == 0) {
             opsOffset.push(0);
             argsOffset.push(0);
             numbersOffset.push(0);
+            storePolsOffset.push(0);
         } else {
             opsOffset.push(opsOffset[i-1] + cHelpersInfo[i-1].ops.length);
             argsOffset.push(argsOffset[i-1] + cHelpersInfo[i-1].args.length);
             numbersOffset.push(numbersOffset[i-1] + cHelpersInfo[i-1].numbers.length);
+            storePolsOffset.push(storePolsOffset[i-1] + cHelpersInfo[i-1].storePols.length);
+
         }
         for(let j = 0; j < cHelpersInfo[i].ops.length; j++) {
             ops.push(cHelpersInfo[i].ops[j]);
@@ -44,11 +50,16 @@ exports.writeCHelpersFile = async function (cHelpersFilename, cHelpersInfo) {
         for(let j = 0; j < cHelpersInfo[i].numbers.length; j++) {
             numbers.push(cHelpersInfo[i].numbers[j]);
         }
+        for(let j = 0; j < cHelpersInfo[i].storePols.length; j++) {
+            storePols.push(cHelpersInfo[i].storePols[j]);
+        }
     }
 
     await cHelpersBin.writeULE32(ops.length);
     await cHelpersBin.writeULE32(args.length);
     await cHelpersBin.writeULE32(numbers.length);
+    await cHelpersBin.writeULE32(storePols.length);
+
 
     await endWriteSection(cHelpersBin);
     
@@ -75,7 +86,10 @@ exports.writeCHelpersFile = async function (cHelpersFilename, cHelpersInfo) {
         await cHelpersBin.writeULE32(argsOffset[i]);
 
         await cHelpersBin.writeULE32(stageInfo.numbers.length);
-        await cHelpersBin.writeULE32(numbersOffset[i]);        
+        await cHelpersBin.writeULE32(numbersOffset[i]); 
+        
+        await cHelpersBin.writeULE32(stageInfo.storePols.length);
+        await cHelpersBin.writeULE32(storePolsOffset[i]); 
     }
 
     await endWriteSection(cHelpersBin);
@@ -103,6 +117,14 @@ exports.writeCHelpersFile = async function (cHelpersFilename, cHelpersInfo) {
         buffNumbersV.setBigUint64(8*j, BigInt(numbers[j]), true);
     }
     await cHelpersBin.write(buffNumbers);
+
+    const buffStorePols = new Uint8Array(storePols.length);
+    const buffStorePolsV = new DataView(buffStorePols.buffer);
+    for(let j = 0; j < storePols.length; j++) {
+        buffStorePolsV.setUint8(j, storePols[j], true);
+    }
+    await cHelpersBin.write(buffStorePols);
+
 
     await endWriteSection(cHelpersBin);
 

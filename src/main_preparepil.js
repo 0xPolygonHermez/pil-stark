@@ -2,17 +2,16 @@ const fs = require("fs");
 const version = require("../package").version;
 
 const F3g = require("./helpers/f3g.js");
-const starkInfoGen = require("./stark/stark_info.js");
 const { compile } = require("pilcom");
+const { preparePil } = require("./pil_info/preparePil");
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_genstarkinfo.js -p <pil.json> [-P <pilconfig.json] -s <starkstruct.json> -i <starkinfo.json>")
+    .usage("node main_preparepil.js -p <pil.json> [-P <pilconfig.json] -s <starkstruct.json> -f <infopil.json>")
     .alias("p", "pil")
     .alias("P", "pilconfig")
     .alias("s", "starkstruct")
-    .alias("i", "starkinfo")
-    .string("arity")
+    .alias("f", "infopil")
     .argv;
 
 async function run() {
@@ -22,18 +21,22 @@ async function run() {
     const pilConfig = typeof(argv.pilconfig) === "string" ? JSON.parse(fs.readFileSync(argv.pilconfig.trim())) : {};
 
     const starkStructFile = typeof(argv.starkstruct) === "string" ?  argv.starkstruct.trim() : "mycircuit.stark_struct.json";
-    const starkInfoFile = typeof(argv.starkinfo) === "string" ?  argv.starkinfo.trim() : "mycircuit.starkinfo.json";
+    
+    const infoPilFile = typeof(argv.infopil) === "string" ?  argv.infopil.trim() : "mycircuit.infopil.json";
 
-    const pil = await compile(F, pilFile, null, pilConfig);
+    let pil = await compile(F, pilFile, null, pilConfig);
+
     const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
 
-    const options = {};
-    if(starkStruct.verificationHashType === "BN128") {
-        options.arity = Number(argv.arity) || 16;
-    }
-    const starkInfo = starkInfoGen(pil, starkStruct, options);
+    const infoPil = preparePil(F, pil, starkStruct);
 
-    await fs.promises.writeFile(starkInfoFile, JSON.stringify(starkInfo, null, 1), "utf8");
+    let maxDeg =  (1 << (starkStruct.nBitsExt - starkStruct.nBits)) + 1;
+
+    const infoPilJSON = { maxDeg, cExpId: infoPil.res.cExpId, qDim: infoPil.res.qDim, ...infoPil };
+    
+    console.log("Writing file...");
+    
+    await fs.promises.writeFile(infoPilFile, JSON.stringify(infoPilJSON, null, 1), "utf8");
 
     console.log("files Generated Correctly");
 }

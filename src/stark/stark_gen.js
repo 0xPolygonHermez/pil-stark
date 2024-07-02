@@ -22,7 +22,7 @@ const maxNperThread = 1<<18;
 const minNperThread = 1<<12;
 
 
-module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo, options) {
+module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo) {
     const starkStruct = starkInfo.starkStruct;
     const N = 1 << starkStruct.nBits;
     const extendBits = starkStruct.nBitsExt - starkStruct.nBits;
@@ -40,9 +40,8 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         transcript = new Transcript(poseidon);
     } else if (starkStruct.verificationHashType == "BN128") {
         const poseidonBN128 = await buildPoseidonBN128();
-        let arity = options.arity || 16;
-        console.log(`Arity: ${arity}`);
-        MH = await buildMerkleHashBN128(arity);
+        console.log(`Merkle Tree Arity: ${starkInfo.merkleTreeArity}`);
+        MH = await buildMerkleHashBN128(starkInfo.merkleTreeArity);
         transcript = new TranscriptBN128(poseidonBN128, 16);
     } else {
         throw new Error("Invalid Hash Type: "+ starkStruct.verificationHashType);
@@ -117,7 +116,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
             // EDU: Do not implement this in the firs version.
             //      we will not use it.
             ctx.publics[i] = calculateExpAtPoint(ctx, starkInfo.publicsCode[i], starkInfo.publics[i].idx);
-//            ctx.publics[i] = ctx.exps[starkInfo.publics[i].polId][starkInfo.publics[i].idx];
         } else {
             throw new Error(`Invalid public type: ${polType.type}`);
         }
@@ -195,12 +193,6 @@ module.exports = async function starkGen(cmPols, constPols, constTree, starkInfo
         const pDen = getPol(ctx, starkInfo, starkInfo.exp2pol[ci.denId]);
         const z = calculateZ(F,pNum, pDen);
         setPol(ctx, starkInfo, starkInfo.cm_n[nCm++], z);
-    }
-
-    if (parallelExec) {
-        await calculateExpsParallel(pool, ctx, "step3", starkInfo);
-    } else {
-        calculateExps(ctx, starkInfo.step3, "n");
     }
 
     console.log("Merkelizing 3....");

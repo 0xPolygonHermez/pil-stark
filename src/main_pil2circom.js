@@ -10,23 +10,18 @@ const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig
 
 const argv = require("yargs")
     .version(version)
-    .usage("node main_pil2circom.js -o <verifier.circom> -v <verification_key.json> -s <starkinfo.json> [--skipMain] [--enableInput] [--verkeyInput] [--arity]")
+    .usage("node main_pil2circom.js -o <verifier.circom> -v <verification_key.json> -s <starkinfo.json> [--skipMain] [--enableInput] [--verkeyInput]")
     .alias("s", "starkinfo")
     .alias("v", "verkey")
     .alias("o", "output")
-    .string("arity")
     .string("index")
     .argv;
 
 async function run() {
-    const starkInfoFIle = typeof(argv.starkinfo) === "string" ?  argv.starkinfo.trim() : "starkinfo.json";
-    const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "mycircuit.verkey.json";
+    const starkInfoFile = typeof(argv.starkinfo) === "string" ?  argv.starkinfo.trim() : "starkinfo.json";
     const outputFile = typeof(argv.output) === "string" ?  argv.output.trim() : "mycircuit.verifier.circom";
-
-    const verKey = JSONbig.parse(await fs.promises.readFile(verKeyFile, "utf8"));
-    const constRoot = verKey.constRoot;
-
-    const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFIle, "utf8"));
+    
+    const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
 
     const options = {
         skipMain: argv.skipMain || false,
@@ -34,9 +29,13 @@ async function run() {
         verkeyInput: argv.verkeyInput || false
     }
 
-    if(starkInfo.starkStruct.verificationHashType === "BN128") {
-        options.arity =  Number(argv.arity) || 16;
-        console.log(`Arity: ${options.arity}`);
+    let constRoot;
+    if(!options.verkeyInput ) {
+        const verKeyFile = typeof(argv.verkey) === "string" ?  argv.verkey.trim() : "mycircuit.verkey.json";
+        const verKey = JSONbig.parse(await fs.promises.readFile(verKeyFile, "utf8"));
+
+        constRoot = verKey.constRoot;
+
     }
 
     if(argv.index) {

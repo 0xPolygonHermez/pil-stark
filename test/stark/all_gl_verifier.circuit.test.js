@@ -24,11 +24,10 @@ describe("Stark Verification Circuit Test", function () {
 
         const circomFile = path.join(__dirname, "../../", "tmp", "all.verifier.circom");
         const verKeyFile = path.join(__dirname, "../../","tmp", "all.verkey.json");
-        const starkStructFile = path.join(__dirname, "../state_machines/sm_all", "all.starkstruct.json");
+        const starkInfoFile = path.join(__dirname, "../../", "tmp", "all.starkinfo.json");
         const pilFile = path.join(__dirname, "../state_machines/sm_all", "all_main.pil");
         const proofFile = path.join(__dirname, "../../", "tmp", "all.proof.json");
         const publicsFile = path.join(__dirname, "../../", "tmp", "all.public.json")
-        const zkInputFile = path.join(__dirname, "../../", "tmp", "all.zkinput.json")
 
 
         const F = new F3g("0xFFFFFFFF00000001");
@@ -38,10 +37,10 @@ describe("Stark Verification Circuit Test", function () {
         for (let i=0; i<4; i++) {
             constRoot[i] = BigInt(verKey.constRoot[i]);
         }
-        const starkStruct = JSON.parse(await fs.promises.readFile(starkStructFile, "utf8"));
+        const starkInfo = JSON.parse(await fs.promises.readFile(starkInfoFile, "utf8"));
+
         const publics = JSONbig.parse(await fs.promises.readFile(publicsFile, "utf8"));
 
-        const starkInfo = starkInfoGen(pil, starkStruct);
         const circuitSrc = await pil2circom(constRoot, starkInfo)
 
         await fs.promises.writeFile(circomFile, circuitSrc, "utf8");
