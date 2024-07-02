@@ -133,9 +133,6 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                 }
                 break;
             }
-            case "f": {
-                break;
-            }
             default: throw new Error("Invalid reference type set: " + r.dest.type);
         }
     }

@@ -7,7 +7,7 @@ function pilCodeGen(ctx, expressions, expId, prime) {
 
     if (ctx.calculated[primeIdx][expId]) return;
 
-    calculateDeps(ctx, expressions, expressions[expId], prime, expId);
+    calculateDeps(ctx, expressions, expressions[expId], prime);
 
     const codeCtx = {
         pil: ctx.pil,
