@@ -14,13 +14,24 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
     var ops = [];
     var args = [];
     var numbers = [];
+    
+    let nConstants = (starkInfo.nConstants + 2);
+    let nCols = nConstants + starkInfo.mapSectionsN["cm1_n"] + starkInfo.mapSectionsN["cm2_n"] + starkInfo.mapSectionsN["cm3_n"];
+    if(stage <= 3) {
+        nCols += starkInfo.mapSectionsN["tmpExp_n"];
+    } else {
+        nCols += starkInfo.mapSectionsN["cm4_n"];
+    }
+
+    let nColsStagesAcc = new Array(10).fill(0);
+    nColsStagesAcc[1] = nColsStagesAcc[0] + nConstants;
+    nColsStagesAcc[2] = nColsStagesAcc[1] + starkInfo.mapSectionsN["cm1_n"];
+    nColsStagesAcc[3] = nColsStagesAcc[2] + starkInfo.mapSectionsN["cm2_n"];
+    nColsStagesAcc[4] = nColsStagesAcc[3] + starkInfo.mapSectionsN["cm3_n"];
+
+    let storePols = new Array(nCols).fill(0);
 
     var counters_ops = new Array(operations.length).fill(0);
-
-    const nBits = starkInfo.starkStruct.nBits;
-    const nBitsExt = starkInfo.starkStruct.nBitsExt;
-
-    const next = (dom == "n" ? 1 : 1 << (nBitsExt - nBits));
 
     // Evaluate max and min temporal variable for tmp_ and tmp3_
     let maxid = 100000;
@@ -38,8 +49,8 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         }
 
         pushResArg(r, r.dest.type);
-        for(let i = 0; i < r.src.length; i++) {
-            pushSrcArg(r.src[i], r.src[i].type);
+        for(let i = 0; i < operation.src.length; i++) {
+            pushSrcArg(operation.src[i], operation.src[i].type);
         }
 
         
@@ -66,6 +77,7 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         nTemp3: count3d,
         ops,
         numbers,
+        storePols,
         args,
     }
     
@@ -95,14 +107,17 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                 }
                 break;
             }
-            case "q": {
+            case "q": 
+            case "f": {
+                args.push(10);
+                args.push(0);
                 break;
             }
             case "cm": {
                 if (dom == "n") {
-                    evalMap_(starkInfo.cm_n[r.dest.id], r.dest.prime)
+                    evalMap_(starkInfo.cm_n[r.dest.id], r.dest.prime, true)
                 } else if (dom == "2ns") {
-                    evalMap_(starkInfo.cm_2ns[r.dest.id], r.dest.prime)
+                    evalMap_(starkInfo.cm_2ns[r.dest.id], r.dest.prime, true)
                 } else {
                     throw new Error("Invalid dom");
                 }
@@ -110,15 +125,12 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
             }
             case "tmpExp": {
                 if (dom == "n") {
-                    evalMap_(starkInfo.tmpExp_n[r.dest.id], r.dest.prime)
+                    evalMap_(starkInfo.tmpExp_n[r.dest.id], r.dest.prime, true)
                 } else if (dom == "2ns") {
                     throw new Error("Invalid dom");
                 } else {
                     throw new Error("Invalid dom");
                 }
-                break;
-            }
-            case "f": {
                 break;
             }
             default: throw new Error("Invalid reference type set: " + r.dest.type);
@@ -140,9 +152,8 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
             case "const": {
                 let offset_prime = r.prime ? 1 : 0;
 
-                args.push(0);
+                args.push(5*offset_prime);
                 args.push(r.id);
-                args.push(offset_prime);
                 
                 break;
             }
@@ -166,27 +177,19 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                 }
                 break;
             }
-            case "q": {
-                if (dom == "n") {
-                    throw new Error("Accessing q in domain n");
-                } else if (dom == "2ns") {
-                    evalMap_(starkInfo.qs[r.id], r.prime)
-                } else {
-                    throw new Error("Invalid dom");
-                }
-                break;
-            }
             case "number": {
                 let numString = `${BigInt(r.value).toString()}`;
                 if(!numbers.includes(numString)) numbers.push(numString); 
                 args.push(numbers.indexOf(numString));
                 break;
             }
-            case "xDivXSubXi": 
+            case "xDivXSubXi":
+                args.push(11);
                 args.push(0);
                 break;
             case "xDivXSubWXi":
-                args.push(1);
+                args.push(11);
+                args.push(3);
                 break;
             case "public":
             case "challenge":
@@ -195,10 +198,18 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
                 args.push(r.id);
                 break;
             }
+            case "x":
+                args.push(0);
+                args.push(starkInfo.nConstants);
+                break;
+            case "Zi":
+                args.push(0);
+                args.push(starkInfo.nConstants + 1);
+                break;
         }
     }
 
-    function evalMap_(polId, prime) {
+    function evalMap_(polId, prime, isDest = false) {
         let p = starkInfo.varPolMap[polId];
 
         let offset_prime = prime ? 1 : 0;
@@ -213,8 +224,18 @@ module.exports.getParserArgs = function getParserArgs(starkInfo, operations, cod
         } else if(["tmpExp_n", "cm4_2ns"].includes(p.section)) {
             step = 4;
         }
-        args.push(Number(step));
+
+        if(isDest && stage < 4) {
+            if(p.section === "tmpExp_n") {
+                if(!prime) storePols[nColsStagesAcc[step] + p.sectionPos] = p.dim;
+            } else {
+                for(let i = 0; i < p.dim; ++i) {
+                    storePols[nColsStagesAcc[step] + p.sectionPos + i] = 1;
+                }
+            }
+        }
+
+        args.push(Number(offset_prime * 5 + step));
         args.push(Number(p.sectionPos));
-        args.push(Number(offset_prime));
     }
 }

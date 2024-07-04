@@ -26,7 +26,6 @@ const argv = require("yargs")
     .alias("z", "zkin")
     .alias("b", "public")
     .string("proverAddr")
-    .string("arity")
     .argv;
 
 async function run() {
@@ -52,24 +51,19 @@ async function run() {
     const cmPols =  newCommitPolsArray(pil);
     await cmPols.loadFromFile(commitFile);
 
-    let options = {};
     let MH;
     if (starkInfo.starkStruct.verificationHashType == "GL") {
         MH = await buildMerklehashGL();
     } else if (starkInfo.starkStruct.verificationHashType == "BN128") {
-        let arity = Number(argv.arity) || 16;
-
-        options = {arity};
-
-        console.log(`Arity: ${arity}`);
-        MH = await buildMerkleHashBN128(arity);
+        console.log(`Merkle Tree Arity: ${starkInfo.merkleTreeArity}`);
+        MH = await buildMerkleHashBN128(starkInfo.merkleTreeArity);
     } else {
         throw new Error("Invalid Hash Type: "+ starkInfo.starkStruct.verificationHashType);
     }
 
     const constTree = await MH.readFromFile(constTreeFile);
 
-    const resP = await starkGen(cmPols, constPols, constTree, starkInfo, options);
+    const resP = await starkGen(cmPols, constPols, constTree, starkInfo);
 
     await fs.promises.writeFile(proofFile, JSONbig.stringify(resP.proof, null, 1), "utf8");
 
