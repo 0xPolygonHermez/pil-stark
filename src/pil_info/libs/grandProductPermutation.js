@@ -86,7 +86,7 @@ module.exports.grandProductPermutation = function grandProductPermutation(res,pi
 
         const c2 = E.sub(  E.mul(zp,  E.exp( peCtx.denId )), E.mul(z, E.exp( peCtx.numId )));
         c2.deg=2;
-        c2.stage = 3;
+        c2.stage = 4;
         peCtx.c2Id = pil.expressions.length;
         pil.expressions.push(c2);
         pil.polIdentities.push({e: peCtx.c2Id});

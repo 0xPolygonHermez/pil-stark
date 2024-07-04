@@ -335,18 +335,22 @@ module.exports = function map(res, expressions) {
 function mapSections(res) {
     Object.keys(res.mapSections).forEach((s) => {
         let p = 0;
-        for (let e of [1,3]) {
-            for (let i=0; i<res.varPolMap.length; i++) {
-                const pp = res.varPolMap[i];
-                if ((pp.section == s) && (pp.dim==e)) {
-                    pp.sectionPos = p;
-                    p += e;
+        res.mapSectionsN1[s] = 0;
+        res.mapSectionsN3[s] = 0
+        for (let i=0; i<res.varPolMap.length; i++) {
+            const pp = res.varPolMap[i];
+            if(pp.section === s) {
+                pp.sectionPos = p;
+                if(pp.dim == 1) {
+                    res.mapSectionsN1[s] += 1;
+                    p += 1;
+                } else {
+                    res.mapSectionsN3[s] += 3;
+                    p += 3;
                 }
             }
-            if (e==1) res.mapSectionsN1[s] = p;
-            if (e==3) res.mapSectionsN[s] = p;
         }
-        res.mapSectionsN3[s] = (res.mapSectionsN[s] - res.mapSectionsN1[s] ) / 3;
+        res.mapSectionsN[s] = p;
     });
 }
 

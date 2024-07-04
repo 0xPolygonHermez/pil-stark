@@ -24,15 +24,26 @@ module.exports.addIntermediatePolynomials = function addIntermediatePolynomials(
     res.nImPols = res.imExpsList.length;
     res.nConstraints += res.nImPols;
     
+    let nImPolsDim1 = 0;
+    let nImPolsDim3 = 0;
     console.log("Checking that intermediate polynomials have degree less than qDeg + 1");
     for (let i=0; i<imExps.length; i++) {
         const expId = imExps[i];
         
+        if(expressions[expId].dim === 3) {
+            nImPolsDim3 += 1;
+        } else {
+            nImPolsDim1 += 1;
+        }
         const imPolDeg = module.exports.calculateExpDeg(expressions, expressions[expId], imExps);
         if(imPolDeg > qDeg + 1) {
             throw new Error(`Intermediate polynomial with id: ${expId} has a higher degree (${imPolDeg}) than the maximum allowed degree (${qDeg + 1})`);
         }
     }
+
+    console.log(`nImPols in the basefield: ${nImPolsDim1}`)
+    console.log(`nImPols in the extended field: ${nImPolsDim3}`)
+    console.log(`Total imPols columns in the base field: ${nImPolsDim1 + 3*nImPolsDim3}`);
 
     console.log("Adding intermediate polynomials to the expressions and constraints.");
     for (let i=0; i<imExps.length; i++) {

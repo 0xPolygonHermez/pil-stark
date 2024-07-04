@@ -83,13 +83,13 @@ module.exports.grandProductConnection = function grandProductConnection(res, pil
         const c1 = E.mul(l1,  E.sub(z, E.number(1)));
         c1.deg=2;
         ciCtx.c1Id = pil.expressions.length;
-        c1.stage = 3;
+        c1.stage = 4;
         pil.expressions.push(c1);
         pil.polIdentities.push({e: ciCtx.c1Id});
 
         const c2 = E.sub(  E.mul(zp,  E.exp( ciCtx.denId )), E.mul(z, E.exp( ciCtx.numId )));
         c2.deg=2;
-        c2.stage = 3;
+        c2.stage = 4;
         ciCtx.c2Id = pil.expressions.length;
         pil.expressions.push(c2);
         pil.polIdentities.push({e: ciCtx.c2Id});

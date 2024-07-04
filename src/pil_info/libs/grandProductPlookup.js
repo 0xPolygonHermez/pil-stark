@@ -86,7 +86,7 @@ module.exports.grandProductPlookup = function grandProductPlookup(res, pil) {
 
         const c1 = E.mul(l1,  E.sub(z, E.number(1)));
         c1.deg=2;
-        c1.stage = 3;
+        c1.stage = 4;
         puCtx.c1Id = pil.expressions.length;
         pil.expressions.push(c1);
         pil.polIdentities.push({e: puCtx.c1Id});
@@ -144,7 +144,7 @@ module.exports.grandProductPlookup = function grandProductPlookup(res, pil) {
 
         const c2 = E.sub(  E.mul(zp, den), E.mul(z, num)  );
         c2.deg=2;
-        c2.stage = 3;
+        c2.stage = 4;
         puCtx.c2Id = pil.expressions.length;
         pil.expressions.push(c2);
         pil.polIdentities.push({e: puCtx.c2Id});
