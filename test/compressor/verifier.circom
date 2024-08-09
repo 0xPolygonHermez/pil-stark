@@ -222,7 +222,7 @@ template parallel VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits, 
         sx[i] <== sx[i-1] *  ( ys[i] * (invroots(prevStepBits -i) -1) +1);
     }
         
-    // Perform an IFFT to obtain the coefficients of the polynomial given s_vals and evaluate it at ??????
+    // Perform an IFFT to obtain the coefficients of the polynomial given s_vals and evaluate it
     signal coefs[1 << step][3] <== FFT(step, 3, 1)(s_vals_curr);
     signal evalXprime[3] <== [specialX[0] *  sx[currStepBits - 1], specialX[1] * sx[currStepBits - 1], specialX[2] *  sx[currStepBits - 1]];
     signal evalPol[3] <== EvalPol(1 << step)(coefs, evalXprime);
@@ -231,7 +231,6 @@ template parallel VerifyFRI(nBitsExt, prevStepBits, currStepBits, nextStepBits, 
     for(var i = 0; i < nextStep; i++) { keys_lowValues[i] = ys[i + nextStepBits]; } 
     signal lowValues[3] <== TreeSelector(nextStep, 3)(s_vals_next, keys_lowValues);
 
-    // Check that ??????
     enable * (lowValues[0] - evalPol[0]) === 0;
     enable * (lowValues[1] - evalPol[1]) === 0;
     enable * (lowValues[2] - evalPol[2]) === 0;
@@ -776,7 +775,6 @@ template parallel VerifyFinalPol() {
     signal lastIFFT[8][3] <== FFT(3, 3, 1)(finalPol);
 
     // Check that the degree of the final polynomial is bounded by the degree defined in the last step of the folding
-    // This means ?????? in terms of IFFT
     for (var k= 4; k< 8; k++) {
         for (var e=0; e<3; e++) {
             enable * lastIFFT[k][e] === 0;

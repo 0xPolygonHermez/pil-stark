@@ -78,7 +78,7 @@ template LinearHash(nInputs, eSize) {
     var totalIn = nInputs*eSize;
 
     // Calculate how many batches of 4 elements are needed to fit all the inputs
-    // If one need less than 8 batches, force batchSize to be 8 so ????
+    // If one need less than 8 batches, force batchSize to be 8
     var batchSize = (totalIn + 3) \ 4;
     if (batchSize <8) batchSize=8;
     

@@ -15,8 +15,7 @@ pragma circom 2.1.0;
 // (16  2 28 13 13 39 18 34 20 17 15 41)
 // (41 16  2 28 13 13 39 18 34 20 17 15)
 // (15 41 16  2 28 13 13 39 18 34 20 17)
-// This matrix is made by the shifts of the vector (20, 34, 18, 39, 13, 13, 28, 2, 16, 41, 15, 17) in each column.
-// Notice that in the first column the 17 is changed by a 25 due to ?????
+// This matrix is made by the shifts of the vector (20, 34, 18, 39, 13, 13, 28, 2, 16, 41, 15, 17) in each column except for the first one
 function MDS(in) {
 
     var out[12];

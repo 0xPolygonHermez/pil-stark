@@ -625,7 +625,6 @@ template parallel VerifyFinalPol() {
     signal lastIFFT[<%- 1 << nLastBits %>][3] <== FFT(<%- nLastBits %>, 1)(finalPol);
 
     // Check that the degree of the final polynomial is bounded by the degree defined in the last step of the folding
-    // This means ?????? in terms of IFFT
     for (var k= <%- 1 << maxDegBits %>; k< <%- 1 << nLastBits %>; k++) {
         for (var e=0; e<3; e++) {
             enable * lastIFFT[k][e] === 0;
